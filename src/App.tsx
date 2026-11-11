@@ -103,9 +103,63 @@ export default function App() {
     );
   }
 
+  const TAB_TITLE: Record<Tab, string> = { week: 'Viikko', analysis: 'Analyysi', settings: 'Asetukset' };
+
   return (
-    <div className="mx-auto flex min-h-dvh max-w-xl flex-col">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50/95 px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur">
+    <div className="min-h-dvh lg:pl-64">
+      {/* Leveä näyttö (PC): kiinteä sivupalkki navigaatiolle ja profiileille. */}
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col border-r border-slate-200 bg-white lg:flex">
+        <div className="flex items-center gap-3 px-6 pb-6 pt-7">
+          <img src="./favicon.svg" alt="" className="size-9 rounded-xl" />
+          <div>
+            <div className="text-base font-semibold leading-tight text-slate-900">Liikkumisen</div>
+            <div className="text-base font-semibold leading-tight text-green-800">seuranta</div>
+          </div>
+        </div>
+        <nav className="space-y-1 px-3" aria-label="Päävalikko">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              aria-current={tab === t.id ? 'page' : undefined}
+              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${tab === t.id ? 'bg-green-50 text-green-900' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
+            >
+              <span className="text-lg" aria-hidden>
+                {t.icon}
+              </span>
+              {t.label}
+            </button>
+          ))}
+        </nav>
+        {profiles && profiles.length > 0 && (
+          <div className="mt-8 px-3">
+            <div className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Profiilit</div>
+            <div className="space-y-1" role="tablist" aria-label="Profiilit" aria-orientation="vertical">
+              {profiles.map((p) => {
+                const active = p.id === selected?.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => select(p.id)}
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium ${active ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50'}`}
+                  >
+                    <span className="size-3 rounded-full ring-2 ring-white/60" style={{ backgroundColor: p.color }} aria-hidden />
+                    {p.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        <div className="mt-auto px-6 pb-6 text-[11px] leading-relaxed text-slate-400">Tiedot pysyvät tällä laitteella. Ei verkkoliikennettä.</div>
+      </aside>
+
+      {/* Kapea näyttö (puhelin): yläpalkki profiilisiruineen. */}
+      <header className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50/95 px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur lg:hidden">
         <h1 className="text-sm font-semibold tracking-wide text-green-800">Liikkumisen seuranta</h1>
         {profiles && profiles.length > 0 && (
           <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1" role="tablist" aria-label="Profiilit">
@@ -129,7 +183,16 @@ export default function App() {
         )}
       </header>
 
-      <main className="flex-1 px-4 py-4 pb-24">
+      <main className="mx-auto max-w-xl px-4 py-4 pb-24 lg:max-w-[1440px] lg:px-10 lg:py-8 lg:pb-10">
+        <div className="mb-6 hidden items-baseline justify-between lg:flex">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{TAB_TITLE[tab]}</h1>
+          {selected && (
+            <span className="flex items-center gap-2 text-sm text-slate-500">
+              <span className="size-2.5 rounded-full" style={{ backgroundColor: selected.color }} aria-hidden />
+              {selected.name}
+            </span>
+          )}
+        </div>
         {!ready ? (
           <p className="text-sm text-slate-600">Ladataan…</p>
         ) : tab === 'week' ? (
@@ -143,7 +206,7 @@ export default function App() {
         )}
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]">
+      <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] lg:hidden">
         <div className="mx-auto grid max-w-xl grid-cols-3">
           {TABS.map((t) => (
             <button

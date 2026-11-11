@@ -13,6 +13,7 @@ import { today as todayFn } from '../../ui/today';
 import { DAY_BAR_TARGET } from '../week/WeekView';
 import { DailyMvpaChart, SERIES } from './DailyMvpaChart';
 import { GoalCard } from './GoalCard';
+import { HoursCard } from '../week/HoursCard';
 import { useReport } from './useReport';
 import { FootballSection } from '../football/FootballSection';
 import { GamesView } from '../football/GamesView';
@@ -29,8 +30,8 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
   if (games && profile) return <GamesView profile={profile} onBack={() => setGames(false)} />;
 
   return (
-    <div className="space-y-4">
-      <Card>
+    <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
+      <Card className="lg:col-span-2">
         <div className="mb-2 grid grid-cols-4 gap-1 rounded-xl bg-slate-100 p-1 text-sm" role="radiogroup" aria-label="Jakso">
           <span role="radio" aria-checked className="rounded-lg bg-white py-2 text-center font-medium text-slate-900 shadow-sm">
             Viikko
@@ -71,6 +72,8 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
           <Card title={`Tavoitteet · ${profile.name}`}>
             <GoalCard report={report} variant="full" />
           </Card>
+
+          <HoursCard report={report} isCurrentWeek={isCurrent} />
 
           <Card title={report.group.group === 'early_years' ? 'Vauhdikas liikkuminen päivittäin' : 'Reipas ja rasittava päivittäin'}>
             <DailyMvpaChart
@@ -215,6 +218,7 @@ function Rationale() {
   const r = RECOMMENDATIONS;
   return (
     <Card
+      className="lg:col-span-2"
       title="Mihin luvut perustuvat"
       action={
         <Button variant="ghost" onClick={() => setOpen(!open)} aria-expanded={open}>

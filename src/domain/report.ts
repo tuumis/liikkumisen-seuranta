@@ -3,6 +3,7 @@
 // Puhdas funktio: kaikki data annetaan parametreina.
 
 import { planAdherence } from './adherence';
+import { weeklyHours, type WeeklyHours } from './hours';
 import { dayTotals, evaluatePeriod, trackingStart, validDays } from './aggregate';
 import { datesBetween } from './dates';
 import { periodGroup, type PeriodGroupInfo } from './groups';
@@ -52,6 +53,8 @@ export interface PeriodReport {
   byCategory: CategoryBreakdown[];
   /** Suunnitelma vs. toteuma koko jaksolta (7.9). */
   adherence: AdherenceSummary;
+  /** Liikuntatunnit kestona: arvio (suunnitelma + perusarvio) ja toteuma. */
+  hours: WeeklyHours;
 }
 
 export interface ReportInput {
@@ -111,5 +114,7 @@ export function periodReport(input: ReportInput): PeriodReport {
   const inPeriod = <T extends { date: ISODate }>(rows: T[]) => rows.filter((r) => r.date >= period.start && r.date <= period.end);
   const adherence = planAdherence(inPeriod(own(input.planned)), inPeriod(sessions), today);
 
-  return { period, group, allDays, validDates, days, evaluation, excluded, trackingStart: start, byCategory, adherence };
+  const hours = weeklyHours({ period, sessions, planned: own(input.planned), estimates, flags, types: input.types, today });
+
+  return { period, group, allDays, validDates, days, evaluation, excluded, trackingStart: start, byCategory, adherence, hours };
 }

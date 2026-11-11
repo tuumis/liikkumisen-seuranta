@@ -19,6 +19,7 @@ import { PlanSheet } from './PlanSheet';
 import { BackupReminder, SyncBar } from '../sync/SyncBar';
 import { FootballPanel } from '../football/FootballPanel';
 import { DayRow } from './DayRow';
+import { HoursCard } from './HoursCard';
 import { DaySheet } from './DaySheet';
 import { SessionEditor } from './SessionEditor';
 
@@ -122,55 +123,81 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     if (Math.abs(dx) > 60 && Math.abs(dy) < 40) go(dx < 0 ? 1 : -1);
   };
 
+  const summaryLines = profile && info && (
+    <>
+      <div className="pt-1 text-xs text-slate-600">
+        Kirjattu {week.count} {week.count === 1 ? 'kerta' : 'kertaa'} · kesto yhteensä {week.duration} min
+      </div>
+      {adherence.planned > 0 && (
+        <div className="text-xs text-slate-700">
+          Suunniteltu {adherence.planned} · tehty {adherence.done} · ei tehty {adherence.skipped}
+          {adherence.unconfirmed > 0 && ` · kuittaamatta ${adherence.unconfirmed}`}
+        </div>
+      )}
+    </>
+  );
+
   return (
-    <div className="space-y-4">
-      <UpdateBanner />
-      <SyncBar />
-      <BackupReminder onOpenSettings={onOpenSettings} />
+    <div className="space-y-4 lg:grid lg:grid-cols-12 lg:items-start lg:gap-6 lg:space-y-0">
+      <div className="space-y-3 empty:hidden lg:col-span-12">
+        <UpdateBanner />
+        <SyncBar />
+        <BackupReminder onOpenSettings={onOpenSettings} />
+      </div>
+
+      <div className="space-y-4 lg:col-span-7 xl:col-span-8">
       <Card>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => go(-1)} className="min-h-11 min-w-11 rounded-full text-xl text-slate-700 active:bg-slate-100" aria-label="Edellinen viikko">
+          <button type="button" onClick={() => go(-1)} className="min-h-11 min-w-11 rounded-full text-xl text-slate-700 hover:bg-slate-100 active:bg-slate-100" aria-label="Edellinen viikko">
             ‹
           </button>
-          <div className="flex-1 text-center">
+          <div className="flex-1 text-center lg:text-left">
             <div className="text-sm text-slate-600">Viikko {wk.week}</div>
-            <div className="text-base font-semibold text-slate-900">
+            <div className="text-base font-semibold text-slate-900 lg:text-lg">
               {formatDate(period.start, 'd.M.')} – {formatDate(period.end, 'd.M.yyyy')}
             </div>
           </div>
-          <button type="button" onClick={() => go(1)} className="min-h-11 min-w-11 rounded-full text-xl text-slate-700 active:bg-slate-100" aria-label="Seuraava viikko">
+          {!isCurrent && (
+            <Button variant="ghost" className="hidden lg:inline-flex lg:items-center" onClick={() => setWeekStart(startOfIsoWeek(today))}>
+              Tämä viikko
+            </Button>
+          )}
+          {profile && (
+            <Button className="hidden lg:inline-flex lg:items-center" onClick={() => setQuickAdd({})}>
+              + Lisää kerta
+            </Button>
+          )}
+          <button type="button" onClick={() => go(1)} className="min-h-11 min-w-11 rounded-full text-xl text-slate-700 hover:bg-slate-100 active:bg-slate-100" aria-label="Seuraava viikko">
             ›
           </button>
         </div>
         {!isCurrent && (
-          <div className="mt-1 text-center">
+          <div className="mt-1 text-center lg:hidden">
             <Button variant="ghost" onClick={() => setWeekStart(startOfIsoWeek(today))}>
               Tämä viikko
             </Button>
           </div>
         )}
         {profile && info && (
-          <div className="mt-3 space-y-1 border-t border-slate-100 pt-3 text-sm">
+          <div className="mt-3 space-y-1 border-t border-slate-100 pt-3 text-sm lg:hidden">
             {report && <GoalCard report={report} variant="compact" />}
-            <div className="pt-1 text-xs text-slate-600">
-              Kirjattu {week.count} {week.count === 1 ? 'kerta' : 'kertaa'} · kesto yhteensä {week.duration} min
-            </div>
-            {adherence.planned > 0 && (
-              <div className="text-xs text-slate-700">
-                Suunniteltu {adherence.planned} · tehty {adherence.done} · ei tehty {adherence.skipped}
-                {adherence.unconfirmed > 0 && ` · kuittaamatta ${adherence.unconfirmed}`}
-              </div>
-            )}
+            {summaryLines}
           </div>
         )}
         {!profile && <p className="mt-3 text-sm text-slate-600">Lisää profiili Asetukset-välilehdellä.</p>}
       </Card>
 
+      {profile && report && (
+        <div className="lg:hidden">
+          <HoursCard report={report} isCurrentWeek={isCurrent} />
+        </div>
+      )}
+
       {profile && (unconfirmed?.length ?? 0) > 0 && (
         <button
           type="button"
           onClick={() => setReviewOpen(true)}
-          className="flex w-full items-center gap-3 rounded-2xl bg-amber-50 p-3 text-left ring-1 ring-amber-200 active:bg-amber-100"
+          className="flex w-full items-center gap-3 rounded-2xl bg-amber-50 p-3 text-left ring-1 ring-amber-200 hover:bg-amber-100 active:bg-amber-100"
         >
           <span className="flex-1 text-sm text-amber-950">
             <strong>Käy viikko läpi</strong> · {unconfirmed!.length} {unconfirmed!.length === 1 ? 'kuittaamaton suunnitelma' : 'kuittaamatonta suunnitelmaa'}
@@ -206,12 +233,32 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
               />
             ))}
           </ol>
-          <p className="text-center text-xs text-slate-500">Pitkä painallus päivään: sairas- tai matkapäivä. Pyyhkäise vaihtaaksesi viikkoa.</p>
+          <p className="text-center text-xs text-slate-500 lg:hidden">Pitkä painallus päivään: sairas- tai matkapäivä. Pyyhkäise vaihtaaksesi viikkoa.</p>
+          <p className="hidden text-center text-xs text-slate-500 lg:block">Päivän ⋯ tai hiiren oikea painike: lisää kerta, sairas- tai matkapäivä.</p>
+        </>
+      )}
+      </div>
+
+      {profile && report && (
+        <div className="hidden space-y-4 lg:sticky lg:top-8 lg:col-span-5 lg:block xl:col-span-4">
+          <HoursCard report={report} isCurrentWeek={isCurrent} />
+          <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <h2 className="mb-3 text-base font-semibold text-slate-900">Suositusvertailu</h2>
+            <div className="space-y-1 text-sm">
+              <GoalCard report={report} variant="compact" />
+              {summaryLines}
+            </div>
+          </section>
+        </div>
+      )}
+
+      {profile && (
+        <>
 
           <button
             type="button"
             onClick={() => setQuickAdd({})}
-            className="fixed bottom-20 right-4 z-20 flex size-14 items-center justify-center rounded-full bg-green-700 text-3xl text-white shadow-lg active:bg-green-800 sm:right-[max(1rem,calc(50%-17rem))]"
+            className="fixed bottom-20 right-4 z-20 flex size-14 items-center justify-center rounded-full bg-green-700 text-3xl text-white shadow-lg active:bg-green-800 sm:right-[max(1rem,calc(50%-17rem))] lg:hidden"
             aria-label="Lisää kerta"
           >
             +

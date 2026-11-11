@@ -16,7 +16,7 @@ import { InstallHint } from './InstallHint';
 
 export function SettingsView({ profile, onProfileCreated }: { profile?: Profile; onProfileCreated: (id: string) => void }) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 lg:columns-2 lg:gap-6 lg:space-y-0 [&>*]:break-inside-avoid lg:[&>*]:mb-6">
       <ProfilesSection onProfileCreated={onProfileCreated} />
       {profile && <TemplateSection profile={profile} />}
       {profile && <EstimatesSection profile={profile} />}
