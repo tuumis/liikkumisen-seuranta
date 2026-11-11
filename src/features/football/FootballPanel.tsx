@@ -1,0 +1,303 @@
+// Jalkapallon lisätietopaneeli (SPEC 8). Kaikki valinnaisia; "Myöhemmin" ohittaa, ja kerta on silti tallessa (D3).
+// Viihtyminen ennen suoritusarviota: liikkumisen ilo on pysyvien tottumusten perusta.
+
+import { useEffect, useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import type { ActivityType, FocusTag, GameResult, Session } from '../../domain/types';
+import { repo, type FootballDetailsInput } from '../../db/repositories';
+import { Button, Field, inputClass } from '../../ui/components';
+import { Segmented, ToggleChip } from '../../ui/controls';
+import { dayLabel } from '../../ui/format';
+import { ENJOYMENT_LABEL, FOCUS_TAG_LABEL, RATING_LABEL } from '../../ui/labels';
+import { Sheet } from '../../ui/Sheet';
+import { useToast } from '../../ui/Toast';
+
+const PLAYED_PICKS = [10, 15, 20, 30, 40, 50, 60];
+
+type GameDraft = { opponent: string; goalsFor: string; goalsAgainst: string; playedMin: string };
+const toNum = (s: string) => (s.trim() === '' ? undefined : Number.isInteger(Number(s)) && Number(s) >= 0 ? Number(s) : NaN);
+const str = (n?: number) => (n === undefined ? '' : String(n));
+
+export function FootballPanel({ session, type, onClose }: { session: Session | null; type?: ActivityType; onClose: () => void }) {
+  const toast = useToast();
+  const kind = type?.footballKind;
+  const names = useLiveQuery(() => (session ? repo.footballNameSuggestions(session.profileId) : undefined), [session?.profileId]);
+
+  const [attendance, setAttendance] = useState<'full' | 'partial'>('full');
+  const [enjoyment, setEnjoyment] = useState<1 | 2 | 3 | undefined>();
+  const [rating, setRating] = useState<1 | 2 | 3 | 4 | 5 | undefined>();
+  const [tags, setTags] = useState<FocusTag[]>([]);
+  const [note, setNote] = useState('');
+  const [team, setTeam] = useState('');
+  const [opponent, setOpponent] = useState('');
+  const [gf, setGf] = useState('');
+  const [ga, setGa] = useState('');
+  const [played, setPlayed] = useState('');
+  const [eventName, setEventName] = useState('');
+  const [gamesCount, setGamesCount] = useState('');
+  const [games, setGames] = useState<GameDraft[]>([]);
+  const [error, setError] = useState<string>();
+  const [saving, setSaving] = useState(false);
+
+  // Avattaessa: olemassa olevat tiedot tai oletukset (oma joukkue = viimeksi käytetty).
+  const existing = useLiveQuery(async () => (session ? (await repo.getFootballDetails(session.id)) ?? null : undefined), [session?.id]);
+  useEffect(() => {
+    if (!session || existing === undefined) return;
+    const d = existing ?? undefined;
+    setAttendance(d?.attendance ?? 'full');
+    setEnjoyment(d?.enjoyment);
+    setRating(d?.parentRating);
+    setTags(d?.focusTags ?? []);
+    setNote(d?.ratingNote ?? '');
+    setTeam(d?.team ?? '');
+    setOpponent(d?.opponent ?? '');
+    setGf(str(d?.goalsFor));
+    setGa(str(d?.goalsAgainst));
+    setPlayed(str(session.playedMin));
+    setEventName(d?.eventName ?? '');
+    setGamesCount(str(d?.games?.length ? undefined : d?.gamesCount));
+    setGames(
+      (d?.games ?? []).map((g) => ({ opponent: g.opponent ?? '', goalsFor: str(g.goalsFor), goalsAgainst: str(g.goalsAgainst), playedMin: str(g.playedMin) })),
+    );
+    setError(undefined);
+  }, [session, existing]);
+
+  // Uudelle kerralle ehdotetaan viimeksi käytettyä omaa joukkuetta.
+  useEffect(() => {
+    if (existing === null && names?.teams[0] && kind !== 'training') setTeam((t) => t || names.teams[0]);
+  }, [existing, names, kind]);
+
+  if (!session || !type) return null;
+
+  async function save() {
+    const nums = { gf: toNum(gf), ga: toNum(ga), played: toNum(played), count: toNum(gamesCount) };
+    const rows: GameResult[] = games.map((g) => ({
+      opponent: g.opponent,
+      goalsFor: toNum(g.goalsFor),
+      goalsAgainst: toNum(g.goalsAgainst),
+      playedMin: toNum(g.playedMin),
+    }));
+    const bad = [...Object.values(nums), ...rows.flatMap((r) => [r.goalsFor, r.goalsAgainst, r.playedMin])].some((n) => Number.isNaN(n));
+    if (bad) return setError('Anna luvut kokonaislukuina');
+    if (nums.played !== undefined && nums.played > session!.durationMin) return setError('Pelatut minuutit eivät voi ylittää kestoa');
+    const input: FootballDetailsInput = {
+      attendance,
+      focusTags: tags,
+      parentRating: rating,
+      enjoyment,
+      ratingNote: note,
+      team,
+      opponent,
+      goalsFor: nums.gf,
+      goalsAgainst: nums.ga,
+      playedMin: nums.played,
+      eventName,
+      gamesCount: nums.count,
+      games: rows,
+    };
+    setSaving(true);
+    try {
+      await repo.saveFootballDetails(session!.id, input);
+      toast('Lisätiedot tallennettu');
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const list = (id: string, values?: string[]) => (
+    <datalist id={id}>
+      {values?.map((v) => (
+        <option key={v} value={v} />
+      ))}
+    </datalist>
+  );
+
+  return (
+    <Sheet open onClose={onClose} title={`${type.icon} ${type.name} · ${dayLabel(session.date)}`}>
+      <form
+        className="space-y-4"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
+        <p className="text-xs text-slate-500">Kaikki tiedot ovat valinnaisia. Kerta on jo tallennettu.</p>
+
+        <div>
+          <div className="mb-1 text-sm font-medium text-slate-700">Viihtyminen</div>
+          <Segmented<0 | 1 | 2 | 3>
+            label="Viihtyminen"
+            value={enjoyment ?? 0}
+            onChange={(v) => setEnjoyment(v === 0 || v === enjoyment ? undefined : v)}
+            options={([1, 2, 3] as const).map((v) => ({ value: v, label: ENJOYMENT_LABEL[v] }))}
+          />
+        </div>
+
+        <div>
+          <div className="mb-1 text-sm font-medium text-slate-700">Suoritus suhteessa omaan tavalliseen tasoon</div>
+          <div className="flex gap-1" role="radiogroup" aria-label="Suoritusarvio">
+            {([1, 2, 3, 4, 5] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                role="radio"
+                aria-checked={rating === v}
+                aria-label={`${v}: ${RATING_LABEL[v]}`}
+                onClick={() => setRating(rating === v ? undefined : v)}
+                className={`flex min-h-11 flex-1 items-center justify-center rounded-xl text-2xl ${rating !== undefined && v <= rating ? 'text-amber-500' : 'text-slate-300'} active:bg-slate-100`}
+              >
+                ★
+              </button>
+            ))}
+          </div>
+          <p className="mt-1 text-xs text-slate-600">{rating ? `${rating} – ${RATING_LABEL[rating]}` : 'Ei arviota. 3 = tavallinen oma taso.'}</p>
+          <p className="text-xs text-slate-400">Vanhemman arvio, ei mittaus. Ei vertailua muihin pelaajiin.</p>
+        </div>
+
+        {kind === 'training' && (
+          <div>
+            <div className="mb-1 text-sm font-medium text-slate-700">Treenin sisältö</div>
+            <div className="flex flex-wrap gap-2">
+              {(Object.keys(FOCUS_TAG_LABEL) as FocusTag[]).map((t) => (
+                <ToggleChip key={t} on={tags.includes(t)} onChange={(on) => setTags((cur) => (on ? [...cur, t] : cur.filter((x) => x !== t)))}>
+                  {FOCUS_TAG_LABEL[t]}
+                </ToggleChip>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div>
+          <div className="mb-1 text-sm font-medium text-slate-700">Osallistuminen</div>
+          <Segmented
+            label="Osallistuminen"
+            value={attendance}
+            onChange={setAttendance}
+            options={[
+              { value: 'full', label: 'Kokonaan' },
+              { value: 'partial', label: 'Osittain' },
+            ]}
+          />
+        </div>
+
+        {(kind === 'game' || kind === 'tournament') && (
+          <Field label="Oma joukkue">
+            <input className={inputClass} value={team} onChange={(e) => setTeam(e.target.value)} list="fb-teams" placeholder="esim. P2018 Valkoinen" maxLength={60} />
+            {list('fb-teams', names?.teams)}
+          </Field>
+        )}
+
+        {kind === 'game' && (
+          <>
+            <div>
+              <div className="mb-1 text-sm font-medium text-slate-700">Pelatut minuutit</div>
+              <div className="flex flex-wrap gap-2">
+                {PLAYED_PICKS.filter((m) => m <= session.durationMin).map((m) => (
+                  <ToggleChip key={m} on={played === String(m)} onChange={(on) => setPlayed(on ? String(m) : '')}>
+                    {m}
+                  </ToggleChip>
+                ))}
+                <input className="min-h-10 w-20 rounded-full border border-slate-300 px-3 text-sm" inputMode="numeric" value={played} onChange={(e) => setPlayed(e.target.value)} aria-label="Pelatut minuutit" placeholder="muu" />
+              </div>
+              <p className="mt-1 text-xs text-slate-500">Arvio lasketaan pelatuista minuuteista; vaihtopenkki ei kerrytä liikuntaa.</p>
+            </div>
+            <Field label="Vastustaja">
+              <input className={inputClass} value={opponent} onChange={(e) => setOpponent(e.target.value)} list="fb-opponents" maxLength={60} />
+              {list('fb-opponents', names?.opponents)}
+            </Field>
+            <div>
+              <div className="mb-1 text-sm font-medium text-slate-700">Tulos (oma joukkue – vastustaja)</div>
+              <div className="flex items-center gap-2">
+                <input className={`${inputClass} w-20 text-center`} inputMode="numeric" value={gf} onChange={(e) => setGf(e.target.value)} aria-label="Tehdyt maalit" />
+                <span className="text-slate-500">–</span>
+                <input className={`${inputClass} w-20 text-center`} inputMode="numeric" value={ga} onChange={(e) => setGa(e.target.value)} aria-label="Päästetyt maalit" />
+              </div>
+            </div>
+          </>
+        )}
+
+        {kind === 'tournament' && (
+          <>
+            <Field label="Turnauksen nimi">
+              <input className={inputClass} value={eventName} onChange={(e) => setEventName(e.target.value)} list="fb-events" maxLength={60} />
+              {list('fb-events', names?.events)}
+            </Field>
+            {games.length === 0 && (
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Pelien määrä">
+                  <input className={inputClass} inputMode="numeric" value={gamesCount} onChange={(e) => setGamesCount(e.target.value)} />
+                </Field>
+                <Field label="Pelatut min yhteensä">
+                  <input className={inputClass} inputMode="numeric" value={played} onChange={(e) => setPlayed(e.target.value)} />
+                </Field>
+              </div>
+            )}
+            {list('fb-opponents', names?.opponents)}
+            {games.map((g, i) => (
+              <div key={i} className="space-y-2 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-800">Peli {i + 1}</span>
+                  <button type="button" className="min-h-9 px-2 text-sm text-red-700" onClick={() => setGames((cur) => cur.filter((_, j) => j !== i))}>
+                    Poista
+                  </button>
+                </div>
+                <input
+                  className={inputClass}
+                  value={g.opponent}
+                  list="fb-opponents"
+                  placeholder="Vastustaja"
+                  aria-label={`Peli ${i + 1}: vastustaja`}
+                  onChange={(e) => setGames((cur) => cur.map((x, j) => (j === i ? { ...x, opponent: e.target.value } : x)))}
+                />
+                <div className="flex items-center gap-2">
+                  {(['goalsFor', 'goalsAgainst'] as const).map((k, idx) => (
+                    <span key={k} className="contents">
+                      {idx === 1 && <span className="text-slate-500">–</span>}
+                      <input
+                        className={`${inputClass} w-16 text-center`}
+                        inputMode="numeric"
+                        value={g[k]}
+                        aria-label={`Peli ${i + 1}: ${k === 'goalsFor' ? 'tehdyt' : 'päästetyt'}`}
+                        onChange={(e) => setGames((cur) => cur.map((x, j) => (j === i ? { ...x, [k]: e.target.value } : x)))}
+                      />
+                    </span>
+                  ))}
+                  <input
+                    className={`${inputClass} ml-auto w-24`}
+                    inputMode="numeric"
+                    value={g.playedMin}
+                    placeholder="pelattu"
+                    aria-label={`Peli ${i + 1}: pelatut minuutit`}
+                    onChange={(e) => setGames((cur) => cur.map((x, j) => (j === i ? { ...x, playedMin: e.target.value } : x)))}
+                  />
+                </div>
+              </div>
+            ))}
+            <Button variant="secondary" className="w-full" onClick={() => setGames((cur) => [...cur, { opponent: '', goalsFor: '', goalsAgainst: '', playedMin: '' }])}>
+              + peli
+            </Button>
+            {games.length > 0 && <p className="text-xs text-slate-500">Pelien määrä = rivien määrä. Pelattujen minuuttien summa on arvion laskentapohja.</p>}
+          </>
+        )}
+
+        <Field label="Huomio">
+          <input className={inputClass} value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} />
+        </Field>
+
+        {error && <p className="text-sm text-red-700">{error}</p>}
+        <div className="flex gap-2">
+          <Button type="submit" disabled={saving} className="flex-1">
+            Tallenna
+          </Button>
+          <Button variant="secondary" onClick={onClose}>
+            Myöhemmin
+          </Button>
+        </div>
+      </form>
+    </Sheet>
+  );
+}

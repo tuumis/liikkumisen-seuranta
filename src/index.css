@@ -1,0 +1,21 @@
+@import 'tailwindcss';
+
+/* Järjestelmäfontit: ei ulkoisia fontteja (SPEC 11). */
+@theme {
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Pitkä painallus ei avaa iOS:n tekstivalikkoa. */
+.no-callout {
+  -webkit-touch-callout: none;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+  overflow-x: hidden;
+}

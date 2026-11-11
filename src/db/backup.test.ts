@@ -1,0 +1,340 @@
+// Vaihe 6: varmuuskopio (C1–C4), tyhjennys (E4), synkronointi (F1–F8, F10) ja profiilin poisto.
+
+import 'fake-indexeddb/auto';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { AppDB } from './schema';
+import { createRepositories, type Repositories, type SessionInput } from './repositories';
+import {
+  buildBackup,
+  buildSyncFile,
+  clearAll,
+  importBackup,
+  markSent,
+  mergeSyncFile,
+  pendingCount,
+  purgeProfile,
+  toJson,
+  type BackupFile,
+} from './backup';
+import { canonicalJson, dataChecksum, sha256Hex, sha256HexSync } from '../domain/checksum';
+import { activityTypeId, plannedSessionId } from '../domain/ids';
+import { defaultPlanningThrough } from '../domain/planning';
+import { SYNCED_TABLES } from '../domain/migrations';
+import { sessionsCsv } from '../domain/csv';
+import { BUILT_IN_ACTIVITY_TYPES } from '../seed/activityTypes';
+
+let n = 0;
+const dbs: AppDB[] = [];
+async function device(name: string): Promise<{ db: AppDB; repo: Repositories; id: string }> {
+  const db = new AppDB(`backup-${name}-${++n}`);
+  dbs.push(db);
+  const repo = createRepositories(db);
+  await repo.initialize();
+  return { db, repo, id: await repo.deviceId() };
+}
+afterEach(async () => {
+  while (dbs.length) await dbs.pop()!.delete();
+});
+
+const TRAINING = activityTypeId('football_training');
+const sessionInput = (over: Partial<SessionInput & { profileId: string }> = {}) => ({
+  profileId: 'p1',
+  activityTypeId: TRAINING,
+  date: '2026-11-10',
+  durationMin: 75,
+  effort: 0 as const,
+  muscle: false,
+  bone: true,
+  ...over,
+});
+
+async function seedData(repo: Repositories) {
+  const p = await repo.createProfile({ name: 'Eetu', kind: 'child', birthYear: 2017, birthMonth: 5, color: '#16a34a' });
+  const s = await repo.createSession(sessionInput({ profileId: p.id }));
+  await repo.saveFootballDetails(s.id, { attendance: 'full', focusTags: ['passing'], parentRating: 4, team: 'P2018 Valkoinen' });
+  await repo.saveEstimate(p.id, { category: 'school_recess', label: 'Välitunnit ä ö', weekdayMin: 60, weekendMin: 0, shares: { light: 0.5, moderate: 0.25, vigorous: 0.05 } }, '2026-11-02');
+  await repo.createTemplateItem(p.id, { activityTypeId: TRAINING, weekdays: [2, 4], durationMin: 90, validFrom: '2026-08-01' }, '2026-11-11');
+  await repo.setDayFlag(p.id, '2026-11-09', 'sick');
+  await repo.updateSettings({ vigorousDayMin: 12 });
+  return { p, s };
+}
+
+async function dump(db: AppDB) {
+  const out: Record<string, unknown[]> = {};
+  for (const t of SYNCED_TABLES) out[t] = await db.table(t).toArray();
+  out.meta = (await db.meta.toArray()).filter((m) => m.key !== 'deviceId');
+  return out;
+}
+
+/** Muokkaa tiedostoa ja laske tarkistussumma uudelleen (simuloi kelvollista mutta virheellistä dataa). */
+async function resign(file: BackupFile, mutate: (f: BackupFile) => void): Promise<string> {
+  const f = structuredClone(file);
+  mutate(f);
+  f.checksum = await dataChecksum(f.data);
+  return toJson(f);
+}
+
+describe('tarkistussumma', () => {
+  it('puhdas SHA-256 = crypto.subtle', async () => {
+    for (const s of ['', 'abc', 'ä ö å € 😄', 'x'.repeat(1000), JSON.stringify({ a: 1 })]) {
+      expect(sha256HexSync(new TextEncoder().encode(s))).toBe(await sha256Hex(s));
+    }
+    expect(await sha256Hex('abc')).toBe('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+  });
+
+  it('kanoninen JSON: avaimet aakkosjärjestyksessä', () => {
+    expect(canonicalJson({ b: 1, a: { d: [{ y: 1, x: 2 }], c: undefined } })).toBe('{"a":{"d":[{"x":2,"y":1}]},"b":1}');
+  });
+});
+
+describe('varmuuskopio', () => {
+  it('C1: vienti → tyhjennys → tuonti → taulut samat', async () => {
+    const a = await device('c1');
+    await seedData(a.repo);
+    const before = await dump(a.db);
+    const file = await buildBackup(a.db);
+    expect(file).toMatchObject({ format: 'liikkumisseuranta-backup', schemaVersion: 1, appVersion: '0.1.0' });
+    expect(file.checksum).toMatch(/^sha256:[0-9a-f]{64}$/);
+
+    await clearAll(a.db);
+    await a.repo.initialize(); // laite aloittaa alusta (uusi laitetunniste)
+    await importBackup(a.db, toJson(file), () => {});
+    expect(await dump(a.db)).toEqual(before);
+  });
+
+  it('C2: käsin muutettu luku → tuonti hylätään tarkistussumman takia, tietokanta ei muutu', async () => {
+    const a = await device('c2');
+    await seedData(a.repo);
+    const text = toJson(await buildBackup(a.db)).replace('"durationMin": 75', '"durationMin": 76');
+    expect(text).toContain('"durationMin": 76');
+    await a.repo.createSession(sessionInput({ date: '2026-11-11' }));
+    const before = await dump(a.db);
+    await expect(importBackup(a.db, text, () => {})).rejects.toThrow(/Tarkistussumma/);
+    expect(await dump(a.db)).toEqual(before);
+  });
+
+  it('C3: tuonnin aikana virhe → tietokanta pysyy ennallaan', async () => {
+    const a = await device('c3');
+    await seedData(a.repo);
+    const file = await buildBackup(a.db);
+    // Kelvollinen tiedosto, jossa sama sisäänrakennetun lajin avain kahdesti → &key-indeksi kaatuu kesken lisäyksen.
+    const text = await resign(file, (f) => f.data.activityTypes!.push({ ...(f.data.activityTypes![0] as object), id: 'dup' }));
+    await a.repo.createSession(sessionInput({ date: '2026-11-12' }));
+    const before = await dump(a.db);
+    await expect(importBackup(a.db, text, () => {})).rejects.toThrow();
+    expect(await dump(a.db)).toEqual(before);
+  });
+
+  it('C4: ennen tuontia syntyy automaattinen varmuuskopio nykytilasta', async () => {
+    const a = await device('c4');
+    await seedData(a.repo);
+    const old = await buildBackup(a.db);
+    await a.repo.createSession(sessionInput({ date: '2026-11-13', note: 'uusin' }));
+    let safety: BackupFile | undefined;
+    let sessionsAtSafety = -1;
+    await importBackup(a.db, toJson(old), async (f) => {
+      safety = f;
+      sessionsAtSafety = await a.db.sessions.count();
+    });
+    expect(sessionsAtSafety).toBe(2); // kutsuttiin ennen muutoksia
+    expect(safety!.data.sessions!.some((s) => (s as { note?: string }).note === 'uusin')).toBe(true);
+    expect(await a.db.sessions.count()).toBe(1);
+  });
+
+  it('tuonti säilyttää tämän laitteen laitekentät', async () => {
+    const a = await device('dev-a');
+    const b = await device('dev-b');
+    await seedData(a.repo);
+    await b.repo.setDeviceRole('phone');
+    await importBackup(b.db, toJson(await buildBackup(a.db)), () => {});
+    expect(await b.repo.deviceId()).toBe(b.id);
+    expect(await b.repo.getDeviceRole()).toBe('phone');
+    expect(await b.db.profiles.count()).toBe(1);
+  });
+
+  it('väärä muoto, rikki JSON ja uudempi skeemaversio hylätään', async () => {
+    const a = await device('bad');
+    await expect(importBackup(a.db, '{', () => {})).rejects.toThrow(/JSON/);
+    await expect(importBackup(a.db, '{"format":"muu","schemaVersion":1}', () => {})).rejects.toThrow(/varmuuskopio/);
+    const newer = await resign(await buildBackup(a.db), (f) => (f.schemaVersion = 2));
+    await expect(importBackup(a.db, newer, () => {})).rejects.toThrow('Päivitä sovellus tällä laitteella ensin');
+  });
+
+  it('E4: "Tyhjennä kaikki tiedot" tyhjentää kaikki taulut', async () => {
+    const a = await device('e4');
+    await seedData(a.repo);
+    await clearAll(a.db);
+    for (const t of [...SYNCED_TABLES, 'meta']) expect(await a.db.table(t).count()).toBe(0);
+  });
+
+  it('CSV: yksi rivi per kerta, BOM ja puolipiste, ä ja ö säilyvät (C5)', async () => {
+    const a = await device('csv');
+    const { p, s } = await seedData(a.repo);
+    const csv = sessionsCsv({
+      profiles: [p],
+      sessions: await a.db.sessions.toArray(),
+      types: new Map(BUILT_IN_ACTIVITY_TYPES.map((t) => [t.id, t])),
+      details: await a.repo.footballDetailsFor([s.id]),
+    });
+    const lines = csv.slice(1).trim().split('\r\n');
+    expect(csv.charCodeAt(0)).toBe(0xfeff);
+    expect(lines).toHaveLength(2);
+    expect(lines[0].startsWith('Profiili;Päivä;Laji;Kategoria;Kesto (min)')).toBe(true);
+    expect(lines[1]).toBe('Eetu;10.11.2026;Jalkapallo – treeni;Harrastus;75;26;23;11;tehoprofiili;ei;kyllä;;kokonaan;P2018 Valkoinen;;;;;;4;;passing;');
+  });
+});
+
+describe('synkronointi PC ↔ puhelin', () => {
+  async function pair() {
+    const pc = await device('pc');
+    const phone = await device('phone');
+    await pc.repo.setDeviceRole('pc');
+    await phone.repo.setDeviceRole('phone');
+    return { pc, phone };
+  }
+  const send = async (from: { db: AppDB; id: string }, role: 'pc' | 'phone', to: { db: AppDB; id: string }) =>
+    mergeSyncFile(to.db, toJson(await buildSyncFile(from.db, from.id, role)), to.id);
+
+  it('F6: sisäänrakennetut lajit samat molemmilla; yhdistäminen ei luo kaksoislajeja', async () => {
+    const { pc, phone } = await pair();
+    const r = await send(pc, 'pc', phone);
+    expect(r).toMatchObject({ added: 0, updated: 0, deleted: 0 });
+    expect(await phone.db.activityTypes.count()).toBe(17);
+  });
+
+  it('F1: molemmat ajavat ensurePlanned offline-tilassa → yhdistämisen jälkeen 3 suunnitelmaa, ei 6', async () => {
+    const { pc, phone } = await pair();
+    const item = await pc.repo.createTemplateItem('p1', { activityTypeId: TRAINING, weekdays: [2, 4], durationMin: 90, validFrom: '2026-08-01' }, '2026-11-11');
+    await send(pc, 'pc', phone); // pohja puhelimelle
+    await phone.db.plannedSessions.clear(); // puhelin luo itse
+    await phone.repo.ensurePlanned('p1', defaultPlanningThrough('2026-11-11'), '2026-11-11');
+    expect(await phone.db.plannedSessions.count()).toBe(3);
+    await send(phone, 'phone', pc);
+    await send(pc, 'pc', phone);
+    expect(await pc.db.plannedSessions.count()).toBe(3);
+    expect(await phone.db.plannedSessions.count()).toBe(3);
+    expect(await pc.db.plannedSessions.get(plannedSessionId(item.id, '2026-11-12'))).toBeDefined();
+  });
+
+  it('F2: PC 80 min klo 10.00, puhelin 85 min klo 10.05 → molemmissa 85, 1 ristiriita', async () => {
+    const { pc, phone } = await pair();
+    const s = await pc.repo.createSession(sessionInput());
+    await send(pc, 'pc', phone);
+    await send(phone, 'phone', pc); // molemmat synkronoitu
+    await pc.db.sessions.update(s.id, { durationMin: 80, updatedAt: '2099-01-01T10:00:00.000Z', updatedBy: pc.id });
+    await phone.db.sessions.update(s.id, { durationMin: 85, updatedAt: '2099-01-01T10:05:00.000Z', updatedBy: phone.id });
+    const onPc = await send(phone, 'phone', pc);
+    expect(onPc.conflicts).toHaveLength(1);
+    expect(onPc.conflicts[0]).toMatchObject({ table: 'sessions', key: s.id, winner: 'incoming' });
+    expect(onPc.updated).toBe(1);
+    const onPhone = await send(pc, 'pc', phone);
+    expect(onPhone.conflicts).toHaveLength(0); // sama versio, ei enää ristiriitaa
+    expect((await pc.db.sessions.get(s.id))!.durationMin).toBe(85);
+    expect((await phone.db.sessions.get(s.id))!.durationMin).toBe(85);
+  });
+
+  it('F3: PC poistaa kerran → puhelimessa piilossa, eikä puhelimen lähetys palauta sitä', async () => {
+    const { pc, phone } = await pair();
+    const s = await pc.repo.createSession(sessionInput());
+    await send(pc, 'pc', phone);
+    await pc.repo.deleteSession(s.id);
+    const r = await send(pc, 'pc', phone);
+    expect(r.deleted).toBe(1);
+    expect(await phone.repo.sessionsInRange('p1', '2026-11-01', '2026-11-30')).toEqual([]);
+    await send(phone, 'phone', pc);
+    expect(await pc.repo.sessionsInRange('p1', '2026-11-01', '2026-11-30')).toEqual([]);
+  });
+
+  it('F4: puhelimen 2 kirjausta säilyvät "Päivitä PC:ltä" -toiminnossa ja odottavat siirtoa', async () => {
+    const { pc, phone } = await pair();
+    await markSent(phone.db);
+    await phone.repo.createSession(sessionInput({ date: '2026-11-10' }));
+    await phone.repo.createSession(sessionInput({ date: '2026-11-11' }));
+    await pc.repo.createSession(sessionInput({ date: '2026-11-12' }));
+    await send(pc, 'pc', phone);
+    expect(await phone.db.sessions.count()).toBe(3);
+    expect(await pendingCount(phone.db, phone.id)).toBe(2);
+    await markSent(phone.db);
+    expect(await pendingCount(phone.db, phone.id)).toBe(0);
+  });
+
+  it('F5: saman tiedoston tuonti kahdesti → toisella kerralla 0 uutta, 0 päivitettyä, 0 poistettua', async () => {
+    const { pc, phone } = await pair();
+    await seedData(pc.repo);
+    const text = toJson(await buildSyncFile(pc.db, pc.id, 'pc'));
+    const first = await mergeSyncFile(phone.db, text, phone.id);
+    expect(first.added).toBeGreaterThan(0);
+    const second = await mergeSyncFile(phone.db, text, phone.id);
+    expect(second).toMatchObject({ added: 0, updated: 0, deleted: 0, conflicts: [] });
+  });
+
+  it('F7: uudemman skeemaversion tiedosto hylätään, data ei muutu', async () => {
+    const { pc, phone } = await pair();
+    await seedData(pc.repo);
+    const f = await buildSyncFile(pc.db, pc.id, 'pc');
+    f.schemaVersion = 2;
+    f.checksum = await dataChecksum(f.data);
+    const before = await dump(phone.db);
+    await expect(mergeSyncFile(phone.db, toJson(f), phone.id)).rejects.toThrow('Päivitä sovellus tällä laitteella ensin');
+    expect(await dump(phone.db)).toEqual(before);
+  });
+
+  it('F8: yhdistämisen aikana virhe → tietokanta pysyy ennallaan', async () => {
+    const { pc, phone } = await pair();
+    await seedData(pc.repo);
+    await phone.repo.createSession(sessionInput({ date: '2026-11-01' }));
+    const f = await buildSyncFile(pc.db, pc.id, 'pc');
+    // Kaksi suunnitelmaa samalla pohjalla ja päivällä eri tunnisteilla → &[templateItemId+date] kaatuu.
+    const plan = f.data.plannedSessions![0] as Record<string, unknown>;
+    f.data.plannedSessions!.push({ ...plan, id: 'other-id' });
+    f.checksum = await dataChecksum(f.data);
+    const before = await dump(phone.db);
+    await expect(mergeSyncFile(phone.db, toJson(f), phone.id)).rejects.toThrow();
+    expect(await dump(phone.db)).toEqual(before);
+  });
+
+  it('F10: sama suunnitelma kuitataan molemmilla laitteilla → yhdistämisen jälkeen yksi kerta', async () => {
+    const { pc, phone } = await pair();
+    const item = await pc.repo.createTemplateItem('p1', { activityTypeId: TRAINING, weekdays: [2], durationMin: 90, validFrom: '2026-08-01' }, '2026-11-09');
+    await send(pc, 'pc', phone);
+    const planId = plannedSessionId(item.id, '2026-11-10');
+    await pc.repo.confirmPlanned(planId, '2026-11-11');
+    await phone.repo.confirmPlanned(planId, '2026-11-11');
+    await send(phone, 'phone', pc);
+    await send(pc, 'pc', phone);
+    expect(await pc.db.sessions.count()).toBe(1);
+    expect(await phone.db.sessions.count()).toBe(1);
+  });
+
+  it('väärän tyyppinen tiedosto hylätään', async () => {
+    const { pc, phone } = await pair();
+    await expect(mergeSyncFile(phone.db, toJson(await buildBackup(pc.db)), phone.id)).rejects.toThrow(/synkronointitiedosto/);
+  });
+});
+
+describe('profiilin poisto', () => {
+  it('tyhjennetyt poistomerkinnät: sisältö häviää ja poisto siirtyy toiselle laitteelle', async () => {
+    const pc = await device('purge-pc');
+    const phone = await device('purge-phone');
+    const { p, s } = await seedData(pc.repo);
+    await mergeSyncFile(phone.db, toJson(await buildSyncFile(pc.db, pc.id, 'pc')), phone.id);
+    expect(await phone.repo.listProfiles()).toHaveLength(1);
+
+    const n = await purgeProfile(pc.db, p.id, pc.id);
+    expect(n).toBeGreaterThan(5);
+    const tomb = await pc.db.profiles.get(p.id);
+    expect(Object.keys(tomb!).sort()).toEqual(['deletedAt', 'id', 'updatedAt', 'updatedBy']);
+    expect(Object.keys((await pc.db.footballDetails.get(s.id))!).sort()).toEqual(['deletedAt', 'sessionId', 'updatedAt', 'updatedBy']);
+    expect(JSON.stringify(await pc.db.sessions.toArray())).not.toContain('P2018');
+    expect(await pc.repo.listProfiles({ includeArchived: true })).toEqual([]);
+
+    const r = await mergeSyncFile(phone.db, toJson(await buildSyncFile(pc.db, pc.id, 'pc')), phone.id);
+    expect(r.deleted).toBeGreaterThan(5);
+    expect(await phone.repo.listProfiles({ includeArchived: true })).toEqual([]);
+    expect(JSON.stringify(await phone.db.estimates.toArray())).not.toContain('Välitunnit');
+    // Poistomerkinnät läpäisevät tuonnin validoinnin.
+    await expect(importBackup(phone.db, toJson(await buildBackup(pc.db)), () => {})).resolves.toBeDefined();
+  });
+});
+
+beforeEach(() => {});
