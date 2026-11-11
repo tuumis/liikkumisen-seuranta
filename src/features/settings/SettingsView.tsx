@@ -4,8 +4,8 @@ import { recommendationGroup } from '../../domain/groups';
 import type { Profile } from '../../domain/types';
 import { repo, type DeviceRole } from '../../db/repositories';
 import { requestPersistentStorage } from '../../db/storage';
-import { Button, Card, EstimateBadge } from '../../ui/components';
-import { CATEGORY_LABEL, GROUP_LABEL, MONTHS, MOVEMENT_GROUP_LABEL, pct, STRENGTH_LABEL } from '../../ui/labels';
+import { Button, Card } from '../../ui/components';
+import { GROUP_LABEL, MONTHS } from '../../ui/labels';
 import { today } from '../../ui/today';
 import { ProfileForm, type ProfileFormValues } from './ProfileForm';
 import { TemplateSection } from './TemplateSection';
@@ -14,6 +14,7 @@ import { ComparisonSection } from './ComparisonSection';
 import { BackupSection, PrivacySection, SyncSettingsSection } from './DataSection';
 import { InstallHint } from './InstallHint';
 import { AppearanceSection } from './AppearanceSection';
+import { ActivityTypesSection } from './ActivityTypesSection';
 
 export function SettingsView({ profile, onProfileCreated }: { profile?: Profile; onProfileCreated: (id: string) => void }) {
   return (
@@ -89,51 +90,6 @@ function ProfilesSection({ onProfileCreated }: { onProfileCreated: (id: string) 
           </li>
         ))}
       </ul>
-    </Card>
-  );
-}
-
-function ActivityTypesSection() {
-  const types = useLiveQuery(() => repo.listActivityTypes(), []);
-  const [open, setOpen] = useState(false);
-  return (
-    <Card
-      title="Liikkumismuodot"
-      action={
-        <Button variant="ghost" onClick={() => setOpen(!open)} aria-expanded={open}>
-          {open ? 'Piilota' : `Näytä (${types?.length ?? 0})`}
-        </Button>
-      }
-    >
-      <p className="text-sm text-slate-600">
-        Tehoprofiilit ovat sovelluksen lähtöoletuksia, eivät virallisia lukuja. Ne kertovat arviolta, kuinka suuri osa kestosta on kevyttä, reipasta ja rasittavaa. Muokkaus tulee myöhemmässä vaiheessa.
-      </p>
-      {open && (
-        <ul className="mt-3 divide-y divide-slate-100">
-          {types?.map((t) => (
-            <li key={t.id} className="py-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xl" aria-hidden>
-                  {t.icon}
-                </span>
-                <span className="font-medium text-slate-900">{t.name}</span>
-              </div>
-              <div className="mt-1 text-xs text-slate-600">
-                {CATEGORY_LABEL[t.category]} · {MOVEMENT_GROUP_LABEL[t.movementGroup]}
-                {t.usesPlayedMinutes && ' · pelatut minuutit'}
-              </div>
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-700">
-                <EstimateBadge />
-                <span>kevyt {pct(t.shares.light)}</span>
-                <span>reipas {pct(t.shares.moderate)}</span>
-                <span>rasittava {pct(t.shares.vigorous)}</span>
-                <span>lihas {STRENGTH_LABEL[t.muscleDefault]}</span>
-                <span>luusto {STRENGTH_LABEL[t.boneDefault]}</span>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
     </Card>
   );
 }

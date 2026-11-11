@@ -5,7 +5,7 @@
 import { Dexie, type Table } from 'dexie';
 import { CURRENT_SCHEMA_VERSION } from '../domain/migrations';
 import { dayFlagId, newId, sessionIdFromPlanned, SETTINGS_ID } from '../domain/ids';
-import { computeSessionMinutes } from '../domain/intensity';
+import { computeSessionMinutes, INTENSITY_PRESETS } from '../domain/intensity';
 import { DEFAULT_SETTINGS } from '../domain/recommendations';
 import { addDays } from '../domain/dates';
 import type {
@@ -21,6 +21,7 @@ import type {
   GameResult,
   HHmm,
   IntensityMinutes,
+  IntensityPreset,
   IntensityShares,
   ISODate,
   PlannedSession,
@@ -55,6 +56,8 @@ export interface SessionInput {
   effort: Effort;
   /** Käsin syötetyt minuutit; puuttuu → lasketaan tehoprofiilista. */
   manual?: IntensityMinutes;
+  /** Tehon esiasetus ("enimmäkseen kevyttä/reipasta/rasittavaa"); ponnistelukerrointa ei käytetä. */
+  intensityPreset?: IntensityPreset;
   muscle: boolean;
   bone: boolean;
   note?: string;
@@ -214,6 +217,49 @@ export function createRepositories(db: AppDB = defaultDb) {
     return t;
   }
 
+  /**
+   * Lajin tehoprofiilin ja vahvistavien oletusten muokkaus. Vanhat kerrat eivät muutu,
+   * koska niillä on oma sharesSnapshot (SPEC 5, B5).
+   */
+  async function updateActivityType(
+    id: UUID,
+    changes: Partial<Pick<ActivityType, 'shares' | 'muscleDefault' | 'boneDefault'>>,
+  ): Promise<ActivityType> {
+    const current = await getActivityType(id);
+    const next = await stamp({ ...current, ...changes, shares: { ...(changes.shares ?? current.shares) } });
+    await db.activityTypes.put(next);
+    return next;
+  }
+
+  /** Sisäänrakennetun lajin lähtöoletukset (SPEC 5 taulukko). */
+  async function restoreActivityTypeDefaults(id: UUID): Promise<ActivityType> {
+    const seed = BUILT_IN_ACTIVITY_TYPES.find((t) => t.id === id);
+    if (!seed) throw new Error('Lajilla ei ole lähtöoletusta');
+    return updateActivityType(id, { shares: { ...seed.shares }, muscleDefault: seed.muscleDefault, boneDefault: seed.boneDefault });
+  }
+
+  /** Kerrat, joihin "Laske uudelleen" vaikuttaisi: lajin profiililla lasketut, päivä ≥ from. */
+  async function recalculableSessions(typeId: UUID, from: ISODate): Promise<Session[]> {
+    const rows = live(await db.sessions.where('activityTypeId').equals(typeId).toArray());
+    return rows.filter((s) => s.date >= from && s.intensitySource === 'profile' && !s.intensityPreset);
+  }
+
+  /**
+   * "Laske uudelleen" (SPEC 5): valitun lajin kerrat alkaen päivästä `from` lasketaan lajin
+   * nykyisellä profiililla. Ei koske käsin syötettyjä eikä esiasetuksella kirjattuja kertoja.
+   */
+  async function recalculateSessions(typeId: UUID, from: ISODate): Promise<number> {
+    return db.transaction('rw', db.sessions, db.activityTypes, db.meta, async () => {
+      const type = await getActivityType(typeId);
+      const rows = await recalculableSessions(typeId, from);
+      for (const s of rows) {
+        const r = computeSessionMinutes(type, { durationMin: s.durationMin, playedMin: s.playedMin, effort: s.effort });
+        await db.sessions.put(await stamp({ ...s, minutes: r.minutes, sharesSnapshot: r.snapshot }));
+      }
+      return rows.length;
+    });
+  }
+
   // ---------- liikkumiskerrat (kerros 3) ----------
 
   /** Profiilin kerrat päiviltä from–to (mukaan luettuina). */
@@ -247,9 +293,13 @@ export function createRepositories(db: AppDB = defaultDb) {
     type: ActivityType,
     input: SessionInput,
     existing?: Session,
-  ): Pick<Session, 'intensitySource' | 'minutes' | 'sharesSnapshot'> {
-    const shares =
-      existing && existing.activityTypeId === type.id && existing.sharesSnapshot ? existing.sharesSnapshot : type.shares;
+  ): Pick<Session, 'intensitySource' | 'minutes' | 'sharesSnapshot' | 'intensityPreset'> {
+    if (input.intensityPreset && !input.manual) {
+      const r = computeSessionMinutes({ ...type, shares: INTENSITY_PRESETS[input.intensityPreset] }, { ...input, effort: 0 });
+      return { intensitySource: 'profile', minutes: r.minutes, sharesSnapshot: r.snapshot, intensityPreset: input.intensityPreset };
+    }
+    const keepSnapshot = existing && existing.activityTypeId === type.id && existing.sharesSnapshot && !existing.intensityPreset;
+    const shares = keepSnapshot ? existing.sharesSnapshot! : type.shares;
     const r = computeSessionMinutes({ ...type, shares }, input);
     return input.manual
       ? { intensitySource: 'manual', minutes: r.minutes }
@@ -286,7 +336,7 @@ export function createRepositories(db: AppDB = defaultDb) {
       if (!current || current.deletedAt) throw new Error('Kertaa ei löydy');
       const type = await getActivityType(input.activityTypeId);
       const next: Session = await stamp({ ...current });
-      for (const k of ['playedMin', 'sharesSnapshot', 'note', 'startTime'] as const) delete next[k];
+      for (const k of ['playedMin', 'sharesSnapshot', 'intensityPreset', 'note', 'startTime'] as const) delete next[k];
       Object.assign(next, {
         activityTypeId: type.id,
         date: input.date,
@@ -769,6 +819,10 @@ export function createRepositories(db: AppDB = defaultDb) {
     setProfileArchived,
     listActivityTypes,
     getActivityType,
+    updateActivityType,
+    restoreActivityTypeDefaults,
+    recalculableSessions,
+    recalculateSessions,
     sessionsInRange,
     recentActivityTypeIds,
     createSession,

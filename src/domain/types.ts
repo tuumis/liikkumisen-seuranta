@@ -35,6 +35,8 @@ export type MovementGroup =
   | 'other';
 export type StrengthDefault = 'yes' | 'ask' | 'no';
 export type Effort = -1 | 0 | 1; // kevyempi | tavallinen | kovempi
+/** Kirjauksessa valittu tehon esiasetus ("enimmäkseen …"); sovelluksen oma arvio. */
+export type IntensityPreset = 'light' | 'moderate' | 'vigorous';
 
 export interface IntensityShares {
   light: number;
@@ -150,6 +152,8 @@ export interface Session extends SyncFields {
   effort: Effort;
   intensitySource: 'profile' | 'manual';
   sharesSnapshot?: IntensityShares; // käytetty profiili, kun source = 'profile'
+  /** Kirjauksessa valittu esiasetus; silloin snapshot = esiasetuksen osuudet, eikä "Laske uudelleen" koske kertaa. */
+  intensityPreset?: IntensityPreset;
   minutes: IntensityMinutes; // tallennettu laskentatulos
   muscle: boolean;
   bone: boolean;

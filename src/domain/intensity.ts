@@ -1,6 +1,16 @@
 // Sovelluksen tehomalli (SPEC 5). Arvio, ei virallinen luku.
 
-import type { ActivityType, Effort, IntensityMinutes, IntensityShares } from './types';
+import type { ActivityType, Effort, IntensityMinutes, IntensityPreset, IntensityShares } from './types';
+
+/**
+ * Kirjauksessa valittavat tehon esiasetukset ("enimmäkseen …"). Sovelluksen omia arvioita,
+ * eivät virallisia lukuja; loppuosuus on paikallaanoloa (tauot, ohjeet).
+ */
+export const INTENSITY_PRESETS: Readonly<Record<IntensityPreset, IntensityShares>> = Object.freeze({
+  light: Object.freeze({ light: 0.75, moderate: 0.15, vigorous: 0 }),
+  moderate: Object.freeze({ light: 0.2, moderate: 0.65, vigorous: 0.1 }),
+  vigorous: Object.freeze({ light: 0.1, moderate: 0.35, vigorous: 0.5 }),
+});
 
 export const EFFORT_FACTOR: Readonly<Record<Effort, number>> = Object.freeze({
   [-1]: 0.75, // kevyempi

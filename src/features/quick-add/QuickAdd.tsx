@@ -5,17 +5,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { addDays } from '../../domain/dates';
-import type { ActivityType, Category, Effort, ISODate, Profile, Session } from '../../domain/types';
+import type { ActivityType, Category, Effort, IntensityMinutes, ISODate, Profile, Session } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { requestPersistentStorage } from '../../db/storage';
 import { Button, inputClass } from '../../ui/components';
-import { EFFORT_OPTIONS, Segmented, ToggleChip } from '../../ui/controls';
+import { ToggleChip } from '../../ui/controls';
+import { IntensityPicker, isPreset, type IntensityMode, type ManualDraft } from '../week/IntensityPicker';
 import { dayLabel } from '../../ui/format';
 import { CATEGORY_LABEL } from '../../ui/labels';
 import { Sheet } from '../../ui/Sheet';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
-import { dateSchema, durationSchema, optionalMinutes, showStrength, strengthDefaults } from '../week/sessionForm';
+import { dateSchema, durationSchema, manualSchema, optionalMinutes, showStrength, strengthDefaults } from '../week/sessionForm';
 
 const DURATIONS = [15, 30, 45, 60, 75, 90];
 const CATEGORY_ORDER: Category[] = ['hobby', 'school_pe', 'school_recess', 'commute', 'self_directed', 'family', 'other'];
@@ -58,6 +59,8 @@ export function QuickAdd({
   const [showAll, setShowAll] = useState(false);
   const [date, setDate] = useState<ISODate>(initialDate ?? today);
   const [effort, setEffort] = useState<Effort>(0);
+  const [mode, setMode] = useState<IntensityMode>('profile');
+  const [manual, setManual] = useState<ManualDraft>({ light: '', moderate: '', vigorous: '' });
   const [muscle, setMuscle] = useState(false);
   const [bone, setBone] = useState(false);
   const [note, setNote] = useState('');
@@ -74,6 +77,8 @@ export function QuickAdd({
     setDate(initialDate && initialDate <= today ? initialDate : today);
     setEffort(0);
     setNote('');
+    setMode('profile');
+    setManual({ light: '', moderate: '', vigorous: '' });
     setPlayed('');
     setCustom(null);
     setError(undefined);
@@ -140,6 +145,13 @@ export function QuickAdd({
     if (!day.success) return setError(day.error.issues[0].message);
     if (!pl.success) return setError('Tarkista pelatut minuutit');
     if (pl.data !== undefined && pl.data > dur.data) return setError('Pelatut minuutit eivät voi ylittää kestoa');
+    let manualMinutes: IntensityMinutes | undefined;
+    if (mode === 'manual') {
+      const m = manualSchema.safeParse(manual);
+      if (!m.success) return setError('Anna oman jaon minuutit kokonaislukuina');
+      if (m.data.light + m.data.moderate + m.data.vigorous > dur.data) return setError('Oman jaon minuutit ylittävät keston');
+      manualMinutes = m.data;
+    }
     setSaving(true);
     try {
       const s = await repo.createSession({
@@ -148,7 +160,9 @@ export function QuickAdd({
         date: day.data,
         durationMin: dur.data,
         playedMin: type.usesPlayedMinutes ? pl.data : undefined,
-        effort,
+        effort: mode === 'profile' ? effort : 0,
+        intensityPreset: isPreset(mode) ? mode : undefined,
+        manual: manualMinutes,
         muscle: showStrength(type.muscleDefault) && muscle,
         bone: showStrength(type.boneDefault) && bone,
         note,
@@ -292,7 +306,16 @@ export function QuickAdd({
                 aria-label="Päivä"
               />
             </div>
-            <Segmented label="Ponnistelu" value={effort} options={EFFORT_OPTIONS} onChange={setEffort} />
+            <IntensityPicker
+              type={type}
+              shares={type.shares}
+              mode={mode}
+              onMode={setMode}
+              effort={effort}
+              onEffort={setEffort}
+              manual={manual}
+              onManual={setManual}
+            />
             {(showStrength(type.muscleDefault) || showStrength(type.boneDefault)) && (
               <div className="flex flex-wrap gap-2">
                 {showStrength(type.muscleDefault) && (

@@ -20,6 +20,8 @@ export function csvCell(v: string | number | boolean | undefined | null): string
 
 export const toCsv = (rows: (string | number | boolean | undefined | null)[][]) => '﻿' + rows.map((r) => r.map(csvCell).join(';')).join('\r\n') + '\r\n';
 
+const PRESET_FI = { light: 'enimmäkseen kevyttä', moderate: 'enimmäkseen reipasta', vigorous: 'enimmäkseen rasittavaa' } as const;
+
 const fiDate = (d: string) => {
   const [y, m, day] = d.split('-');
   return `${Number(day)}.${Number(m)}.${y}`;
@@ -73,7 +75,7 @@ export function sessionsCsv(input: {
         s.minutes.light,
         s.minutes.moderate,
         s.minutes.vigorous,
-        s.intensitySource === 'manual' ? 'käsin' : 'tehoprofiili',
+        s.intensitySource === 'manual' ? 'käsin' : s.intensityPreset ? PRESET_FI[s.intensityPreset] : 'tehoprofiili',
         s.muscle,
         s.bone,
         s.playedMin,

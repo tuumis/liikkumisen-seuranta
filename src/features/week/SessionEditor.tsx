@@ -2,17 +2,17 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { computeSessionMinutes, mvpaOf } from '../../domain/intensity';
+import { computeSessionMinutes, INTENSITY_PRESETS, mvpaOf } from '../../domain/intensity';
 import type { Effort, IntensityMinutes, Session } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { Button, EstimateBadge, Field, inputClass } from '../../ui/components';
-import { EFFORT_OPTIONS, Segmented, ToggleChip } from '../../ui/controls';
+import { ToggleChip } from '../../ui/controls';
+import { IntensityPicker, isPreset, type IntensityMode } from './IntensityPicker';
 import { Sheet } from '../../ui/Sheet';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { dateSchema, durationSchema, manualSchema, optionalMinutes, showStrength } from './sessionForm';
 
-type Mode = 'profile' | 'manual';
 
 export function SessionEditor({
   session,
@@ -36,7 +36,7 @@ export function SessionEditor({
   const [muscle, setMuscle] = useState(false);
   const [bone, setBone] = useState(false);
   const [note, setNote] = useState('');
-  const [mode, setMode] = useState<Mode>('profile');
+  const [mode, setMode] = useState<IntensityMode>('profile');
   const [manual, setManual] = useState({ light: '', moderate: '', vigorous: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -52,7 +52,7 @@ export function SessionEditor({
     setMuscle(session.muscle);
     setBone(session.bone);
     setNote(session.note ?? '');
-    setMode(session.intensitySource);
+    setMode(session.intensitySource === 'manual' ? 'manual' : (session.intensityPreset ?? 'profile'));
     setManual({
       light: String(session.minutes.light),
       moderate: String(session.minutes.moderate),
@@ -70,16 +70,19 @@ export function SessionEditor({
   }, [confirmDelete]);
 
   const type = types?.find((t) => t.id === typeId);
+  // Lajin arviossa käytetään kerran omaa profiilia, jos laji ei vaihdu eikä kertaa kirjattu esiasetuksella.
+  const profileShares =
+    type && session && session.activityTypeId === type.id && session.sharesSnapshot && !session.intensityPreset ? session.sharesSnapshot : type?.shares;
 
   // Esikatselu: sama laskenta kuin tallennuksessa (kerran oma profiili, jos laji ei vaihdu).
   const preview: IntensityMinutes | undefined = useMemo(() => {
-    if (!type || !session || mode !== 'profile') return undefined;
+    if (!type || !session || !profileShares || mode === 'manual') return undefined;
     const d = durationSchema.safeParse(duration);
     const p = optionalMinutes.safeParse(played);
     if (!d.success || !p.success) return undefined;
-    const shares = session.activityTypeId === type.id && session.sharesSnapshot ? session.sharesSnapshot : type.shares;
-    return computeSessionMinutes({ ...type, shares }, { durationMin: d.data, playedMin: p.data, effort }).minutes;
-  }, [type, session, mode, duration, played, effort]);
+    const shares = isPreset(mode) ? INTENSITY_PRESETS[mode] : profileShares;
+    return computeSessionMinutes({ ...type, shares }, { durationMin: d.data, playedMin: p.data, effort: mode === 'profile' ? effort : 0 }).minutes;
+  }, [type, session, profileShares, mode, duration, played, effort]);
 
   async function save() {
     if (!session || !type) return;
@@ -106,7 +109,8 @@ export function SessionEditor({
         startTime: session.startTime,
         durationMin: d.data,
         playedMin: type.usesPlayedMinutes && p.success ? p.data : undefined,
-        effort,
+        effort: mode === 'profile' ? effort : 0,
+        intensityPreset: isPreset(mode) ? mode : undefined,
         manual: mode === 'manual' && m.success ? m.data : undefined,
         muscle: showStrength(type.muscleDefault, muscle) && muscle,
         bone: showStrength(type.boneDefault, bone) && bone,
@@ -170,11 +174,6 @@ export function SessionEditor({
             </Field>
           )}
 
-          <div>
-            <div className="mb-1 text-sm font-medium text-slate-700">Ponnistelu</div>
-            <Segmented label="Ponnistelu" value={effort} options={EFFORT_OPTIONS} onChange={setEffort} />
-          </div>
-
           {type && (showStrength(type.muscleDefault, muscle) || showStrength(type.boneDefault, bone)) && (
             <div className="flex flex-wrap gap-2">
               {showStrength(type.muscleDefault, muscle) && (
@@ -190,40 +189,27 @@ export function SessionEditor({
             </div>
           )}
 
-          <div>
-            <div className="mb-1 text-sm font-medium text-slate-700">Teho</div>
-            <Segmented
-              label="Tehon lähde"
-              value={mode}
-              onChange={setMode}
-              options={[
-                { value: 'profile', label: 'Arvio lajista' },
-                { value: 'manual', label: 'Syötä itse' },
-              ]}
-            />
-            {mode === 'profile' && preview && (
-              <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-700">
-                <EstimateBadge />
-                kevyt {preview.light} · reipas {preview.moderate} · rasittava {preview.vigorous} min (reipasta ja rasittavaa arviolta {mvpaOf(preview)} min)
-              </p>
-            )}
-            {mode === 'manual' && (
-              <div className="mt-2 grid grid-cols-3 gap-2">
-                {(['light', 'moderate', 'vigorous'] as const).map((k) => (
-                  <label key={k} className="block">
-                    <span className="mb-1 block text-xs text-slate-600">{k === 'light' ? 'Kevyt' : k === 'moderate' ? 'Reipas' : 'Rasittava'}</span>
-                    <input
-                      className={inputClass}
-                      inputMode="numeric"
-                      value={manual[k]}
-                      onChange={(e) => setManual({ ...manual, [k]: e.target.value })}
-                    />
-                  </label>
-                ))}
-                {errors.manual && <span className="col-span-3 text-sm text-red-700">{errors.manual}</span>}
-              </div>
-            )}
-          </div>
+          {type && profileShares && (
+            <div>
+              <IntensityPicker
+                type={type}
+                shares={profileShares}
+                mode={mode}
+                onMode={setMode}
+                effort={effort}
+                onEffort={setEffort}
+                manual={manual}
+                onManual={setManual}
+              />
+              {preview && (
+                <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-700">
+                  <EstimateBadge />
+                  kevyt {preview.light} · reipas {preview.moderate} · rasittava {preview.vigorous} min (reipasta ja rasittavaa arviolta {mvpaOf(preview)} min)
+                </p>
+              )}
+              {errors.manual && <p className="mt-1 text-sm text-red-700">{errors.manual}</p>}
+            </div>
+          )}
 
           <Field label="Muistiinpano">
             <input className={inputClass} value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} />
