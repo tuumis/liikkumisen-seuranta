@@ -65,7 +65,9 @@ export function QuickAdd({
   const [bone, setBone] = useState(false);
   const [note, setNote] = useState('');
   const [played, setPlayed] = useState('');
-  const [custom, setCustom] = useState<string | null>(null);
+  /** Valittu kesto (pikavalinta tai "Muu"); tallennus vasta Tallenna-painikkeesta. */
+  const [duration, setDuration] = useState('');
+  const [custom, setCustom] = useState(false);
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
 
@@ -80,7 +82,8 @@ export function QuickAdd({
     setMode('profile');
     setManual({ light: '', moderate: '', vigorous: '' });
     setPlayed('');
-    setCustom(null);
+    setDuration('');
+    setCustom(false);
     setError(undefined);
   }, [open, initialDate, today]);
 
@@ -136,9 +139,9 @@ export function QuickAdd({
     setPlayed('');
   }
 
-  async function save(durationInput: number | string) {
+  async function save() {
     if (!type || saving) return;
-    const dur = durationSchema.safeParse(durationInput);
+    const dur = durationSchema.safeParse(duration);
     const day = dateSchema(today).safeParse(date);
     const pl = optionalMinutes.safeParse(played);
     if (!dur.success) return setError(dur.error.issues[0].message);
@@ -226,6 +229,75 @@ export function QuickAdd({
             </p>
           ) : null}
 
+          <div>
+            <div className="mb-1 text-sm font-medium text-slate-700">Päivä</div>
+            <div className="flex flex-wrap items-center gap-2">
+              <ToggleChip on={date === today} onChange={() => setDate(today)}>
+                Tänään
+              </ToggleChip>
+              <ToggleChip on={date === yesterday} onChange={() => setDate(yesterday)}>
+                Eilen
+              </ToggleChip>
+              <input
+                type="date"
+                className="min-h-10 rounded-full border border-slate-300 bg-white px-3 text-sm"
+                value={date}
+                max={today}
+                onChange={(e) => e.target.value && setDate(e.target.value)}
+                aria-label="Päivä"
+              />
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-1 text-sm font-medium text-slate-700">{type.usesPlayedMinutes ? 'Kesto (koko tapahtuma)' : 'Kesto'}</div>
+            <div className="grid grid-cols-4 gap-2" role="radiogroup" aria-label="Kesto">
+              {DURATIONS.map((m) => {
+                const on = !custom && duration === String(m);
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => {
+                      setCustom(false);
+                      setDuration(String(m));
+                      setError(undefined);
+                    }}
+                    className={`min-h-12 rounded-xl text-base font-semibold ring-1 ${on ? 'bg-green-700 text-white ring-green-700' : 'bg-white text-slate-900 ring-slate-300 hover:bg-slate-50'}`}
+                  >
+                    {m}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                role="radio"
+                aria-checked={custom}
+                onClick={() => {
+                  setCustom(true);
+                  setDuration('');
+                }}
+                className={`col-span-2 min-h-12 rounded-xl text-sm font-medium ring-1 ${custom ? 'bg-green-700 text-white ring-green-700' : 'bg-white text-slate-900 ring-slate-300 hover:bg-slate-50'}`}
+              >
+                Muu
+              </button>
+            </div>
+            {custom && (
+              <input
+                className={`${inputClass} mt-2`}
+                inputMode="numeric"
+                autoFocus
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && void save()}
+                placeholder="minuutit"
+                aria-label="Kesto minuutteina"
+              />
+            )}
+          </div>
+
           {type.usesPlayedMinutes && (
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-slate-700">Pelatut minuutit (valinnainen)</span>
@@ -240,72 +312,8 @@ export function QuickAdd({
             </label>
           )}
 
-          <div>
-            <div className="mb-1 text-sm font-medium text-slate-700">{type.usesPlayedMinutes ? 'Kesto (koko tapahtuma)' : 'Kesto'} – valinta tallentaa</div>
-            <div className="grid grid-cols-4 gap-2">
-              {DURATIONS.map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  disabled={saving}
-                  onClick={() => save(m)}
-                  className="min-h-12 rounded-xl bg-green-700 text-base font-semibold text-white active:bg-green-800 disabled:opacity-60"
-                >
-                  {m}
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => setCustom(custom === null ? '' : null)}
-                className="col-span-2 min-h-12 rounded-xl bg-slate-100 text-sm font-medium text-slate-900 ring-1 ring-slate-300"
-                aria-expanded={custom !== null}
-              >
-                Muu
-              </button>
-            </div>
-            {custom !== null && (
-              <form
-                className="mt-2 flex gap-2"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void save(custom);
-                }}
-              >
-                <input
-                  className={inputClass}
-                  inputMode="numeric"
-                  autoFocus
-                  value={custom}
-                  onChange={(e) => setCustom(e.target.value)}
-                  placeholder="minuutit"
-                  aria-label="Kesto minuutteina"
-                />
-                <Button type="submit" disabled={saving}>
-                  Tallenna
-                </Button>
-              </form>
-            )}
-            {error && <p className="mt-2 text-sm text-red-700">{error}</p>}
-          </div>
-
           <div className="space-y-3 border-t border-slate-100 pt-3">
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Valinnaiset – valitse ennen kestoa</div>
-            <div className="flex flex-wrap items-center gap-2">
-              <ToggleChip on={date === today} onChange={() => setDate(today)}>
-                Tänään
-              </ToggleChip>
-              <ToggleChip on={date === yesterday} onChange={() => setDate(yesterday)}>
-                Eilen
-              </ToggleChip>
-              <input
-                type="date"
-                className="min-h-10 rounded-full border border-slate-300 px-3 text-sm"
-                value={date}
-                max={today}
-                onChange={(e) => e.target.value && setDate(e.target.value)}
-                aria-label="Päivä"
-              />
-            </div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Valinnaiset</div>
             <IntensityPicker
               type={type}
               shares={type.shares}
@@ -331,9 +339,19 @@ export function QuickAdd({
               </div>
             )}
             <input className={inputClass} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Muistiinpano" maxLength={200} aria-label="Muistiinpano" />
-            <Button variant="ghost" className="w-full" onClick={() => setType(null)}>
-              ← Vaihda laji
-            </Button>
+          </div>
+
+          {/* Aina näkyvä tallennus: kertoo päivän ja keston ennen tallennusta. */}
+          <div className="sticky bottom-0 -mx-4 space-y-2 border-t border-slate-200 bg-white px-4 pb-1 pt-3 lg:-mx-6 lg:px-6">
+            {error && <p className="text-sm text-red-700">{error}</p>}
+            <div className="flex gap-2">
+              <Button variant="ghost" className="shrink-0 px-3" onClick={() => setType(null)}>
+                ← Laji
+              </Button>
+              <Button className="flex-1" disabled={saving || !duration} onClick={() => void save()}>
+                {duration ? `Tallenna · ${dayLabel(date)} · ${duration} min` : 'Valitse kesto'}
+              </Button>
+            </div>
           </div>
         </div>
       )}

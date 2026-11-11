@@ -813,7 +813,7 @@ Kolme välilehteä: **Viikko**, **Analyysi** ja **Asetukset**. Yläreunassa ovat
 
 | Toiminto | Tavoite | Napautuksia |
 | --- | --- | --- |
-| Uusi kerta (tänään, viimeksi käytetty laji) | < 15 s | 3: + → laji → kesto (tallentuu valinnasta) |
+| Uusi kerta (tänään, viimeksi käytetty laji) | < 15 s | 4: + → laji → kesto → Tallenna |
 | Suunnitellun kuittaus "kuten suunniteltu" | < 2 s | 1 |
 | Viikon läpikäynti (7 suunniteltua) | < 60 s | 7–10 |
 | Viikon tilanteen näkeminen | heti | 0: Viikko-näkymän yläkortti |
@@ -829,8 +829,9 @@ Kolme välilehteä: **Viikko**, **Analyysi** ja **Asetukset**. Yläreunassa ovat
 ### Pikalisäys (alapaneeli)
 
 1. Laji: kuuden viimeksi käytetyn kuvakepainikkeet ja "Kaikki lajit".
-2. Kesto: pikavalinnat 15, 30, 45, 60, 75 ja 90 min sekä "Muu". Valinta tallentaa heti.
-3. Samassa paneelissa voi ennen keston valintaa valinnaisesti muuttaa päivää (oletus tänään), ponnistelua (kevyempi / tavallinen / kovempi), lihas- ja luustovalintaa (vain lajeille `yes` tai `ask`) ja muistiinpanoa.
+2. Päivä (oletus tänään) näkyy ylimpänä. Kesto: pikavalinnat 15, 30, 45, 60, 75 ja 90 min sekä "Muu". Valinta ei vielä tallenna.
+3. Samassa paneelissa voi valinnaisesti muuttaa tehoa (lajin arvio ja ponnistelu, "enimmäkseen kevyttä / reipasta / rasittavaa" tai oma jako), lihas- ja luustovalintaa (vain lajeille `yes` tai `ask`) ja muistiinpanoa.
+3b. Alareunassa on aina näkyvä Tallenna-painike, jossa lukee valittu päivä ja kesto ("Tallenna · Ke 11.11. · 60 min"). Muutettu käyttäjän pyynnöstä 11.11.2026, jotta väärälle päivälle ei kirjata vahingossa.
 4. Jalkapallossa tallennuksen jälkeen aukeaa lisätietopaneeli, jonka voi ohittaa ("Myöhemmin").
 
 Tallennuksen jälkeen näkyy ilmoitus "Tallennettu · Kumoa". Erillisiä vahvistusdialogeja ei ole.
@@ -944,7 +945,7 @@ A- ja B-kriteerit ovat automaattisia testejä (Vitest; B-sarjassa `fake-indexedd
 
 ### D. Käytettävyys (käsin)
 
-- [ ] **D1** Uusi kerta viimeksi käytetyllä lajilla vaatii 3 napautusta.
+- [ ] **D1** Uusi kerta viimeksi käytetyllä lajilla vaatii 4 napautusta (+ → laji → kesto → Tallenna).
 - [ ] **D2** Seitsemän suunnitellun kerran läpikäynti onnistuu alle 60 sekunnissa.
 - [ ] **D3** Jalkapallon lisätietopaneelin voi ohittaa, ja kerta on silti tallessa.
 - [ ] **D4** Jokainen tehomallista laskettu luku on käyttöliittymässä merkitty arvioksi.
