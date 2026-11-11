@@ -7,11 +7,13 @@ import { isoWeekday } from '../../domain/dates';
 import { CATEGORY_LABEL } from '../../ui/labels';
 import { dayLabel } from '../../ui/format';
 
+// CSS-muuttujat (index.css) vaihtuvat vaalean ja tumman teeman mukana.
 const C = {
-  logged: '#2a78d6', // kirjattu (kategorinen paikka 1)
-  estimate: '#86b6ef', // perusarvio (sama sävy, vaaleampi askel)
-  track: '#e2e8f0',
-  trackLine: '#94a3b8',
+  logged: 'var(--viz-logged)', // kirjattu (kategorinen paikka 1)
+  estimate: 'var(--viz-estimate-soft)', // perusarvio (sama sävy, eri askel)
+  track: 'var(--viz-track)',
+  trackLine: 'var(--viz-track-line)',
+  trackFill: 'var(--viz-track-fill)',
 };
 const WD = ['Ma', 'Ti', 'Ke', 'To', 'Pe', 'La', 'Su'];
 
@@ -102,7 +104,7 @@ export function HoursCard({ report, isCurrentWeek }: { report: PeriodReport; isC
               return (
                 <div key={d.date} className="flex flex-col items-center gap-1" title={`${dayLabel(d.date)}: toteuma ${formatHours(d.actualMin)}, arvio ${formatHours(d.expectedMin)}`}>
                   <div className="relative h-20 w-full max-w-7 border-b border-slate-300">
-                    {d.expectedMin > 0 && <div className="absolute inset-x-0 bottom-0 rounded-md border border-dashed" style={{ height: `${eh}%`, borderColor: C.trackLine, background: '#f8fafc' }} />}
+                    {d.expectedMin > 0 && <div className="absolute inset-x-0 bottom-0 rounded-md border border-dashed" style={{ height: `${eh}%`, borderColor: C.trackLine, background: C.trackFill }} />}
                     <div className="absolute inset-x-1 bottom-0 flex flex-col-reverse gap-px overflow-hidden rounded-t-[3px]" style={{ height: `${lh + ah}%` }}>
                       {lh > 0 && <div style={{ height: `${(lh / (lh + ah)) * 100}%`, background: C.logged }} />}
                       {ah > 0 && <div className="flex-1" style={{ background: C.estimate }} />}

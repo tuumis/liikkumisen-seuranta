@@ -22,7 +22,7 @@ export function Segmented<T extends string | number>({
           role="radio"
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
-          className={`min-h-10 rounded-lg px-2 text-sm font-medium ${value === o.value ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'}`}
+          className={`min-h-10 rounded-lg px-2 text-sm font-medium ${value === o.value ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-300' : 'text-slate-600'}`}
         >
           {o.label}
         </button>

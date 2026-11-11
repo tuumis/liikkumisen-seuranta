@@ -13,6 +13,7 @@ import { EstimatesSection } from './EstimatesSection';
 import { ComparisonSection } from './ComparisonSection';
 import { BackupSection, PrivacySection, SyncSettingsSection } from './DataSection';
 import { InstallHint } from './InstallHint';
+import { AppearanceSection } from './AppearanceSection';
 
 export function SettingsView({ profile, onProfileCreated }: { profile?: Profile; onProfileCreated: (id: string) => void }) {
   return (
@@ -22,6 +23,7 @@ export function SettingsView({ profile, onProfileCreated }: { profile?: Profile;
       {profile && <EstimatesSection profile={profile} />}
       <ComparisonSection />
       <ActivityTypesSection />
+      <AppearanceSection />
       <DeviceSection />
       <SyncSettingsSection />
       <BackupSection />

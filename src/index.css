@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* Tumma tila html.dark-luokalla (valinta Asetuksissa: järjestelmä / vaalea / tumma). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Järjestelmäfontit: ei ulkoisia fontteja (SPEC 11). */
 @theme {
   --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -18,4 +21,99 @@ html {
 body {
   @apply bg-slate-50 text-slate-900 antialiased;
   overflow-x: hidden;
+}
+
+/* Kaavioiden ja palkkien värit (kategoriset paikat 1–2, validoitu vaalealle ja tummalle pinnalle). */
+:root {
+  --viz-logged: #2a78d6;
+  --viz-estimate: #eb6834;
+  --viz-estimate-soft: #86b6ef;
+  --viz-track: #e2e8f0;
+  --viz-track-line: #94a3b8;
+  --viz-track-fill: #f8fafc;
+  --surface: #ffffff;
+}
+
+/*
+ * Tumma tila teemakerroksena: harmaasävyasteikko (slate) käännetään, jolloin tekstit, reunat ja
+ * taustat vaihtuvat yhdellä kertaa. Kortit (bg-white) saavat tumman pinnan, ja vaaleat
+ * korostesävyt (ilmoitukset, merkit) korvataan tummilla vastineilla. Vahvat painikevärit pysyvät.
+ */
+.dark {
+  --color-slate-50: #0b1220;
+  --color-slate-100: #1a2435;
+  --color-slate-200: #263246;
+  --color-slate-300: #354357;
+  --color-slate-400: #64748b;
+  --color-slate-500: #94a3b8;
+  --color-slate-600: #aab6c8;
+  --color-slate-700: #cbd5e1;
+  --color-slate-800: #e2e8f0;
+  --color-slate-900: #f1f5f9;
+  --color-slate-950: #f8fafc;
+
+  --viz-logged: #3987e5;
+  --viz-estimate: #d95926;
+  --viz-estimate-soft: #2f5f9e;
+  --viz-track: #263246;
+  --viz-track-line: #64748b;
+  --viz-track-fill: #0f1726;
+  --surface: #121a2a;
+}
+
+/* Elementit, joilla on oma dark:bg-*-luokka, jätetään ohituksen ulkopuolelle. */
+.dark .bg-white:not([class*='dark:bg-']) {
+  background-color: var(--surface);
+}
+
+/* Korostepinnat */
+.dark .bg-green-50,
+.dark .bg-green-100 {
+  background-color: #10291d;
+}
+.dark .bg-amber-50 {
+  background-color: #2a2010;
+}
+.dark .bg-amber-100 {
+  background-color: #3a2c12;
+}
+.dark .bg-red-50 {
+  background-color: #2c1416;
+}
+.dark .bg-sky-50 {
+  background-color: #0e2433;
+}
+.dark .ring-green-200 {
+  --tw-ring-color: #1f4d33;
+}
+.dark .ring-amber-200 {
+  --tw-ring-color: #5c4416;
+}
+.dark .ring-red-200,
+.dark .ring-red-300 {
+  --tw-ring-color: #6b2a2e;
+}
+.dark .ring-sky-200 {
+  --tw-ring-color: #1d4a66;
+}
+
+/* Korostetekstit tummalla pinnalla */
+.dark .text-green-800,
+.dark .text-green-900 {
+  color: #6ee7a0;
+}
+.dark .text-amber-800,
+.dark .text-amber-900,
+.dark .text-amber-950 {
+  color: #fcd38a;
+}
+.dark .text-red-700 {
+  color: #f87171;
+}
+.dark .text-red-900,
+.dark .text-red-950 {
+  color: #fecaca;
+}
+.dark .text-sky-950 {
+  color: #bae6fd;
 }

@@ -166,7 +166,7 @@ function TagBars({ tagged, counts }: { tagged: number; counts: Partial<Record<Fo
                 </span>
               </div>
               <div className="mt-0.5 h-2 rounded-sm bg-slate-100" aria-hidden>
-                <div className="h-full rounded-sm" style={{ width: `${share * 100}%`, background: '#2a78d6' }} />
+                <div className="h-full rounded-sm" style={{ width: `${share * 100}%`, background: 'var(--viz-logged)' }} />
               </div>
             </li>
           );

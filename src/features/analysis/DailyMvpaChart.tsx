@@ -6,11 +6,16 @@ import { Bar, BarChart, CartesianGrid, Rectangle, ReferenceLine, ResponsiveConta
 import type { DayTotals } from '../../domain/types';
 import { dayLabel } from '../../ui/format';
 import { today as todayFn } from '../../ui/today';
+import { useIsDark } from '../../ui/theme';
 
-export const SERIES = { logged: '#2a78d6', estimate: '#eb6834' } as const;
-const GRID = '#e2e8f0';
-const AXIS_TEXT = '#475569';
-const REF = '#334155';
+/** Div-elementeille (CSS-muuttujat vaihtuvat teeman mukana). */
+export const SERIES = { logged: 'var(--viz-logged)', estimate: 'var(--viz-estimate)' } as const;
+/** SVG-kaaviolle hex-arvot teeman mukaan (validoitu paletti, vaalea ja tumma askel). */
+const PALETTE = {
+  light: { logged: '#2a78d6', estimate: '#eb6834', grid: '#e2e8f0', axis: '#475569', ref: '#334155', cursor: '#f1f5f9' },
+  dark: { logged: '#3987e5', estimate: '#d95926', grid: '#263246', axis: '#aab6c8', ref: '#cbd5e1', cursor: '#1a2435' },
+};
+let P = PALETTE.light;
 
 interface Row {
   label: string;
@@ -34,7 +39,7 @@ function segment(which: 'logged' | 'estimate') {
         width={width}
         height={Math.max(0, Number(height) - gap)}
         radius={isTop ? [4, 4, 0, 0] : 0}
-        fill={SERIES[which]}
+        fill={P[which]}
         fillOpacity={payload.valid ? 1 : 0.35}
       />
     );
@@ -73,6 +78,7 @@ export function DailyMvpaChart({
   targetLabel: string;
 }) {
   const [table, setTable] = useState(false);
+  P = useIsDark() ? PALETTE.dark : PALETTE.light;
   const valid = new Set(validDates);
   const today = todayFn();
   const rows: Row[] = days.map((d) => ({
@@ -94,7 +100,7 @@ export function DailyMvpaChart({
           <span className="size-2.5 rounded-sm" style={{ background: SERIES.estimate }} aria-hidden /> Perusarvio
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-px w-4" style={{ background: REF }} aria-hidden /> {targetLabel}
+          <span className="h-px w-4 bg-slate-700" aria-hidden /> {targetLabel}
         </span>
       </div>
       {table ? (
@@ -122,13 +128,13 @@ export function DailyMvpaChart({
         <div className="h-52 w-full" role="img" aria-label={`Päivittäinen reipas ja rasittava liikkuminen, ${targetLabel}`}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: -16 }} barCategoryGap="25%">
-              <CartesianGrid vertical={false} stroke={GRID} strokeWidth={1} />
-              <XAxis dataKey="label" tick={{ fontSize: 11, fill: AXIS_TEXT }} tickLine={false} axisLine={{ stroke: GRID }} interval={0} tickFormatter={(v: string) => v.split(' ')[0]} />
-              <YAxis tick={{ fontSize: 11, fill: AXIS_TEXT }} tickLine={false} axisLine={false} allowDecimals={false} domain={[0, Math.ceil(max / 15) * 15]} />
-              <Tooltip content={<TooltipBox />} cursor={{ fill: '#f1f5f9' }} />
+              <CartesianGrid vertical={false} stroke={P.grid} strokeWidth={1} />
+              <XAxis dataKey="label" tick={{ fontSize: 11, fill: P.axis }} tickLine={false} axisLine={{ stroke: P.grid }} interval={0} tickFormatter={(v: string) => v.split(' ')[0]} />
+              <YAxis tick={{ fontSize: 11, fill: P.axis }} tickLine={false} axisLine={false} allowDecimals={false} domain={[0, Math.ceil(max / 15) * 15]} />
+              <Tooltip content={<TooltipBox />} cursor={{ fill: P.cursor }} />
               <Bar dataKey="logged" stackId="mvpa" maxBarSize={24} shape={LoggedShape} isAnimationActive={false} />
               <Bar dataKey="estimate" stackId="mvpa" maxBarSize={24} shape={EstimateShape} isAnimationActive={false} />
-              <ReferenceLine y={target} stroke={REF} strokeWidth={1} ifOverflow="extendDomain" />
+              <ReferenceLine y={target} stroke={P.ref} strokeWidth={1} ifOverflow="extendDomain" />
             </BarChart>
           </ResponsiveContainer>
         </div>

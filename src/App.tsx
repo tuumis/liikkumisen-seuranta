@@ -145,7 +145,7 @@ export default function App() {
                     role="tab"
                     aria-selected={active}
                     onClick={() => select(p.id)}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium ${active ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50'}`}
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium ${active ? 'bg-slate-900 text-white dark:bg-green-700' : 'text-slate-700 hover:bg-slate-50'}`}
                   >
                     <span className="size-3 rounded-full ring-2 ring-white/60" style={{ backgroundColor: p.color }} aria-hidden />
                     {p.name}
@@ -172,7 +172,7 @@ export default function App() {
                   role="tab"
                   aria-selected={active}
                   onClick={() => select(p.id)}
-                  className={`flex min-h-9 shrink-0 items-center gap-2 rounded-full px-3 text-sm font-medium ring-1 ${active ? 'bg-slate-900 text-white ring-slate-900' : 'bg-white text-slate-800 ring-slate-300'}`}
+                  className={`flex min-h-9 shrink-0 items-center gap-2 rounded-full px-3 text-sm font-medium ring-1 ${active ? 'bg-slate-900 text-white ring-slate-900 dark:bg-green-700 dark:ring-green-700' : 'bg-white text-slate-800 ring-slate-300'}`}
                 >
                   <span className="size-2.5 rounded-full" style={{ backgroundColor: p.color }} aria-hidden />
                   {p.name}

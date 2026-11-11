@@ -20,7 +20,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-30 flex items-end justify-center lg:items-center lg:p-6" role="presentation">
-      <div className="absolute inset-0 bg-slate-900/40" onClick={onClose} aria-hidden />
+      <div className="absolute inset-0 bg-slate-900/40 dark:bg-black/60" onClick={onClose} aria-hidden />
       <div
         ref={panel}
         role="dialog"
