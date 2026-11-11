@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { addDays, isoWeek, startOfIsoWeek, weekPeriod } from '../../domain/dates';
-import { APP_INTERPRETATIONS, RECOMMENDATIONS, RECOMMENDATIONS_VERSION, type Rule } from '../../domain/recommendations';
+import { APP_INTERPRETATIONS, RECOMMENDATIONS, RECOMMENDATIONS_VERSION, VIGOROUS_DAY_BY_AGE_DEFAULT, type Rule } from '../../domain/recommendations';
 import type { PeriodReport } from '../../domain/report';
 import type { ISODate, Profile, SkipReason } from '../../domain/types';
 import { Button, Card } from '../../ui/components';
@@ -247,7 +247,9 @@ function Rationale() {
           </ul>
           <h3 className="mt-3 text-sm font-semibold text-slate-800">Sovelluksen omat tulkinnat</h3>
           <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-slate-700">
-            <li>Rasittava päivä: vähintään {APP_INTERPRETATIONS.VIGOROUS_DAY_MIN} min rasittavaa (oletus; muokattavissa asetuksissa). Suositus ei anna minuuttirajaa.</li>
+            <li>
+              Rasittava päivä: suositus ei anna päivälle minuuttirajaa. Raja on oma tavoite iän mukaan (esim. 7 v. 15 min, 10 v. {VIGOROUS_DAY_BY_AGE_DEFAULT['10']} min, 17 v. {VIGOROUS_DAY_BY_AGE_DEFAULT['17']} min) tai kiinteä (oletus {APP_INTERPRETATIONS.VIGOROUS_DAY_MIN} min); muokattavissa asetuksissa.
+            </li>
             <li>Aikuisten "2 kertaa viikossa" lasketaan erillisinä päivinä.</li>
             <li>Tehoprofiilit (kuinka suuri osa treenistä on reipasta) ovat sovelluksen arvioita, eivät virallisia lukuja.</li>
             <li>Perusarvio täyttää kategorian vain päivinä, joille siinä ei ole kirjauksia, eikä se koskaan tuota rasittavaa eikä vahvistavaa päivää.</li>

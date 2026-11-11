@@ -75,12 +75,15 @@ export function GoalCard({ report, variant }: { report: PeriodReport; variant: '
         <StatusChip m={main} shortfall={aboutMinutes(main, 'min/pv')} kind={kind} />
         {both(s.mvpaAvg, 'min/pv')}
         <p className="text-sm text-slate-800">
-          Rasittava {s.vigorousDays.actual}/{r.vigorousDaysPerWeek.value} · Lihas {s.muscleDays.actual}/{r.muscleDaysPerWeek.value} · Luusto {s.boneDays.actual}/
+          Rasittava (≥ {report.vigorousDay.min} min) {s.vigorousDays.actual}/{r.vigorousDaysPerWeek.value} · Lihas {s.muscleDays.actual}/{r.muscleDaysPerWeek.value} · Luusto {s.boneDays.actual}/
           {r.boneDaysPerWeek.value}
         </p>
         {full && (
           <ul className="space-y-1 text-xs text-slate-600">
-            <li>Rasittavat päivät: vähintään {settings.vigorousDayMin} min rasittavaa (raja on sovelluksen oma tulkinta), vain kirjatuista.</li>
+            <li>
+              Rasittavat päivät: vähintään {report.vigorousDay.min} min rasittavaa
+              {report.vigorousDay.rule === 'age' ? ` (oma tavoite ${report.vigorousDay.age} v.)` : ' (kiinteä raja)'}, vain kirjatuista. Suositus ei anna päivälle minuuttirajaa.
+            </li>
             <li>Lihaksia ja luustoa vahvistavat päivät: vain kirjatuista kerroista.</li>
             <li>
               Aktiivisia päiviä (≥ {r.mvpaAvgMinPerDay.value} min): kirjattu {s.activeDays.logged}/{ev.n}

@@ -88,7 +88,8 @@ describe('profiilit ja poistomerkinnät', () => {
   });
 
   it('asetukset: oletukset ja synkronoituva rivi', async () => {
-    expect(await repo.getSettings()).toEqual({ vigorousDayMin: 10, primaryView: 'logged_plus_estimate', backupReminderDays: 30 });
+    expect(await repo.getSettings()).toMatchObject({ vigorousDayMin: 10, vigorousDayRule: 'age', primaryView: 'logged_plus_estimate', backupReminderDays: 30 });
+    expect((await repo.getSettings()).vigorousDayByAge['9']).toBe(20);
     await repo.updateSettings({ vigorousDayMin: 15 });
     const row = await db.settings.get('settings');
     expect(row).toMatchObject({ id: 'settings', vigorousDayMin: 15, updatedBy: await repo.deviceId() });

@@ -115,3 +115,30 @@ describe('tilan sanoitus (7.7)', () => {
     expect(aboutMinutes(measure(52.4, 60), 'min/pv')).toBe('noin 8 min/pv');
   });
 });
+
+describe('rasittavan päivän raja iän mukaan (oma tavoite)', () => {
+  it('taulukko, rajat ja kiinteä sääntö', async () => {
+    const { vigorousDayThreshold } = await import('./vigorous');
+    const s = { ...DEFAULT_SETTINGS };
+    const p = (birthYear: number) => ({ birthYear, birthMonth: 1 });
+    expect(vigorousDayThreshold(s, p(2017), '2026-11-15')).toEqual({ min: 20, rule: 'age', age: 9 });
+    expect(vigorousDayThreshold(s, p(2010), '2026-11-15')).toMatchObject({ min: 35, age: 16 });
+    expect(vigorousDayThreshold(s, p(2021), '2026-11-15')).toMatchObject({ min: 15, age: 5 }); // alle 7 → 7 v rivi
+    expect(vigorousDayThreshold(s, p(2000), '2026-11-15')).toMatchObject({ min: 35, age: 26 }); // yli 17 → 17 v rivi
+    expect(vigorousDayThreshold({ ...s, vigorousDayRule: 'fixed', vigorousDayMin: 12 }, p(2017), '2026-11-15')).toEqual({ min: 12, rule: 'fixed' });
+    // Syntymäpäivä oletetaan kuun 15. päiväksi: 2017/11 täyttää 9 v vasta 15.11.
+    expect(vigorousDayThreshold(s, { birthYear: 2017, birthMonth: 11 }, '2026-11-14')).toMatchObject({ min: 18, age: 8 });
+  });
+
+  it('jakson arviointi käyttää iän mukaista rajaa (9 v → 20 min)', () => {
+    const minutes = (v: number) => ({ light: 0, moderate: 30, vigorous: v });
+    const days = ['2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12'];
+    const vig = [15, 20, 25, 19];
+    const sessions = days.map((date, i) => session({ date, minutes: minutes(vig[i]) }));
+    const r = periodReport(input({ profile: profile({ createdAt: '2026-11-01T10:00:00.000Z', birthYear: 2017, birthMonth: 1 }), sessions }));
+    expect(r.vigorousDay).toEqual({ min: 20, rule: 'age', age: 9 });
+    expect(r.evaluation.schoolAge!.vigorousDays.actual).toBe(2);
+    const fixed = periodReport(input({ profile: profile({ createdAt: '2026-11-01T10:00:00.000Z', birthYear: 2017, birthMonth: 1 }), sessions, settings: { ...DEFAULT_SETTINGS, vigorousDayRule: 'fixed' } }));
+    expect(fixed.evaluation.schoolAge!.vigorousDays.actual).toBe(4); // raja 10 min
+  });
+});

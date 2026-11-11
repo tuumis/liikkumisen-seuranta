@@ -786,9 +786,16 @@ export function createRepositories(db: AppDB = defaultDb) {
 
   async function getSettings(): Promise<Settings> {
     const row = await db.settings.get(SETTINGS_ID);
-    if (!row || row.deletedAt) return { ...DEFAULT_SETTINGS };
-    const { vigorousDayMin, primaryView, backupReminderDays } = row;
-    return { vigorousDayMin, primaryView, backupReminderDays };
+    const d = DEFAULT_SETTINGS;
+    if (!row || row.deletedAt) return { ...d, vigorousDayByAge: { ...d.vigorousDayByAge } };
+    // Uudet kentät oletuksineen (vanhemmissa riveissä niitä ei ole).
+    return {
+      vigorousDayMin: row.vigorousDayMin ?? d.vigorousDayMin,
+      vigorousDayRule: row.vigorousDayRule ?? d.vigorousDayRule,
+      vigorousDayByAge: { ...(row.vigorousDayByAge ?? d.vigorousDayByAge) },
+      primaryView: row.primaryView ?? d.primaryView,
+      backupReminderDays: row.backupReminderDays ?? d.backupReminderDays,
+    };
   }
 
   async function updateSettings(changes: Partial<Settings>): Promise<void> {

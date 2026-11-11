@@ -216,7 +216,12 @@ export interface MetaRow {
 // 'plannedThrough:<profileId>', 'lastExportAt', 'lastSyncAt', 'syncFolderHandle'
 
 export interface Settings {
-  vigorousDayMin: number; // oletus 10
+  /** Kiinteä rasittavan päivän raja (min), kun vigorousDayRule = 'fixed'; oletus 10. */
+  vigorousDayMin: number;
+  /** Rasittavan päivän raja: iän mukaan (taulukko) tai kiinteä. Oletus 'age'. */
+  vigorousDayRule: 'age' | 'fixed';
+  /** Ikä (v) → rasittavaa vähintään (min/pv). Käyttäjän oma tavoite, ei virallinen suositus. */
+  vigorousDayByAge: Record<string, number>;
   primaryView: 'logged_plus_estimate' | 'logged';
   backupReminderDays: number; // oletus 30
 }

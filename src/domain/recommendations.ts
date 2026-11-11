@@ -132,8 +132,28 @@ export const APP_INTERPRETATIONS = deepFreeze({
   ADULT_MAX_AGE: 64,
 });
 
+/**
+ * Rasittavan päivän ikäkohtainen raja (min/pv). Käyttäjän antama oma tai valmentajan tavoite
+ * (11.11.2026), ei virallinen suositus: OKM 2021:50 ei anna rasittavalle päivälle minuuttirajaa.
+ */
+export const VIGOROUS_DAY_BY_AGE_DEFAULT: Readonly<Record<string, number>> = deepFreeze({
+  '7': 15,
+  '8': 18,
+  '9': 20,
+  '10': 22,
+  '11': 25,
+  '12': 25,
+  '13': 30,
+  '14': 30,
+  '15': 30,
+  '16': 35,
+  '17': 35,
+});
+
 export const DEFAULT_SETTINGS = deepFreeze({
   vigorousDayMin: APP_INTERPRETATIONS.VIGOROUS_DAY_MIN,
+  vigorousDayRule: 'age' as const,
+  vigorousDayByAge: VIGOROUS_DAY_BY_AGE_DEFAULT as Record<string, number>,
   primaryView: 'logged_plus_estimate' as const,
   backupReminderDays: 30,
 });

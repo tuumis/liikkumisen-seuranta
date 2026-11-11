@@ -4,6 +4,7 @@
 
 import { planAdherence } from './adherence';
 import { weeklyHours, type WeeklyHours } from './hours';
+import { vigorousDayThreshold, type VigorousThreshold } from './vigorous';
 import { dayTotals, evaluatePeriod, trackingStart, validDays } from './aggregate';
 import { datesBetween } from './dates';
 import { periodGroup, type PeriodGroupInfo } from './groups';
@@ -55,6 +56,8 @@ export interface PeriodReport {
   adherence: AdherenceSummary;
   /** Liikuntatunnit kestona: arvio (suunnitelma + perusarvio) ja toteuma. */
   hours: WeeklyHours;
+  /** Rasittavan päivän raja, jolla rasittavat päivät laskettiin (iän mukaan tai kiinteä). */
+  vigorousDay: VigorousThreshold;
 }
 
 export interface ReportInput {
@@ -94,7 +97,9 @@ export function periodReport(input: ReportInput): PeriodReport {
   }
 
   const group = periodGroup(profile, period);
-  const evaluation = evaluatePeriod(group.group, days, input.settings);
+  // Rasittavan päivän raja jakson viimeisen päivän iän mukaan (kuten suositusryhmä).
+  const vigorousDay = vigorousDayThreshold(input.settings, profile, period.end);
+  const evaluation = evaluatePeriod(group.group, days, { ...input.settings, vigorousDayMin: vigorousDay.min });
 
   const acc = new Map<Category, { logged: IntensityMinutes; estimate: IntensityMinutes }>();
   for (const d of days) {
@@ -116,5 +121,5 @@ export function periodReport(input: ReportInput): PeriodReport {
 
   const hours = weeklyHours({ period, sessions, planned: own(input.planned), estimates, flags, types: input.types, today });
 
-  return { period, group, allDays, validDates, days, evaluation, excluded, trackingStart: start, byCategory, adherence, hours };
+  return { period, group, allDays, validDates, days, evaluation, excluded, trackingStart: start, byCategory, adherence, hours, vigorousDay };
 }
