@@ -142,6 +142,12 @@ export const IconSync = (p: IconProps) => (
     <path d="M20.5 19.5V15H16" />
   </svg>
 );
+export const IconSearch = (p: IconProps) => (
+  <svg {...base(p)}>
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="m20 20-4.2-4.2" />
+  </svg>
+);
 export const IconSun = (p: IconProps) => (
   <svg {...base(p)}>
     <circle cx="12" cy="12" r="3.8" />

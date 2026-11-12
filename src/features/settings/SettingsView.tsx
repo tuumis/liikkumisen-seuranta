@@ -21,7 +21,7 @@ import { ActivityTypesSection } from './ActivityTypesSection';
 
 export type SettingsSectionId = 'profiles' | 'routine' | 'everyday' | 'goals' | 'devices' | 'appearance' | 'privacy';
 
-const SECTIONS: { id: SettingsSectionId; Icon: typeof IconUser; title: string; text: string; needsProfile?: boolean }[] = [
+export const SETTINGS_SECTIONS: { id: SettingsSectionId; Icon: typeof IconUser; title: string; text: string; needsProfile?: boolean }[] = [
   { id: 'profiles', Icon: IconUser, title: 'Profiilit', text: 'Lapset ja aikuiset, syntymävuosi ja koulun aloitus' },
   { id: 'routine', Icon: IconRepeat, title: 'Viikkorytmi', text: 'Toistuvat treenit ja koululiikunta, jotka kuitataan viikolla', needsProfile: true },
   { id: 'everyday', Icon: IconSun, title: 'Arkiliikunta', text: 'Arvio välitunneista, koulumatkoista ja leikistä', needsProfile: true },
@@ -43,14 +43,14 @@ export function SettingsView({
   section?: SettingsSectionId;
   onSection: (s?: SettingsSectionId) => void;
 }) {
-  const current = SECTIONS.find((x) => x.id === section);
+  const current = SETTINGS_SECTIONS.find((x) => x.id === section);
   // PC:llä (valikko ja sisältö rinnakkain) avataan suoraan ensimmäinen ryhmä tyhjän tilan sijaan.
   useEffect(() => {
     if (!section && window.matchMedia?.('(min-width: 1024px)').matches) onSection('profiles');
   }, [section, onSection]);
   const menu = (
     <nav aria-label="Asetukset" className="space-y-2">
-      {SECTIONS.map((x, i) => (
+      {SETTINGS_SECTIONS.map((x, i) => (
         <button
           key={x.id}
           type="button"

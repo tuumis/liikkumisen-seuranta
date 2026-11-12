@@ -14,9 +14,10 @@ import { DesktopAgent } from './features/desktop/DesktopAgent';
 import { SyncBar } from './features/sync/SyncBar';
 import { SidebarUpdate } from './features/update/appUpdate';
 import { consumeLaunchAction, dispatchCommand, type AppCommand } from './features/desktop/commands';
+import { CommandPalette } from './features/desktop/CommandPalette';
 import { Avatar } from './ui/Avatar';
 import { formatDate } from './ui/format';
-import { IconBall, IconChart, IconHelp, IconLeaf, IconSettings, IconWeek } from './ui/icons';
+import { IconBall, IconChart, IconHelp, IconLeaf, IconSearch, IconSettings, IconWeek } from './ui/icons';
 
 // Analyysi (Recharts) ladataan omana osanaan; service worker esivälimuistittaa senkin.
 const loadAnalysis = () => import('./features/analysis/AnalysisView');
@@ -220,6 +221,15 @@ export default function App() {
         <div className="mt-auto space-y-3 px-4 pb-7">
           <SidebarUpdate />
           <SyncBar variant="sidebar" />
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+            className="press flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-sm font-semibold text-[var(--side-ink-soft)] hover:bg-white/[0.06] hover:text-white"
+          >
+            <IconSearch size="1.25rem" />
+            <span className="flex-1 text-left">Haku ja komennot</span>
+            <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[10.5px] font-bold tracking-wide text-[var(--side-muted)]">Ctrl K</span>
+          </button>
           <button type="button" onClick={() => setHelpOpen(true)} className="press flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-sm font-semibold text-[var(--side-ink-soft)] hover:bg-white/[0.06] hover:text-white">
             <IconHelp size="1.25rem" />
             Ohje
@@ -340,6 +350,18 @@ export default function App() {
         </div>
       </nav>
       <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} />
+      {ready && profiles && (
+        <CommandPalette
+          profiles={profiles}
+          selected={selected}
+          tab={tab}
+          setTab={setTab}
+          selectProfile={select}
+          openSettings={openSettings}
+          openHelp={() => setHelpOpen(true)}
+          run={runCommand}
+        />
+      )}
     </div>
   );
 }
