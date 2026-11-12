@@ -57,16 +57,19 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className="anim-sheet relative max-h-[90dvh] w-full max-w-xl overflow-y-auto overscroll-contain rounded-t-[2rem] bg-[var(--surface)] px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 shadow-xl focus:outline-none lg:max-w-xl lg:rounded-[2rem] lg:px-7 lg:pb-7 lg:pt-6"
+        className="anim-sheet relative flex max-h-[90dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-[2rem] bg-[var(--surface)] shadow-xl focus:outline-none lg:rounded-[2rem]"
       >
-        <div className="mx-auto mb-3 h-1.5 w-11 rounded-full bg-slate-300 lg:hidden" aria-hidden />
-        <div className="sticky -top-3 z-10 -mx-5 mb-4 flex items-center justify-between gap-2 bg-[var(--surface)]/95 px-5 py-1 backdrop-blur lg:-top-6 lg:-mx-7 lg:px-7">
-          <h2 className="font-display text-xl font-semibold leading-tight text-slate-900">{title}</h2>
-          <button type="button" onClick={onClose} className="press flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--surface-sunk)] text-slate-600 hover:text-slate-900" aria-label="Sulje">
-            <IconClose size="1.1rem" />
-          </button>
+        {/* Otsikko pysyy paikallaan; vain sisältö vierii (ohut palkki pyöristettyjen kulmien sisällä). */}
+        <div className="shrink-0 px-5 pt-3 lg:px-7 lg:pt-6">
+          <div className="mx-auto mb-3 h-1.5 w-11 rounded-full bg-slate-300 lg:hidden" aria-hidden />
+          <div className="flex items-center justify-between gap-2 pb-3">
+            <h2 className="font-display text-xl font-semibold leading-tight text-slate-900">{title}</h2>
+            <button type="button" onClick={onClose} className="press flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--surface-sunk)] text-slate-600 hover:text-slate-900" aria-label="Sulje">
+              <IconClose size="1.1rem" />
+            </button>
+          </div>
         </div>
-        {children}
+        <div className="scroll-thin min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-1 lg:px-7 lg:pb-7">{children}</div>
       </div>
     </div>,
     document.body,

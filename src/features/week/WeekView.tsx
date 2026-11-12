@@ -18,6 +18,7 @@ import { PlanSheet } from './PlanSheet';
 import { BackupReminder, SyncBar } from '../sync/SyncBar';
 import { FootballPanel } from '../football/FootballPanel';
 import { DayRow } from './DayRow';
+import { DayTable } from './DayTable';
 import { WeekDetails, WeekHero } from './WeekSummary';
 import { DailyChart, RecentCard, RhythmCard, UpcomingCard } from './Dashboard';
 import { useScrolling } from '../../ui/motion';
@@ -145,6 +146,21 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
   const sideIds: WeekCardId[] = isLg && !simple ? cardIds.filter((id) => layoutApi.layout.side.includes(id)) : [];
   // Päivät kahdessa sarakkeessa, kun pääpalsta on PC:llä koko levyinen.
   const wideDays = sideIds.length === 0;
+  const [daysView, setDaysViewState] = useState<'cards' | 'table'>(() => {
+    try {
+      return localStorage.getItem('daysView') === 'table' ? 'table' : 'cards';
+    } catch {
+      return 'cards';
+    }
+  });
+  const setDaysView = (v: 'cards' | 'table') => {
+    setDaysViewState(v);
+    try {
+      localStorage.setItem('daysView', v);
+    } catch {
+      /* ei tallennusta */
+    }
+  };
   // Kerrat ilman arkiliikunnan vahvistuksia (ne näkyvät päivän arkiliikuntarivillä).
   const realSessions = (sessions ?? []).filter((s) => !isEstimateConfirmation(s));
   const week = {
@@ -223,15 +239,61 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
 
   const dayList = profile && (
     <section className="space-y-3" aria-labelledby="days-title">
-      <div className="flex items-baseline justify-between gap-2 px-1">
-        <h2 id="days-title" className="font-display text-lg font-semibold text-slate-900">
-          Päivät
-        </h2>
-        <span className="truncate text-xs text-slate-500">
-          {week.count} {week.count === 1 ? 'kerta' : 'kertaa'} · {week.duration} min
-          {adherence.planned > 0 && ` · suunniteltu ${adherence.planned}, tehty ${adherence.done}`}
-        </span>
+      <div className="flex items-center gap-2 px-1">
+        <div className="min-w-0 flex-1">
+          <h2 id="days-title" className="font-display text-lg font-semibold leading-tight text-slate-900">
+            Päivät
+          </h2>
+          <span className="block truncate text-xs text-slate-500">
+            {week.count} {week.count === 1 ? 'kerta' : 'kertaa'} · {week.duration} min
+            {adherence.planned > 0 && ` · suunniteltu ${adherence.planned}, tehty ${adherence.done}`}
+          </span>
+        </div>
+        {/* Näkymän vaihto: kortit tai tiivis taulukko (laitekohtainen). */}
+        <div className="flex shrink-0 rounded-xl bg-[var(--surface-sunk)] p-0.5 text-xs font-semibold" role="radiogroup" aria-label="Päivien näkymä">
+          {(
+            [
+              ['cards', 'Kortit', 'M4 5h16v6H4zM4 14h16v5H4z'],
+              ['table', 'Taulukko', 'M4 5h16v14H4zM4 10h16M4 15h16M10 5v14'],
+            ] as const
+          ).map(([v, l, d]) => (
+            <button
+              key={v}
+              type="button"
+              role="radio"
+              aria-checked={daysView === v}
+              onClick={() => setDaysView(v)}
+              className={`press flex min-h-9 items-center gap-1.5 rounded-[0.6rem] px-2.5 ${daysView === v ? 'bg-[var(--surface-raised)] text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
+            >
+              <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round" aria-hidden>
+                <path d={d} />
+              </svg>
+              {l}
+            </button>
+          ))}
+        </div>
       </div>
+      {daysView === 'table' ? (
+        <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+          <DayTable
+            rows={dates.map((d, i) => ({
+              date: d,
+              isToday: d === today,
+              isFuture: d > today,
+              totals: report?.allDays[i],
+              hours: report?.hours.days[i],
+              sessions: (sessions ?? []).filter((s) => s.date === d),
+              plans: (plans ?? []).filter((p) => p.date === d && p.status !== 'done'),
+              flag: flagByDate.get(d),
+            }))}
+            types={typeMap}
+            onEdit={setEditing}
+            onPlanOpen={setPlanOpen}
+            onEstimate={setEstimateDay}
+            onOpenMenu={setDayMenu}
+          />
+        </div>
+      ) : (
       <ol className={`space-y-2.5 2xl:grid 2xl:grid-cols-2 2xl:gap-3 2xl:space-y-0 ${wideDays ? 'lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0' : ''}`} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} aria-label="Viikon päivät">
         {dates.map((d, i) => (
           <DayRow
@@ -259,8 +321,15 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
           />
         ))}
       </ol>
-      <p className="text-center text-xs text-slate-500 lg:hidden">Pitkä painallus päivään: sairas- tai matkapäivä. Pyyhkäise vaihtaaksesi viikkoa.</p>
-      <p className="hidden text-center text-xs text-slate-500 lg:block">Päivän ⋯ tai hiiren oikea painike: lisää kerta, sairas- tai matkapäivä.</p>
+      )}
+      {daysView === 'table' ? (
+        <p className="text-center text-xs text-slate-500">Päivän nimestä: lisää kerta, sairas- tai matkapäivä. Kerrasta muokkaus, ☀️ Arki -napista arkiliikunnan tarkistus.</p>
+      ) : (
+        <>
+          <p className="text-center text-xs text-slate-500 lg:hidden">Pitkä painallus päivään: sairas- tai matkapäivä. Pyyhkäise vaihtaaksesi viikkoa.</p>
+          <p className="hidden text-center text-xs text-slate-500 lg:block">Päivän ⋯ tai hiiren oikea painike: lisää kerta, sairas- tai matkapäivä.</p>
+        </>
+      )}
     </section>
   );
 

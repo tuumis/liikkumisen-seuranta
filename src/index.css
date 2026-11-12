@@ -207,6 +207,9 @@ html {
   overflow-x: clip;
   /* Vierityspalkin tila varataan aina: sisältö ei hyppää välilehteä vaihdettaessa (PC). */
   scrollbar-gutter: stable;
+  /* Ohut, hillitty vierityspalkki ilman nuolia (myös paneeleissa, .scroll-thin). */
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--color-slate-500) 45%, transparent) transparent;
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
   background: var(--bg);
@@ -835,4 +838,13 @@ body {
   textarea {
     font-size: max(16px, 1em) !important;
   }
+}
+
+/* Paneelien ohut vierityspalkki: läpinäkyvä ura, pyöreä peukalo, joka vahvistuu osoitettaessa. */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--color-slate-500) 40%, transparent) transparent;
+}
+.scroll-thin:hover {
+  scrollbar-color: color-mix(in oklab, var(--color-slate-500) 70%, transparent) transparent;
 }
