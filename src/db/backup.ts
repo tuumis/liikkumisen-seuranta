@@ -4,8 +4,8 @@
 // tyhjennys ja lisäys YHDESSÄ rw-transaktiossa. Mikä tahansa virhe perii transaktion,
 // eikä data muutu. Yhdistäminen (synkronointi) samoin yhdessä transaktiossa.
 
-import { dataChecksum } from '../domain/checksum';
-import { mergeSnapshot, type MergeResult } from '../domain/merge';
+import { canonicalJson, dataChecksum } from '../domain/checksum';
+import { keyOf, mergeSnapshot, type MergeResult } from '../domain/merge';
 import { CURRENT_SCHEMA_VERSION, migrateToCurrent, SYNCED_TABLES, type SyncedTable } from '../domain/migrations';
 import { backupFileSchema, fileHeaderSchema, syncFileSchema } from '../domain/schemas';
 import type { DeviceId, MetaRow, SyncFields, Timestamp, UUID } from '../domain/types';
@@ -206,6 +206,7 @@ export async function mergeSyncFile(db: AppDB, text: string, thisDevice: DeviceI
       { key: 'lastSyncAt', value: nowTimestamp() },
       { key: 'lastIncomingExportedAt', value: file.exportedAt },
     ]);
+    if (file.deviceId !== thisDevice) await acknowledgeDelivered(db, file.data as TableMap, thisDevice);
     return { ...result, incomingDevice: file.deviceId, incomingRole: file.deviceRole, incomingExportedAt: file.exportedAt };
   });
 }
@@ -234,7 +235,44 @@ export async function mergeAnyFile(db: AppDB, text: string, thisDevice: DeviceId
   throw new ImportError(wrongFileMessage(kind, text));
 }
 
-/** Odottavat kirjaukset: tämän laitteen muutokset edellisen "Lähetä PC:lle" jälkeen. */
+const SYNC_KEYS = new Set(['updatedAt', 'updatedBy', 'createdAt']);
+/** Sama sisältö synkronointikenttiä lukuun ottamatta (esim. molemmilla laitteilla luotu sama viikkorytmin kerta). */
+function sameContent(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+  const strip = (r: Record<string, unknown>) => Object.fromEntries(Object.entries(r).filter(([k]) => !SYNC_KEYS.has(k)));
+  return canonicalJson(strip(a)) === canonicalJson(strip(b));
+}
+
+/**
+ * Toisen laitteen tiedoston tuonnin jälkeen (puhelin: "Päivitä PC:ltä"): tämän laitteen odottavat muutokset,
+ * jotka tiedostossa jo ovat (sama tai uudempi versio tai sama sisältö), kuitataan siirretyiksi siirtämällä
+ * lastSentAt eteenpäin – enintään vanhimpaan muutokseen asti, jota toisella laitteella ei vielä ole.
+ */
+async function acknowledgeDelivered(db: AppDB, incoming: TableMap, thisDevice: DeviceId): Promise<void> {
+  const since = (await getMeta<Timestamp>(db, 'lastSentAt')) ?? '';
+  const delivered: Timestamp[] = [];
+  let firstMissing: Timestamp | undefined;
+  for (const t of SYNCED_TABLES) {
+    const pending = (await db
+      .table(t)
+      .where('updatedAt')
+      .above(since)
+      .filter((r: SyncFields) => r.updatedBy === thisDevice)
+      .toArray()) as (SyncFields & Record<string, unknown>)[];
+    if (!pending.length) continue;
+    const there = new Map(((incoming[t] ?? []) as Record<string, unknown>[]).map((r) => [keyOf(t, r), r as SyncFields & Record<string, unknown>]));
+    for (const r of pending) {
+      const inc = there.get(keyOf(t, r));
+      if (inc && (inc.updatedAt >= r.updatedAt || sameContent(inc, r))) delivered.push(r.updatedAt);
+      else if (!firstMissing || r.updatedAt < firstMissing) firstMissing = r.updatedAt;
+    }
+  }
+  if (!delivered.length) return;
+  // Kaikki perillä: nykyhetki tai uusin kuitattu (jos kello on ollut edellä), muuten viimeinen ennen puuttuvaa.
+  const upTo = firstMissing ? delivered.filter((ts) => ts < firstMissing!).sort().pop() : [nowTimestamp(), ...delivered].sort().pop();
+  if (upTo && upTo > since) await db.meta.put({ key: 'lastSentAt', value: upTo });
+}
+
+/** Odottavat kirjaukset: tämän laitteen muutokset edellisen "Lähetä PC:lle" jälkeen (ja joita toisella laitteella ei vielä ole). */
 export async function pendingCount(db: AppDB, thisDevice: DeviceId): Promise<number> {
   const since = (await getMeta<Timestamp>(db, 'lastSentAt')) ?? '';
   let n = 0;

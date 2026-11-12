@@ -275,6 +275,35 @@ describe('synkronointi PC ↔ puhelin', () => {
     expect(await pendingCount(phone.db, phone.id)).toBe(0);
   });
 
+  it('F4b: "Päivitä PC:ltä" kuittaa siirretyiksi muutokset, jotka PC:n tiedostossa jo ovat', async () => {
+    const { pc, phone } = await pair();
+    await markSent(phone.db);
+    await phone.repo.createSession(sessionInput({ date: '2026-11-10' }));
+    await phone.repo.createSession(sessionInput({ date: '2026-11-11' }));
+    expect(await pendingCount(phone.db, phone.id)).toBe(2);
+    await send(phone, 'phone', pc); // PC sai tiedoston (esim. jaettu ilman "Lähetä"-merkintää)
+    await phone.repo.createSession(sessionInput({ date: '2026-11-12' })); // tätä PC:llä ei vielä ole
+    await send(pc, 'pc', phone);
+    expect(await pendingCount(phone.db, phone.id)).toBe(1);
+    await send(phone, 'phone', pc);
+    await send(pc, 'pc', phone);
+    expect(await pendingCount(phone.db, phone.id)).toBe(0);
+  });
+
+  it('F4c: sama sisältö molemmilla laitteilla (eri aikaleimat) ei odota siirtoa', async () => {
+    const { pc, phone } = await pair();
+    await markSent(phone.db);
+    const s = await phone.repo.createSession(sessionInput({ date: '2026-11-10' }));
+    const row = (await phone.db.sessions.get(s.id))!;
+    await pc.db.sessions.put({ ...row, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', updatedBy: pc.id });
+    await phone.db.sessions.update(s.id, { updatedAt: '2099-01-01T00:00:00.000Z' }); // puhelimen versio uudempi, sisältö sama
+    await send(pc, 'pc', phone);
+    expect(await pendingCount(phone.db, phone.id)).toBe(0);
+    await phone.db.sessions.update(s.id, { durationMin: 33, updatedAt: '2099-01-02T00:00:00.000Z' }); // oikea muutos
+    await send(pc, 'pc', phone);
+    expect(await pendingCount(phone.db, phone.id)).toBe(1);
+  });
+
   it('F5: saman tiedoston tuonti kahdesti → toisella kerralla 0 uutta, 0 päivitettyä, 0 poistettua', async () => {
     const { pc, phone } = await pair();
     await seedData(pc.repo);
