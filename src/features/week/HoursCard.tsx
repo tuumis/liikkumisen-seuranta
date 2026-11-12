@@ -3,6 +3,7 @@
 
 import type { PeriodReport } from '../../domain/report';
 import { formatHours } from '../../domain/hours';
+import { Collapse, CollapseToggle, useCollapsible } from '../../ui/Collapse';
 import { isoWeekday } from '../../domain/dates';
 import { CATEGORY_LABEL } from '../../ui/labels';
 import { dayLabel } from '../../ui/format';
@@ -44,10 +45,26 @@ export function HoursCard({ report, isCurrentWeek }: { report: PeriodReport; isC
   const dayMax = Math.max(1, ...h.days.map((d) => Math.max(d.expectedMin, d.actualMin)));
   const catMax = Math.max(1, ...h.byCategory.map((c) => Math.max(c.expected.sessions + c.expected.estimate, c.actual.sessions + c.actual.estimate)));
   const empty = h.expectedMin === 0 && h.actualMin === 0;
+  const [open, toggle] = useCollapsible('hoursCard');
 
   return (
     <section className="card p-4 sm:p-5 lg:p-6">
-      <h2 className="font-display text-lg font-semibold text-slate-900">Viikon liikuntatunnit</h2>
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Arvio ja toteuma</div>
+          <h2 className="font-display text-lg font-semibold text-slate-900">Viikon liikuntatunnit</h2>
+        </div>
+        <div className="flex items-center gap-2">
+          {!open && !empty && (
+            <span className="text-sm font-semibold tabular-nums text-slate-700">
+              {formatHours(h.actualMin)} / {formatHours(h.expectedMin)}
+            </span>
+          )}
+          <CollapseToggle open={open} onToggle={toggle} label="Viikon liikuntatunnit" />
+        </div>
+      </div>
+      <Collapse open={open}>
+      <p className="mt-1 text-xs text-slate-500">Kaikki liikunta kestona: kevyt, reipas ja rasittava sekä arkiliikunnan arvio.</p>
       {empty ? (
         <p className="mt-2 text-sm text-slate-600">Ei vielä arviota eikä kirjauksia. Lisää viikkopohja ja perusarviot Asetuksissa, niin arvio näkyy tässä.</p>
       ) : (
@@ -152,10 +169,11 @@ export function HoursCard({ report, isCurrentWeek }: { report: PeriodReport; isC
           )}
           <p className="mt-3 text-[11px] text-slate-500">
             Kesto kellotunteina. Arvio = viikkopohjan suunnitellut kerrat + perusarviot. Toteuma = kirjatut kerrat + perusarvio päiville, joilta kirjaus puuttuu{' '}
-            {isCurrentWeek ? '(tähän päivään asti)' : ''}. Suunnitelmat eivät vaikuta suositusvertailuun.
+            {isCurrentWeek ? '(tähän päivään asti)' : ''}. Molemmat sisältävät kaiken liikunnan (myös kevyen). Suunnitelmat eivät vaikuta suositusvertailuun.
           </p>
         </>
       )}
+      </Collapse>
     </section>
   );
 }

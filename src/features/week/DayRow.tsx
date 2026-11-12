@@ -93,26 +93,38 @@ export function DayRow({
           <span className="stat text-[17px] font-semibold">{dayNo}</span>
         </div>
         <div className="min-w-0 flex-1">
-          <div className={`truncate text-sm font-bold ${isToday ? 'text-green-800' : isFuture ? 'text-slate-500' : 'text-slate-900'}`}>
+          <div className={`${isToday ? '' : 'hidden sm:block'} truncate text-sm font-bold ${isToday ? 'text-green-800' : isFuture ? 'text-slate-500' : 'text-slate-900'}`}>
             {isToday ? 'Tänään' : weekdayName}
             {isToday && <span className="sr-only"> ({dayLabel(date)})</span>}
           </div>
           {flag && <span className="mt-0.5 inline-block rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700">{FLAG_LABEL[flag.reason]}</span>}
-          {!flag && hours && !isFuture && hours.actualMin > 0 && (
-            <div className="truncate text-[11px] font-medium text-slate-500" title="Kaikki liikunta kestona (myös kevyt), kirjatut kerrat + arkiliikunnan arvio">
-              Yhteensä {hours.actualMin} min{hours.actualMin > hours.actualLoggedMin ? ` · arvio ${hours.actualMin - hours.actualLoggedMin}` : ''}
-            </div>
-          )}
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-          {totals && !isFuture && (logged > 0 || est > 0) && (
-            <>
-              <div className="hidden h-2 w-14 shrink-0 gap-[2px] overflow-hidden rounded-full bg-[var(--viz-track)] sm:flex" aria-hidden>
+          {totals && !isFuture && (logged > 0 || est > 0 || (hours?.actualMin ?? 0) > 0) && (
+            <div className="flex flex-col items-end gap-1">
+              {/* Kokonaismäärä (kaikki liikunta kestona) mittarin yläpuolella. */}
+              {hours && hours.actualMin > 0 && (
+                <InfoTip
+                  className="whitespace-nowrap text-[13px] font-bold text-slate-900"
+                  tip={
+                    <>
+                      <strong className="block text-[13px]">Liikuntaa yhteensä {hours.actualMin} min</strong>
+                      Kaikki liikunta kestona: kevyt, reipas ja rasittava. {hours.actualLoggedMin} min kirjatuista kerroista
+                      {hours.actualMin > hours.actualLoggedMin && `, ${hours.actualMin - hours.actualLoggedMin} min arkiliikunnan perusarviosta`}.
+                    </>
+                  }
+                >
+                  <span className="stat text-[15px]">{hours.actualMin}</span>
+                  <span className="text-[11px] font-semibold text-slate-500">min yhteensä</span>
+                </InfoTip>
+              )}
+              <div className="flex items-center gap-1.5">
+              <div className="flex h-1.5 w-12 shrink-0 gap-[2px] overflow-hidden rounded-full bg-[var(--viz-track)]" aria-hidden>
                 <div className="anim-grow-x h-full rounded-full" style={{ width: `${loggedPct}%`, background: 'var(--viz-logged)' }} />
                 {estPct > 0 && <div className="anim-grow-x h-full rounded-full" style={{ width: `${estPct}%`, background: 'var(--viz-estimate)' }} />}
               </div>
               <InfoTip
-                className="shrink-0 whitespace-nowrap text-xs font-semibold text-slate-700"
+                className="shrink-0 whitespace-nowrap text-[11px] font-semibold text-slate-700"
                 tip={
                   <>
                     <strong className="block text-[13px]">Reipas ja rasittava liikunta</strong>
@@ -126,12 +138,13 @@ export function DayRow({
                   </>
                 }
               >
-                <span className="stat text-[15px]">{logged}</span>
+                <span className="tabular-nums">{logged}</span>
                 {est > 0 && <span className="text-slate-500">+{est}</span>}
-                <span className="font-medium text-slate-500">min</span>
+                <span className="font-medium text-slate-500">reipas+</span>
                 {(estimated || est > 0) && <span className="rounded-full bg-amber-100 px-1.5 text-[10px] font-bold text-amber-900">arvio</span>}
               </InfoTip>
-            </>
+              </div>
+            </div>
           )}
           <button
             type="button"

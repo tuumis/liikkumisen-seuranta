@@ -1,26 +1,55 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { IconClose } from './icons';
 
-/** Alapaneeli (bottom sheet). Sulkeutuu taustan napautuksella ja Esc-näppäimellä. */
+// Taustan vierityksen lukitus, joka toimii myös iPhonessa (overflow: hidden ei siellä riitä):
+// body kiinnitetään paikalleen nykyiseen vierityskohtaan ja palautetaan suljettaessa.
+// Laskuri sallii sisäkkäiset paneelit (esim. kerran muokkaus suunnitelmapaneelin päällä).
+let locks = 0;
+let savedY = 0;
+function lockScroll() {
+  if (locks++ > 0) return;
+  savedY = window.scrollY;
+  const b = document.body.style;
+  b.position = 'fixed';
+  b.top = `-${savedY}px`;
+  b.left = '0';
+  b.right = '0';
+  b.width = '100%';
+  b.overflow = 'hidden';
+}
+function unlockScroll() {
+  if (--locks > 0) return;
+  locks = 0;
+  const b = document.body.style;
+  b.position = b.top = b.left = b.right = b.width = b.overflow = '';
+  window.scrollTo(0, savedY);
+}
+
+/**
+ * Alapaneeli (bottom sheet). Piirretään suoraan <body>-elementtiin (portaali), jotta se on aina
+ * alapalkin ja muun sisällön päällä. Sulkeutuu taustan napautuksella ja Esc-näppäimellä.
+ */
 export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
   const panel = useRef<HTMLDivElement>(null);
+  const close = useRef(onClose);
+  close.current = onClose;
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close.current();
     window.addEventListener('keydown', onKey);
-    panel.current?.focus();
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    panel.current?.focus({ preventScroll: true });
+    lockScroll();
     return () => {
       window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
+      unlockScroll();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-30 flex items-end justify-center lg:items-center lg:p-6" role="presentation">
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-end justify-center lg:items-center lg:p-6" role="presentation">
       <div className="anim-fade absolute inset-0 bg-[#1a2520]/45 backdrop-blur-[2px] dark:bg-black/60" onClick={onClose} aria-hidden />
       <div
         ref={panel}
@@ -39,6 +68,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -12,6 +12,7 @@ import { EmptyState, SectionLabel } from '../../ui/components';
 import { dayLabel, formatDate } from '../../ui/format';
 import { IconBolt, IconBone, IconCalendarClock, IconHistory, IconLeaf } from '../../ui/icons';
 import { useMounted } from '../../ui/motion';
+import { Collapse, CollapseToggle, useCollapsible } from '../../ui/Collapse';
 
 const WD = ['Ma', 'Ti', 'Ke', 'To', 'Pe', 'La', 'Su'];
 
@@ -76,7 +77,7 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
                 role="radio"
                 aria-checked={mode === k}
                 onClick={() => setMode(k)}
-                className={`press rounded-[10px] px-2.5 py-1 ${mode === k ? 'bg-[var(--surface-raised)] text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                className={`press min-h-8 rounded-[10px] px-3 py-1.5 ${mode === k ? 'bg-[var(--surface-raised)] text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
               >
                 {l}
               </button>
@@ -251,6 +252,7 @@ export function UpcomingCard({
   const plans = useLiveQuery(() => repo.plansInRange(profile.id, today, to), [profile.id, today, to]);
   const fixtures = useLiveQuery(() => repo.listFixtures(profile.id, today, to), [profile.id, today, to]);
   const fx = new Map((fixtures ?? []).filter((e) => e.fixture).map((e) => [e.plan.id, e.fixture!]));
+  const [open, toggle] = useCollapsible('upcoming');
   const list = (plans ?? [])
     .filter((p) => p.status === 'open')
     .sort((a, b) => a.date.localeCompare(b.date) || (a.startTime ?? '99').localeCompare(b.startTime ?? '99'))
@@ -258,8 +260,17 @@ export function UpcomingCard({
 
   return (
     <section className="card anim-rise p-4 sm:p-5" style={{ ['--i' as string]: 4 }}>
-      <SectionLabel>Seuraavaksi</SectionLabel>
-      <h2 className="font-display text-lg font-semibold text-slate-900">Tulevat kerrat</h2>
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <SectionLabel>Seuraavaksi</SectionLabel>
+          <h2 className="font-display text-lg font-semibold text-slate-900">Tulevat kerrat</h2>
+        </div>
+        <div className="flex items-center gap-2">
+          {!open && <span className="text-sm font-semibold text-slate-600">{list.length} tulossa</span>}
+          <CollapseToggle open={open} onToggle={toggle} label="Tulevat kerrat" />
+        </div>
+      </div>
+      <Collapse open={open}>
       {plans && list.length === 0 ? (
         <EmptyState icon={<IconCalendarClock size="1.4rem" />} title="Ei suunniteltuja kertoja">
           Lisää toistuvat treenit Asetusten Viikkorytmiin, niin ne näkyvät tässä valmiina kuitattaviksi.
@@ -292,6 +303,7 @@ export function UpcomingCard({
           })}
         </ul>
       )}
+      </Collapse>
     </section>
   );
 }
@@ -301,12 +313,19 @@ export function UpcomingCard({
 export function RecentCard({ profile, today, types, onOpen }: { profile: Profile; today: ISODate; types: Map<UUID, ActivityType>; onOpen: (s: Session) => void }) {
   const from = addDays(today, -30);
   const sessions = useLiveQuery(() => repo.sessionsInRange(profile.id, from, today), [profile.id, from, today]);
+  const [open, toggle] = useCollapsible('recent');
   const list = [...(sessions ?? [])].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
 
   return (
     <section className="card anim-rise p-4 sm:p-5" style={{ ['--i' as string]: 5 }}>
-      <SectionLabel>Viimeksi</SectionLabel>
-      <h2 className="font-display text-lg font-semibold text-slate-900">Viimeisimmät kirjaukset</h2>
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <SectionLabel>Viimeksi</SectionLabel>
+          <h2 className="font-display text-lg font-semibold text-slate-900">Viimeisimmät kirjaukset</h2>
+        </div>
+        <CollapseToggle open={open} onToggle={toggle} label="Viimeisimmät kirjaukset" />
+      </div>
+      <Collapse open={open}>
       {sessions && list.length === 0 ? (
         <EmptyState icon={<IconHistory size="1.4rem" />} title="Ei vielä kirjauksia">
           Kirjatut liikuntakerrat näkyvät tässä uusin ensin.
@@ -336,6 +355,7 @@ export function RecentCard({ profile, today, types, onOpen }: { profile: Profile
           })}
         </ul>
       )}
+      </Collapse>
     </section>
   );
 }

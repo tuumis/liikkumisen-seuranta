@@ -264,3 +264,31 @@ describe('kuittaus ja ohitus', () => {
     expect(await repo.sessionsInRange('p1', MON, WED)).toEqual([]);
   });
 });
+
+describe('suunnitellun kerran poisto kokonaan', () => {
+  it('poistettu kerta katoaa, ensurePlanned ja pohjan muokkaus eivät palauta sitä; kumoa palauttaa', async () => {
+    const item = await repo.createTemplateItem('p1', tueThu(), WED);
+    await repo.ensurePlanned('p1', defaultPlanningThrough(WED), WED);
+    const id = plannedSessionId(item.id, '2026-11-12');
+    await repo.deletePlanned(id);
+    const dates = async () => (await repo.plansInRange('p1', '2026-11-09', '2026-11-22')).map((p) => p.date);
+    expect(await dates()).toEqual(['2026-11-17', '2026-11-19']);
+    await repo.ensurePlanned('p1', defaultPlanningThrough(WED), WED);
+    await repo.updateTemplateItem(item.id, tueThu({ durationMin: 75 }), WED);
+    expect(await dates()).not.toContain('2026-11-12');
+    await repo.restorePlanned(id);
+    expect(await dates()).toContain('2026-11-12');
+  });
+
+  it('kuitattua kertaa ei poisteta; pelikalenterin tiedot poistuvat kerran mukana', async () => {
+    const item = await repo.createTemplateItem('p1', tueThu(), MON);
+    await repo.ensurePlanned('p1', defaultPlanningThrough(MON), MON);
+    const done = plannedSessionId(item.id, '2026-11-10');
+    await repo.confirmPlanned(done, WED);
+    await expect(repo.deletePlanned(done)).rejects.toThrow();
+    const fx = await repo.createFixture('p1', { kind: 'game', date: '2026-11-14', durationMin: 60, opponent: 'HJK' });
+    await repo.deletePlanned(fx.plan.id);
+    expect(await repo.listFixtures('p1')).toEqual([]);
+    expect((await db.fixtures.get(fx.plan.id))?.deletedAt).toBeTruthy();
+  });
+});

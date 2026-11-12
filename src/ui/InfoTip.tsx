@@ -25,7 +25,7 @@ export function InfoTip({ children, tip, className = '', align = 'right' }: { ch
     <span ref={ref} className="relative inline-flex" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
       <button
         type="button"
-        className={`inline-flex cursor-help items-center gap-1 rounded-lg decoration-slate-400 decoration-dotted underline-offset-4 hover:underline ${className}`}
+        className={`-my-2 inline-flex min-h-9 cursor-help items-center gap-1 rounded-lg py-2 decoration-slate-400 decoration-dotted underline-offset-4 hover:underline ${className}`}
         aria-describedby={shown ? id : undefined}
         aria-expanded={open}
         onClick={(e) => {

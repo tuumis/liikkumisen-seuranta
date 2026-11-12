@@ -239,7 +239,7 @@ export default function App() {
         )}
       </header>
 
-      <main className="mx-auto max-w-xl px-4 pb-32 pt-2 md:max-w-2xl lg:max-w-none lg:px-10 lg:pb-12 lg:pt-10 2xl:px-14">
+      <main className="mx-auto max-w-xl px-4 pb-[calc(max(0.75rem,env(safe-area-inset-bottom))+7.5rem)] pt-2 md:max-w-2xl lg:max-w-none lg:px-10 lg:pb-12 lg:pt-10 2xl:px-14">
         <div className="mb-5 flex items-end justify-between gap-3 lg:mb-8">
           <div className="min-w-0">
             <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">{dateLine}</div>

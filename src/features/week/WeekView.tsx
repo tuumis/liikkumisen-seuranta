@@ -23,6 +23,7 @@ import { DailyChart, RecentCard, RhythmCard, UpcomingCard } from './Dashboard';
 import { useScrolling } from '../../ui/motion';
 import { IconCalendarClock, IconChevronLeft, IconChevronRight, IconPlus } from '../../ui/icons';
 import { HoursGauge } from './HoursGauge';
+import { HoursCard } from './HoursCard';
 import { GettingStarted } from './GettingStarted';
 import type { SettingsSectionId } from '../settings/SettingsView';
 import { DaySheet } from './DaySheet';
@@ -266,7 +267,10 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
                 <RhythmCard report={report} today={today} />
               </div>
             </div>
-            <div className="lg:hidden">{showGauge && <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} />}</div>
+            <div className="space-y-5 lg:hidden">
+              {showGauge && <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} />}
+              <HoursCard report={report} isCurrentWeek={isCurrent} />
+            </div>
             <div className="lg:hidden">
               <UpcomingCard profile={profile} today={today} types={typeMap} onOpen={setPlanOpen} />
             </div>
@@ -280,6 +284,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
           {/* Sivupalsta (PC): määrä, tulevat ja viimeisimmät, tarkemmat luvut. */}
           <aside className="hidden min-w-0 space-y-5 lg:col-span-5 lg:block xl:col-span-4" aria-label="Viikon yhteenveto">
             {showGauge && <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} />}
+            <HoursCard report={report} isCurrentWeek={isCurrent} />
             <UpcomingCard profile={profile} today={today} types={typeMap} onOpen={setPlanOpen} />
             <RecentCard profile={profile} today={today} types={typeMap} onOpen={setEditing} />
             <WeekDetails report={report} isCurrentWeek={isCurrent} />
@@ -293,7 +298,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             type="button"
             onClick={() => setQuickAdd({})}
             tabIndex={scrolling ? -1 : 0}
-            className={`fixed bottom-[6.75rem] right-5 z-20 flex size-16 items-center justify-center rounded-[1.4rem] bg-green-700 text-white shadow-[0_14px_30px_-10px_rgb(var(--accent-rgb)/0.8)] transition-[transform,opacity] duration-300 [transition-timing-function:var(--ease-out)] hover:bg-green-800 active:scale-95 sm:right-[max(1.25rem,calc(50%-19rem))] md:right-[max(1.25rem,calc(50%-21rem))] lg:hidden ${
+            className={`fixed bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+5.5rem)] right-5 z-20 flex size-16 items-center justify-center rounded-[1.4rem] bg-green-700 text-white shadow-[0_14px_30px_-10px_rgb(var(--accent-rgb)/0.8)] transition-[transform,opacity] duration-300 [transition-timing-function:var(--ease-out)] hover:bg-green-800 active:scale-95 sm:right-[max(1.25rem,calc(50%-19rem))] md:right-[max(1.25rem,calc(50%-21rem))] lg:hidden ${
               scrolling ? 'pointer-events-none translate-y-6 scale-90 opacity-0' : 'opacity-100'
             }`}
             aria-label="Lisää kerta"

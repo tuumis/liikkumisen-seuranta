@@ -417,31 +417,31 @@ body {
 
 /* Porrastettu sisääntulo: style={{ '--i': n }} määrää viiveen. */
 .anim-rise {
-  animation: rise 0.55s var(--ease-out) both;
+  animation: rise 0.55s var(--ease-out) backwards;
   animation-delay: calc(var(--i, 0) * 60ms);
 }
 .anim-fade {
-  animation: fade 0.4s var(--ease-out) both;
+  animation: fade 0.4s var(--ease-out) backwards;
 }
 .anim-pop {
-  animation: pop 0.45s var(--ease-out) both;
+  animation: pop 0.45s var(--ease-out) backwards;
 }
 .anim-grow-y {
   transform-origin: bottom;
-  animation: grow-y 0.7s var(--ease-out) both;
+  animation: grow-y 0.7s var(--ease-out) backwards;
   animation-delay: calc(var(--i, 0) * 45ms + 120ms);
 }
 .anim-grow-x {
   transform-origin: left;
-  animation: grow-x 0.8s var(--ease-out) both;
+  animation: grow-x 0.8s var(--ease-out) backwards;
   animation-delay: 150ms;
 }
 .anim-draw {
-  animation: draw 1s var(--ease-out) both;
+  animation: draw 1s var(--ease-out) backwards;
   animation-delay: 150ms;
 }
 .anim-sheet {
-  animation: sheet-up 0.35s var(--ease-out) both;
+  animation: sheet-up 0.35s var(--ease-out) backwards;
 }
 @media (min-width: 1024px) {
   .anim-sheet {
@@ -804,4 +804,13 @@ body {
   --band-4: #4c5d66;
   --band-5: #71858f;
   --band-6: #b3c1c8;
+}
+
+/* Kosketuslaitteet: iPhone zoomaa sivua, jos lomakekentän fontti on alle 16 px. */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em) !important;
+  }
 }

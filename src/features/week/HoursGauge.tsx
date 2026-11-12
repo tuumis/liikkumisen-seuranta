@@ -2,6 +2,7 @@
 // taulukon mukaan (alle 7 h … 20+ h). Osoitin = toteuma, katkoviiva = viikon arvio.
 // Luokat kuvaavat määrää; suositusvertailu (reipas ja rasittava) on erikseen.
 
+import { Collapse, CollapseToggle, useCollapsible } from '../../ui/Collapse';
 import { formatHours, hoursBand, HOURS_BANDS, type WeeklyHours } from '../../domain/hours';
 
 /** Mittarin asteikko 0–25 h; ylin luokka (20+) piirretään 20–25 h väliin. */
@@ -16,15 +17,28 @@ export function HoursGauge({ hours, isCurrentWeek, className = '' }: { hours: We
   const actualIdx = HOURS_BANDS.indexOf(actual);
   const expectedIdx = HOURS_BANDS.indexOf(expected);
   const x = xOf(hours.actualMin);
+  const [open, toggle] = useCollapsible('hoursGauge');
 
   return (
     <section className={`@container card p-4 sm:p-5 lg:p-6 ${className}`} aria-labelledby="hours-gauge-title">
-      <div className="flex items-baseline justify-between gap-2">
-        <h2 id="hours-gauge-title" className="text-base font-semibold text-slate-900">
-          Liikuntaa viikossa
-        </h2>
-        <span className="text-xs text-slate-500">kokonaiskesto</span>
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Kaikki liikunta kestona</div>
+          <h2 id="hours-gauge-title" className="whitespace-nowrap font-display text-lg font-semibold text-slate-900">
+            Liikuntaa viikossa
+          </h2>
+        </div>
+        <div className="flex items-center gap-2">
+          {!open && (
+            <span className="whitespace-nowrap text-sm font-semibold tabular-nums text-slate-700">
+              {formatHours(hours.actualMin)}
+              <span className="hidden sm:inline"> · {actual.label.toLowerCase()}</span>
+            </span>
+          )}
+          <CollapseToggle open={open} onToggle={toggle} label="Liikuntaa viikossa" />
+        </div>
       </div>
+      <Collapse open={open}>
 
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="text-4xl font-semibold tracking-tight tabular-nums text-slate-900">{formatHours(hours.actualMin)}</span>
@@ -89,6 +103,7 @@ export function HoursGauge({ hours, isCurrentWeek, className = '' }: { hours: We
         Kesto kellotunteina: kirjatut kerrat + arkiliikunnan arvio{isCurrentWeek ? ' tähän päivään asti' : ''}. Luokitus on sovelluksen arvio kokonaismäärästä; kouluikäisten suositus 60 min päivässä = 7 h viikossa.
         Reippaan ja rasittavan liikunnan vertailu näkyy erikseen.
       </p>
+      </Collapse>
     </section>
   );
 }

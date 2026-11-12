@@ -71,6 +71,7 @@ export function createPlanner(db: AppDB, deviceId: () => Promise<DeviceId>) {
     }
     for (const date of wanted) {
       const existing = await db.plannedSessions.get(plannedSessionId(item.id, date));
+      if (existing?.deletedAt && existing.overridden) continue; // käyttäjä poisti juuri tämän kerran
       if (existing && !existing.deletedAt && existing.status !== 'open') continue; // kuitattu tai ohitettu säilyy
       if (existing && !existing.deletedAt && existing.overridden) continue; // yksittäin muutettu kerta säilyy
       const fresh: PlannedSession = newPlanned(item, date, nowTimestamp(), by);

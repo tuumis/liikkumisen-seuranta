@@ -1,7 +1,6 @@
 // Viikon tilanne: sankarikortti (pääluku edistymisrenkaassa + kolme tunnuslukua) ja avattavat
 // tarkemmat luvut. Laskenta tulee raportista (domain); tässä vain esitys.
 
-import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { formatHours, hoursBand } from '../../domain/hours';
 import { DEFAULT_SETTINGS, RECOMMENDATIONS } from '../../domain/recommendations';
@@ -14,7 +13,7 @@ import { useCountUp } from '../../ui/motion';
 import { ProgressRing } from '../../ui/ProgressRing';
 import { IconPlus } from '../../ui/icons';
 import { GoalCard } from '../analysis/GoalCard';
-import { HoursCard } from './HoursCard';
+import { Collapse, CollapseToggle, useCollapsible } from '../../ui/Collapse';
 
 const pick = (d: DualMeasure, s: Settings) => (s.primaryView === 'logged' ? d.logged : d.combined);
 
@@ -166,47 +165,24 @@ export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: Pe
   );
 }
 
-function readOpen(): boolean {
-  try {
-    return localStorage.getItem('weekDetails') === '1';
-  } catch {
-    return false;
-  }
-}
-
-/** Tarkemmat luvut (suositusvertailu ja tunnit) avattavana korttina. */
-export function WeekDetails({ report, isCurrentWeek }: { report: PeriodReport; isCurrentWeek: boolean }) {
-  const [open, setOpen] = useState(readOpen);
-  const toggle = () =>
-    setOpen((o) => {
-      try {
-        localStorage.setItem('weekDetails', o ? '0' : '1');
-      } catch {
-        /* ei tallennusta */
-      }
-      return !o;
-    });
+/** Tarkemmat luvut: suositusvertailu kirjatuista ja arvioiduista minuuteista (pienennettävä). */
+export function WeekDetails({ report }: { report: PeriodReport; isCurrentWeek?: boolean }) {
+  const [open, toggle] = useCollapsible('weekDetails', false);
   return (
     <section className="card p-4 sm:p-5">
-      <button type="button" onClick={toggle} className="press flex w-full items-center justify-between gap-2 text-left" aria-expanded={open}>
-        <span>
-          <span className="block font-display text-lg font-semibold text-slate-900">Tarkemmat luvut</span>
-          <span className="block text-xs text-slate-500">Suositusvertailu kirjatuista ja arvioiduista minuuteista, tunnit päivittäin</span>
-        </span>
-        <span className={`flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-sunk)] text-slate-600 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} aria-hidden>
-          <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
-            <path d="m6 9 6 6 6-6" />
-          </svg>
-        </span>
-      </button>
-      {open && (
-        <div className="anim-fade mt-4 space-y-4">
-          <div className="card-sunk p-3 text-sm">
-            <GoalCard report={report} variant="compact" />
-          </div>
-          <HoursCard report={report} isCurrentWeek={isCurrentWeek} />
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Suositusvertailu</div>
+          <h2 className="font-display text-lg font-semibold text-slate-900">Tarkemmat luvut</h2>
+          {!open && <p className="text-xs text-slate-500">Kirjatut ja arvioidut minuutit erikseen, rasittavat ja vahvistavat päivät</p>}
         </div>
-      )}
+        <CollapseToggle open={open} onToggle={toggle} label="Tarkemmat luvut" />
+      </div>
+      <Collapse open={open}>
+        <div className="card-sunk mt-4 p-3 text-sm">
+          <GoalCard report={report} variant="compact" />
+        </div>
+      </Collapse>
     </section>
   );
 }

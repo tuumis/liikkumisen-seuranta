@@ -943,6 +943,39 @@ export function createRepositories(db: AppDB = defaultDb) {
   }
 
   /** Poisto kalenterista (poistomerkintä); pelattua peliä ei poisteta täältä. */
+  /**
+   * Suunnitellun kerran poisto kokonaan (ei näy viikolla eikä toteutumassa). Kuitattua ei poisteta
+   * (poista kerta ensin). Poistomerkintä saa overridden-tiedon, jotta viikkopohjan muokkaus ei
+   * luo kertaa uudelleen; pelikalenterin tiedot poistetaan samalla. restorePlanned kumoaa.
+   */
+  async function deletePlanned(planId: UUID): Promise<void> {
+    await db.transaction('rw', [db.plannedSessions, db.fixtures, db.meta], async () => {
+      const plan = await db.plannedSessions.get(planId);
+      if (!plan || plan.deletedAt) return;
+      if (plan.status === 'done') throw new Error('Kuitattu kerta: poista ensin kirjattu kerta');
+      const ts = nowTimestamp();
+      await db.plannedSessions.put({ ...plan, overridden: true, deletedAt: ts, updatedAt: ts, updatedBy: await deviceId() });
+      const f = await db.fixtures.get(planId);
+      if (f && !f.deletedAt) await softDelete(db.fixtures, planId);
+    });
+  }
+
+  async function restorePlanned(planId: UUID): Promise<void> {
+    await db.transaction('rw', [db.plannedSessions, db.fixtures, db.meta], async () => {
+      const plan = await db.plannedSessions.get(planId);
+      if (!plan?.deletedAt) return;
+      const next = await stamp({ ...plan });
+      delete next.deletedAt;
+      await db.plannedSessions.put(next);
+      const f = await db.fixtures.get(planId);
+      if (f?.deletedAt) {
+        const nf = await stamp({ ...f });
+        delete nf.deletedAt;
+        await db.fixtures.put(nf);
+      }
+    });
+  }
+
   async function deleteFixture(planId: UUID): Promise<void> {
     await db.transaction('rw', [db.plannedSessions, db.fixtures, db.meta], async () => {
       const plan = await db.plannedSessions.get(planId);
@@ -1145,6 +1178,8 @@ export function createRepositories(db: AppDB = defaultDb) {
     createFixture,
     updateFixture,
     deleteFixture,
+    deletePlanned,
+    restorePlanned,
     getFootballDetails,
     footballDetailsFor,
     saveFootballDetails,

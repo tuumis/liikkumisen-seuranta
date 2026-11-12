@@ -91,7 +91,7 @@ export function HighlightsCard({ profile, week, className = '' }: { profile: Pro
                 setScope(k);
                 setShowAll(false);
               }}
-              className={`press rounded-[10px] px-2.5 py-1 ${scope === k ? 'bg-[var(--surface-raised)] text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+              className={`press min-h-8 rounded-[10px] px-3 py-1.5 ${scope === k ? 'bg-[var(--surface-raised)] text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
             >
               {l}
             </button>

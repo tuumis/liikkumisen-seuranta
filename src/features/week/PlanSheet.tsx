@@ -41,6 +41,7 @@ export function PlanSheet({
   const [editTime, setEditTime] = useState('');
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string>();
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     setCustom('');
@@ -48,6 +49,7 @@ export function PlanSheet({
     setEditTime(plan?.startTime ?? '');
     setEditing(false);
     setError(undefined);
+    setConfirmDelete(false);
   }, [plan]);
   if (!plan) return null;
   const future = plan.date > todayFn();
@@ -55,6 +57,18 @@ export function PlanSheet({
     await f();
     onClose();
   };
+
+  async function remove() {
+    if (!confirmDelete) return setConfirmDelete(true);
+    try {
+      const id = plan!.id;
+      await repo.deletePlanned(id);
+      onClose();
+      toast(`Poistettu: ${type?.name ?? 'suunnitelma'} ${dayLabel(plan!.date)}`, { label: 'Kumoa', run: () => repo.restorePlanned(id) });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
 
   async function saveOccurrence() {
     const d = durationSchema.safeParse(editDuration);
@@ -168,6 +182,31 @@ export function PlanSheet({
           <Button variant="secondary" className="w-full" onClick={run(() => actions.reopen(plan))}>
             Palauta avoimeksi
           </Button>
+        )}
+
+        {plan.status !== 'done' && (
+          <div className="border-t border-slate-200 pt-4">
+            {confirmDelete && (
+              <p className="mb-2 text-sm text-slate-700">
+                Poistetaanko tämä kerta kokonaan? Se ei näy viikolla eikä suunnitelman toteutumassa{plan.templateItemId ? '. Viikkopohja ja muut viikot pysyvät ennallaan' : ''}.
+              </p>
+            )}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => void remove()}
+                className={`press min-h-11 flex-1 rounded-xl px-4 text-sm font-semibold ${confirmDelete ? 'bg-red-700 text-white hover:bg-red-800' : 'bg-[var(--surface-raised)] text-red-700 shadow-xs ring-1 ring-red-200 hover:bg-red-50'}`}
+              >
+                {confirmDelete ? 'Vahvista poisto' : 'Poista kokonaan'}
+              </button>
+              {confirmDelete && (
+                <Button variant="secondary" onClick={() => setConfirmDelete(false)}>
+                  Peruuta
+                </Button>
+              )}
+            </div>
+            {!confirmDelete && <p className="mt-1.5 text-xs text-slate-500">Yleensä riittää "Ei tehty", jolloin merkintä jää näkyviin. Poista vain, jos kertaa ei pitänyt olla lainkaan.</p>}
+          </div>
         )}
       </div>
     </Sheet>
