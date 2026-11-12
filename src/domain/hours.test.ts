@@ -95,6 +95,10 @@ describe('arvio koko viikolle (ennuste)', () => {
     expect(h.actualMin).toBe(570);
     // suunnitelma (vertailukohta): kolme suunniteltua kertaa + välitunnit 5 × 60, ei turnausta
     expect(h.expectedMin).toBe(90 + 90 + 60 + 300);
+    // päiväkohtainen arkiliikunta näkyy myös tulevilla arkipäivillä, ei viikonloppuna (0 min)
+    const est = Object.fromEntries(h.days.map((d) => [d.date, d.estimateMin]));
+    expect(est).toMatchObject({ '2026-11-09': 60, '2026-11-11': 60, '2026-11-12': 60, '2026-11-13': 60, '2026-11-14': 0 });
+    expect(h.days.find((d) => d.date === '2026-11-12')!.estimateCategories).toEqual(['school_recess']);
   });
 
   it('"Ei tehty" pudottaa kerran pois; kuittaamaton mennyt kerta on mukana, kunnes se merkitään', () => {

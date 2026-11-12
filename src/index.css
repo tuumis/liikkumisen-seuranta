@@ -460,6 +460,16 @@ body {
 ::view-transition-new(root) {
   animation: none;
 }
+/* Alapalkki omana kerroksenaan sisällön päällä: pysyy näkyvissä näkymänvaihdon aikana (uusi tila elää, liukuva korostus näkyy). */
+.bottom-nav {
+  view-transition-name: bottom-nav;
+}
+::view-transition-old(bottom-nav) {
+  display: none;
+}
+::view-transition-new(bottom-nav) {
+  animation: none;
+}
 ::view-transition-old(page) {
   animation: 0.12s ease-out both fade reverse;
 }

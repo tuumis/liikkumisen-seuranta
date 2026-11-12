@@ -283,7 +283,7 @@ export default function App() {
       </main>
 
       {/* Puhelin: kelluva alanavigaatio, aktiivinen kohta liukuu paikalleen. */}
-      <nav className="fixed inset-x-0 bottom-0 z-20 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden" aria-label="Päävalikko">
+      <nav className="bottom-nav fixed inset-x-0 bottom-0 z-20 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden" aria-label="Päävalikko">
         <div className="relative mx-auto grid max-w-md grid-cols-4 rounded-[1.75rem] bg-[color-mix(in_oklab,var(--surface)_88%,transparent)] p-1.5 shadow-xl ring-1 ring-slate-200/70 backdrop-blur-xl">
           <span
             className="absolute inset-y-1.5 left-1.5 rounded-[1.35rem] bg-green-700 shadow-[0_8px_20px_-8px_rgb(var(--accent-rgb)/0.7)] transition-transform duration-500 [transition-timing-function:var(--ease-out)]"

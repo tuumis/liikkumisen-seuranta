@@ -235,7 +235,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             barTarget={DAY_BAR_TARGET[info?.group ?? 'school_age']}
             onOpenMenu={() => setDayMenu(d)}
             onEdit={setEditing}
-            onEstimate={() => setEstimateDay({ date: d, categories: report?.allDays[i]?.estimatedCategories ?? [] })}
+            onEstimate={() => setEstimateDay({ date: d, categories: report?.hours.days[i]?.estimateCategories ?? [] })}
           />
         ))}
       </ol>

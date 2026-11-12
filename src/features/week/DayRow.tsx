@@ -77,9 +77,8 @@ export function DayRow({
   const estPct = Math.min(100 - loggedPct, (est / barTarget) * 100);
 
   const dayNo = Number(date.slice(8, 10));
-  // Arkiliikunnan arvio, joka on mukana päivän luvuissa (menneet ja tämä päivä, ei sairas-/matkapäivinä).
-  const estMin = hours ? hours.actualMin - hours.actualLoggedMin : 0;
-  const estimateRow = !isFuture && !flag && estMin > 0 && totals && totals.estimatedCategories.length > 0 ? { minutes: estMin, categories: totals.estimatedCategories } : null;
+  // Arkiliikunnan arvio näkyy jokaisella päivällä (ei sairas-/matkapäivinä); tarkistus tehdään kyseisenä päivänä tai jälkikäteen.
+  const estimateRow = hours && !flag && hours.estimateMin > 0 ? { minutes: hours.estimateMin, categories: hours.estimateCategories } : null;
   const weekday = dayLabel(date).split(' ')[0];
   const full = formatDate(date, 'EEEE');
   const weekdayName = full.charAt(0).toUpperCase() + full.slice(1);
@@ -211,7 +210,7 @@ export function DayRow({
                   <button
                     type="button"
                     onClick={() => onFootball(s)}
-                    className="press min-h-9 shrink-0 rounded-full bg-amber-100 px-3 text-xs font-bold text-amber-900 hover:bg-amber-200"
+                    className="press min-h-9 shrink-0 rounded-full bg-amber-100 px-3 text-xs font-bold text-amber-900 hover:bg-amber-200 dark:hover:bg-amber-900"
                   >
                     + tiedot
                   </button>
@@ -220,23 +219,37 @@ export function DayRow({
             );
           })}
           {estimateRow && (
-            <li className="flex items-center gap-2 rounded-2xl border border-dashed border-amber-300 bg-amber-50/60 pr-1 dark:border-amber-800">
-              <button type="button" onClick={onEstimate} className="press flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-2 py-2 text-left">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-800" aria-hidden>
-                  <IconSun size="1.15rem" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-slate-800">
-                    Arkiliikunta <span className="font-medium text-amber-800">(arvio)</span>
-                  </span>
-                  <span className="block truncate text-xs text-slate-500">
-                    {estimateRow.categories.map((c) => CATEGORY_LABEL[c].toLowerCase()).join(', ')} · {estimateRow.minutes} min
-                  </span>
-                </span>
-              </button>
-              <button type="button" onClick={onEstimate} className="press min-h-9 shrink-0 rounded-full bg-amber-100 px-3 text-xs font-bold text-amber-900 hover:bg-amber-200">
-                Tarkista
-              </button>
+            <li className="flex items-center gap-2 rounded-2xl border border-dashed border-amber-300 bg-amber-50/60 pr-1 dark:border-amber-800 dark:bg-amber-950/45">
+              {(() => {
+                const body = (
+                  <>
+                    <span className={`flex size-9 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-800 ${isFuture ? 'opacity-70' : ''}`} aria-hidden>
+                      <IconSun size="1.15rem" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className={`block truncate text-sm font-semibold ${isFuture ? 'text-slate-600' : 'text-slate-800'}`}>
+                        Arkiliikunta <span className="font-medium text-amber-800">(arvio)</span>
+                      </span>
+                      <span className="block truncate text-xs text-slate-500">
+                        {estimateRow.categories.map((c) => CATEGORY_LABEL[c].toLowerCase()).join(', ')} · {estimateRow.minutes} min
+                        {isFuture && ' · tarkistetaan päivänä'}
+                      </span>
+                    </span>
+                  </>
+                );
+                return isFuture ? (
+                  <div className="flex min-w-0 flex-1 items-center gap-3 px-2 py-2">{body}</div>
+                ) : (
+                  <button type="button" onClick={onEstimate} className="press flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-2 py-2 text-left">
+                    {body}
+                  </button>
+                );
+              })()}
+              {!isFuture && (
+                <button type="button" onClick={onEstimate} className="press min-h-9 shrink-0 rounded-full bg-amber-100 px-3 text-xs font-bold text-amber-900 hover:bg-amber-200 dark:hover:bg-amber-900">
+                  Tarkista
+                </button>
+              )}
             </li>
           )}
           {plans.map((p) => {

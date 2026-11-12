@@ -34,6 +34,10 @@ export interface DayHours {
   actualLoggedMin: number;
   /** Ennuste: menneille toteuma + kuittaamattomat, tuleville avoimet suunnitelmat + perusarvio. */
   forecastMin: number;
+  /** Päivän arkiliikunnan perusarvio (min): menneille mukana toteumassa, tuleville ennusteessa. */
+  estimateMin: number;
+  /** Kategoriat, joiden perusarvio on mukana estimateMin-luvussa. */
+  estimateCategories: Category[];
   future: boolean;
   flagged: boolean;
 }
@@ -113,6 +117,8 @@ export function weeklyHours(input: {
     }
     let actualMin = 0;
     let actualLoggedMin = 0;
+    let estimateMin = 0;
+    const estimateCategories: Category[] = [];
     for (const [c, m] of logByCat) {
       cat(c).actual.sessions += m;
       actualMin += m;
@@ -125,6 +131,8 @@ export function weeklyHours(input: {
         if (!m) continue;
         cat(c).actual.estimate += m;
         actualMin += m;
+        estimateMin += m;
+        estimateCategories.push(c);
       }
     }
 
@@ -161,6 +169,8 @@ export function weeklyHours(input: {
         cat(c).forecast += m;
         forecastMin += m;
         fc.estimateAhead += m;
+        estimateMin += m;
+        estimateCategories.push(c);
       }
     }
     for (const [c, m] of openByCat) {
@@ -170,7 +180,7 @@ export function weeklyHours(input: {
     }
 
     if (!future) expectedToDateMin += expectedMin;
-    days.push({ date: d, expectedMin, actualMin, actualLoggedMin, forecastMin, future, flagged: isFlagged });
+    days.push({ date: d, expectedMin, actualMin, actualLoggedMin, forecastMin, estimateMin, estimateCategories, future, flagged: isFlagged });
   }
 
   const byCategory = CATEGORY_ORDER.filter((c) => acc.has(c)).map((c) => acc.get(c)!);
