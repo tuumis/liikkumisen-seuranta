@@ -36,7 +36,7 @@ type Variant = 'primary' | 'secondary' | 'ghost' | 'soft';
 
 const VARIANT: Record<Variant, string> = {
   primary:
-    'bg-green-700 text-white shadow-[0_1px_0_rgb(255_255_255/0.12)_inset,0_6px_16px_-6px_rgb(36_76_59/0.55)] hover:bg-green-800 disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none',
+    'bg-green-700 text-white shadow-[0_1px_0_rgb(255_255_255/0.12)_inset,0_6px_16px_-6px_rgb(var(--accent-rgb)/0.55)] hover:bg-green-800 disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none',
   secondary: 'bg-[var(--surface-raised)] text-slate-900 shadow-xs ring-1 ring-slate-200 hover:bg-slate-100',
   ghost: 'text-green-800 hover:bg-green-50',
   soft: 'bg-green-100 text-green-900 hover:bg-green-200',

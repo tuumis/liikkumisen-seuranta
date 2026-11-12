@@ -69,3 +69,65 @@ export function useThemeChoice(): [ThemeChoice, (c: ThemeChoice) => void] {
     },
   ];
 }
+
+// ---------- väriteema (korosteväri) ----------
+
+export type AccentTheme = 'forest' | 'fjord' | 'heather' | 'graphite';
+export const ACCENT_THEMES: { id: AccentTheme; label: string; text: string; swatch: [string, string, string] }[] = [
+  { id: 'forest', label: 'Metsä', text: 'Metsänvihreä ja hiekka', swatch: ['#244c3b', '#dce8dc', '#e6bd89'] },
+  { id: 'fjord', label: 'Vuono', text: 'Syvä sinivihreä ja persikka', swatch: ['#1f4a5b', '#d6e8ee', '#efbf94'] },
+  { id: 'heather', label: 'Kanerva', text: 'Luumu ja ruusukulta', swatch: ['#4a2f55', '#ebe0ee', '#ecb9a2'] },
+  { id: 'graphite', label: 'Grafiitti', text: 'Hiilenharmaa ja meripihka', swatch: ['#2f3a40', '#e3e7e9', '#e8b562'] },
+];
+const ACCENT_KEY = 'accent';
+
+export function getAccent(): AccentTheme {
+  try {
+    const v = localStorage.getItem(ACCENT_KEY);
+    return ACCENT_THEMES.some((t) => t.id === v) ? (v as AccentTheme) : 'forest';
+  } catch {
+    return 'forest';
+  }
+}
+
+export function applyAccent(a: AccentTheme = getAccent()): void {
+  const root = document.documentElement;
+  if (a === 'forest') root.removeAttribute('data-accent');
+  else root.setAttribute('data-accent', a);
+}
+
+export function useAccent(): [AccentTheme, (a: AccentTheme) => void] {
+  const [accent, setAccent] = useState<AccentTheme>(getAccent);
+  return [
+    accent,
+    (a) => {
+      try {
+        if (a === 'forest') localStorage.removeItem(ACCENT_KEY);
+        else localStorage.setItem(ACCENT_KEY, a);
+      } catch {
+        /* ei tallennusta */
+      }
+      // Pehmeä siirtymä teemojen välillä (View Transitions, jos tuettu).
+      const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown };
+      if (doc.startViewTransition && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) doc.startViewTransition(() => applyAccent(a));
+      else applyAccent(a);
+      setAccent(a);
+      window.dispatchEvent(new Event('themechange'));
+    },
+  ];
+}
+
+/** Kasvaa aina teeman tai väriteeman vaihtuessa (SVG-kaaviot lukevat värit CSS-muuttujista). */
+export function useThemeVersion(): number {
+  const [v, setV] = useState(0);
+  useEffect(() => {
+    const bump = () => setV((x) => x + 1);
+    window.addEventListener('themechange', bump);
+    return () => window.removeEventListener('themechange', bump);
+  }, []);
+  return v;
+}
+
+/** Design systemin tokenin arvo (esim. '--viz-logged') nykyisessä teemassa. */
+export const cssVar = (name: string, fallback = '') =>
+  (typeof document !== 'undefined' && getComputedStyle(document.documentElement).getPropertyValue(name).trim()) || fallback;

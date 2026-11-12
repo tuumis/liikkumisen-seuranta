@@ -41,11 +41,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toast && (
           <div
             key={toast.id}
-            className="anim-pop pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-2xl bg-[#1f2c26] px-4 py-2.5 text-sm font-medium text-[#f6f5f0] shadow-xl ring-1 ring-white/10 dark:bg-[#2a3a32]"
+            className="anim-pop pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-2xl bg-[var(--toast-bg)] px-4 py-2.5 text-sm font-medium text-[#f6f5f0] shadow-xl ring-1 ring-white/10"
           >
             {toast.kind !== 'info' && (
               <span
-                className={`flex size-7 shrink-0 items-center justify-center rounded-full ${toast.kind === 'success' ? 'bg-[#dce8dc] text-[#244c3b]' : 'bg-red-200 text-red-900'}`}
+                className={`flex size-7 shrink-0 items-center justify-center rounded-full ${toast.kind === 'success' ? 'bg-[var(--hero-pill-bg)] text-[var(--accent)]' : 'bg-red-200 text-red-900'}`}
                 aria-hidden
               >
                 <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
@@ -61,7 +61,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             {toast.action && (
               <button
                 type="button"
-                className="press min-h-10 rounded-lg px-3 font-semibold text-[#e6bd89] hover:bg-white/10"
+                className="press min-h-10 rounded-lg px-3 font-semibold text-[var(--hero-accent)] hover:bg-white/10"
                 onClick={async () => {
                   const a = toast.action!;
                   clearTimeout(timer.current);

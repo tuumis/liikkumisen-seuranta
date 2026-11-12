@@ -28,7 +28,13 @@ export function weekModel(report: PeriodReport, settings: Settings): WeekModel {
   const ev = report.evaluation;
   const h = report.hours;
   const kind = report.period.kind;
-  const hoursTile = { label: 'Liikuntaa', value: formatHours(h.actualMin), sub: report.group.group === 'school_age' ? hoursBand(h.actualMin).label : h.expectedMin ? `arvio ${formatHours(h.expectedMin)}` : undefined };
+  // Kokonaisliikunta kestona (kaikki teho: kevyt, reipas, rasittava) ja siitä reippaan osuus.
+  const mvpaMin = report.days.reduce((a, d) => a + d.mvpaCombined, 0);
+  const hoursTile = {
+    label: 'Liikuntaa yhteensä',
+    value: formatHours(h.actualMin),
+    sub: `josta reipasta ja rasittavaa ≈ ${formatHours(mvpaMin)}${report.group.group === 'school_age' ? ` · ${hoursBand(h.actualMin).label.toLowerCase()}` : ''}`,
+  };
 
   if (ev.schoolAge) {
     const s = ev.schoolAge;
@@ -77,7 +83,7 @@ export function weekModel(report: PeriodReport, settings: Settings): WeekModel {
 }
 
 const PILL = {
-  met: 'bg-[#dce8dc] text-[#1c3d30]',
+  met: 'bg-[var(--hero-pill-bg)] text-[var(--hero-pill-ink)]',
   near: 'bg-[#f3e3cc] text-[#6a4526]',
   below: 'bg-white/15 text-[var(--hero-ink)]',
 } as const;
@@ -109,7 +115,7 @@ export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: Pe
           <div className="py-6">
             <p className="font-display text-2xl font-semibold leading-snug">Viikko on vasta alussa.</p>
             <p className="mt-1 max-w-md text-sm text-[var(--hero-ink-soft)]">Kirjaa ensimmäinen liikuntakerta, niin {profile.name}n tilanne suhteessa suosituksiin näkyy tässä.</p>
-            <button type="button" onClick={onAdd} className="press mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#f6f5f0] px-4 text-sm font-bold text-[#244c3b] shadow-md hover:bg-white">
+            <button type="button" onClick={onAdd} className="press mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--side-ink)] px-4 text-sm font-bold text-[var(--accent)] shadow-md hover:bg-white">
               <IconPlus size="1.1rem" /> Lisää kerta
             </button>
           </div>

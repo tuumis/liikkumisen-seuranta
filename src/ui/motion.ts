@@ -45,3 +45,26 @@ export function useMounted(): boolean {
   }, []);
   return on;
 }
+
+/** true vierityksen aikana; palaa false-tilaan, kun vieritys on ollut pysähdyksissä `idleMs`. */
+export function useScrolling(idleMs = 450): boolean {
+  const [scrolling, setScrolling] = useState(false);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      // Pienet heilahdukset (esim. iOS:n osoiterivi) eivät piilota painiketta.
+      if (Math.abs(window.scrollY - lastY) < 4) return;
+      lastY = window.scrollY;
+      setScrolling(true);
+      clearTimeout(timer);
+      timer = setTimeout(() => setScrolling(false), idleMs);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      clearTimeout(timer);
+    };
+  }, [idleMs]);
+  return scrolling;
+}

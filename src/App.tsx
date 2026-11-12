@@ -15,7 +15,8 @@ import { formatDate } from './ui/format';
 import { IconBall, IconChart, IconHelp, IconLeaf, IconSettings, IconWeek } from './ui/icons';
 
 // Analyysi (Recharts) ladataan omana osanaan; service worker esivälimuistittaa senkin.
-const AnalysisView = lazy(() => import('./features/analysis/AnalysisView').then((m) => ({ default: m.AnalysisView })));
+const loadAnalysis = () => import('./features/analysis/AnalysisView');
+const AnalysisView = lazy(() => loadAnalysis().then((m) => ({ default: m.AnalysisView })));
 
 type Tab = 'week' | 'games' | 'analysis' | 'settings';
 
@@ -55,6 +56,12 @@ export default function App() {
     setTab('settings');
   };
   const [selectedId, setSelectedIdState] = useState<string | undefined>(() => store.get('selectedProfileId'));
+
+  // Analyysi esiladataan taustalla, jotta välilehti avautuu heti (ei tyhjää hetkeä).
+  useEffect(() => {
+    const id = window.setTimeout(() => void loadAnalysis(), 1200);
+    return () => window.clearTimeout(id);
+  }, []);
 
   useEffect(() => {
     repo
@@ -138,8 +145,8 @@ export default function App() {
         <div className="flex items-center gap-3 px-6 pb-8 pt-8">
           <BrandMark className="size-10" />
           <div className="leading-tight">
-            <div className="font-display text-[17px] font-semibold text-[#f6f5f0]">Liikkumisen</div>
-            <div className="font-display text-[17px] font-semibold text-[#e6bd89]">seuranta</div>
+            <div className="font-display text-[17px] font-semibold text-[var(--side-ink)]">Liikkumisen</div>
+            <div className="font-display text-[17px] font-semibold text-[var(--hero-accent)]">seuranta</div>
           </div>
         </div>
         <nav className="space-y-1 px-4" aria-label="Päävalikko">
@@ -152,10 +159,10 @@ export default function App() {
                 onClick={() => setTab(t.id)}
                 aria-current={active ? 'page' : undefined}
                 className={`press group relative flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-[15px] font-semibold ${
-                  active ? 'bg-white/[0.12] text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]' : 'text-[#c9dccb] hover:bg-white/[0.06] hover:text-white'
+                  active ? 'bg-white/[0.12] text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]' : 'text-[var(--side-ink-soft)] hover:bg-white/[0.06] hover:text-white'
                 }`}
               >
-                <span className={`absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-[#e6bd89] transition-opacity ${active ? 'opacity-100' : 'opacity-0'}`} aria-hidden />
+                <span className={`absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-[var(--hero-accent)] transition-opacity ${active ? 'opacity-100' : 'opacity-0'}`} aria-hidden />
                 <t.Icon size="1.35rem" />
                 {t.label}
               </button>
@@ -164,7 +171,7 @@ export default function App() {
         </nav>
         {profiles && profiles.length > 0 && (
           <div className="mt-10 px-4">
-            <div className="px-4 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9fbaa8]">Profiilit</div>
+            <div className="px-4 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--side-muted)]">Profiilit</div>
             <div className="space-y-1" role="tablist" aria-label="Profiilit" aria-orientation="vertical">
               {profiles.map((p) => {
                 const active = p.id === selected?.id;
@@ -175,7 +182,7 @@ export default function App() {
                     role="tab"
                     aria-selected={active}
                     onClick={() => select(p.id)}
-                    className={`press flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-sm font-semibold ${active ? 'bg-[#f6f5f0] text-[#244c3b] shadow-md' : 'text-[#dce8dc] hover:bg-white/[0.06]'}`}
+                    className={`press flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-sm font-semibold ${active ? 'bg-[var(--side-ink)] text-[var(--side-from)] shadow-md' : 'text-[var(--side-ink-soft)] hover:bg-white/[0.06]'}`}
                   >
                     <Avatar name={p.name} photo={p.photo} color={p.color} size="sm" className={active ? '' : 'ring-2 ring-white/20'} />
                     <span className="truncate">{p.name}</span>
@@ -186,11 +193,11 @@ export default function App() {
           </div>
         )}
         <div className="mt-auto space-y-3 px-4 pb-7">
-          <button type="button" onClick={() => setHelpOpen(true)} className="press flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-sm font-semibold text-[#c9dccb] hover:bg-white/[0.06] hover:text-white">
+          <button type="button" onClick={() => setHelpOpen(true)} className="press flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-sm font-semibold text-[var(--side-ink-soft)] hover:bg-white/[0.06] hover:text-white">
             <IconHelp size="1.25rem" />
             Ohje
           </button>
-          <p className="flex items-start gap-2 px-4 text-[11px] leading-relaxed text-[#9fbaa8]">
+          <p className="flex items-start gap-2 px-4 text-[11px] leading-relaxed text-[var(--side-muted)]">
             <IconLeaf size="0.95rem" className="mt-px shrink-0" />
             Tiedot pysyvät tällä laitteella. Ei verkkoliikennettä.
           </p>
@@ -220,7 +227,7 @@ export default function App() {
                   aria-selected={active}
                   onClick={() => select(p.id)}
                   className={`press flex min-h-9 shrink-0 items-center gap-2 rounded-full pl-1 pr-3.5 text-sm font-semibold ${
-                    active ? 'bg-green-700 text-white shadow-[0_6px_16px_-6px_rgb(36_76_59/0.6)]' : 'bg-[var(--surface)] text-slate-800 shadow-xs ring-1 ring-slate-200'
+                    active ? 'bg-green-700 text-white shadow-[0_6px_16px_-6px_rgb(var(--accent-rgb)/0.6)]' : 'bg-[var(--surface)] text-slate-800 shadow-xs ring-1 ring-slate-200'
                   }`}
                 >
                   <Avatar name={p.name} photo={p.photo} color={p.color} size="sm" />
@@ -268,7 +275,7 @@ export default function App() {
       <nav className="fixed inset-x-0 bottom-0 z-20 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden" aria-label="Päävalikko">
         <div className="relative mx-auto grid max-w-md grid-cols-4 rounded-[1.75rem] bg-[color-mix(in_oklab,var(--surface)_88%,transparent)] p-1.5 shadow-xl ring-1 ring-slate-200/70 backdrop-blur-xl">
           <span
-            className="absolute inset-y-1.5 left-1.5 rounded-[1.35rem] bg-green-700 shadow-[0_8px_20px_-8px_rgb(36_76_59/0.7)] transition-transform duration-500 [transition-timing-function:var(--ease-out)]"
+            className="absolute inset-y-1.5 left-1.5 rounded-[1.35rem] bg-green-700 shadow-[0_8px_20px_-8px_rgb(var(--accent-rgb)/0.7)] transition-transform duration-500 [transition-timing-function:var(--ease-out)]"
             style={{ width: 'calc((100% - 0.75rem) / 4)', transform: `translateX(${tabIndex * 100}%)` }}
             aria-hidden
           />
@@ -301,13 +308,13 @@ function BrandMark({ className = '' }: { className?: string }) {
     <svg viewBox="0 0 40 40" className={className} aria-hidden>
       <defs>
         <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#2f6a51" />
-          <stop offset="1" stopColor="#1a3a2d" />
+          <stop offset="0" style={{ stopColor: 'var(--hero-from)' }} />
+          <stop offset="1" style={{ stopColor: 'var(--hero-to)' }} />
         </linearGradient>
       </defs>
       <rect width="40" height="40" rx="12" fill={`url(#${id})`} />
       <circle cx="20" cy="20" r="10.5" fill="none" stroke="#f6f5f0" strokeOpacity="0.22" strokeWidth="3.2" />
-      <path d="M20 9.5a10.5 10.5 0 1 1-9.9 14" fill="none" stroke="#e6bd89" strokeWidth="3.2" strokeLinecap="round" />
+      <path d="M20 9.5a10.5 10.5 0 1 1-9.9 14" fill="none" style={{ stroke: 'var(--hero-accent)' }} strokeWidth="3.2" strokeLinecap="round" />
       <circle cx="20" cy="20" r="3.4" fill="#f6f5f0" />
     </svg>
   );

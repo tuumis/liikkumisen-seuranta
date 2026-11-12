@@ -20,6 +20,7 @@ import { FootballPanel } from '../football/FootballPanel';
 import { DayRow } from './DayRow';
 import { WeekDetails, WeekHero } from './WeekSummary';
 import { DailyChart, RecentCard, RhythmCard, UpcomingCard } from './Dashboard';
+import { useScrolling } from '../../ui/motion';
 import { IconCalendarClock, IconChevronLeft, IconChevronRight, IconPlus } from '../../ui/icons';
 import { HoursGauge } from './HoursGauge';
 import { GettingStarted } from './GettingStarted';
@@ -122,6 +123,8 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
 
   // Päiväkoosteet korvausperiaatteella (kirjaukset + perusarviot) ja suositusvertailu.
   const report = useReport(profile, period);
+  // +-painike väistyy vierityksen ajaksi ja palaa, kun vieritys pysähtyy.
+  const scrolling = useScrolling();
   // Liikuntamäärän luokat (7 h = 60 min/pv) koskevat kouluikäisiä.
   const showGauge = report?.group.group === 'school_age';
   const week = {
@@ -212,6 +215,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             isToday={d === today}
             isFuture={d > today}
             totals={report?.allDays[i]}
+            hours={report?.hours.days[i]}
             sessions={(sessions ?? []).filter((s) => s.date === d)}
             plans={(plans ?? []).filter((p) => p.date === d && p.status !== 'done')}
             plannedById={plannedById}
@@ -249,12 +253,12 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
       {profile && hasAnySessions === false && <GettingStarted onAdd={() => setQuickAdd({})} onOpenSettings={onOpenSettings} />}
 
       {profile && report && (
-        <div className="grid items-start gap-5 lg:grid-cols-12 lg:gap-6">
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12 lg:gap-6">
           {/* Pääpalsta: tilanne, päivittäinen jakauma ja päivät. */}
-          <div className="space-y-5 lg:col-span-7 xl:col-span-8">
+          <div className="min-w-0 space-y-5 lg:col-span-7 xl:col-span-8">
             <WeekHero report={report} profile={profile} isCurrentWeek={isCurrent} onAdd={() => setQuickAdd({})} />
             {reviewButton}
-            <div className="grid gap-5 2xl:grid-cols-5">
+            <div className="grid grid-cols-1 gap-5 2xl:grid-cols-5">
               <div className="2xl:col-span-3">
                 <DailyChart report={report} today={today} target={DAY_BAR_TARGET[info?.group ?? 'school_age']} title={chartTitle} />
               </div>
@@ -274,7 +278,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
           </div>
 
           {/* Sivupalsta (PC): määrä, tulevat ja viimeisimmät, tarkemmat luvut. */}
-          <aside className="hidden space-y-5 lg:col-span-5 lg:block xl:col-span-4" aria-label="Viikon yhteenveto">
+          <aside className="hidden min-w-0 space-y-5 lg:col-span-5 lg:block xl:col-span-4" aria-label="Viikon yhteenveto">
             {showGauge && <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} />}
             <UpcomingCard profile={profile} today={today} types={typeMap} onOpen={setPlanOpen} />
             <RecentCard profile={profile} today={today} types={typeMap} onOpen={setEditing} />
@@ -288,7 +292,10 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
           <button
             type="button"
             onClick={() => setQuickAdd({})}
-            className="press fixed bottom-[6.75rem] right-5 z-20 flex size-16 items-center justify-center rounded-[1.4rem] bg-green-700 text-white shadow-[0_14px_30px_-10px_rgb(36_76_59/0.8)] hover:bg-green-800 sm:right-[max(1.25rem,calc(50%-19rem))] md:right-[max(1.25rem,calc(50%-21rem))] lg:hidden"
+            tabIndex={scrolling ? -1 : 0}
+            className={`fixed bottom-[6.75rem] right-5 z-20 flex size-16 items-center justify-center rounded-[1.4rem] bg-green-700 text-white shadow-[0_14px_30px_-10px_rgb(var(--accent-rgb)/0.8)] transition-[transform,opacity] duration-300 [transition-timing-function:var(--ease-out)] hover:bg-green-800 active:scale-95 sm:right-[max(1.25rem,calc(50%-19rem))] md:right-[max(1.25rem,calc(50%-21rem))] lg:hidden ${
+              scrolling ? 'pointer-events-none translate-y-6 scale-90 opacity-0' : 'opacity-100'
+            }`}
             aria-label="Lisää kerta"
           >
             <IconPlus size="1.75rem" strokeWidth={2.2} />

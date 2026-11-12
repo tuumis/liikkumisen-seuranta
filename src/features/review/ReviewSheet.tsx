@@ -143,7 +143,7 @@ export function IconButton({
   disabled?: boolean;
 }) {
   const tones = {
-    green: 'bg-green-700 text-white shadow-[0_6px_14px_-6px_rgb(36_76_59/0.7)] hover:bg-green-800',
+    green: 'bg-green-700 text-white shadow-[0_6px_14px_-6px_rgb(var(--accent-rgb)/0.7)] hover:bg-green-800',
     red: 'bg-[var(--surface-raised)] text-red-700 shadow-xs ring-1 ring-red-200 hover:bg-red-50',
     slate: 'bg-[var(--surface-raised)] text-slate-700 shadow-xs ring-1 ring-slate-200 hover:bg-slate-100',
   };

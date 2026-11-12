@@ -24,7 +24,7 @@ import { IconPlus } from '../../ui/icons';
 type View = 'diary' | 'calendar' | 'results' | 'teams';
 
 const LEVEL_CLASS: Record<GameLevel, string> = {
-  elite: 'bg-[#244c3b] text-[#f6f5f0] ring-[#244c3b] dark:bg-[#3e8a66] dark:ring-[#3e8a66]',
+  elite: 'bg-green-700 text-white ring-green-700',
   kilpa: 'bg-amber-100 text-amber-900 ring-amber-200',
   haaste: 'bg-green-100 text-green-900 ring-green-200',
 };

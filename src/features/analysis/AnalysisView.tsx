@@ -18,6 +18,8 @@ import { HoursGauge } from '../week/HoursGauge';
 import { useReport } from './useReport';
 import { FootballSection } from '../football/FootballSection';
 import { GamesView } from '../football/GamesView';
+import { HighlightsCard } from './HighlightsCard';
+import { IconChevronLeft, IconChevronRight } from '../../ui/icons';
 
 export function AnalysisView({ profile }: { profile?: Profile }) {
   const today = todayFn();
@@ -31,70 +33,81 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
   if (games && profile) return <GamesView profile={profile} onBack={() => setGames(false)} />;
 
   return (
-    <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0 2xl:grid-cols-3">
-      <Card className="lg:col-span-2 2xl:col-span-3">
-        <div className="mb-2 grid grid-cols-4 gap-1 rounded-xl bg-slate-100 p-1 text-sm" role="radiogroup" aria-label="Jakso">
-          <span role="radio" aria-checked className="rounded-xl bg-[var(--surface-raised)] py-2 text-center font-semibold text-slate-900 shadow-sm">
-            Viikko
-          </span>
-          {['Kuukausi', 'Kausi', 'Vuosi'].map((l) => (
-            <span key={l} role="radio" aria-checked={false} aria-disabled className="py-2 text-center text-slate-400" title="Tulossa vaiheessa 7">
-              {l}
-            </span>
-          ))}
-        </div>
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => setWeekStart(addDays(weekStart, -7))} className="min-h-11 min-w-11 rounded-full text-xl text-slate-700 active:bg-slate-100" aria-label="Edellinen viikko">
-            ‹
+    <div className="space-y-5">
+      {/* Jakson valinta */}
+      <div className="anim-fade flex flex-wrap items-center gap-2">
+        <div className="flex flex-1 items-center gap-1 rounded-2xl bg-[var(--surface)] p-1 shadow-sm sm:flex-none">
+          <button type="button" onClick={() => setWeekStart(addDays(weekStart, -7))} className="press flex size-10 items-center justify-center rounded-xl text-slate-600 hover:bg-[var(--surface-sunk)]" aria-label="Edellinen viikko">
+            <IconChevronLeft />
           </button>
-          <div className="flex-1 text-center">
-            <div className="text-sm text-slate-600">Viikko {wk.week}</div>
-            <div className="text-base font-semibold text-slate-900">
+          <div className="min-w-0 flex-1 px-2 text-center sm:w-56 sm:flex-none">
+            <div className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500">Viikko {wk.week}</div>
+            <div className="truncate text-sm font-bold text-slate-900">
               {formatDate(period.start, 'd.M.')} – {formatDate(period.end, 'd.M.yyyy')}
             </div>
           </div>
-          <button type="button" onClick={() => setWeekStart(addDays(weekStart, 7))} className="min-h-11 min-w-11 rounded-full text-xl text-slate-700 active:bg-slate-100" aria-label="Seuraava viikko">
-            ›
+          <button type="button" onClick={() => setWeekStart(addDays(weekStart, 7))} className="press flex size-10 items-center justify-center rounded-xl text-slate-600 hover:bg-[var(--surface-sunk)]" aria-label="Seuraava viikko">
+            <IconChevronRight />
           </button>
         </div>
         {!isCurrent && (
-          <div className="text-center">
-            <Button variant="ghost" onClick={() => setWeekStart(startOfIsoWeek(today))}>
-              Tämä viikko
-            </Button>
-          </div>
+          <Button variant="secondary" onClick={() => setWeekStart(startOfIsoWeek(today))}>
+            Tämä viikko
+          </Button>
         )}
-      </Card>
+        <span className="w-full text-xs text-slate-500 sm:ml-auto sm:w-auto">Kuukausi-, kausi- ja vuosinäkymä tulossa. Kohokohdat voi jo katsoa kuukaudelta ja kaudelta.</span>
+      </div>
 
       {!profile && <Card>Lisää profiili Asetukset-välilehdellä.</Card>}
 
+      {profile && !report && (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-12" aria-busy="true" aria-label="Ladataan">
+          <div className="space-y-5 lg:col-span-8">
+            <div className="skeleton h-56 rounded-[1.75rem]" />
+            <div className="skeleton h-72 rounded-[1.75rem]" />
+          </div>
+          <div className="space-y-5 lg:col-span-4">
+            <div className="skeleton h-80 rounded-[1.75rem]" />
+          </div>
+        </div>
+      )}
+
       {profile && report && (
-        <>
-          <Card title={`Tavoitteet · ${profile.name}`}>
-            <GoalCard report={report} variant="full" />
-          </Card>
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12 lg:gap-6">
+          {/* Pääpalsta: suositusvertailu, päivittäinen kaavio ja tunnit. */}
+          <div className="min-w-0 space-y-5 lg:col-span-7 xl:col-span-8">
+            <Card title={`Tavoitteet · ${profile.name}`} eyebrow="Suositusvertailu" className="anim-rise">
+              <GoalCard report={report} variant="full" />
+            </Card>
+            <Card title={report.group.group === 'early_years' ? 'Vauhdikas liikkuminen päivittäin' : 'Reipas ja rasittava päivittäin'} eyebrow="Päivittäin" className="anim-rise">
+              <DailyMvpaChart
+                days={report.allDays}
+                validDates={report.validDates}
+                target={DAY_BAR_TARGET[report.group.group]}
+                targetLabel={
+                  report.group.group === 'adult'
+                    ? `tahti ${Math.round(DAY_BAR_TARGET.adult)} min/pv (150 min/vko)`
+                    : `suositus ${DAY_BAR_TARGET[report.group.group]} min/pv`
+                }
+              />
+            </Card>
+            <HoursCard report={report} isCurrentWeek={isCurrent} />
+            <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2">
+              <CategoryCard report={report} />
+              <div className="space-y-5">
+                <AdherenceCard report={report} />
+                <QualityCard report={report} />
+              </div>
+            </div>
+          </div>
 
-          {report.group.group === 'school_age' && <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} />}
-          <HoursCard report={report} isCurrentWeek={isCurrent} />
-
-          <Card title={report.group.group === 'early_years' ? 'Vauhdikas liikkuminen päivittäin' : 'Reipas ja rasittava päivittäin'}>
-            <DailyMvpaChart
-              days={report.allDays}
-              validDates={report.validDates}
-              target={DAY_BAR_TARGET[report.group.group]}
-              targetLabel={
-                report.group.group === 'adult'
-                  ? `tahti ${Math.round(DAY_BAR_TARGET.adult)} min/pv (150 min/vko)`
-                  : `suositus ${DAY_BAR_TARGET[report.group.group]} min/pv`
-              }
-            />
-          </Card>
-
-          <CategoryCard report={report} />
-          <FootballSection profileId={profile.id} week={period} onOpenGames={() => setGames(true)} />
-          <QualityCard report={report} />
-          <AdherenceCard report={report} />
-        </>
+          {/* Sivupalsta: liikuntamäärä, kohokohdat ja jalkapallo. */}
+          <div className="min-w-0 space-y-5 lg:col-span-5 xl:col-span-4">
+            {report.group.group === 'school_age' && <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} />}
+            <HighlightsCard profile={profile} week={period} />
+            <FootballSection profileId={profile.id} week={period} onOpenGames={() => setGames(true)} />
+          </div>
+        </div>
       )}
 
       <Rationale />
@@ -220,7 +233,6 @@ function Rationale() {
   const r = RECOMMENDATIONS;
   return (
     <Card
-      className="lg:col-span-2 2xl:col-span-3"
       title="Mihin luvut perustuvat"
       action={
         <Button variant="ghost" onClick={() => setOpen(!open)} aria-expanded={open}>

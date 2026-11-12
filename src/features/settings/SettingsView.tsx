@@ -56,7 +56,7 @@ export function SettingsView({
           onClick={() => onSection(x.id)}
           aria-current={section === x.id ? 'page' : undefined}
           className={`press anim-rise flex w-full items-center gap-3 rounded-[1.4rem] p-3 text-left transition-[background-color,box-shadow] ${
-            section === x.id ? 'bg-green-700 text-white shadow-[0_10px_24px_-12px_rgb(36_76_59/0.8)]' : 'card card-interactive'
+            section === x.id ? 'bg-green-700 text-white shadow-[0_10px_24px_-12px_rgb(var(--accent-rgb)/0.8)]' : 'card card-interactive'
           }`}
           style={{ ['--i' as string]: i }}
         >

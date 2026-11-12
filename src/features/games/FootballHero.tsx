@@ -46,7 +46,7 @@ export function FootballHero({ profile }: { profile: Profile }) {
           <div className="mt-1 font-display text-2xl font-semibold leading-snug">Kausi tähän mennessä</div>
           {next ? (
             <div className="mt-3 flex items-center gap-3 rounded-2xl bg-white/[0.1] p-3 ring-1 ring-white/10">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--hero-accent)] text-[#244c3b]" aria-hidden>
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--hero-accent)] text-[var(--hero-to)]" aria-hidden>
                 <IconTrophy size="1.25rem" />
               </span>
               <span className="min-w-0">

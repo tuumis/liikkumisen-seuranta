@@ -6,16 +6,22 @@ import { Bar, BarChart, CartesianGrid, Rectangle, ReferenceLine, ResponsiveConta
 import type { DayTotals } from '../../domain/types';
 import { dayLabel } from '../../ui/format';
 import { today as todayFn } from '../../ui/today';
-import { useIsDark } from '../../ui/theme';
+import { cssVar, useIsDark, useThemeVersion } from '../../ui/theme';
 
 /** Div-elementeille (CSS-muuttujat vaihtuvat teeman mukana). */
 export const SERIES = { logged: 'var(--viz-logged)', estimate: 'var(--viz-estimate)' } as const;
-/** SVG-kaaviolle hex-arvot teeman mukaan (validoitu paletti, vaalea ja tumma askel). */
-const PALETTE = {
-  light: { logged: '#2a78d6', estimate: '#eb6834', grid: '#e2e8f0', axis: '#475569', ref: '#334155', cursor: '#f1f5f9' },
-  dark: { logged: '#3987e5', estimate: '#d95926', grid: '#263246', axis: '#aab6c8', ref: '#cbd5e1', cursor: '#1a2435' },
-};
-let P = PALETTE.light;
+/** SVG-kaaviolle värit design systemin tokeneista (validoitu paletti, teeman ja väriteeman mukaan). */
+function palette() {
+  return {
+    logged: cssVar('--viz-logged', '#127a4e'),
+    estimate: cssVar('--viz-estimate', '#c4823f'),
+    grid: cssVar('--line', '#e5e2d8'),
+    axis: cssVar('--ink-muted', '#7a827b'),
+    ref: cssVar('--ink-soft', '#4a5750'),
+    cursor: cssVar('--surface-sunk', '#efede6'),
+  };
+}
+let P = palette();
 
 interface Row {
   label: string;
@@ -78,7 +84,9 @@ export function DailyMvpaChart({
   targetLabel: string;
 }) {
   const [table, setTable] = useState(false);
-  P = useIsDark() ? PALETTE.dark : PALETTE.light;
+  useIsDark();
+  useThemeVersion();
+  P = palette();
   const valid = new Set(validDates);
   const today = todayFn();
   const rows: Row[] = days.map((d) => ({

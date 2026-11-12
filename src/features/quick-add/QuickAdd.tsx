@@ -295,7 +295,7 @@ export function QuickAdd({
                       setDuration(String(m));
                       setError(undefined);
                     }}
-                    className={`press stat min-h-14 rounded-2xl text-xl font-semibold ${on ? 'bg-green-700 text-white shadow-[0_8px_18px_-8px_rgb(36_76_59/0.7)]' : 'bg-[var(--surface-sunk)] text-slate-900 shadow-[inset_0_0_0_1px_var(--line)] hover:bg-slate-100'}`}
+                    className={`press stat min-h-14 rounded-2xl text-xl font-semibold ${on ? 'bg-green-700 text-white shadow-[0_8px_18px_-8px_rgb(var(--accent-rgb)/0.7)]' : 'bg-[var(--surface-sunk)] text-slate-900 shadow-[inset_0_0_0_1px_var(--line)] hover:bg-slate-100'}`}
                   >
                     {m}
                   </button>

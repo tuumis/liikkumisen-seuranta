@@ -1,4 +1,6 @@
 import type { ActivityType, DayFlag, DayTotals, Fixture, FootballDetails, ISODate, PlannedSession, Session, UUID } from '../../domain/types';
+import type { DayHours } from '../../domain/hours';
+import { InfoTip } from '../../ui/InfoTip';
 import { LEVEL_LABEL, OUTCOME_LABEL, outcomeOf } from '../../domain/football';
 
 /** "vs HJK · Elite · " tulevan pelin suunnitelmariville. */
@@ -21,6 +23,7 @@ export function DayRow({
   isToday,
   isFuture,
   totals,
+  hours,
   sessions,
   plans,
   plannedById,
@@ -42,6 +45,8 @@ export function DayRow({
   isFuture: boolean;
   /** Päiväkooste (kirjattu + perusarvio); puuttuu latauksen ajan. */
   totals?: DayTotals;
+  /** Päivän kokonaisliikunta kestona (kirjatut kerrat + perusarvio). */
+  hours?: DayHours;
   sessions: Session[];
   /** Päivän avoimet ja ohitetut suunnitelmat (kuitatut näkyvät kertoina). */
   plans: PlannedSession[];
@@ -73,7 +78,7 @@ export function DayRow({
 
   return (
     <li
-      className={`anim-rise overflow-hidden rounded-[1.5rem] ${
+      className={`anim-rise relative rounded-[1.5rem] focus-within:z-10 hover:z-10 ${
         isToday
           ? 'bg-[linear-gradient(160deg,var(--surface-sage),var(--surface))] shadow-md ring-2 ring-green-700/70'
           : flag
@@ -83,30 +88,49 @@ export function DayRow({
       style={{ ['--i' as string]: index + 3 }}
     >
       <div {...press.handlers} className="no-callout flex select-none items-center gap-3 px-4 pb-1.5 pt-3">
-        <div className={`flex size-11 shrink-0 flex-col items-center justify-center rounded-2xl leading-none ${isToday ? 'bg-green-700 text-white shadow-[0_6px_14px_-6px_rgb(36_76_59/0.7)]' : isFuture ? 'bg-[var(--surface-sunk)] text-slate-400' : 'bg-[var(--surface-sunk)] text-slate-800'}`}>
+        <div className={`flex size-11 shrink-0 flex-col items-center justify-center rounded-2xl leading-none ${isToday ? 'bg-green-700 text-white shadow-[0_6px_14px_-6px_rgb(var(--accent-rgb)/0.7)]' : isFuture ? 'bg-[var(--surface-sunk)] text-slate-400' : 'bg-[var(--surface-sunk)] text-slate-800'}`}>
           <span className="text-[9.5px] font-bold uppercase tracking-wider opacity-80">{weekday}</span>
           <span className="stat text-[17px] font-semibold">{dayNo}</span>
         </div>
-        <div className="min-w-0">
-          <div className={`text-sm font-bold ${isToday ? 'text-green-800' : isFuture ? 'text-slate-500' : 'text-slate-900'}`}>
+        <div className="min-w-0 flex-1">
+          <div className={`truncate text-sm font-bold ${isToday ? 'text-green-800' : isFuture ? 'text-slate-500' : 'text-slate-900'}`}>
             {isToday ? 'Tänään' : weekdayName}
             {isToday && <span className="sr-only"> ({dayLabel(date)})</span>}
           </div>
           {flag && <span className="mt-0.5 inline-block rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700">{FLAG_LABEL[flag.reason]}</span>}
+          {!flag && hours && !isFuture && hours.actualMin > 0 && (
+            <div className="truncate text-[11px] font-medium text-slate-500" title="Kaikki liikunta kestona (myös kevyt), kirjatut kerrat + arkiliikunnan arvio">
+              Yhteensä {hours.actualMin} min{hours.actualMin > hours.actualLoggedMin ? ` · arvio ${hours.actualMin - hours.actualLoggedMin}` : ''}
+            </div>
+          )}
         </div>
-        <div className="ml-auto flex min-w-0 items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
           {totals && !isFuture && (logged > 0 || est > 0) && (
             <>
-              <div className="flex h-2 w-14 shrink-0 gap-[2px] overflow-hidden rounded-full bg-[var(--viz-track)]" aria-hidden>
+              <div className="hidden h-2 w-14 shrink-0 gap-[2px] overflow-hidden rounded-full bg-[var(--viz-track)] sm:flex" aria-hidden>
                 <div className="anim-grow-x h-full rounded-full" style={{ width: `${loggedPct}%`, background: 'var(--viz-logged)' }} />
                 {estPct > 0 && <div className="anim-grow-x h-full rounded-full" style={{ width: `${estPct}%`, background: 'var(--viz-estimate)' }} />}
               </div>
-              <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-semibold text-slate-700" title="Reipas ja rasittava liikkuminen (kirjattu + perusarvio)">
+              <InfoTip
+                className="shrink-0 whitespace-nowrap text-xs font-semibold text-slate-700"
+                tip={
+                  <>
+                    <strong className="block text-[13px]">Reipas ja rasittava liikunta</strong>
+                    {logged} min kirjatuista kerroista{estimated ? ' (arvio lajin tyypillisestä tehosta)' : ''}.
+                    {est > 0 && (
+                      <>
+                        {' '}
+                        <strong>+{est} min</strong> on arkiliikunnan perusarviota (esim. välitunnit, koulumatkat), joka lasketaan mukaan, kun päivälle ei ole kirjattu sen kategorian liikuntaa.
+                      </>
+                    )}
+                  </>
+                }
+              >
                 <span className="stat text-[15px]">{logged}</span>
                 {est > 0 && <span className="text-slate-500">+{est}</span>}
                 <span className="font-medium text-slate-500">min</span>
                 {(estimated || est > 0) && <span className="rounded-full bg-amber-100 px-1.5 text-[10px] font-bold text-amber-900">arvio</span>}
-              </span>
+              </InfoTip>
             </>
           )}
           <button
@@ -138,8 +162,8 @@ export function DayRow({
                     <span className="block truncate text-xs text-slate-500">
                       {s.durationMin} min
                       {plan && plan.durationMin !== s.durationMin && ` (suunn. ${plan.durationMin})`}
-                      {s.playedMin !== undefined && ` · pelattu ${s.playedMin}`} · reipas+rasittava {s.intensitySource === 'profile' ? '≈ ' : ''}
-                      {mvpaOf(s.minutes)} min{tags && ` · ${tags}`}
+                      {s.playedMin !== undefined && ` · pelattu ${s.playedMin}`} · {s.intensitySource === 'manual' ? 'reipas+rasittava' : 'arvio: reipas+rasittava'} {mvpaOf(s.minutes)} min
+                      {tags && ` · ${tags}`}
                       {s.note && ` · ${s.note}`}
                     </span>
                     {fbText && <span className="block truncate text-xs font-medium text-slate-700">{fbText}</span>}

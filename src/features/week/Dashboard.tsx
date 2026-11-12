@@ -15,12 +15,17 @@ import { useMounted } from '../../ui/motion';
 
 const WD = ['Ma', 'Ti', 'Ke', 'To', 'Pe', 'La', 'Su'];
 
+const median = (xs: number[]) => {
+  const v = xs.filter((x) => x > 0).sort((a, b) => a - b);
+  return v.length ? v[Math.floor(v.length / 2)] : 0;
+};
+
 /** Lajin ikoni pehmeässä ruudussa (lajien ikonit ovat käyttäjän muokattavia emojeja). */
 export function TypeIcon({ t, muted = false, size = 'md' }: { t?: ActivityType; muted?: boolean; size?: 'sm' | 'md' }) {
   return (
     <span
       className={`flex shrink-0 items-center justify-center rounded-2xl ${size === 'sm' ? 'size-9 text-lg' : 'size-11 text-xl'} ${
-        muted ? 'bg-[var(--surface-sunk)] grayscale-[0.6]' : 'bg-[var(--surface-sage)] shadow-[inset_0_0_0_1px_rgb(36_76_59/0.06)]'
+        muted ? 'bg-[var(--surface-sunk)] grayscale-[0.6]' : 'bg-[var(--surface-sage)] shadow-[inset_0_0_0_1px_rgb(var(--accent-rgb)/0.06)]'
       }`}
       aria-hidden
     >
@@ -34,12 +39,21 @@ export function TypeIcon({ t, muted = false, size = 'md' }: { t?: ActivityType; 
 export function DailyChart({ report, today, target, title }: { report: PeriodReport; today: ISODate; target: number; title: string }) {
   const mounted = useMounted();
   const [hover, setHover] = useState<number | null>(null);
-  const days = report.allDays;
+  // Näkymä: reipas ja rasittava (suositusvertailu) tai kaikki liikunta kestona (myös kevyt).
+  const [mode, setMode] = useState<'mvpa' | 'total'>('mvpa');
+  const hours = report.hours.days;
+  const days = report.allDays.map((d, i) =>
+    mode === 'mvpa'
+      ? { date: d.date, total: d.mvpaCombined, logged: d.mvpa }
+      : { date: d.date, total: hours[i]?.actualMin ?? 0, logged: hours[i]?.actualLoggedMin ?? 0 },
+  );
+  const showTarget = mode === 'mvpa';
+  const peak = Math.max(...days.map((d) => d.total));
   // Asteikko enintään 2,5 × tavoite, jottei yksi pitkä turnauspäivä litistä muita; ylittävä palkki saa arvon yläpuolelleen.
-  const max = Math.max(target * 1.4, Math.min(target * 2.5, Math.max(...days.map((d) => d.mvpaCombined)))) || 1;
+  const max = (showTarget ? Math.max(target * 1.4, Math.min(target * 2.5, peak)) : Math.max(60, Math.min(peak, Math.max(120, median(days.map((d) => d.total)) * 3)))) || 1;
   const h = 168;
   const y = (v: number) => (Math.min(v, max) / max) * h;
-  const anyEstimate = days.some((d) => d.mvpaCombined > d.mvpa);
+  const anyEstimate = days.some((d) => d.total > d.logged);
   const active = hover ?? days.findIndex((d) => d.date === today);
   const ad = active >= 0 ? days[active] : undefined;
 
@@ -48,17 +62,36 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <SectionLabel>Päivittäin</SectionLabel>
-          <h2 className="font-display text-lg font-semibold text-slate-900">{title}</h2>
+          <h2 className="font-display text-lg font-semibold text-slate-900">{mode === 'mvpa' ? title : 'Kaikki liikunta'}</h2>
+          <div className="mt-2 inline-flex rounded-xl bg-[var(--surface-sunk)] p-0.5 text-[11px] font-bold" role="radiogroup" aria-label="Kaavion sisältö">
+            {(
+              [
+                ['mvpa', 'Reipas + rasittava'],
+                ['total', 'Kaikki liikunta'],
+              ] as const
+            ).map(([k, l]) => (
+              <button
+                key={k}
+                type="button"
+                role="radio"
+                aria-checked={mode === k}
+                onClick={() => setMode(k)}
+                className={`press rounded-[10px] px-2.5 py-1 ${mode === k ? 'bg-[var(--surface-raised)] text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
         </div>
         {ad && (
           <div className="text-right" aria-live="polite">
             <div className="stat text-2xl font-semibold text-slate-900">
-              {ad.mvpaCombined}
+              {ad.total}
               <span className="ml-1 font-sans text-xs font-semibold tracking-normal text-slate-500">min</span>
             </div>
             <div className="text-[11px] text-slate-500">
               {dayLabel(ad.date)}
-              {ad.mvpaCombined > ad.mvpa && ` · arviota ${ad.mvpaCombined - ad.mvpa}`}
+              {ad.total > ad.logged && ` · arviota ${ad.total - ad.logged}`}
             </div>
           </div>
         )}
@@ -66,13 +99,15 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
 
       <div className="relative" style={{ height: h + 28 }} onMouseLeave={() => setHover(null)}>
         {/* tavoiteviiva */}
-        <div className="absolute inset-x-0 border-t-2 border-dashed border-[var(--viz-track-line)]" style={{ bottom: 28 + y(target) }} aria-hidden>
-          <span className="absolute -top-5 right-0 rounded-md bg-[var(--surface)] px-1 text-[10.5px] font-semibold text-slate-500">tavoite {Math.round(target)}</span>
-        </div>
-        <div className="absolute inset-x-0 bottom-0 grid grid-cols-7 gap-1.5 sm:gap-3" role="list" aria-label="Reipas ja rasittava liikunta päivittäin">
+        {showTarget && (
+          <div className="absolute inset-x-0 border-t-2 border-dashed border-[var(--viz-track-line)]" style={{ bottom: 28 + y(target) }} aria-hidden>
+            <span className="absolute -top-5 right-0 rounded-md bg-[var(--surface)] px-1 text-[10.5px] font-semibold text-slate-500">tavoite {Math.round(target)}</span>
+          </div>
+        )}
+        <div className="absolute inset-x-0 bottom-0 grid grid-cols-7 gap-1.5 sm:gap-3" role="list" aria-label={mode === 'mvpa' ? 'Reipas ja rasittava liikunta päivittäin' : 'Kaikki liikunta päivittäin'}>
           {days.map((d, i) => {
             const future = d.date > today;
-            const est = Math.max(0, d.mvpaCombined - d.mvpa);
+            const est = Math.max(0, d.total - d.logged);
             const isToday = d.date === today;
             return (
               <button
@@ -83,28 +118,28 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
                 onFocus={() => setHover(i)}
                 onClick={() => setHover(i)}
                 className="group flex flex-col items-center justify-end gap-2 focus-visible:outline-offset-4"
-                aria-label={`${dayLabel(d.date)}: ${d.mvpaCombined} min${est ? `, josta arvio ${est}` : ''}`}
+                aria-label={`${dayLabel(d.date)}: ${d.total} min${est ? `, josta arvio ${est}` : ''}`}
                 style={{ height: h + 28 }}
               >
-                <div className="relative flex w-full max-w-9 flex-col-reverse items-stretch" style={{ height: h }}>
+                <div key={mode} className="relative flex w-full max-w-9 flex-col-reverse items-stretch" style={{ height: h }}>
                   {future ? (
                     <div className="mt-auto h-1.5 rounded-full bg-[var(--viz-track)]" />
-                  ) : d.mvpaCombined === 0 ? (
+                  ) : d.total === 0 ? (
                     <div className="mt-auto h-1.5 rounded-full bg-[var(--viz-track)]" />
                   ) : (
                     <div
                       className="relative mt-auto flex flex-col-reverse gap-[2px] transition-transform duration-700 [transition-timing-function:var(--ease-out)]"
-                      style={{ height: y(d.mvpaCombined), transform: mounted ? 'scaleY(1)' : 'scaleY(0)', transformOrigin: 'bottom', transitionDelay: `${i * 50 + 100}ms` }}
+                      style={{ height: y(d.total), transform: mounted ? 'scaleY(1)' : 'scaleY(0)', transformOrigin: 'bottom', transitionDelay: `${i * 50 + 100}ms` }}
                     >
-                      {d.mvpa > 0 && (
+                      {d.logged > 0 && (
                         <div
                           className={`rounded-b-[4px] ${est ? '' : 'rounded-t-[6px]'} transition-opacity ${active === i ? '' : 'opacity-85'}`}
-                          style={{ height: `${(d.mvpa / d.mvpaCombined) * 100}%`, background: 'var(--viz-logged)' }}
+                          style={{ height: `${(d.logged / d.total) * 100}%`, background: 'var(--viz-logged)' }}
                         />
                       )}
-                      {est > 0 && <div className={`flex-1 rounded-t-[6px] ${d.mvpa ? '' : 'rounded-b-[4px]'}`} style={{ background: 'var(--viz-estimate)' }} />}
-                      {d.mvpaCombined > max && (
-                        <span className="absolute -top-5 left-1/2 -translate-x-1/2 rounded-md bg-[var(--surface)] px-1 text-[10px] font-bold text-slate-700 tabular-nums">{d.mvpaCombined}</span>
+                      {est > 0 && <div className={`flex-1 rounded-t-[6px] ${d.logged ? '' : 'rounded-b-[4px]'}`} style={{ background: 'var(--viz-estimate)' }} />}
+                      {d.total > max && (
+                        <span className="absolute -top-5 left-1/2 -translate-x-1/2 rounded-md bg-[var(--surface)] px-1 text-[10px] font-bold text-slate-700 tabular-nums">{d.total}</span>
                       )}
                     </div>
                   )}
@@ -127,9 +162,13 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
             <span className="size-2.5 rounded-[3px]" style={{ background: 'var(--viz-estimate)' }} /> Arkiliikunta (arvio)
           </span>
         )}
-        <span className="flex items-center gap-1.5">
-          <span className="w-4 border-t-2 border-dashed border-[var(--viz-track-line)]" /> Päivätavoite
-        </span>
+        {showTarget ? (
+          <span className="flex items-center gap-1.5">
+            <span className="w-4 border-t-2 border-dashed border-[var(--viz-track-line)]" /> Päivätavoite
+          </span>
+        ) : (
+          <span className="text-slate-500">Kesto minuutteina, myös kevyt liikunta</span>
+        )}
       </div>
     </section>
   );
@@ -177,7 +216,7 @@ export function RhythmCard({ report, today }: { report: PeriodReport; today: ISO
                     <div
                       key={d.date}
                       className={`anim-pop flex h-8 items-center justify-center rounded-xl text-[10.5px] font-bold ${
-                        on ? 'bg-green-700 text-white shadow-[0_4px_10px_-4px_rgb(36_76_59/0.6)]' : future ? 'border border-dashed border-slate-300 text-slate-400' : 'bg-[var(--surface-sunk)] text-slate-500'
+                        on ? 'bg-green-700 text-white shadow-[0_4px_10px_-4px_rgb(var(--accent-rgb)/0.6)]' : future ? 'border border-dashed border-slate-300 text-slate-400' : 'bg-[var(--surface-sunk)] text-slate-500'
                       }`}
                       style={{ animationDelay: `${ri * 120 + i * 40 + 200}ms` }}
                       title={`${dayLabel(d.date)}: ${on ? 'kyllä' : 'ei'}`}
@@ -289,7 +328,7 @@ export function RecentCard({ profile, today, types, onOpen }: { profile: Profile
                       {s.durationMin}
                       <span className="font-sans text-[11px] font-semibold tracking-normal text-slate-500"> min</span>
                     </span>
-                    <span className="block text-[11px] text-slate-500">≈ {mvpaOf(s.minutes)} reipas+</span>
+                    <span className="block text-[11px] text-slate-500">{s.intensitySource === 'manual' ? '' : 'arvio '}reipas+ {mvpaOf(s.minutes)}</span>
                   </span>
                 </button>
               </li>

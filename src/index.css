@@ -106,6 +106,8 @@
   --sand: #dda96e;
   --sand-soft: #f3e3cc;
   --focus: #34664d;
+  --toast-bg: #1f2c26;
+  --side-ink: #f6f5f0;
 
   /* Kaaviot (validoitu: valoisuus, kroma, CVD-erottuvuus, kontrasti pintaa vasten). */
   --viz-logged: #127a4e;
@@ -201,6 +203,8 @@
 
 /* ---------- perusta ---------- */
 html {
+  /* Ei vaakavieritystä: leveä sisältö ei saa puhelinta loitontamaan näkymää. */
+  overflow-x: clip;
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
   background: var(--bg);
@@ -211,17 +215,17 @@ body {
   color: var(--ink);
   font-family: var(--font-sans);
   font-feature-settings: 'cv11', 'ss01';
-  overflow-x: hidden;
+  overflow-x: clip;
   /* Kerroksellinen tausta: hento salvia- ja hiekkahehku paperinsävyisellä pohjalla. */
   background:
-    radial-gradient(1200px 600px at 0% -10%, rgb(220 232 220 / 0.7), transparent 60%),
+    radial-gradient(1200px 600px at 0% -10%, rgb(var(--glow) / 0.7), transparent 60%),
     radial-gradient(900px 500px at 100% 0%, rgb(243 227 204 / 0.45), transparent 55%),
     var(--bg);
   background-attachment: fixed;
 }
 .dark body {
   background:
-    radial-gradient(1200px 600px at 0% -10%, rgb(36 76 59 / 0.35), transparent 60%),
+    radial-gradient(1200px 600px at 0% -10%, rgb(var(--glow) / 0.3), transparent 60%),
     radial-gradient(900px 500px at 100% 0%, rgb(221 169 110 / 0.07), transparent 55%),
     var(--bg);
   background-attachment: fixed;
@@ -476,7 +480,7 @@ body {
 }
 .dark .bg-green-50,
 .dark .bg-green-100 {
-  background-color: #17291f;
+  background-color: var(--dark-tint);
 }
 .dark .bg-amber-50 {
   background-color: #2a2114;
@@ -491,7 +495,7 @@ body {
   background-color: #10232b;
 }
 .dark .ring-green-200 {
-  --tw-ring-color: #2a4a38;
+  --tw-ring-color: var(--dark-tint-ring);
 }
 .dark .ring-amber-200 {
   --tw-ring-color: #5a4320;
@@ -505,7 +509,7 @@ body {
 }
 .dark .text-green-800,
 .dark .text-green-900 {
-  color: #9fd4b4;
+  color: var(--on-dark-accent);
 }
 .dark .text-amber-800,
 .dark .text-amber-900,
@@ -527,11 +531,277 @@ body {
 .sidebar {
   background:
     radial-gradient(400px 300px at 0% 0%, rgb(221 169 110 / 0.12), transparent 60%),
-    linear-gradient(180deg, #244c3b 0%, #1a3a2d 100%);
+    linear-gradient(180deg, var(--side-from) 0%, var(--side-to) 100%);
   box-shadow: inset -1px 0 0 rgb(255 255 255 / 0.06);
 }
 .dark .sidebar {
   background:
     radial-gradient(400px 300px at 0% 0%, rgb(221 169 110 / 0.08), transparent 60%),
-    linear-gradient(180deg, #16291f 0%, #0d1913 100%);
+    linear-gradient(180deg, var(--side-from) 0%, var(--side-to) 100%);
+}
+
+/* ---------- väriteemat (Asetukset → Ulkoasu); oletus Metsä. Kaaviovärit validoitu jokaiselle. ---------- */
+:root {
+  --color-green-50: #eef4ee;
+  --color-green-100: #dce8dc;
+  --color-green-200: #c3d8c6;
+  --color-green-300: #9dbfa4;
+  --color-green-400: #6f9e7d;
+  --color-green-500: #4b8061;
+  --color-green-600: #34664d;
+  --color-green-700: #244c3b;
+  --color-green-800: #1c3d30;
+  --color-green-900: #152f25;
+  --color-green-950: #0d1f18;
+  --accent: #244c3b;
+  --accent-rgb: 36 76 59;
+  --forest: #244c3b;
+  --forest-deep: #1a3a2d;
+  --sage: #dce8dc;
+  --surface-sage: #e4ede3;
+  --focus: #34664d;
+  --hero-from: #2c5a46;
+  --hero-to: #1a3a2d;
+  --hero-accent: #e6bd89;
+  --hero-ink-soft: #c9dccb;
+  --hero-pill-bg: #dce8dc;
+  --hero-pill-ink: #1c3d30;
+  --side-from: #244c3b;
+  --side-to: #1a3a2d;
+  --side-ink-soft: #c9dccb;
+  --side-muted: #9fbaa8;
+  --glow: 220 232 220;
+  --viz-logged: #127a4e;
+  --band-1: #e3ede2;
+  --band-2: #c3d8c6;
+  --band-3: #9dbfa4;
+  --band-4: #6f9e7d;
+  --band-5: #3f7559;
+  --band-6: #244c3b;
+}
+:root.dark {
+  --color-green-700: #2f6a51;
+  --color-green-800: #25583f;
+  --accent: #2f6a51;
+  --accent-rgb: 47 106 81;
+  --forest: #3e8a66;
+  --sage: #17291f;
+  --surface-sage: #1a2a22;
+  --focus: #7cc39b;
+  --hero-from: #1f4535;
+  --hero-to: #11261d;
+  --hero-accent: #e6bd89;
+  --hero-ink-soft: #a8c4b2;
+  --side-from: #16291f;
+  --side-to: #0d1913;
+  --side-ink-soft: #a8c4b2;
+  --dark-tint: #17291f;
+  --dark-tint-ring: #2a4a38;
+  --on-dark-accent: #9fd4b4;
+  --glow: 36 76 59;
+  --viz-logged: #3ba878;
+  --band-1: #1d2d25;
+  --band-2: #244232;
+  --band-3: #2e5c44;
+  --band-4: #3e7c5d;
+  --band-5: #5fa27f;
+  --band-6: #9ccbb0;
+}
+:root[data-accent="fjord"] {
+  --color-green-50: #edf5f7;
+  --color-green-100: #d6e8ee;
+  --color-green-200: #b7d3de;
+  --color-green-300: #8db6c6;
+  --color-green-400: #5e94a9;
+  --color-green-500: #3f788e;
+  --color-green-600: #2c6076;
+  --color-green-700: #1f4a5b;
+  --color-green-800: #183b49;
+  --color-green-900: #122d38;
+  --color-green-950: #0b1d25;
+  --accent: #1f4a5b;
+  --accent-rgb: 31 74 91;
+  --forest: #1f4a5b;
+  --forest-deep: #16364a;
+  --sage: #d6e8ee;
+  --surface-sage: #e2eef2;
+  --focus: #2c6076;
+  --hero-from: #265b6d;
+  --hero-to: #16364a;
+  --hero-accent: #efbf94;
+  --hero-ink-soft: #c4dbe3;
+  --hero-pill-bg: #d6e8ee;
+  --hero-pill-ink: #183b49;
+  --side-from: #1f4a5b;
+  --side-to: #16364a;
+  --side-ink-soft: #c4dbe3;
+  --side-muted: #93b5c2;
+  --glow: 214 232 238;
+  --viz-logged: #00779c;
+  --band-1: #e2eef2;
+  --band-2: #b7d3de;
+  --band-3: #8db6c6;
+  --band-4: #5e94a9;
+  --band-5: #3a6f86;
+  --band-6: #1f4a5b;
+}
+:root.dark[data-accent="fjord"] {
+  --color-green-700: #2b6479;
+  --color-green-800: #22566a;
+  --accent: #2b6479;
+  --accent-rgb: 43 100 121;
+  --forest: #3f8ca6;
+  --sage: #132631;
+  --surface-sage: #16262e;
+  --focus: #80c3d8;
+  --hero-from: #1b4252;
+  --hero-to: #0e2430;
+  --hero-accent: #efbf94;
+  --hero-ink-soft: #a3c3cf;
+  --side-from: #132a35;
+  --side-to: #0b1a22;
+  --side-ink-soft: #a3c3cf;
+  --dark-tint: #132631;
+  --dark-tint-ring: #264a5a;
+  --on-dark-accent: #9fd0e0;
+  --glow: 31 74 91;
+  --viz-logged: #3e9ec0;
+  --band-1: #172a33;
+  --band-2: #1e3e4c;
+  --band-3: #285668;
+  --band-4: #367489;
+  --band-5: #5596ad;
+  --band-6: #97c6d6;
+}
+:root[data-accent="heather"] {
+  --color-green-50: #f6f1f7;
+  --color-green-100: #ebe0ee;
+  --color-green-200: #d9c6de;
+  --color-green-300: #bfa0c7;
+  --color-green-400: #9d76a8;
+  --color-green-500: #7d5789;
+  --color-green-600: #634270;
+  --color-green-700: #4a2f55;
+  --color-green-800: #3b2544;
+  --color-green-900: #2d1c34;
+  --color-green-950: #1d1122;
+  --accent: #4a2f55;
+  --accent-rgb: 74 47 85;
+  --forest: #4a2f55;
+  --forest-deep: #341f3f;
+  --sage: #ebe0ee;
+  --surface-sage: #f0e8f2;
+  --focus: #634270;
+  --hero-from: #5a3a67;
+  --hero-to: #341f3f;
+  --hero-accent: #ecb9a2;
+  --hero-ink-soft: #dcc9e2;
+  --hero-pill-bg: #ebe0ee;
+  --hero-pill-ink: #3b2544;
+  --side-from: #4a2f55;
+  --side-to: #341f3f;
+  --side-ink-soft: #dcc9e2;
+  --side-muted: #b49dbd;
+  --glow: 235 224 238;
+  --viz-logged: #7b4b94;
+  --band-1: #f0e8f2;
+  --band-2: #d9c6de;
+  --band-3: #bfa0c7;
+  --band-4: #9d76a8;
+  --band-5: #6f4c7d;
+  --band-6: #4a2f55;
+}
+:root.dark[data-accent="heather"] {
+  --color-green-700: #654478;
+  --color-green-800: #563869;
+  --accent: #654478;
+  --accent-rgb: 101 68 120;
+  --forest: #8e64a2;
+  --sage: #271a2d;
+  --surface-sage: #241a29;
+  --focus: #c9a5d8;
+  --hero-from: #3f2949;
+  --hero-to: #21142a;
+  --hero-accent: #ecb9a2;
+  --hero-ink-soft: #c2adc9;
+  --side-from: #2a1b31;
+  --side-to: #170e1c;
+  --side-ink-soft: #c2adc9;
+  --dark-tint: #271a2d;
+  --dark-tint-ring: #47304f;
+  --on-dark-accent: #dcc0e6;
+  --glow: 74 47 85;
+  --viz-logged: #a57cc0;
+  --band-1: #26192c;
+  --band-2: #3a2643;
+  --band-3: #51365c;
+  --band-4: #6c4b7a;
+  --band-5: #9473a3;
+  --band-6: #cdb2d7;
+}
+:root[data-accent="graphite"] {
+  --color-green-50: #f2f4f5;
+  --color-green-100: #e3e7e9;
+  --color-green-200: #cbd2d6;
+  --color-green-300: #a9b4ba;
+  --color-green-400: #7f8c93;
+  --color-green-500: #5f6b72;
+  --color-green-600: #4a555b;
+  --color-green-700: #2f3a40;
+  --color-green-800: #263035;
+  --color-green-900: #1d252a;
+  --color-green-950: #12181c;
+  --accent: #2f3a40;
+  --accent-rgb: 47 58 64;
+  --forest: #2f3a40;
+  --forest-deep: #1f272c;
+  --sage: #e3e7e9;
+  --surface-sage: #e9ecee;
+  --focus: #4a555b;
+  --hero-from: #3b474e;
+  --hero-to: #1f272c;
+  --hero-accent: #e8b562;
+  --hero-ink-soft: #cfd6da;
+  --hero-pill-bg: #e3e7e9;
+  --hero-pill-ink: #263035;
+  --side-from: #2f3a40;
+  --side-to: #1f272c;
+  --side-ink-soft: #cfd6da;
+  --side-muted: #9eabb2;
+  --glow: 227 231 233;
+  --viz-logged: #2a64a3;
+  --band-1: #e9ecee;
+  --band-2: #cbd2d6;
+  --band-3: #a9b4ba;
+  --band-4: #7f8c93;
+  --band-5: #4f5b62;
+  --band-6: #2f3a40;
+}
+:root.dark[data-accent="graphite"] {
+  --color-green-700: #4a5860;
+  --color-green-800: #3e4b52;
+  --accent: #4a5860;
+  --accent-rgb: 74 88 96;
+  --forest: #6d808a;
+  --sage: #1d2428;
+  --surface-sage: #1c2226;
+  --focus: #a9bac3;
+  --hero-from: #2a3439;
+  --hero-to: #14191c;
+  --hero-accent: #e8b562;
+  --hero-ink-soft: #b1bcc2;
+  --side-from: #1c2327;
+  --side-to: #111518;
+  --side-ink-soft: #b1bcc2;
+  --dark-tint: #1d2428;
+  --dark-tint-ring: #364248;
+  --on-dark-accent: #cdd6db;
+  --glow: 47 58 64;
+  --viz-logged: #4c8fd6;
+  --band-1: #1c2327;
+  --band-2: #283238;
+  --band-3: #37444b;
+  --band-4: #4c5d66;
+  --band-5: #71858f;
+  --band-6: #b3c1c8;
 }

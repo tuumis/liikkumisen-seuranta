@@ -45,7 +45,7 @@ export function ToggleChip({ on, onChange, children }: { on: boolean; onChange: 
       aria-pressed={on}
       onClick={() => onChange(!on)}
       className={`press inline-flex min-h-10 items-center gap-1 rounded-full px-3.5 text-sm font-semibold ${
-        on ? 'bg-green-700 text-white shadow-[0_4px_12px_-4px_rgb(36_76_59/0.5)]' : 'bg-[var(--surface-sunk)] text-slate-700 shadow-[inset_0_0_0_1px_var(--line)] hover:text-slate-900'
+        on ? 'bg-green-700 text-white shadow-[0_4px_12px_-4px_rgb(var(--accent-rgb)/0.5)]' : 'bg-[var(--surface-sunk)] text-slate-700 shadow-[inset_0_0_0_1px_var(--line)] hover:text-slate-900'
       }`}
     >
       {on && (
