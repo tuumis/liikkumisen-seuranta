@@ -10,6 +10,7 @@
 
 import { activeEstimate, isEstimateConfirmation, isEstimateValidOn } from './aggregate';
 import { datesBetween, isWeekend } from './dates';
+import { computeSessionMinutes, mvpaOf } from './intensity';
 import type { ActivityType, Category, DayFlag, Estimate, ISODate, Period, PlannedSession, Session, UUID } from './types';
 
 export interface HoursSplit {
@@ -40,6 +41,8 @@ export interface DayHours {
   estimateCategories: Category[];
   /** Päiväkohtaisesti vahvistettu arkiliikunta (min), sisältyy actualLoggedMin-lukuun. */
   confirmedMin: number;
+  /** Avoimien suunnitelmien (ennusteessa mukana olevien) reipas ja rasittava osuus lajin tehoprofiilista (min). */
+  openPlanMvpa: number;
   future: boolean;
   flagged: boolean;
 }
@@ -145,11 +148,14 @@ export function weeklyHours(input: {
     // Ennuste: avoimet suunnitelmat (ei kuitatut, ei ohitetut) kategorioittain; jos kategorialle on jo
     // kirjaus, kuittaamatonta suunnitelmaa ei lasketa toiseen kertaan.
     const openByCat = new Map<Category, number>();
+    let openPlanMvpa = 0;
     for (const p of input.planned) {
       if (p.deletedAt || p.date !== d || p.status !== 'open') continue;
       const c = catOf(p.activityTypeId);
       if (logByCat.has(c)) continue;
       openByCat.set(c, (openByCat.get(c) ?? 0) + p.durationMin);
+      const type = input.types.get(p.activityTypeId);
+      if (type) openPlanMvpa += mvpaOf(computeSessionMinutes(type, { durationMin: p.durationMin, effort: 0 }).minutes);
     }
     let forecastMin = 0;
     if (!future) {
@@ -186,7 +192,7 @@ export function weeklyHours(input: {
     }
 
     if (!future) expectedToDateMin += expectedMin;
-    days.push({ date: d, expectedMin, actualMin, actualLoggedMin, forecastMin, estimateMin, estimateCategories, confirmedMin, future, flagged: isFlagged });
+    days.push({ date: d, expectedMin, actualMin, actualLoggedMin, forecastMin, estimateMin, estimateCategories, confirmedMin, openPlanMvpa, future, flagged: isFlagged });
   }
 
   const byCategory = CATEGORY_ORDER.filter((c) => acc.has(c)).map((c) => acc.get(c)!);

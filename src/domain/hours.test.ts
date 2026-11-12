@@ -113,6 +113,19 @@ describe('arvio koko viikolle (ennuste)', () => {
     expect(h3.forecastMin).toBe(80);
   });
 
+  it('avoimen suunnitelman reipas ja rasittava osuus lajin tehoprofiilista (tuleville päiville kaavioon)', () => {
+    const today = '2026-11-12';
+    const types = typesMap();
+    const shares = types.get(TRAINING)!.shares;
+    const open = planned({ date: '2026-11-14', activityTypeId: TRAINING, durationMin: 90 });
+    const h = weeklyHours({ ...base, today, planned: [open, { ...open, id: 'x', status: 'skipped' }] });
+    const sat = h.days.find((d) => d.date === '2026-11-14')!;
+    expect(sat.openPlanMvpa).toBe(Math.round(90 * shares.moderate) + Math.round(90 * shares.vigorous));
+    expect(sat.openPlanMvpa).toBeGreaterThan(0);
+    expect(sat.openPlanMvpa).toBeLessThanOrEqual(90);
+    expect(h.days.find((d) => d.date === '2026-11-13')!.openPlanMvpa).toBe(0);
+  });
+
   it('mennyt viikko: arvio = toteuma', () => {
     const s = session({ date: '2026-11-10', activityTypeId: TRAINING, durationMin: 80, minutes: M });
     const h = weeklyHours({ ...base, sessions: [s], estimates: [recess] });

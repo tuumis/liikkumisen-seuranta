@@ -53,7 +53,8 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
     if (future) {
       const est = hd && !hd.flagged && hd.estimateMin > 0 ? (mode === 'mvpa' ? d.mvpaCombined - d.mvpa : hd.estimateMin) : 0;
       const logged = mode === 'mvpa' ? d.mvpa : (hd?.actualLoggedMin ?? 0);
-      const plan = mode === 'mvpa' || !hd ? 0 : Math.max(0, hd.forecastMin - hd.estimateMin);
+      // suunnitellut kerrat: Reipas + rasittava -näkymässä lajin tehoprofiilin mukainen osuus, muuten koko kesto
+      const plan = !hd || hd.flagged ? 0 : mode === 'mvpa' ? hd.openPlanMvpa : Math.max(0, hd.forecastMin - hd.estimateMin);
       return { date: d.date, total: logged + est + plan, logged, arkiConf: 0, arkiEst: est, plan, future };
     }
     const total = mode === 'mvpa' ? d.mvpaCombined : (hd?.actualMin ?? 0);
@@ -75,7 +76,10 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
   const detail = !ad
     ? ''
     : ad.future
-      ? [ad.arkiEst > 0 && `Arkiliikuntaa arviolta ${ad.arkiEst} min`, ad.plan > 0 && `suunniteltu ${ad.plan} min`].filter(Boolean).join(' · ')
+      ? [ad.arkiEst > 0 && `arkiliikuntaa arviolta ${ad.arkiEst} min`, ad.plan > 0 && `suunniteltuja kertoja ${ad.plan} min`]
+          .filter(Boolean)
+          .join(' · ')
+          .replace(/^./, (c) => c.toUpperCase())
       : ad.arkiConf + ad.arkiEst > 0
         ? `Josta arkiliikuntaa ${ad.arkiConf + ad.arkiEst} min${ad.arkiEst ? ` (arvio ${ad.arkiEst})` : ''}`
         : '';
@@ -146,7 +150,7 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
                 onFocus={() => setHover(i)}
                 onClick={() => setHover(i)}
                 className="group flex flex-col items-center justify-end gap-2 focus-visible:outline-offset-4"
-                aria-label={`${dayLabel(d.date)}: ${d.total} min${est ? `, josta arkiliikuntaa ${est}` : ''}`}
+                aria-label={`${dayLabel(d.date)}: ${d.total} min${est ? `, josta arkiliikuntaa ${est}` : ''}${d.plan ? `, suunniteltuja kertoja ${d.plan}` : ''}`}
                 style={{ height: h + 28 }}
               >
                 <div key={mode} className="relative flex w-full max-w-9 flex-col-reverse items-stretch" style={{ height: h }}>
