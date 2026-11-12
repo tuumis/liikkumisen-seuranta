@@ -41,12 +41,17 @@ function read<Id extends string>(key: string, cards: CardDef<Id>[], hidden: Id[]
     if (!v || !Array.isArray(v.order)) return def;
     const known = new Set(cards.map((c) => c.id));
     const order = v.order.filter((id) => known.has(id));
-    for (const c of cards) if (!order.includes(c.id)) order.push(c.id);
-    return {
-      order,
-      hidden: (v.hidden ?? []).filter((id) => known.has(id)),
-      side: Array.isArray(v.side) ? v.side.filter((id) => known.has(id)) : def.side,
-    };
+    const hiddenStored = (v.hidden ?? []).filter((id) => known.has(id));
+    const side = Array.isArray(v.side) ? v.side.filter((id) => known.has(id)) : def.side;
+    // Uudet kortit (myöhemmät versiot) edeltäjänsä perään; oletuspalsta ja -piilotus säilyvät myös vanhoilla asetuksilla.
+    cards.forEach((c, i) => {
+      if (order.includes(c.id)) return;
+      const prev = i > 0 ? order.indexOf(cards[i - 1].id) : -1;
+      order.splice(prev + 1, 0, c.id);
+      if (hidden.includes(c.id)) hiddenStored.push(c.id);
+      if (c.side && Array.isArray(v.side)) side.push(c.id);
+    });
+    return { order, hidden: hiddenStored, side };
   } catch {
     return def;
   }

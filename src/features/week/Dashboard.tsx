@@ -45,18 +45,22 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
   // Näkymä: reipas ja rasittava (suositusvertailu) tai kaikki liikunta kestona (myös kevyt).
   const [mode, setMode] = useState<'mvpa' | 'total'>('mvpa');
   const hours = report.hours.days;
-  const days = report.allDays.map((d, i) =>
-    mode === 'mvpa'
-      ? { date: d.date, total: d.mvpaCombined, logged: d.mvpa }
-      : { date: d.date, total: hours[i]?.actualMin ?? 0, logged: hours[i]?.actualLoggedMin ?? 0 },
-  );
+  // Osat: kerrat, vahvistettu arkiliikunta ja arkiliikunnan arvio (vahvistettu kuuluu arkiliikuntaan, ei kertoihin).
+  const days = report.allDays.map((d, i) => {
+    const hd = hours[i];
+    const total = mode === 'mvpa' ? d.mvpaCombined : (hd?.actualMin ?? 0);
+    const arkiEst = mode === 'mvpa' ? d.mvpaCombined - d.mvpa : (hd ? hd.actualMin - hd.actualLoggedMin : 0);
+    const arkiConf = mode === 'mvpa' ? d.confirmedMvpa : (hd?.confirmedMin ?? 0);
+    return { date: d.date, total, logged: Math.max(0, total - arkiEst - arkiConf), arkiConf, arkiEst };
+  });
   const showTarget = mode === 'mvpa';
   const peak = Math.max(...days.map((d) => d.total));
   // Asteikko enintään 2,5 × tavoite, jottei yksi pitkä turnauspäivä litistä muita; ylittävä palkki saa arvon yläpuolelleen.
   const max = (showTarget ? Math.max(target * 1.4, Math.min(target * 2.5, peak)) : Math.max(60, Math.min(peak, Math.max(120, median(days.map((d) => d.total)) * 3)))) || 1;
   const h = 168;
   const y = (v: number) => (Math.min(v, max) / max) * h;
-  const anyEstimate = days.some((d) => d.total > d.logged);
+  const anyArki = days.some((d) => d.arkiConf > 0);
+  const anyEstimate = days.some((d) => d.arkiEst > 0);
   const active = hover ?? days.findIndex((d) => d.date === today);
   const ad = active >= 0 ? days[active] : undefined;
 
@@ -94,7 +98,7 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
             </div>
             <div className="text-[11px] text-slate-500">
               {dayLabel(ad.date)}
-              {ad.total > ad.logged && ` · arviota ${ad.total - ad.logged}`}
+              {ad.arkiConf + ad.arkiEst > 0 && ` · arkiliikuntaa ${ad.arkiConf + ad.arkiEst}${ad.arkiEst ? ` (arvio ${ad.arkiEst})` : ''}`}
             </div>
           </div>
         )}
@@ -110,8 +114,13 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
         <div className="absolute inset-x-0 bottom-0 grid grid-cols-7 gap-1.5 sm:gap-3" role="list" aria-label={mode === 'mvpa' ? 'Reipas ja rasittava liikunta päivittäin' : 'Kaikki liikunta päivittäin'}>
           {days.map((d, i) => {
             const future = d.date > today;
-            const est = Math.max(0, d.total - d.logged);
+            const est = d.arkiConf + d.arkiEst;
             const isToday = d.date === today;
+            const parts = [
+              { v: d.logged, c: 'var(--viz-logged)' },
+              { v: d.arkiConf, c: 'var(--viz-estimate)' },
+              { v: d.arkiEst, c: 'var(--viz-estimate-soft)' },
+            ].filter((p) => p.v > 0);
             return (
               <button
                 key={d.date}
@@ -121,7 +130,7 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
                 onFocus={() => setHover(i)}
                 onClick={() => setHover(i)}
                 className="group flex flex-col items-center justify-end gap-2 focus-visible:outline-offset-4"
-                aria-label={`${dayLabel(d.date)}: ${d.total} min${est ? `, josta arvio ${est}` : ''}`}
+                aria-label={`${dayLabel(d.date)}: ${d.total} min${est ? `, josta arkiliikuntaa ${est}` : ''}`}
                 style={{ height: h + 28 }}
               >
                 <div key={mode} className="relative flex w-full max-w-9 flex-col-reverse items-stretch" style={{ height: h }}>
@@ -134,13 +143,13 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
                       className="relative mt-auto flex flex-col-reverse gap-[2px] transition-transform duration-700 [transition-timing-function:var(--ease-out)]"
                       style={{ height: y(d.total), transform: mounted ? 'scaleY(1)' : 'scaleY(0)', transformOrigin: 'bottom', transitionDelay: `${i * 50 + 100}ms` }}
                     >
-                      {d.logged > 0 && (
+                      {parts.map((p, k) => (
                         <div
-                          className={`rounded-b-[4px] ${est ? '' : 'rounded-t-[6px]'} transition-opacity ${active === i ? '' : 'opacity-85'}`}
-                          style={{ height: `${(d.logged / d.total) * 100}%`, background: 'var(--viz-logged)' }}
+                          key={k}
+                          className={`${k === 0 ? 'rounded-b-[4px]' : ''} ${k === parts.length - 1 ? 'rounded-t-[6px]' : ''} transition-opacity ${active === i ? '' : 'opacity-85'}`}
+                          style={{ height: `${(p.v / d.total) * 100}%`, background: p.c }}
                         />
-                      )}
-                      {est > 0 && <div className={`flex-1 rounded-t-[6px] ${d.logged ? '' : 'rounded-b-[4px]'}`} style={{ background: 'var(--viz-estimate)' }} />}
+                      ))}
                       {d.total > max && (
                         <span className="absolute -top-5 left-1/2 -translate-x-1/2 rounded-md bg-[var(--surface)] px-1 text-[10px] font-bold text-slate-700 tabular-nums">{d.total}</span>
                       )}
@@ -158,11 +167,16 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
 
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-semibold text-slate-600">
         <span className="flex items-center gap-1.5">
-          <span className="size-2.5 rounded-[3px]" style={{ background: 'var(--viz-logged)' }} /> Kirjattu
+          <span className="size-2.5 rounded-[3px]" style={{ background: 'var(--viz-logged)' }} /> Kerrat
         </span>
+        {anyArki && (
+          <span className="flex items-center gap-1.5">
+            <span className="size-2.5 rounded-[3px]" style={{ background: 'var(--viz-estimate)' }} /> Arkiliikunta
+          </span>
+        )}
         {anyEstimate && (
           <span className="flex items-center gap-1.5">
-            <span className="size-2.5 rounded-[3px]" style={{ background: 'var(--viz-estimate)' }} /> Arkiliikunta (arvio)
+            <span className="size-2.5 rounded-[3px]" style={{ background: 'var(--viz-estimate-soft)' }} /> Arkiliikunta (arvio)
           </span>
         )}
         {showTarget ? (

@@ -8,7 +8,7 @@
 // Tämä on kestovertailu; suositusvertailu (reipas ja rasittava) on erillinen (osio 7),
 // eikä suunnitelma koskaan näy liikuntamäärissä.
 
-import { activeEstimate, isEstimateValidOn } from './aggregate';
+import { activeEstimate, isEstimateConfirmation, isEstimateValidOn } from './aggregate';
 import { datesBetween, isWeekend } from './dates';
 import type { ActivityType, Category, DayFlag, Estimate, ISODate, Period, PlannedSession, Session, UUID } from './types';
 
@@ -38,6 +38,8 @@ export interface DayHours {
   estimateMin: number;
   /** Kategoriat, joiden perusarvio on mukana estimateMin-luvussa. */
   estimateCategories: Category[];
+  /** Päiväkohtaisesti vahvistettu arkiliikunta (min), sisältyy actualLoggedMin-lukuun. */
+  confirmedMin: number;
   future: boolean;
   flagged: boolean;
 }
@@ -59,11 +61,7 @@ export interface WeeklyHours {
 
 const CATEGORY_ORDER: Category[] = ['hobby', 'school_pe', 'school_recess', 'commute', 'self_directed', 'family', 'other'];
 
-/** Arkiliikunnan päiväkohtainen vahvistus (myös ennen merkintäkenttää tehdyt, tunnistetaan muistiinpanosta). */
-export function isEstimateConfirmation(s: Session): boolean {
-  if (s.estimateConfirmed) return true;
-  return s.effort === 0 && !s.muscle && !s.bone && (s.note === 'Arkiliikunta vahvistettu' || s.note === 'Ei arkiliikuntaa tänä päivänä');
-}
+export { isEstimateConfirmation } from './aggregate';
 
 /** Perusarvion kesto päivälle (ei tehokerrointa): arki- tai viikonloppuminuutit. */
 const estimateDuration = (e: Estimate, d: ISODate) => (isWeekend(d) ? e.weekendMin : e.weekdayMin);
@@ -124,7 +122,9 @@ export function weeklyHours(input: {
     let actualMin = 0;
     let actualLoggedMin = 0;
     let estimateMin = 0;
+    let confirmedMin = 0;
     const estimateCategories: Category[] = [];
+    for (const s of input.sessions) if (!s.deletedAt && s.date === d && isEstimateConfirmation(s)) confirmedMin += s.durationMin;
     for (const [c, m] of logByCat) {
       cat(c).actual.sessions += m;
       actualMin += m;
@@ -186,7 +186,7 @@ export function weeklyHours(input: {
     }
 
     if (!future) expectedToDateMin += expectedMin;
-    days.push({ date: d, expectedMin, actualMin, actualLoggedMin, forecastMin, estimateMin, estimateCategories, future, flagged: isFlagged });
+    days.push({ date: d, expectedMin, actualMin, actualLoggedMin, forecastMin, estimateMin, estimateCategories, confirmedMin, future, flagged: isFlagged });
   }
 
   const byCategory = CATEGORY_ORDER.filter((c) => acc.has(c)).map((c) => acc.get(c)!);

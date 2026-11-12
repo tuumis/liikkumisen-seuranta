@@ -69,6 +69,12 @@ export function estimateMinutes(e: Estimate, d: ISODate): IntensityMinutes {
  * perusarviota, ei molempia. Perusarvio ei koskaan tuota rasittavaa eikä
  * vahvistavaa päivää.
  */
+/** Arkiliikunnan päiväkohtainen vahvistus (myös ennen merkintäkenttää tehdyt, tunnistetaan muistiinpanosta). */
+export function isEstimateConfirmation(s: Session): boolean {
+  if (s.estimateConfirmed) return true;
+  return s.effort === 0 && !s.muscle && !s.bone && (s.note === 'Arkiliikunta vahvistettu' || s.note === 'Ei arkiliikuntaa tänä päivänä');
+}
+
 export function dayTotals(
   date: ISODate,
   sessions: Session[],
@@ -80,9 +86,11 @@ export function dayTotals(
   let muscle = false;
   let bone = false;
   let sessionCount = 0;
+  let confirmedMvpa = 0;
 
   for (const s of sessions) {
     if (s.date !== date || s.deletedAt) continue;
+    if (isEstimateConfirmation(s)) confirmedMvpa += mvpaOf(s.minutes);
     const category: Category = types.get(s.activityTypeId)?.category ?? 'other';
     logged = addMinutes(logged, s.minutes);
     const prev = byCategory[category]?.minutes ?? ZERO_MINUTES;
@@ -120,6 +128,7 @@ export function dayTotals(
     bone,
     sessionCount,
     estimatedCategories,
+    confirmedMvpa,
     estimateAvailable: validEstimates.length > 0,
     byCategory,
   };

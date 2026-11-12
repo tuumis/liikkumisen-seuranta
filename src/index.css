@@ -112,7 +112,8 @@
   /* Kaaviot (validoitu: valoisuus, kroma, CVD-erottuvuus, kontrasti pintaa vasten). */
   --viz-logged: #127a4e;
   --viz-estimate: #c4823f;
-  --viz-estimate-soft: #c4823f;
+  /* Arkiliikunnan vahvistamaton arvio: sama oranssi vinoviivoituksena (tekstuuri erottaa vahvistetusta). */
+  --viz-estimate-soft: repeating-linear-gradient(135deg, #c4823f 0 2.5px, rgb(196 130 63 / 0.32) 2.5px 5px);
   --viz-track: #ebe8df;
   --viz-track-line: #b9b5a8;
   --viz-track-fill: #f7f5ef;
@@ -173,7 +174,7 @@
 
   --viz-logged: #3ba878;
   --viz-estimate: #b97a33;
-  --viz-estimate-soft: #b97a33;
+  --viz-estimate-soft: repeating-linear-gradient(135deg, #b97a33 0 2.5px, rgb(185 122 51 / 0.32) 2.5px 5px);
   --viz-track: #25302a;
   --viz-track-line: #5d6b63;
   --viz-track-fill: #121a16;

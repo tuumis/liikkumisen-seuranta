@@ -29,7 +29,7 @@ import { EditLayoutSheet } from '../../ui/EditLayoutSheet';
 import { isEstimateConfirmation } from '../../domain/hours';
 import { useWeekLayout, type WeekCardId } from './layout';
 import { HoursGauge } from './HoursGauge';
-import { HoursCard } from './HoursCard';
+import { HoursCard, HoursDetailCard } from './HoursCard';
 import { GettingStarted } from './GettingStarted';
 import type { SettingsSectionId } from '../settings/SettingsView';
 import { DaySheet } from './DaySheet';
@@ -390,6 +390,8 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
               return showGauge ? <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} /> : null;
             case 'hours':
               return <HoursCard report={report} isCurrentWeek={isCurrent} />;
+            case 'hoursDetail':
+              return <HoursDetailCard report={report} isCurrentWeek={isCurrent} />;
             case 'upcoming':
               return <UpcomingCard profile={profile} today={today} types={typeMap} onOpen={setPlanOpen} />;
             case 'days':

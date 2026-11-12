@@ -13,7 +13,7 @@ import { today as todayFn } from '../../ui/today';
 import { DAY_BAR_TARGET } from '../week/WeekView';
 import { DailyMvpaChart, SERIES } from './DailyMvpaChart';
 import { GoalCard } from './GoalCard';
-import { HoursCard } from '../week/HoursCard';
+import { HoursCard, HoursDetailCard } from '../week/HoursCard';
 import { HoursGauge } from '../week/HoursGauge';
 import { useReport } from './useReport';
 import { FootballSection } from '../football/FootballSection';
@@ -108,6 +108,8 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
                   report.group.group === 'school_age' ? <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} /> : null
                 ) : id === 'hours' ? (
                   <HoursCard report={report} isCurrentWeek={isCurrent} />
+                ) : id === 'hoursDetail' ? (
+                  <HoursDetailCard report={report} isCurrentWeek={isCurrent} />
                 ) : id === 'highlights' ? (
                   <HighlightsCard profile={profile} week={period} />
                 ) : id === 'football' ? (

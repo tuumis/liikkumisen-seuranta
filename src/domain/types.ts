@@ -350,6 +350,8 @@ export interface DayTotals {
   sessionCount: number;
   /** Kategoriat, joille perusarviota käytettiin. */
   estimatedCategories: Category[];
+  /** Päiväkohtaisesti vahvistetun arkiliikunnan reipas+rasittava (sisältyy mvpa-lukuun). */
+  confirmedMvpa: number;
   /** Oliko päivälle voimassa vähintään yksi perusarvio (käytettiin tai ei). */
   estimateAvailable: boolean;
   /** Minuutit kategorioittain (7.10). */
