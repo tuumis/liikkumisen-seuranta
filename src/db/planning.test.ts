@@ -292,3 +292,33 @@ describe('suunnitellun kerran poisto kokonaan', () => {
     expect((await db.fixtures.get(fx.plan.id))?.deletedAt).toBeTruthy();
   });
 });
+
+describe('takautuvat kerrat viikkopohjasta', () => {
+  it('menneet kerrat alkupäivästä eiliseen avoimiksi; olemassa olevat ja poistetut eivät muutu; toisto ei tuplaa', async () => {
+    const item = await repo.createTemplateItem('p1', tueThu({ validFrom: '2026-10-26' }), WED);
+    // ilman takautusta: vain tästä päivästä eteenpäin
+    expect((await repo.plansInRange('p1', '2026-10-26', '2026-11-10')).length).toBe(0);
+    await repo.deletePlanned(plannedSessionId(item.id, '2026-11-12'));
+    const added = await repo.backfillTemplateItem(item.id, WED);
+    // ti 27.10., to 29.10., ti 3.11., to 5.11., ti 10.11.
+    expect(added).toBe(5);
+    const past = await repo.plansInRange('p1', '2026-10-26', '2026-11-10');
+    expect(past.map((p) => [p.date, p.status])).toEqual([
+      ['2026-10-27', 'open'],
+      ['2026-10-29', 'open'],
+      ['2026-11-03', 'open'],
+      ['2026-11-05', 'open'],
+      ['2026-11-10', 'open'],
+    ]);
+    expect(await repo.backfillTemplateItem(item.id, WED)).toBe(0);
+    // kuittaamattomat menneet näkyvät läpikäynnissä
+    expect((await repo.unconfirmedPlans('p1', WED)).length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('enintään 12 viikkoa taaksepäin', async () => {
+    const item = await repo.createTemplateItem('p1', tueThu({ validFrom: '2026-01-01' }), WED);
+    await repo.backfillTemplateItem(item.id, WED);
+    const all = await repo.plansInRange('p1', '2026-01-01', '2026-11-10');
+    expect(all[0].date >= '2026-08-19').toBe(true);
+  });
+});

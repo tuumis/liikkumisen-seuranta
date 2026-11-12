@@ -491,6 +491,15 @@ export function createRepositories(db: AppDB = defaultDb) {
     });
   }
 
+  /** Pohjarivin menneet kerrat kuitattaviksi (alkupäivästä eiliseen, enintään 12 vk). */
+  async function backfillTemplateItem(id: UUID, today: ISODate): Promise<number> {
+    return db.transaction('rw', PLAN_TABLES, async () => {
+      const item = await db.templateItems.get(id);
+      if (!item) return 0;
+      return planner.backfillItem(item, item.validFrom, today);
+    });
+  }
+
   /** Muokkaus koskee vain tulevia avoimia suunnitelmia (B2). */
   async function updateTemplateItem(id: UUID, input: TemplateItemInput, today: ISODate): Promise<TemplateItem> {
     return db.transaction('rw', PLAN_TABLES, async () => {
@@ -1163,6 +1172,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     createTemplateItem,
     updateTemplateItem,
     deleteTemplateItem,
+    backfillTemplateItem,
     plansInRange,
     unconfirmedPlans,
     confirmPlanned,

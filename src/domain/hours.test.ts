@@ -74,6 +74,48 @@ describe('viikon liikuntatunnit', () => {
   });
 });
 
+describe('arvio koko viikolle (ennuste)', () => {
+  // Keskiviikko 11.11.: ma ja ti menneitä, ke tänään, to–su tulevia.
+  const today = '2026-11-11';
+  it('= toteutunut + avoimet suunnitelmat + loppuviikon perusarvio; ylimääräinen kirjaus mukana', () => {
+    const plans = [
+      planned({ date: '2026-11-10', activityTypeId: TRAINING, durationMin: 90, status: 'done' }),
+      planned({ date: '2026-11-12', activityTypeId: TRAINING, durationMin: 90 }),
+      planned({ date: '2026-11-14', activityTypeId: TRAINING, durationMin: 60 }),
+    ];
+    const sessions = [
+      session({ date: '2026-11-10', activityTypeId: TRAINING, durationMin: 90, minutes: M }),
+      // suunnittelematon turnaus maanantaina
+      session({ date: '2026-11-09', activityTypeId: activityTypeId('football_tournament'), durationMin: 300, minutes: M }),
+    ];
+    const h = weeklyHours({ ...base, today, planned: plans, sessions, estimates: [recess] });
+    // toteutunut: 300 + 90 + välitunnit ma–ke 3 × 60 = 570; avoimet: 90 + 60 = 150; perusarvio to–pe 2 × 60 = 120
+    expect(h.forecast).toEqual({ actual: 570, openPlans: 150, estimateAhead: 120 });
+    expect(h.forecastMin).toBe(840);
+    expect(h.actualMin).toBe(570);
+    // suunnitelma (vertailukohta): kolme suunniteltua kertaa + välitunnit 5 × 60, ei turnausta
+    expect(h.expectedMin).toBe(90 + 90 + 60 + 300);
+  });
+
+  it('"Ei tehty" pudottaa kerran pois; kuittaamaton mennyt kerta on mukana, kunnes se merkitään', () => {
+    const open = planned({ date: '2026-11-10', activityTypeId: TRAINING, durationMin: 90 });
+    const h1 = weeklyHours({ ...base, today, planned: [open] });
+    expect(h1.forecast.openPlans).toBe(90);
+    const h2 = weeklyHours({ ...base, today, planned: [{ ...open, status: 'skipped' }] });
+    expect(h2.forecastMin).toBe(0);
+    // kirjattu saman kategorian kerta samana päivänä: kuittaamatonta ei lasketa toiseen kertaan
+    const s = session({ date: '2026-11-10', activityTypeId: TRAINING, durationMin: 80, minutes: M });
+    const h3 = weeklyHours({ ...base, today, planned: [open], sessions: [s] });
+    expect(h3.forecastMin).toBe(80);
+  });
+
+  it('mennyt viikko: arvio = toteuma', () => {
+    const s = session({ date: '2026-11-10', activityTypeId: TRAINING, durationMin: 80, minutes: M });
+    const h = weeklyHours({ ...base, sessions: [s], estimates: [recess] });
+    expect(h.forecastMin).toBe(h.actualMin);
+  });
+});
+
 describe('viikon liikuntamäärän luokat', () => {
   it('rajat kuuluvat ylempään luokkaan; 20 h ja yli on ylin', () => {
     const at = (h: number) => hoursBand(h * 60).label;

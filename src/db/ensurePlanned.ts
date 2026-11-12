@@ -5,7 +5,10 @@
 // (p:<templateItemId>:<date>), joten kaksi laitetta tuottaa saman tietueen.
 
 import { Dexie } from 'dexie';
-import { maxDate } from '../domain/dates';
+import { addDays, maxDate } from '../domain/dates';
+
+/** Takautuvien kertojen enimmäisikä: 12 viikkoa. */
+export const BACKFILL_MAX_DAYS = 84;
 import { plannedSessionId } from '../domain/ids';
 import { defaultPlanningThrough, newPlanned, planningFrom, templateItemDates } from '../domain/planning';
 import type { DeviceId, ISODate, PlannedSession, TemplateItem, UUID } from '../domain/types';
@@ -80,5 +83,26 @@ export function createPlanner(db: AppDB, deviceId: () => Promise<DeviceId>) {
     }
   }
 
-  return { getPlannedThrough, ensurePlanned, regenerateItem };
+  /**
+   * Takautuvat kerrat käyttäjän pyynnöstä: pohjarivin menneet päivät `from`–eilen (enintään
+   * BACKFILL_MAX_DAYS taaksepäin) luodaan avoimiksi suunnitelmiksi kuitattaviksi. Olemassa olevia
+   * (myös poistettuja tai kuitattuja) ei kosketa. Palauttaa luotujen määrän.
+   */
+  async function backfillItem(item: TemplateItem, from: ISODate, today: ISODate): Promise<number> {
+    if (!item.active || item.deletedAt) return 0;
+    const start = maxDate(maxDate(from, item.validFrom), addDays(today, -BACKFILL_MAX_DAYS));
+    const end = addDays(today, -1);
+    if (start > end) return 0;
+    const by = await deviceId();
+    let created = 0;
+    for (const date of templateItemDates(item, start, end)) {
+      const exists = await db.plannedSessions.where('[templateItemId+date]').equals([item.id, date]).count();
+      if (exists) continue;
+      await db.plannedSessions.add(newPlanned(item, date, nowTimestamp(), by));
+      created++;
+    }
+    return created;
+  }
+
+  return { getPlannedThrough, ensurePlanned, regenerateItem, backfillItem };
 }

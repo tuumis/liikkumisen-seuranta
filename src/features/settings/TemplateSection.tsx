@@ -107,6 +107,9 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Menneet kerrat kuitattaviksi, kun alkupäivä on menneisyydessä (oletus: kyllä).
+  const [backfill, setBackfill] = useState(true);
+  const past = isISODate(v.validFrom) && v.validFrom < today;
 
   // Funktionaalinen päivitys: nopeat peräkkäiset napautukset eivät hukkaa valintoja.
   const toggleDay = (d: Weekday) =>
@@ -130,9 +133,17 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
       note: r.data.note,
     };
     try {
-      if (item) await repo.updateTemplateItem(item.id, input, today);
-      else await repo.createTemplateItem(profile.id, input, today);
-      toast(item ? 'Pohja päivitetty – muutos koskee tulevia avoimia kertoja' : 'Rivi lisätty viikkopohjaan');
+      const saved = item ? await repo.updateTemplateItem(item.id, input, today) : await repo.createTemplateItem(profile.id, input, today);
+      const added = past && backfill ? await repo.backfillTemplateItem(saved.id, today) : 0;
+      toast(
+        added > 0
+          ? `${item ? 'Pohja päivitetty' : 'Rivi lisätty'} – ${added} mennyttä kertaa lisätty kuitattavaksi (Viikko → Käy viikko läpi)`
+          : item
+            ? 'Pohja päivitetty – muutos koskee tulevia avoimia kertoja'
+            : 'Rivi lisätty viikkopohjaan',
+        undefined,
+        'success',
+      );
       onDone();
     } catch (e) {
       setErrors({ _: e instanceof Error ? e.message : String(e) });
@@ -214,6 +225,17 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
         <input className={inputClass} value={v.note} maxLength={200} onChange={(e) => setV((c) => ({ ...c, note: e.target.value }))} placeholder="esim. syyskausi" />
       </Field>
 
+      {past && (
+        <label className="card-sunk flex cursor-pointer items-start gap-3 p-3">
+          <input type="checkbox" className="mt-0.5 size-5 shrink-0 accent-green-700" checked={backfill} onChange={(e) => setBackfill(e.target.checked)} />
+          <span className="text-sm text-slate-800">
+            <strong className="block">Luo myös menneet kerrat</strong>
+            <span className="text-xs text-slate-600">
+              Kerrat alkupäivästä eiliseen (enintään 12 viikkoa) lisätään avoimiksi, jotta voit kuitata ne tehdyiksi tai ei tehdyiksi. Jo olemassa olevat kerrat eivät muutu.
+            </span>
+          </span>
+        </label>
+      )}
       <p className="text-xs text-slate-500">
         {item ? 'Muutos koskee vain avoimia suunnitelmia tästä päivästä eteenpäin. Menneet ja kuitatut kerrat eivät muutu.' : 'Suunnitelmat luodaan tästä päivästä eteenpäin.'}
       </p>

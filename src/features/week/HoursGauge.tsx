@@ -12,8 +12,9 @@ const bandColor = (i: number) => `var(--band-${i + 1})`;
 
 export function HoursGauge({ hours, isCurrentWeek, className = '' }: { hours: WeeklyHours; isCurrentWeek: boolean; className?: string }) {
   const actual = hoursBand(hours.actualMin);
-  const showExpected = hours.expectedMin > 0;
-  const expected = hoursBand(hours.expectedMin);
+  // Päättyneellä viikolla arvio = toteuma, joten merkkiä ei näytetä.
+  const showExpected = hours.forecastMin > 0 && hours.days.some((d) => d.future);
+  const expected = hoursBand(hours.forecastMin);
   const actualIdx = HOURS_BANDS.indexOf(actual);
   const expectedIdx = HOURS_BANDS.indexOf(expected);
   const x = xOf(hours.actualMin);
@@ -49,12 +50,12 @@ export function HoursGauge({ hours, isCurrentWeek, className = '' }: { hours: We
       </div>
       {showExpected && (
         <p className="mt-1 text-sm text-slate-600">
-          {isCurrentWeek ? 'Koko viikon arvio' : 'Viikon arvio oli'} <strong className="tabular-nums text-slate-900">{formatHours(hours.expectedMin)}</strong> · {expected.label}
+          {isCurrentWeek ? 'Koko viikon arvio' : 'Viikon arvio oli'} <strong className="tabular-nums text-slate-900">{formatHours(hours.forecastMin)}</strong> · {expected.label}
         </p>
       )}
 
       {/* Mittari: luokat yhtenä palkkina, osoitin toteuman kohdalla. */}
-      <div className="relative mt-7" role="img" aria-label={`Toteuma ${formatHours(hours.actualMin)}: ${actual.label}${showExpected ? `. Viikon arvio ${formatHours(hours.expectedMin)}: ${expected.label}` : ''}.`}>
+      <div className="relative mt-7" role="img" aria-label={`Toteuma ${formatHours(hours.actualMin)}: ${actual.label}${showExpected ? `. Viikon arvio ${formatHours(hours.forecastMin)}: ${expected.label}` : ''}.`}>
         <div className="flex h-4 gap-0.5">
           {HOURS_BANDS.map((b, i) => (
             <div
@@ -66,7 +67,7 @@ export function HoursGauge({ hours, isCurrentWeek, className = '' }: { hours: We
           ))}
         </div>
         {showExpected && (
-          <div className="absolute -top-1.5 h-7 border-l-2 border-dashed border-slate-500" style={{ left: `${xOf(hours.expectedMin)}%` }} title={`Viikon arvio ${formatHours(hours.expectedMin)}`} />
+          <div className="absolute -top-1.5 h-7 border-l-2 border-dashed border-slate-500" style={{ left: `${xOf(hours.forecastMin)}%` }} title={`Viikon arvio ${formatHours(hours.forecastMin)}`} />
         )}
         <div className="absolute -top-6 flex -translate-x-1/2 flex-col items-center" style={{ left: `${x}%` }}>
           <span className="rounded bg-slate-900 px-1.5 text-[11px] font-semibold leading-5 text-white tabular-nums dark:bg-slate-800 dark:text-slate-50">{formatHours(hours.actualMin)}</span>

@@ -205,6 +205,8 @@
 html {
   /* Ei vaakavieritystä: leveä sisältö ei saa puhelinta loitontamaan näkymää. */
   overflow-x: clip;
+  /* Vierityspalkin tila varataan aina: sisältö ei hyppää välilehteä vaihdettaessa (PC). */
+  scrollbar-gutter: stable;
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
   background: var(--bg);
@@ -417,8 +419,8 @@ body {
 
 /* Porrastettu sisääntulo: style={{ '--i': n }} määrää viiveen. */
 .anim-rise {
-  animation: rise 0.55s var(--ease-out) backwards;
-  animation-delay: calc(var(--i, 0) * 60ms);
+  animation: rise 0.4s var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 4) * 40ms);
 }
 .anim-fade {
   animation: fade 0.4s var(--ease-out) backwards;
@@ -450,11 +452,19 @@ body {
 }
 
 /* Näkymänvaihto (View Transitions API, jos selain tukee): pehmeä ristihäivytys ja nosto. */
-::view-transition-old(root) {
-  animation: 0.18s ease-out both fade reverse;
+/* Vain sisältöalue vaihtuu animoidusti; sivupalkki, yläpalkki ja alavalikko pysyvät paikallaan. */
+.page-view {
+  view-transition-name: page;
 }
+::view-transition-old(root),
 ::view-transition-new(root) {
-  animation: 0.32s var(--ease-out) both rise;
+  animation: none;
+}
+::view-transition-old(page) {
+  animation: 0.12s ease-out both fade reverse;
+}
+::view-transition-new(page) {
+  animation: 0.24s var(--ease-out) both rise;
 }
 
 /* Liikkeen vähentäminen: animaatiot ja siirtymät pois, sisältö näkyy heti. */
@@ -469,7 +479,9 @@ body {
     scroll-behavior: auto !important;
   }
   ::view-transition-old(root),
-  ::view-transition-new(root) {
+  ::view-transition-new(root),
+  ::view-transition-old(page),
+  ::view-transition-new(page) {
     animation: none !important;
   }
 }

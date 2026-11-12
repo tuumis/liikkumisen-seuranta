@@ -50,6 +50,9 @@ export default function App() {
   const [error, setError] = useState<string>();
   const [tab, setTabState] = useState<Tab>(() => (store.get('tab') as Tab) ?? 'week');
   const [settingsSection, setSettingsSection] = useState<SettingsSectionId | undefined>();
+  // Kerran avatut välilehdet (pysyvät muistissa, ei uutta latausta palatessa).
+  const [visited, setVisited] = useState<Set<Tab>>(() => new Set());
+  useEffect(() => setVisited((v) => (v.has(tab) ? v : new Set(v).add(tab))), [tab]);
   const [helpOpen, setHelpOpen] = useState(false);
   const openSettings = (section?: SettingsSectionId) => {
     setSettingsSection(section);
@@ -136,6 +139,7 @@ export default function App() {
 
   const TAB_TITLE: Record<Tab, string> = { week: 'Viikko', games: 'Jalkapallo', analysis: 'Analyysi', settings: 'Asetukset' };
   const tabIndex = TABS.findIndex((t) => t.id === tab);
+  const mounted = new Set<Tab>([...visited, tab]);
   const dateLine = formatDate(today(), 'EEEE d. MMMM');
 
   return (
@@ -254,19 +258,26 @@ export default function App() {
             </span>
           )}
         </div>
-        <div key={tab} className="anim-fade">
+        {/* Avatut välilehdet pidetään muistissa (piilotettuina), jotta palatessa sisältö näkyy heti. */}
+        <div className="page-view">
           {!ready ? (
             <LoadingSkeleton />
-          ) : tab === 'week' ? (
-            <WeekView profile={selected} onOpenSettings={openSettings} />
-          ) : tab === 'games' ? (
-            <GamesTab profile={selected} />
-          ) : tab === 'analysis' ? (
-            <Suspense fallback={<LoadingSkeleton />}>
-              <AnalysisView profile={selected} />
-            </Suspense>
           ) : (
-            <SettingsView profile={selected} onProfileCreated={select} section={settingsSection} onSection={setSettingsSection} />
+            TABS.filter((t) => mounted.has(t.id)).map((t) => (
+              <div key={t.id} hidden={t.id !== tab}>
+                {t.id === 'week' ? (
+                  <WeekView profile={selected} onOpenSettings={openSettings} />
+                ) : t.id === 'games' ? (
+                  <GamesTab profile={selected} />
+                ) : t.id === 'analysis' ? (
+                  <Suspense fallback={<LoadingSkeleton />}>
+                    <AnalysisView profile={selected} />
+                  </Suspense>
+                ) : (
+                  <SettingsView profile={selected} onProfileCreated={select} section={settingsSection} onSection={setSettingsSection} />
+                )}
+              </div>
+            ))
           )}
         </div>
       </main>

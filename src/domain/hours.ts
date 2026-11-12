@@ -1,7 +1,9 @@
-// Viikon liikuntatunnit: arvio ja toteuma rinnakkain, kestona (kellotunnit).
-// Käyttäjän vahvistama määrittely:
-// - Arvio = viikkopohjan suunnitellut kerrat + perusarviot.
+// Viikon liikuntatunnit: arvio ja toteuma rinnakkain, kestona (kellotunnit), kaikki teho.
 // - Toteuma = kirjatut kerrat + perusarvio niille päiville ja kategorioille, joilta kirjaus puuttuu.
+// - Ennuste ("Arvio koko viikolle", käyttäjän tarkentama 12.11.2026) = toteuma tähän päivään asti
+//   + avoimet suunnitellut kerrat (tulevat ja kuittaamattomat) + perusarvio loppuviikolle.
+//   Ohitettu ("Ei tehty") tai poistettu kerta putoaa pois, ylimääräinen kirjaus tulee mukaan.
+// - Suunnitelma (expected) = viikkopohjan kerrat + perusarviot; vertailukohta, ei muutu toteuman mukaan.
 // Molemmissa korvausperiaate: päivälle ja kategorialle joko kerrat tai perusarvio, ei molempia.
 // Tämä on kestovertailu; suositusvertailu (reipas ja rasittava) on erillinen (osio 7),
 // eikä suunnitelma koskaan näy liikuntamäärissä.
@@ -21,6 +23,8 @@ export interface CategoryHours {
   category: Category;
   expected: HoursSplit;
   actual: HoursSplit;
+  /** Ennuste koko viikolle (min). */
+  forecast: number;
 }
 
 export interface DayHours {
@@ -28,6 +32,8 @@ export interface DayHours {
   expectedMin: number;
   actualMin: number;
   actualLoggedMin: number;
+  /** Ennuste: menneille toteuma + kuittaamattomat, tuleville avoimet suunnitelmat + perusarvio. */
+  forecastMin: number;
   future: boolean;
   flagged: boolean;
 }
@@ -40,6 +46,9 @@ export interface WeeklyHours {
   actualMin: number;
   expected: HoursSplit;
   actual: HoursSplit;
+  /** Ennuste koko viikolle = toteutunut + avoimet suunnitelmat + perusarvio loppuviikolle (min). */
+  forecastMin: number;
+  forecast: { actual: number; openPlans: number; estimateAhead: number };
   byCategory: CategoryHours[];
   days: DayHours[];
 }
@@ -64,12 +73,13 @@ export function weeklyHours(input: {
   const acc = new Map<Category, CategoryHours>();
   const cat = (c: Category) => {
     let v = acc.get(c);
-    if (!v) acc.set(c, (v = { category: c, expected: { sessions: 0, estimate: 0 }, actual: { sessions: 0, estimate: 0 } }));
+    if (!v) acc.set(c, (v = { category: c, expected: { sessions: 0, estimate: 0 }, actual: { sessions: 0, estimate: 0 }, forecast: 0 }));
     return v;
   };
 
   const days: DayHours[] = [];
   let expectedToDateMin = 0;
+  const fc = { actual: 0, openPlans: 0, estimateAhead: 0 };
   for (const d of datesBetween(period.start, period.end)) {
     const future = d > today;
     const isFlagged = flagged.has(d);
@@ -118,8 +128,49 @@ export function weeklyHours(input: {
       }
     }
 
+    // Ennuste: avoimet suunnitelmat (ei kuitatut, ei ohitetut) kategorioittain; jos kategorialle on jo
+    // kirjaus, kuittaamatonta suunnitelmaa ei lasketa toiseen kertaan.
+    const openByCat = new Map<Category, number>();
+    for (const p of input.planned) {
+      if (p.deletedAt || p.date !== d || p.status !== 'open') continue;
+      const c = catOf(p.activityTypeId);
+      if (logByCat.has(c)) continue;
+      openByCat.set(c, (openByCat.get(c) ?? 0) + p.durationMin);
+    }
+    let forecastMin = 0;
+    if (!future) {
+      // menneet ja tämä päivä: toteuma + kuittaamattomat suunnitelmat (perusarvio väistyy niiden kategoriassa)
+      for (const [c, m] of logByCat) cat(c).forecast += m;
+      forecastMin += actualLoggedMin;
+      fc.actual += actualLoggedMin;
+      if (!isFlagged) {
+        for (const c of estCats) {
+          if (logByCat.has(c) || openByCat.has(c)) continue;
+          const m = estimateDuration(activeEstimate(estimates, c, d)!, d);
+          if (!m) continue;
+          cat(c).forecast += m;
+          forecastMin += m;
+          fc.actual += m;
+        }
+      }
+    } else if (!isFlagged) {
+      for (const c of estCats) {
+        if (openByCat.has(c)) continue;
+        const m = estimateDuration(activeEstimate(estimates, c, d)!, d);
+        if (!m) continue;
+        cat(c).forecast += m;
+        forecastMin += m;
+        fc.estimateAhead += m;
+      }
+    }
+    for (const [c, m] of openByCat) {
+      cat(c).forecast += m;
+      forecastMin += m;
+      fc.openPlans += m;
+    }
+
     if (!future) expectedToDateMin += expectedMin;
-    days.push({ date: d, expectedMin, actualMin, actualLoggedMin, future, flagged: isFlagged });
+    days.push({ date: d, expectedMin, actualMin, actualLoggedMin, forecastMin, future, flagged: isFlagged });
   }
 
   const byCategory = CATEGORY_ORDER.filter((c) => acc.has(c)).map((c) => acc.get(c)!);
@@ -132,6 +183,8 @@ export function weeklyHours(input: {
     actualMin: actual.sessions + actual.estimate,
     expected,
     actual,
+    forecastMin: fc.actual + fc.openPlans + fc.estimateAhead,
+    forecast: fc,
     byCategory,
     days,
   };
