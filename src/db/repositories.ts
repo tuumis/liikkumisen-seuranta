@@ -71,6 +71,8 @@ export interface SessionInput {
   note?: string;
   /** Tarkenne (esim. "Talenttitreeni"), enintään 40 merkkiä. */
   label?: string;
+  /** Arkiliikunnan vahvistus päiväkohtaisesti (säilyy muokattaessa). */
+  estimateConfirmed?: boolean;
 }
 
 /** Jalkapallon lisätietojen tallennettavat tiedot (kaikki valinnaisia osallistumista lukuun ottamatta). */
@@ -386,6 +388,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     if (input.note?.trim()) session.note = input.note.trim();
     const label = cleanLabel(input.label);
     if (label) session.label = label;
+    if (input.estimateConfirmed) session.estimateConfirmed = true;
     await db.sessions.add(session);
     return session;
   }

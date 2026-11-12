@@ -59,6 +59,12 @@ export interface WeeklyHours {
 
 const CATEGORY_ORDER: Category[] = ['hobby', 'school_pe', 'school_recess', 'commute', 'self_directed', 'family', 'other'];
 
+/** Arkiliikunnan päiväkohtainen vahvistus (myös ennen merkintäkenttää tehdyt, tunnistetaan muistiinpanosta). */
+export function isEstimateConfirmation(s: Session): boolean {
+  if (s.estimateConfirmed) return true;
+  return s.effort === 0 && !s.muscle && !s.bone && (s.note === 'Arkiliikunta vahvistettu' || s.note === 'Ei arkiliikuntaa tänä päivänä');
+}
+
 /** Perusarvion kesto päivälle (ei tehokerrointa): arki- tai viikonloppuminuutit. */
 const estimateDuration = (e: Estimate, d: ISODate) => (isWeekend(d) ? e.weekendMin : e.weekdayMin);
 

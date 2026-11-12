@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatHours, hoursBand, HOURS_BANDS, weeklyHours } from './hours';
+import { formatHours, hoursBand, HOURS_BANDS, isEstimateConfirmation, weeklyHours } from './hours';
 import { weekPeriod } from './dates';
 import { activityTypeId } from './ids';
 import { estimate, planned, session, typesMap } from './test-helpers';
@@ -146,5 +146,14 @@ describe('arkiliikunta päiväkohtaisesti', () => {
     expect(h.actual.estimate).toBe(4 * 60);
     const t = dayTotals('2026-11-11', [zero], [recess], types);
     expect(t.estimatedCategories).toEqual([]);
+  });
+});
+
+describe('arkiliikunnan vahvistus', () => {
+  const M = { sedentary: 0, light: 30, moderate: 0, vigorous: 0 };
+  it('tunnistetaan merkinnästä ja aiemmista muistiinpanoista, ei tavallisesta kirjauksesta', () => {
+    expect(isEstimateConfirmation(session({ date: '2026-11-10', minutes: M, estimateConfirmed: true }))).toBe(true);
+    expect(isEstimateConfirmation(session({ date: '2026-11-10', minutes: M, effort: 0, muscle: false, bone: false, note: 'Arkiliikunta vahvistettu' }))).toBe(true);
+    expect(isEstimateConfirmation(session({ date: '2026-11-10', minutes: M, effort: 0, muscle: false, bone: false }))).toBe(false);
   });
 });

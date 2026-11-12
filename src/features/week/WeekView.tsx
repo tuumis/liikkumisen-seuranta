@@ -5,7 +5,7 @@ import { addDays, datesBetween, isoWeek, startOfIsoWeek, weekPeriod } from '../.
 import { planAdherence } from '../../domain/adherence';
 import { planningThroughForWeek } from '../../domain/planning';
 import { RECOMMENDATIONS } from '../../domain/recommendations';
-import type { ActivityType, Category, DayFlag, ISODate, PlannedSession, Profile, RecommendationGroup, Session } from '../../domain/types';
+import type { ActivityType, DayFlag, ISODate, PlannedSession, Profile, RecommendationGroup, Session } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { Button, Card } from '../../ui/components';
 import { formatDate } from '../../ui/format';
@@ -62,7 +62,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
   const [quickAdd, setQuickAdd] = useState<{ date?: ISODate } | null>(null);
   const [editing, setEditing] = useState<Session | null>(null);
   const [dayMenu, setDayMenu] = useState<ISODate | null>(null);
-  const [estimateDay, setEstimateDay] = useState<{ date: ISODate; categories: Category[] } | null>(null);
+  const [estimateDay, setEstimateDay] = useState<ISODate | null>(null);
   const [planOpen, setPlanOpen] = useState<PlannedSession | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [football, setFootball] = useState<Session | null>(null);
@@ -235,7 +235,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             barTarget={DAY_BAR_TARGET[info?.group ?? 'school_age']}
             onOpenMenu={() => setDayMenu(d)}
             onEdit={setEditing}
-            onEstimate={() => setEstimateDay({ date: d, categories: report?.hours.days[i]?.estimateCategories ?? [] })}
+            onEstimate={() => setEstimateDay(d)}
           />
         ))}
       </ol>
@@ -341,7 +341,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             type={football ? typeMap.get(football.activityTypeId) : undefined}
             onClose={() => setFootball(null)}
           />
-          <EstimateDaySheet date={estimateDay?.date ?? null} categories={estimateDay?.categories ?? []} profile={profile} onClose={() => setEstimateDay(null)} />
+          <EstimateDaySheet date={estimateDay} profile={profile} onClose={() => setEstimateDay(null)} />
           <DaySheet
             date={dayMenu}
             flag={dayMenu ? flagByDate.get(dayMenu) : undefined}

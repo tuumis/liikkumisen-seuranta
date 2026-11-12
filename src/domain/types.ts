@@ -173,6 +173,8 @@ export interface Session extends SyncFields {
   note?: string;
   /** Tarkenne lajin nimen rinnalle (esim. "Joukkuetreeni", "Taitokoulu", "Uinti koululiikunnassa"). */
   label?: string;
+  /** Arkiliikunnan päiväkohtainen vahvistus (Tarkista-paneelista); näytetään arkiliikuntarivillä. */
+  estimateConfirmed?: boolean;
   createdAt: Timestamp;
 }
 

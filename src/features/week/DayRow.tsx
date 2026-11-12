@@ -18,6 +18,7 @@ import { FLAG_LABEL } from './DaySheet';
 import { TypeIcon } from './Dashboard';
 import { IconSun } from '../../ui/icons';
 import { CATEGORY_LABEL } from '../../ui/labels';
+import { isEstimateConfirmation } from '../../domain/hours';
 
 export function DayRow({
   index = 0,
@@ -77,8 +78,19 @@ export function DayRow({
   const estPct = Math.min(100 - loggedPct, (est / barTarget) * 100);
 
   const dayNo = Number(date.slice(8, 10));
-  // Arkiliikunnan arvio näkyy jokaisella päivällä (ei sairas-/matkapäivinä); tarkistus tehdään kyseisenä päivänä tai jälkikäteen.
-  const estimateRow = hours && !flag && hours.estimateMin > 0 ? { minutes: hours.estimateMin, categories: hours.estimateCategories } : null;
+  // Arkiliikunta näkyy jokaisella päivällä omana rivinään: arvio (ei sairas-/matkapäivinä) ja päiväkohtaisesti
+  // vahvistetut. Tarkistus tehdään kyseisenä päivänä tai jälkikäteen; vahvistettu jää riville näkyviin.
+  const confirmed = sessions.filter(isEstimateConfirmation);
+  const listed = sessions.filter((s) => !isEstimateConfirmation(s));
+  const pendingMin = hours && !flag ? hours.estimateMin : 0;
+  const estimateRow =
+    pendingMin > 0 || confirmed.length > 0
+      ? {
+          pendingMin,
+          pendingCats: pendingMin > 0 ? hours!.estimateCategories : [],
+          confirmed: confirmed.map((s) => ({ id: s.id, name: CATEGORY_LABEL[types.get(s.activityTypeId)?.category ?? 'other'], min: s.durationMin })),
+        }
+      : null;
   const weekday = dayLabel(date).split(' ')[0];
   const full = formatDate(date, 'EEEE');
   const weekdayName = full.charAt(0).toUpperCase() + full.slice(1);
@@ -166,9 +178,9 @@ export function DayRow({
         </div>
       </div>
 
-      {sessions.length + plans.length + (estimateRow ? 1 : 0) > 0 ? (
+      {listed.length + plans.length + (estimateRow ? 1 : 0) > 0 ? (
         <ul className="space-y-1 px-2 pb-2.5">
-          {sessions.map((s) => {
+          {listed.map((s) => {
             const t = types.get(s.activityTypeId);
             const tags = [s.muscle && 'lihas', s.bone && 'luusto'].filter(Boolean).join(' · ');
             const plan = s.plannedSessionId ? plannedById.get(s.plannedSessionId) : undefined;
@@ -221,17 +233,28 @@ export function DayRow({
           {estimateRow && (
             <li className="flex items-center gap-2 rounded-2xl border border-dashed border-amber-300 bg-amber-50/60 pr-1 dark:border-amber-800 dark:bg-amber-950/45">
               {(() => {
+                const pending = estimateRow.pendingMin > 0;
+                const parts = [
+                  ...estimateRow.confirmed.map((c) => `${c.name.toLowerCase()} ${c.min > 0 ? `${c.min} min` : 'ei tänä päivänä'} ✓`),
+                  ...(pending
+                    ? [`${estimateRow.pendingCats.map((c) => CATEGORY_LABEL[c].toLowerCase()).join(', ')} ${estimateRow.pendingMin} min${estimateRow.confirmed.length ? ' (arvio)' : ''}`]
+                    : []),
+                ];
                 const body = (
                   <>
-                    <span className={`flex size-9 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-800 ${isFuture ? 'opacity-70' : ''}`} aria-hidden>
+                    <span
+                      className={`flex size-9 shrink-0 items-center justify-center rounded-2xl ${pending ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'} ${isFuture ? 'opacity-70' : ''}`}
+                      aria-hidden
+                    >
                       <IconSun size="1.15rem" />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className={`block truncate text-sm font-semibold ${isFuture ? 'text-slate-600' : 'text-slate-800'}`}>
-                        Arkiliikunta <span className="font-medium text-amber-800">(arvio)</span>
+                        Arkiliikunta{' '}
+                        {pending ? <span className="font-medium text-amber-800">(arvio)</span> : <span className="font-medium text-green-800">· vahvistettu</span>}
                       </span>
                       <span className="block truncate text-xs text-slate-500">
-                        {estimateRow.categories.map((c) => CATEGORY_LABEL[c].toLowerCase()).join(', ')} · {estimateRow.minutes} min
+                        {parts.join(' · ')}
                         {isFuture && ' · tarkistetaan päivänä'}
                       </span>
                     </span>
@@ -246,8 +269,12 @@ export function DayRow({
                 );
               })()}
               {!isFuture && (
-                <button type="button" onClick={onEstimate} className="press min-h-9 shrink-0 rounded-full bg-amber-100 px-3 text-xs font-bold text-amber-900 hover:bg-amber-200 dark:hover:bg-amber-900">
-                  Tarkista
+                <button
+                  type="button"
+                  onClick={onEstimate}
+                  className={`press min-h-9 shrink-0 rounded-full px-3 text-xs font-bold ${estimateRow.pendingMin > 0 ? 'bg-amber-100 text-amber-900 hover:bg-amber-200 dark:hover:bg-amber-900' : 'bg-[var(--surface-sunk)] text-slate-700 hover:bg-slate-200'}`}
+                >
+                  {estimateRow.pendingMin > 0 ? 'Tarkista' : 'Muuta'}
                 </button>
               )}
             </li>
