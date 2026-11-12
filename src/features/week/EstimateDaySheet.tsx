@@ -25,6 +25,25 @@ function typeFor(category: Category, types: ActivityType[]): ActivityType | unde
   return types.find((t) => t.category === category && t.sport !== 'football' && !t.archived);
 }
 
+/**
+ * Pikavahvistus (taulukon ✓): päivän avoimet arviot kirjataan sellaisinaan vahvistetuiksi.
+ * Palauttaa luotujen kirjausten tunnisteet kumoamista varten.
+ */
+export async function confirmDayEstimates(profileId: string, date: ISODate, categories: Category[]): Promise<string[]> {
+  const estimates = await repo.activeEstimates(profileId, date);
+  const types = await repo.listActivityTypes({ includeArchived: true });
+  const ids: string[] = [];
+  for (const e of estimates) {
+    if (!categories.includes(e.category)) continue;
+    const minutes = isWeekend(date) ? e.weekendMin : e.weekdayMin;
+    const type = typeFor(e.category, types);
+    if (!minutes || !type) continue;
+    const s = await repo.createSession({ profileId, activityTypeId: type.id, date, durationMin: minutes, effort: 0, muscle: false, bone: false, label: e.label, estimateConfirmed: true });
+    ids.push(s.id);
+  }
+  return ids;
+}
+
 export function EstimateDaySheet({ date, profile, onClose }: { date: ISODate | null; profile: Profile; onClose: () => void }) {
   const toast = useToast();
   const data = useLiveQuery(

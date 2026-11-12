@@ -18,7 +18,7 @@ import { PlanSheet } from './PlanSheet';
 import { BackupReminder, SyncBar } from '../sync/SyncBar';
 import { FootballPanel } from '../football/FootballPanel';
 import { DayRow } from './DayRow';
-import { DayTable } from './DayTable';
+import { DayTable, fmtUnit, type MinuteUnit } from './DayTable';
 import { WeekDetails, WeekHero } from './WeekSummary';
 import { DailyChart, RecentCard, RhythmCard, UpcomingCard } from './Dashboard';
 import { useScrolling } from '../../ui/motion';
@@ -160,6 +160,24 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     } catch {
       /* ei tallennusta */
     }
+    // Taulukkoon vaihdettaessa tämän päivän rivi näkyviin.
+    if (v === 'table') requestAnimationFrame(() => document.querySelector('[data-today-row]')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+  };
+  // Summien yksikkö (minuutit / tunnit), laitekohtainen.
+  const [unit, setUnitState] = useState<MinuteUnit>(() => {
+    try {
+      return localStorage.getItem('minuteUnit') === 'h' ? 'h' : 'min';
+    } catch {
+      return 'min';
+    }
+  });
+  const setUnit = (u: MinuteUnit) => {
+    setUnitState(u);
+    try {
+      localStorage.setItem('minuteUnit', u);
+    } catch {
+      /* ei tallennusta */
+    }
   };
   // Kerrat ilman arkiliikunnan vahvistuksia (ne näkyvät päivän arkiliikuntarivillä).
   const realSessions = (sessions ?? []).filter((s) => !isEstimateConfirmation(s));
@@ -245,7 +263,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             Päivät
           </h2>
           <span className="block truncate text-xs text-slate-500">
-            {week.count} {week.count === 1 ? 'kerta' : 'kertaa'} · {week.duration} min
+            {week.count} {week.count === 1 ? 'kerta' : 'kertaa'} · {fmtUnit(week.duration, unit)} {unit}
             {adherence.planned > 0 && ` · suunniteltu ${adherence.planned}, tehty ${adherence.done}`}
           </span>
         </div>
@@ -286,9 +304,18 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
               plans: (plans ?? []).filter((p) => p.date === d && p.status !== 'done'),
               flag: flagByDate.get(d),
             }))}
+            profileId={profile.id}
+            group={info?.group ?? 'school_age'}
+            vigorousMin={report?.vigorousDay.min ?? 10}
+            barTarget={DAY_BAR_TARGET[info?.group ?? 'school_age']}
             types={typeMap}
+            footballDetails={footballDetails}
+            unit={unit}
+            onUnit={setUnit}
+            onAdd={(date) => setQuickAdd({ date })}
             onEdit={setEditing}
             onPlanOpen={setPlanOpen}
+            onPlanConfirm={(p) => void planActions.confirm(p)}
             onEstimate={setEstimateDay}
             onOpenMenu={setDayMenu}
           />
