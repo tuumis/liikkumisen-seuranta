@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { IconClose } from './icons';
+import { takeMorph } from './morph';
 
 // Taustan vierityksen lukitus, joka toimii myös iPhonessa (overflow: hidden ei siellä riitä):
 // body kiinnitetään paikalleen nykyiseen vierityskohtaan ja palautetaan suljettaessa.
@@ -34,6 +35,12 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   const panel = useRef<HTMLDivElement>(null);
   const close = useRef(onClose);
   close.current = onClose;
+  // Avautuu morfina napautetusta kortista (morphOpen); muuten tavallinen nousu.
+  const wasOpen = useRef(false);
+  const morph = useRef(false);
+  if (open && !wasOpen.current) morph.current = takeMorph();
+  if (!open) morph.current = false;
+  wasOpen.current = open;
 
   useEffect(() => {
     if (!open) return;
@@ -57,7 +64,8 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className="anim-sheet relative flex max-h-[90dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-[2rem] bg-[var(--surface)] shadow-xl focus:outline-none lg:rounded-[2rem]"
+        style={morph.current ? { viewTransitionName: 'morph' } : undefined}
+        className={`${morph.current ? '' : 'anim-sheet'} relative flex max-h-[90dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-[2rem] bg-[var(--surface)] shadow-xl focus:outline-none lg:rounded-[2rem]`}
       >
         {/* Otsikko pysyy paikallaan; vain sisältö vierii (ohut palkki pyöristettyjen kulmien sisällä). */}
         <div className="shrink-0 px-5 pt-3 lg:px-7 lg:pt-6">

@@ -13,6 +13,7 @@ import { dayLabel } from '../../ui/format';
 import { IconBolt, IconBone, IconCheck, IconLeaf, IconPlus } from '../../ui/icons';
 import { useToast } from '../../ui/Toast';
 import { isFresh, useConfirmFeedback } from '../../ui/fresh';
+import { morphOpen } from '../../ui/morph';
 import { repo } from '../../db/repositories';
 import { FLAG_LABEL } from './DaySheet';
 import { confirmDayEstimates } from './EstimateDaySheet';
@@ -335,7 +336,7 @@ export function DayTable({
                       {listed.map((s) => {
                         const t = types.get(s.activityTypeId);
                         return (
-                          <button key={s.id} type="button" onClick={() => onEdit(s)} className={`${chip} bg-[var(--surface-sage)] text-slate-800 hover:brightness-95 ${isFresh(s.id) ? 'row-fresh' : ''}`} title={`${t?.name ?? ''} ${s.durationMin} min`}>
+                          <button key={s.id} type="button" onClick={(e) => morphOpen(e.currentTarget, () => onEdit(s))} className={`${chip} bg-[var(--surface-sage)] text-slate-800 hover:brightness-95 ${isFresh(s.id) ? 'row-fresh' : ''}`} title={`${t?.name ?? ''} ${s.durationMin} min`}>
                             {isFresh(s.id) ? (
                               <span className="fresh-check flex size-4 items-center justify-center rounded-full bg-green-700 text-white" aria-hidden>
                                 <svg viewBox="0 0 16 16" className="size-2.5" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
@@ -357,7 +358,7 @@ export function DayTable({
                           <span key={p.id} className={`inline-flex max-w-full items-center gap-0.5 ${leaving.has(p.id) ? 'plan-leaving' : ''}`}>
                             <button
                               type="button"
-                              onClick={() => onPlanOpen(p)}
+                              onClick={(e) => morphOpen(e.currentTarget, () => onPlanOpen(p))}
                               className={`${chip} border border-dashed border-slate-300 text-slate-500 ${skipped ? 'line-through opacity-70' : ''}`}
                               title={`Suunniteltu: ${t?.name ?? ''} ${p.durationMin} min${skipped ? ' (ei tehty)' : ''}`}
                             >

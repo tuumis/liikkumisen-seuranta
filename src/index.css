@@ -571,6 +571,36 @@ body {
   animation: 0.24s var(--ease-out) both rise;
 }
 
+/* Kortti → paneeli -morfi (ui/morph.ts): vain morfattava osa liikkuu, muu näkymä pysyy paikallaan. */
+::view-transition-group(morph) {
+  animation-duration: 0.38s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  border-radius: 1.5rem;
+  overflow: hidden;
+  /* Peittävä pinta: sisältö ei näy läpi ristihäivytyksen aikana. */
+  background-color: var(--surface);
+  box-shadow: 0 24px 60px -20px rgb(0 0 0 / 0.35);
+}
+::view-transition-old(morph),
+::view-transition-new(morph) {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+::view-transition-old(morph) {
+  animation: 0.16s ease-out both fade reverse;
+}
+::view-transition-new(morph) {
+  animation: 0.3s ease-out both fade;
+}
+html.morphing::view-transition-old(page),
+html.morphing::view-transition-new(page),
+html.morphing::view-transition-old(bottom-nav),
+html.morphing::view-transition-new(bottom-nav) {
+  animation: none;
+}
+
 /* Liikkeen vähentäminen: animaatiot ja siirtymät pois, sisältö näkyy heti. */
 @media (prefers-reduced-motion: reduce) {
   .sparks {
