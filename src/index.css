@@ -632,6 +632,36 @@ body {
   color: #bfe3ee;
 }
 
+/* PC-sovellus ilman erillistä otsikkopalkkia (window-controls-overlay, SPEC 16): ylälaidan vetoalue
+   ikkunan siirtämiseen; sivupalkin kohdalla läpinäkyvä, jolloin sivupalkin väri jatkuu ylälaitaan asti. */
+.titlebar {
+  display: none;
+}
+@media (display-mode: window-controls-overlay) {
+  .titlebar {
+    display: block;
+    position: fixed;
+    z-index: 30;
+    top: env(titlebar-area-y, 0);
+    left: env(titlebar-area-x, 0);
+    width: env(titlebar-area-width, 100%);
+    height: env(titlebar-area-height, 33px);
+    app-region: drag;
+    -webkit-app-region: drag;
+    background: color-mix(in oklab, var(--bg) 82%, transparent);
+    backdrop-filter: blur(16px);
+  }
+  @media (min-width: 1024px) {
+    .titlebar {
+      background: linear-gradient(90deg, transparent 0 18rem, color-mix(in oklab, var(--bg) 82%, transparent) 18rem);
+    }
+  }
+  /* Kapea ikkuna: yläpalkki ikkunapainikkeiden alapuolelle. */
+  header.sticky {
+    padding-top: calc(env(titlebar-area-height, 33px) + 0.5rem);
+  }
+}
+
 /* Sivupalkki (PC): syvä metsänvihreä liukuväri ja hento valoreunus. */
 .sidebar {
   background:

@@ -1,7 +1,7 @@
 // Synkronointi (SPEC 12 "Synkronointi") ja muistutukset (SPEC 10): PC:n leveällä näytöllä sivupalkin alaosassa,
 // muuten (puhelin, kapea ikkuna) Viikko-näkymän palkkina.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import type { MergeSummary } from '../../db/backup';
 import { repo } from '../../db/repositories';
@@ -13,6 +13,7 @@ import { useToast } from '../../ui/Toast';
 import { ConflictSheet } from './ConflictSheet';
 import { folderPermission, readFolderFile, supportsFolder } from './fileIO';
 import { syncFileDevice, useSyncActions, useSyncState } from './useSync';
+import { subscribeCommands } from '../desktop/commands';
 
 const DAY = 86_400_000;
 
@@ -35,6 +36,18 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' }) {
   const [busy, setBusy] = useState(false);
   const [conflicts, setConflicts] = useState<MergeSummary | null>(null);
   const [phoneHasNew, setPhoneHasNew] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  // "Synkronoi"-komento (pikanäppäin, komentovalikko, tehtäväpalkki): vain näkyvissä oleva instanssi suorittaa.
+  const runRef = useRef<() => void>(() => {});
+  useEffect(
+    () =>
+      subscribeCommands(['sync'], () => {
+        const el = rootRef.current;
+        if (!el || el.getBoundingClientRect().height === 0) return false;
+        runRef.current();
+      }),
+    [],
+  );
 
   // PC: muistutus, jos kansiossa on lukematon uudempi puhelimen tiedosto (vain jos lupa on jo annettu).
   useEffect(() => {
@@ -83,11 +96,17 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' }) {
   const stale = state.lastSyncAt ? Date.now() - new Date(state.lastSyncAt).getTime() > 7 * DAY : false;
   const pcDays = state.lastIncomingExportedAt ? Math.floor((Date.now() - new Date(state.lastIncomingExportedAt).getTime()) / DAY) : undefined;
 
+  runRef.current = () => {
+    if (busy) return;
+    if (state.role === 'pc' && supportsFolder()) void run(actions.pcSync);
+    else if (state.role === 'pc') void run(actions.importFile);
+    else void run(actions.importFile);
+  };
   const sideBtn = 'press flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-left hover:bg-white/[0.06] disabled:opacity-60';
   if (variant === 'sidebar') {
     const sub = busy ? 'Synkronoidaan…' : phoneHasNew ? 'Puhelimella uusia kirjauksia' : `Synkronoitu ${ago(state.lastSyncRunAt)}`;
     return (
-      <>
+      <div ref={rootRef}>
         {supportsFolder() ? (
           <button type="button" disabled={busy} onClick={() => run(actions.pcSync)} className={`${sideBtn} group`} aria-label={`Synkronoi puhelimen kanssa. ${sub}`}>
             <span className="relative text-[var(--side-ink-soft)] group-hover:text-white">
@@ -122,12 +141,12 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' }) {
           </div>
         )}
         <ConflictSheet summary={conflicts} onClose={() => setConflicts(null)} />
-      </>
+      </div>
     );
   }
 
   return (
-    <>
+    <div ref={rootRef} className="space-y-2 empty:hidden">
       {state.role === 'pc' ? (
         <div className="space-y-2 lg:hidden">
           {phoneHasNew && <div className="rounded-2xl bg-sky-50 p-3 text-sm text-sky-950 ring-1 ring-sky-200">Puhelimella on uusia kirjauksia – synkronoi</div>}
@@ -168,7 +187,7 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' }) {
         </div>
       )}
       <ConflictSheet summary={conflicts} onClose={() => setConflicts(null)} />
-    </>
+    </div>
   );
 }
 

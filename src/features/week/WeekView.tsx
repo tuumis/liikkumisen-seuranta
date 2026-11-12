@@ -15,6 +15,7 @@ import { ReviewSheet } from '../review/ReviewSheet';
 import { usePlanActions } from '../review/usePlanActions';
 import { loadUnconfirmed, useMinuteTick } from '../review/unconfirmed';
 import { subscribeWeekRequest } from '../desktop/settings';
+import { subscribeCommands } from '../desktop/commands';
 import { PlanSheet } from './PlanSheet';
 import { BackupReminder, SyncBar } from '../sync/SyncBar';
 import { UpdateBanner } from '../update/appUpdate';
@@ -181,6 +182,20 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
   };
   const info = report?.group;
   const go = (weeks: number) => setWeekStart((w) => addDays(w, weeks * 7));
+  // Pikanäppäimet, komentovalikko ja tehtäväpalkin pikakuvakkeet (SPEC 16).
+  useEffect(
+    () =>
+      subscribeCommands(['add', 'review', 'week'], (c) => {
+        if (!profile) return false;
+        if (c.kind === 'add') setQuickAdd({});
+        else if (c.kind === 'review') setReviewOpen(true);
+        else if (c.kind === 'week') {
+          if (c.delta === 0) setWeekStart(startOfIsoWeek(todayFn()));
+          else setWeekStart((w) => addDays(w, c.delta * 7));
+        }
+      }),
+    [profile],
+  );
 
   // Pyyhkäisy vaihtaa viikkoa.
   const touch = useRef<{ x: number; y: number } | null>(null);

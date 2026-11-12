@@ -13,6 +13,7 @@ import { GamesTab } from './features/games/GamesTab';
 import { DesktopAgent } from './features/desktop/DesktopAgent';
 import { SyncBar } from './features/sync/SyncBar';
 import { SidebarUpdate } from './features/update/appUpdate';
+import { consumeLaunchAction, dispatchCommand, type AppCommand } from './features/desktop/commands';
 import { Avatar } from './ui/Avatar';
 import { formatDate } from './ui/format';
 import { IconBall, IconChart, IconHelp, IconLeaf, IconSettings, IconWeek } from './ui/icons';
@@ -97,6 +98,21 @@ export default function App() {
     store.set('selectedProfileId', id);
   };
 
+  /** Komento pikanäppäimestä, komentovalikosta tai tehtäväpalkista: Viikko-komennot avaavat Viikko-näkymän. */
+  const runCommand = (cmd: AppCommand) => {
+    if (cmd.kind === 'add' || cmd.kind === 'review' || cmd.kind === 'week') setTab('week');
+    dispatchCommand(cmd);
+  };
+  // Tehtäväpalkin pikakuvake (?action=…) kerran käynnistyksessä, kun profiilit on ladattu.
+  const [launchHandled, setLaunchHandled] = useState(false);
+  useEffect(() => {
+    if (launchHandled || !ready || !profiles) return;
+    setLaunchHandled(true);
+    const cmd = consumeLaunchAction();
+    if (cmd && profiles.length) runCommand(cmd);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [launchHandled, ready, profiles]);
+
   // Käynnistyksessä suunnitelmat kaikille profiileille ensi viikon loppuun (SPEC 10).
   const profileIds = profiles?.map((p) => p.id).join(',') ?? '';
   useEffect(() => {
@@ -147,6 +163,8 @@ export default function App() {
 
   return (
     <div className="min-h-dvh lg:pl-72">
+      {/* PC-sovellus: vetoalue ikkunan ylälaidassa, kun otsikkopalkki on piilotettu (window-controls-overlay). */}
+      <div className="titlebar" aria-hidden />
       {/* PC: kiinteä metsänvihreä sivupalkki navigaatiolle ja profiileille. */}
       <aside className="sidebar fixed inset-y-0 left-0 z-20 hidden w-72 flex-col lg:flex">
         <div className="flex items-center gap-3 px-6 pb-8 pt-8">

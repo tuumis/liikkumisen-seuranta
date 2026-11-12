@@ -46,6 +46,8 @@ export default defineConfig({
         start_url: '.',
         scope: '.',
         display: 'standalone',
+        // PC: otsikkopalkki sulautuu sovellukseen (sivupalkin väri); muuten tavallinen ikkuna.
+        display_override: ['window-controls-overlay', 'standalone'],
         orientation: 'portrait',
         background_color: '#f6f5f0',
         theme_color: '#1f4a5b',
@@ -54,9 +56,21 @@ export default defineConfig({
           { src: 'pwa-512.png', sizes: '512x512', type: 'image/png' },
           { src: 'pwa-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+        // Tehtäväpalkin / aloitusvalikon pikatoiminnot (hiiren oikea painike kuvakkeesta).
+        shortcuts: [
+          { name: 'Kirjaa liikunta', short_name: 'Kirjaa', url: './?action=add', icons: [{ src: 'pwa-192.png', sizes: '192x192' }] },
+          { name: 'Synkronoi puhelimen kanssa', short_name: 'Synkronoi', url: './?action=sync', icons: [{ src: 'pwa-192.png', sizes: '192x192' }] },
+          { name: 'Käy viikko läpi', short_name: 'Läpikäynti', url: './?action=review', icons: [{ src: 'pwa-192.png', sizes: '192x192' }] },
+        ],
+        // Asennusikkunan esikatselukuvat (esimerkkiprofiili, ei oikeita tietoja).
+        screenshots: [
+          { src: 'screenshot-wide.png', sizes: '1280x800', type: 'image/png', form_factor: 'wide', label: 'Viikkonäkymä PC:llä' },
+          { src: 'screenshot-narrow.png', sizes: '390x844', type: 'image/png', form_factor: 'narrow', label: 'Viikkonäkymä puhelimella' },
+        ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest,woff2}'],
+        globIgnores: ['**/screenshot-*.png'], // asennusikkunan kuvat eivät kuulu välimuistiin
         navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,
       },
