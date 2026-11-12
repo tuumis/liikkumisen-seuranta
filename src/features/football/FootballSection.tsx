@@ -23,7 +23,7 @@ import { useFootball } from './useFootball';
 export function resultLine(g: GameSummary): string {
   const res = g.wins + g.draws + g.losses;
   if (!g.games) return 'Ei pelejä';
-  return `${g.games} ${g.games === 1 ? 'peli' : 'peliä'}${res ? ` · V–T–H ${g.wins}–${g.draws}–${g.losses} · maalit ${g.goalsFor}–${g.goalsAgainst}` : ''}${g.noResult ? ` · ${g.noResult} ei tulosta` : ''}${g.playerGoalsGames ? ` · omat maalit ${g.playerGoals}` : ''}`;
+  return `${g.games} ${g.games === 1 ? 'peli' : 'peliä'}${res ? ` · V–T–H ${g.wins}–${g.draws}–${g.losses} · maalit ${g.goalsFor}–${g.goalsAgainst}` : ''}${g.noResult ? ` · ${g.noResult} ei tulosta` : ''}${g.playerGoalsGames ? ` · pelaajan maalit ${g.playerGoals}` : ''}`;
 }
 
 export function FootballSection({ profileId, week, onOpenGames }: { profileId: string; week: Period; onOpenGames: () => void }) {

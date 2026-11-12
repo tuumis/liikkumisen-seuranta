@@ -272,6 +272,7 @@ function TeamsView({ profile }: { profile: Profile }) {
   const [level, setLevel] = useState<GameLevel>('kilpa');
   const [photo, setPhoto] = useState<string | undefined>();
   const [format, setFormat] = useState<GameFormat | ''>('');
+  const [share, setShare] = useState(70); // peliaika-arvio %
 
   const open = (t: Team | 'new') => {
     setEditing(t);
@@ -279,11 +280,12 @@ function TeamsView({ profile }: { profile: Profile }) {
     setLevel(t === 'new' ? 'kilpa' : t.level);
     setPhoto(t === 'new' ? undefined : t.photo);
     setFormat(t === 'new' ? '' : (t.format ?? ''));
+    setShare(Math.round((t === 'new' ? 0.7 : (t.playShare ?? 0.7)) * 100));
   };
 
   async function save() {
     try {
-      await repo.saveTeam(profile.id, { name, level, photo, format: format || undefined }, editing && editing !== 'new' ? editing.id : undefined);
+      await repo.saveTeam(profile.id, { name, level, photo, format: format || undefined, playShare: share === 70 ? undefined : share / 100 }, editing && editing !== 'new' ? editing.id : undefined);
       toast('Joukkue tallennettu');
       setEditing(null);
     } catch (e) {
@@ -330,6 +332,16 @@ function TeamsView({ profile }: { profile: Profile }) {
               ))}
             </div>
           </div>
+          <div>
+            <div className="mb-1 flex items-baseline justify-between gap-2 text-sm font-medium text-slate-700">
+              <label htmlFor="team-share">Peliaika-arvio</label>
+              <span className="tabular-nums text-slate-900">{share} %</span>
+            </div>
+            <input id="team-share" type="range" min={30} max={100} step={5} value={share} onChange={(e) => setShare(Number(e.target.value))} className="w-full accent-green-700" />
+            <p className="mt-1 text-xs text-slate-500">
+              Kuinka suuren osan peliajasta pelaaja on tavallisesti kentällä, kun pelattuja minuutteja ei kirjata. Oletus 70 % (esim. 5v5 ja 7 pelaajan ryhmä: 5/7). Arvio tarkentuu, kun pelin jälkeen merkitset Ei / Osan / Koko pelin.
+            </p>
+          </div>
           <PhotoPicker label="Joukkuekuva" name={name} value={photo} fallback="👕" onChange={setPhoto} />
           <div className="flex gap-2">
             <Button type="submit" className="flex-1">
@@ -352,6 +364,7 @@ function TeamsView({ profile }: { profile: Profile }) {
                 <span className="mt-0.5 flex items-center gap-1.5">
                   <LevelBadge level={t.level} />
                   {t.format && <span className="text-xs text-slate-500">{t.format}</span>}
+                  <span className="text-xs text-slate-500">· peliaika ~{Math.round((t.playShare ?? 0.7) * 100)} %</span>
                 </span>
               </span>
               <span className="text-slate-400" aria-hidden>

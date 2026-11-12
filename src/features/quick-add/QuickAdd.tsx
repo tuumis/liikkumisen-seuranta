@@ -344,7 +344,7 @@ export function QuickAdd({
                 onChange={(e) => setPlayed(e.target.value)}
                 placeholder="esim. 40"
               />
-              <span className="mt-1 block text-xs text-slate-500">Arvio lasketaan pelatuista minuuteista; vaihtopenkki ei kerrytä liikuntaa.</span>
+              <span className="mt-1 block text-xs text-slate-500">Ilman pelattuja minuutteja arvio: lämmittely ~15 min treenin teholla ja peliaika-arvio (joukkueen asetus, oletus 70 %) pelin teholla; vaihtopenkki ei kerrytä liikuntaa.</span>
             </label>
           )}
 

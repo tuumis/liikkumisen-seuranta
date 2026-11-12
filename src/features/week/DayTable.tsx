@@ -30,7 +30,7 @@ export interface DayTableRow {
 type ExtraCol = 'split' | 'football' | 'note';
 const EXTRA_COLS: { id: ExtraCol; label: string; text: string }[] = [
   { id: 'split', label: 'Kevyt, reipas, rasittava', text: 'Tehot erikseen minuutteina (kirjattu + arvio)' },
-  { id: 'football', label: 'Jalkapallo', text: 'Tulos, peliaika ja omat maalit' },
+  { id: 'football', label: 'Jalkapallo', text: 'Tulos, peliaika ja pelaajan maalit' },
   { id: 'note', label: 'Kommentit', text: 'Kertojen muistiinpanot ja arviot' },
 ];
 
@@ -68,7 +68,7 @@ function shortName(s: { label?: string }, t?: ActivityType): string {
   return tail.charAt(0).toUpperCase() + tail.slice(1);
 }
 
-/** Jalkapallon tiivis yhteenveto: tulos tai turnauksen V-T-H, peliaika ja omat maalit. */
+/** Jalkapallon tiivis yhteenveto: tulos tai turnauksen V-T-H, peliaika ja pelaajan maalit. */
 function footballCell(s: Session, t: ActivityType | undefined, d: FootballDetails | undefined): string {
   const parts: string[] = [];
   if (t?.footballKind === 'game' && d) {

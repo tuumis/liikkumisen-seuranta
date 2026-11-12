@@ -96,8 +96,8 @@ describe('lajin profiilin muokkaus ja Laske uudelleen (B5)', () => {
     const s = await repo.createSession(input({ activityTypeId: game, durationMin: 90, playedMin: 40, effort: 1 }));
     await repo.updateActivityType(game, { shares: { light: 0.2, moderate: 0.4, vigorous: 0.4 } });
     await repo.recalculateSessions(game, '2026-01-01');
-    // pohja 40, kovempi: m' = 0,5, v' = 0,5 → summa 1 → kevyt 0
-    expect((await db.sessions.get(s.id))!.minutes).toEqual({ light: 0, moderate: 20, vigorous: 20 });
+    // pelattu 40, kovempi: m' = 0,5, v' = 0,5 → summa 1 → kevyt 0; lämmittely 15 min treenin teholla 5 / 5 / 2
+    expect((await db.sessions.get(s.id))!.minutes).toEqual({ light: 5, moderate: 25, vigorous: 22 });
   });
 
   it('lähtöoletusten palautus', async () => {

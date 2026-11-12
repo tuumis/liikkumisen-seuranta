@@ -3,7 +3,9 @@
 
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import type { ActivityType, FieldPosition, FocusTag, GameFormat, GameLevel, GameResult, Session } from '../../domain/types';
+import type { ActivityType, FieldPosition, FocusTag, GameFormat, GameLevel, GameResult, PlayedState, Session } from '../../domain/types';
+import { DEFAULT_GAME_WARMUP_MIN, DEFAULT_PLAY_SHARE } from '../../domain/intensity';
+import { goalsLabel } from '../../ui/labels';
 import { GAME_FORMATS, LEVEL_LABEL, POSITION_LABEL, POSITIONS } from '../../domain/football';
 import { repo, type FootballDetailsInput } from '../../db/repositories';
 import { Button, Field, inputClass } from '../../ui/components';
@@ -15,7 +17,25 @@ import { useToast } from '../../ui/Toast';
 
 const PLAYED_PICKS = [10, 15, 20, 30, 40, 50, 60];
 
-type GameDraft = { opponent: string; goalsFor: string; goalsAgainst: string; playedMin: string; playerGoals: string; time?: string; location?: string; note: string };
+type GameDraft = { opponent: string; goalsFor: string; goalsAgainst: string; playedMin: string; played: PlayedState | ''; playerGoals: string; time?: string; location?: string; note: string };
+
+/** Pelasiko: Ei / Osan / Koko pelin (uudelleen painallus poistaa valinnan). */
+function PlayedChips({ value, onChange, label, shareText }: { value: PlayedState | ''; onChange: (v: PlayedState | '') => void; label: string; shareText: string }) {
+  const opts: { v: PlayedState; l: string }[] = [
+    { v: 'none', l: 'Ei pelannut' },
+    { v: 'part', l: `Osan (${shareText})` },
+    { v: 'full', l: 'Koko pelin' },
+  ];
+  return (
+    <div className="flex flex-wrap gap-1.5" role="group" aria-label={label}>
+      {opts.map((o) => (
+        <ToggleChip key={o.v} on={value === o.v} onChange={() => onChange(value === o.v ? '' : o.v)}>
+          {o.l}
+        </ToggleChip>
+      ))}
+    </div>
+  );
+}
 
 /** Oman lapsen maalit: nopea − / + -valitsin (tyhjä = ei kirjattu). */
 function GoalStepper({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
@@ -42,6 +62,10 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
   const toast = useToast();
   const kind = type?.footballKind;
   const names = useLiveQuery(() => (session ? repo.footballNameSuggestions(session.profileId) : undefined), [session?.profileId]);
+  const playerName = useLiveQuery(
+    async () => (session ? (await repo.listProfiles({ includeArchived: true })).find((p) => p.id === session.profileId)?.name : undefined),
+    [session?.profileId],
+  );
 
   const [attendance, setAttendance] = useState<'full' | 'partial'>('full');
   const [enjoyment, setEnjoyment] = useState<1 | 2 | 3 | undefined>();
@@ -56,6 +80,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
   const [gf, setGf] = useState('');
   const [ga, setGa] = useState('');
   const [played, setPlayed] = useState('');
+  const [gamePlayed, setGamePlayed] = useState<PlayedState | ''>('');
   const [eventName, setEventName] = useState('');
   const [gamesCount, setGamesCount] = useState('');
   const [games, setGames] = useState<GameDraft[]>([]);
@@ -81,7 +106,8 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
     setOpponent(d?.opponent ?? '');
     setGf(str(d?.goalsFor));
     setGa(str(d?.goalsAgainst));
-    setPlayed(str(session.playedMin));
+    setPlayed(d?.played ? '' : str(session.playedMin));
+    setGamePlayed(d?.played ?? '');
     setEventName(d?.eventName ?? '');
     setGamesCount(str(d?.games?.length ? undefined : d?.gamesCount));
     setGames(
@@ -90,6 +116,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
         goalsFor: str(g.goalsFor),
         goalsAgainst: str(g.goalsAgainst),
         playedMin: str(g.playedMin),
+        played: g.played ?? '',
         playerGoals: str(g.playerGoals),
         time: g.time,
         location: g.location,
@@ -114,6 +141,9 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
   }, [existing, names, kind, teams]);
 
   if (!session || !type) return null;
+  const warmupMin = session.warmupMin ?? DEFAULT_GAME_WARMUP_MIN;
+  const shareText = `~${Math.round((session.playShare ?? DEFAULT_PLAY_SHARE) * 100)} %`;
+  const goals = goalsLabel(playerName);
 
   async function save() {
     const nums = { gf: toNum(gf), ga: toNum(ga), played: toNum(played), count: toNum(gamesCount), own: toNum(playerGoals) };
@@ -122,6 +152,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
       goalsFor: toNum(g.goalsFor),
       goalsAgainst: toNum(g.goalsAgainst),
       playedMin: toNum(g.playedMin),
+      played: g.played || undefined,
       playerGoals: toNum(g.playerGoals),
       time: g.time,
       location: g.location,
@@ -130,6 +161,17 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
     const bad = [...Object.values(nums), ...rows.flatMap((r) => [r.goalsFor, r.goalsAgainst, r.playedMin, r.playerGoals])].some((n) => Number.isNaN(n));
     if (bad) return setError('Anna luvut kokonaislukuina');
     if (nums.played !== undefined && nums.played > session!.durationMin) return setError('Pelatut minuutit eivät voi ylittää kestoa');
+    // Peli: tarkat minuutit, muuten Ei = 0, Koko pelin = kesto − lämmittely, Osan = peliaika-arvio (ei minuutteja).
+    const gamePlayedMin =
+      kind !== 'game'
+        ? nums.played
+        : nums.played !== undefined
+          ? nums.played
+          : gamePlayed === 'none'
+            ? 0
+            : gamePlayed === 'full'
+              ? Math.max(0, session!.durationMin - warmupMin)
+              : undefined;
     const input: FootballDetailsInput = {
       attendance,
       focusTags: tags,
@@ -142,7 +184,8 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
       opponent,
       goalsFor: nums.gf,
       goalsAgainst: nums.ga,
-      playedMin: nums.played,
+      playedMin: gamePlayedMin,
+      played: kind === 'game' ? gamePlayed || undefined : undefined,
       eventName,
       gamesCount: nums.count,
       games: rows,
@@ -309,16 +352,45 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
         {kind === 'game' && (
           <>
             <div>
-              <div className="mb-1 text-sm font-medium text-slate-700">Pelatut minuutit</div>
+              <div className="mb-1 text-sm font-medium text-slate-700">Pelasiko?</div>
+              <PlayedChips
+                value={gamePlayed}
+                onChange={(v) => {
+                  setGamePlayed(v);
+                  if (v) setPlayed('');
+                }}
+                label="Pelasiko"
+                shareText={shareText}
+              />
+              <div className="mb-1 mt-3 text-xs font-medium text-slate-600">tai tarkat pelatut minuutit</div>
               <div className="flex flex-wrap gap-2">
                 {PLAYED_PICKS.filter((m) => m <= session.durationMin).map((m) => (
-                  <ToggleChip key={m} on={played === String(m)} onChange={(on) => setPlayed(on ? String(m) : '')}>
+                  <ToggleChip
+                    key={m}
+                    on={played === String(m)}
+                    onChange={(on) => {
+                      setPlayed(on ? String(m) : '');
+                      if (on) setGamePlayed('');
+                    }}
+                  >
                     {m}
                   </ToggleChip>
                 ))}
-                <input className="field-shell min-h-10 w-20 rounded-full border-0 px-3 text-sm" inputMode="numeric" value={played} onChange={(e) => setPlayed(e.target.value)} aria-label="Pelatut minuutit" placeholder="muu" />
+                <input
+                  className="field-shell min-h-10 w-20 rounded-full border-0 px-3 text-sm"
+                  inputMode="numeric"
+                  value={played}
+                  onChange={(e) => {
+                    setPlayed(e.target.value);
+                    if (e.target.value) setGamePlayed('');
+                  }}
+                  aria-label="Pelatut minuutit"
+                  placeholder="muu"
+                />
               </div>
-              <p className="mt-1 text-xs text-slate-500">Arvio lasketaan pelatuista minuuteista; vaihtopenkki ei kerrytä liikuntaa.</p>
+              <p className="mt-1 text-xs text-slate-500">
+                Arvio: lämmittely {warmupMin} min treenin teholla, pelattu aika pelin teholla, vaihtopenkki ei kerrytä liikuntaa. Ilman valintaa käytetään peliaika-arviota ({shareText}).
+              </p>
             </div>
             <Field label="Vastustaja">
               <input className={inputClass} value={opponent} onChange={(e) => setOpponent(e.target.value)} list="fb-opponents" maxLength={60} />
@@ -333,8 +405,8 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
               </div>
             </div>
             <div>
-              <div className="mb-1 text-sm font-medium text-slate-700">Omat maalit ⚽</div>
-              <GoalStepper value={playerGoals} onChange={setPlayerGoals} label="Omat maalit" />
+              <div className="mb-1 text-sm font-medium text-slate-700">{goals} ⚽</div>
+              <GoalStepper value={playerGoals} onChange={setPlayerGoals} label={goals} />
             </div>
           </>
         )}
@@ -354,8 +426,8 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
                   <input className={inputClass} inputMode="numeric" value={played} onChange={(e) => setPlayed(e.target.value)} />
                 </Field>
                 <div className="col-span-2">
-                  <div className="mb-1 text-sm font-medium text-slate-700">Omat maalit yhteensä ⚽</div>
-                  <GoalStepper value={playerGoals} onChange={setPlayerGoals} label="Omat maalit yhteensä" />
+                  <div className="mb-1 text-sm font-medium text-slate-700">{goals} yhteensä ⚽</div>
+                  <GoalStepper value={playerGoals} onChange={setPlayerGoals} label={`${goals} yhteensä`} />
                 </div>
               </div>
             )}
@@ -380,6 +452,12 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
                   aria-label={`Peli ${i + 1}: vastustaja`}
                   onChange={(e) => setGames((cur) => cur.map((x, j) => (j === i ? { ...x, opponent: e.target.value } : x)))}
                 />
+                <PlayedChips
+                  value={g.played}
+                  onChange={(v) => setGames((cur) => cur.map((x, j) => (j === i ? { ...x, played: v, playedMin: v ? '' : x.playedMin } : x)))}
+                  label={`Peli ${i + 1}: pelasiko`}
+                  shareText={shareText}
+                />
                 <div className="flex items-center gap-2">
                   {(['goalsFor', 'goalsAgainst'] as const).map((k, idx) => (
                     <span key={k} className="contents">
@@ -397,17 +475,17 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
                     className={`${inputClass} ml-auto w-16 px-1 text-center`}
                     inputMode="numeric"
                     value={g.playerGoals}
-                    placeholder="⚽ omat"
-                    aria-label={`Peli ${i + 1}: omat maalit`}
+                    placeholder="⚽ maalit"
+                    aria-label={`Peli ${i + 1}: ${goals}`}
                     onChange={(e) => setGames((cur) => cur.map((x, j) => (j === i ? { ...x, playerGoals: e.target.value } : x)))}
                   />
                   <input
                     className={`${inputClass} w-20 px-2`}
                     inputMode="numeric"
                     value={g.playedMin}
-                    placeholder="pelattu"
-                    aria-label={`Peli ${i + 1}: pelatut minuutit`}
-                    onChange={(e) => setGames((cur) => cur.map((x, j) => (j === i ? { ...x, playedMin: e.target.value } : x)))}
+                    placeholder="tarkat min"
+                    aria-label={`Peli ${i + 1}: tarkat pelatut minuutit`}
+                    onChange={(e) => setGames((cur) => cur.map((x, j) => (j === i ? { ...x, playedMin: e.target.value, played: e.target.value ? '' : x.played } : x)))}
                   />
                 </div>
                 <input
@@ -420,10 +498,14 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
                 />
               </div>
             ))}
-            <Button variant="secondary" className="w-full" onClick={() => setGames((cur) => [...cur, { opponent: '', goalsFor: '', goalsAgainst: '', playedMin: '', playerGoals: '', note: '' }])}>
+            <Button variant="secondary" className="w-full" onClick={() => setGames((cur) => [...cur, { opponent: '', goalsFor: '', goalsAgainst: '', playedMin: '', played: '', playerGoals: '', note: '' }])}>
               + peli
             </Button>
-            {games.length > 0 && <p className="text-xs text-slate-500">Pelien määrä = rivien määrä. Pelattujen minuuttien summa on arvion laskentapohja.</p>}
+            {games.length > 0 && (
+              <p className="text-xs text-slate-500">
+                Pelien määrä = rivien määrä. Pelattu aika: Koko pelin = pelin pituus, Osan = peliaika-arvio ({shareText}), Ei pelannut = 0; tarkat minuutit ohittavat valinnan ja merkitsemätön peli lasketaan arviolla. Lämmittely ennen jokaista peliä (~15 min) treenin teholla, vaihtopenkki ei kerrytä liikuntaa.
+              </p>
+            )}
           </>
         )}
 

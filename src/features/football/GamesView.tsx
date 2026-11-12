@@ -21,6 +21,7 @@ import type { Profile } from '../../domain/types';
 import { Button, Card, inputClass } from '../../ui/components';
 import { dayLabel } from '../../ui/format';
 import { num1 } from '../../ui/statusText';
+import { goalsLabel } from '../../ui/labels';
 import { resultLine } from './FootballSection';
 import { useFootball } from './useFootball';
 
@@ -125,7 +126,7 @@ export function GamesView({ profile, onBack }: { profile: Profile; onBack?: () =
 
       <div className="space-y-4 lg:col-span-5 xl:col-span-4">
       <Card title="Kokonaisuus">
-        <SummaryBlock s={total} />
+        <SummaryBlock s={total} name={profile.name} />
       </Card>
       {byLevel.length > 0 && <GroupCard title="Taso (Elite · Kilpa · Haaste)" groups={byLevel} />}
       {byFormat.length > 0 && <GroupCard title="Pelimuoto" groups={byFormat} />}
@@ -186,7 +187,7 @@ function GameLine({ r, showDate }: { r: GameRow; showDate: boolean }) {
               r.format,
               r.positions?.map((p) => POSITION_LABEL[p].toLowerCase()).join(', '),
               r.playedMin !== undefined && `pelattu ${r.playedMin} min`,
-              r.playerGoals ? `⚽ ${r.playerGoals} ${r.playerGoals === 1 ? 'oma maali' : 'omaa maalia'}` : undefined,
+              r.playerGoals ? `⚽ ${r.playerGoals} ${r.playerGoals === 1 ? 'maali' : 'maalia'}` : undefined,
             ]
               .filter(Boolean)
               .join(' · ')}
@@ -200,7 +201,7 @@ function GameLine({ r, showDate }: { r: GameRow; showDate: boolean }) {
   );
 }
 
-function SummaryBlock({ s }: { s: ReturnType<typeof summarizeGames> }) {
+function SummaryBlock({ s, name }: { s: ReturnType<typeof summarizeGames>; name: string }) {
   return (
     <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-sm">
       <dt className="text-slate-600">Pelit</dt>
@@ -222,7 +223,7 @@ function SummaryBlock({ s }: { s: ReturnType<typeof summarizeGames> }) {
       )}
       {s.playerGoalsGames > 0 && (
         <>
-          <dt className="text-slate-600">Omat maalit ⚽</dt>
+          <dt className="text-slate-600">{goalsLabel(name)} ⚽</dt>
           <dd className="text-right tabular-nums">
             {s.playerGoals}
             <span className="text-slate-500"> ({s.playerGoalsGames} pelissä)</span>

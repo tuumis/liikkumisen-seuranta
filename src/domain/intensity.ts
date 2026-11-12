@@ -50,7 +50,34 @@ export function minutesFromShares(base: number, shares: IntensityShares): Intens
   };
 }
 
-/** Vaihe 1: laskentapohja – pelatut minuutit pelissä ja turnauksessa, jos annettu. */
+/** Peliaika-arvio: osuus peliajasta kentällä, kun pelattuja minuutteja ei ole kirjattu (käyttäjän vahvistama 12.11.2026). */
+export const DEFAULT_PLAY_SHARE = 0.7;
+/** Lämmittely ennen peliä (min), kun sitä ei ole annettu (yksi peli). */
+export const DEFAULT_GAME_WARMUP_MIN = 15;
+/** Lämmittelyn teho, jos jalkapallotreenin profiilia ei ole saatavilla (= treenin lähtöoletus). */
+export const WARMUP_FALLBACK_SHARES: Readonly<IntensityShares> = Object.freeze({ light: 0.35, moderate: 0.3, vigorous: 0.15 });
+
+export interface FootballParts {
+  warmup: number;
+  played: number;
+  /** Vaihtopenkki ja tauot: ei kerrytä liikuntaa. */
+  bench: number;
+}
+
+/**
+ * Pelin ja turnauksen osat (SPEC 16): lämmittely, pelattu aika ja vaihtopenkki. Pelattu aika on
+ * kirjattu tai arvioitu (kesto − lämmittely) × peliaika-arvio; lämmittely mahtuu aina kestoon.
+ */
+export function footballParts(input: { durationMin: number; playedMin?: number; warmupMin?: number; playShare?: number }): FootballParts {
+  const d = Math.max(0, input.durationMin);
+  let warmup = Math.min(d, Math.max(0, input.warmupMin ?? DEFAULT_GAME_WARMUP_MIN));
+  const share = Math.min(1, Math.max(0, input.playShare ?? DEFAULT_PLAY_SHARE));
+  const played = Math.min(d, Math.max(0, input.playedMin ?? roundMinutes((d - warmup) * share)));
+  if (played + warmup > d) warmup = d - played;
+  return { warmup, played, bench: d - warmup - played };
+}
+
+/** Vaihe 1 (muut lajit): laskentapohja on kesto; pelissä ja turnauksessa pelatut minuutit (ks. footballParts). */
 export function sessionBase(
   type: Pick<ActivityType, 'usesPlayedMinutes'>,
   input: { durationMin: number; playedMin?: number },
@@ -68,14 +95,31 @@ export function sessionBase(
  */
 export function computeSessionMinutes(
   type: ActivityType,
-  input: { durationMin: number; playedMin?: number; effort: Effort; manual?: IntensityMinutes },
+  input: {
+    durationMin: number;
+    playedMin?: number;
+    effort: Effort;
+    manual?: IntensityMinutes;
+    /** Peli ja turnaus: lämmittely (min), peliaika-arvio ja lämmittelyn teho (jalkapallotreenin profiili). */
+    warmupMin?: number;
+    playShare?: number;
+    warmupShares?: IntensityShares;
+  },
 ): { minutes: IntensityMinutes; snapshot?: IntensityShares } {
   if (input.manual) {
     const { light, moderate, vigorous } = input.manual;
     return { minutes: { light, moderate, vigorous } };
   }
-  const base = sessionBase(type, input);
-  const minutes = minutesFromShares(base, effectiveShares(type.shares, input.effort));
+  // Peli ja turnaus osina: pelattu aika pelin teholla (ponnistelu = taso), lämmittely treenin teholla, penkki 0.
+  const minutes = type.usesPlayedMinutes
+    ? (() => {
+        const p = footballParts(input);
+        return addMinutes(
+          minutesFromShares(p.played, effectiveShares(type.shares, input.effort)),
+          minutesFromShares(p.warmup, effectiveShares(input.warmupShares ?? WARMUP_FALLBACK_SHARES, 0)),
+        );
+      })()
+    : minutesFromShares(sessionBase(type, input), effectiveShares(type.shares, input.effort));
   const { light, moderate, vigorous } = type.shares;
   return { minutes, snapshot: { light, moderate, vigorous } };
 }

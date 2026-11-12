@@ -49,9 +49,9 @@ describe('kerran tallennus', () => {
     expect('sharesSnapshot' in s).toBe(false);
   });
 
-  it('pelissä laskentapohja on pelatut minuutit (A3); treenissä playedMin ei tallennu', async () => {
+  it('pelissä pelattu aika pelin teholla + lämmittely treenin teholla (A3, SPEC 16); treenissä playedMin ei tallennu', async () => {
     const g = await repo.createSession(input({ activityTypeId: GAME, durationMin: 90, playedMin: 40 }));
-    expect(g.minutes).toEqual({ light: 8, moderate: 18, vigorous: 12 });
+    expect(g.minutes).toEqual({ light: 13, moderate: 23, vigorous: 14 });
     expect(g.playedMin).toBe(40);
     const t = await repo.createSession(input({ playedMin: 40 }));
     expect('playedMin' in t).toBe(false);
@@ -78,7 +78,7 @@ describe('kerran muokkaus', () => {
   it('lajin vaihto käyttää uuden lajin profiilia', async () => {
     const s = await repo.createSession(input());
     const u = await repo.updateSession(s.id, input({ activityTypeId: GAME, durationMin: 40 }));
-    expect(u.minutes).toEqual({ light: 8, moderate: 18, vigorous: 12 });
+    expect(u.minutes).toEqual({ light: 9, moderate: 13, vigorous: 7 }); // lämmittely 15 + pelattu 70 % × 25
   });
 
   it('profiili → käsin poistaa snapshotin; käsin → profiili palauttaa sen', async () => {

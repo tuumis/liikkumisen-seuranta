@@ -68,16 +68,17 @@ describe('pelikalenteri', () => {
     expect(r.session.effort).toBe(1);
     expect(await repo.getFootballDetails(r.session.id)).toMatchObject({ teamId: team.id, team: 'P2018 Valkoinen', opponent: 'HJK', level: 'elite', attendance: 'full' });
 
-    // Pelatut 40 min tulosta kirjattaessa: Elite (kovempi) → m′ 0,5625, v′ 0,375 → 23 + 15 = 38 min.
+    // Pelatut 40 min tulosta kirjattaessa: Elite (kovempi) → m′ 0,5625, v′ 0,375 → 23 + 15 = 38 min,
+    // lisäksi lämmittely 15 min treenin teholla (ei tasokerrointa) 5 + 2 = 7 min.
     await repo.saveFootballDetails(r.session.id, { attendance: 'full', focusTags: [], teamId: team.id, level: 'elite', playedMin: 40, goalsFor: 2, goalsAgainst: 1 });
     const s = (await repo.sessionsInRange('p1', '2026-11-10', '2026-11-10'))[0];
-    expect(s.minutes.moderate + s.minutes.vigorous).toBe(38);
+    expect(s.minutes.moderate + s.minutes.vigorous).toBe(38 + 7);
 
     // Taso Haasteeksi → kevyempi: 40 · (0,3375 + 0,225) ≈ 23 min.
     await repo.saveFootballDetails(r.session.id, { attendance: 'full', focusTags: [], teamId: team.id, level: 'haaste', playedMin: 40 });
     const h = (await repo.sessionsInRange('p1', '2026-11-10', '2026-11-10'))[0];
     expect(h.effort).toBe(-1);
-    expect(h.minutes.moderate + h.minutes.vigorous).toBe(23);
+    expect(h.minutes.moderate + h.minutes.vigorous).toBe(23 + 7);
   });
 
   it('ilman tapahtumakohtaista tasoa käytetään joukkueen tasoa', async () => {
@@ -107,6 +108,57 @@ describe('pelikalenteri', () => {
     await repo.updateFixture(e.plan.id, { kind: 'tournament', date: '2026-11-21', durationMin: 300, eventName: 'Winterliiga', durationManual: true });
     expect(await db.fixtures.get(e.plan.id)).toMatchObject({ durationManual: true });
     expect((await db.plannedSessions.get(e.plan.id))!.durationMin).toBe(300);
+  });
+
+  it('peliaika: Ei / Osan / Koko pelin, joukkueen peliaika-arvio ja lämmittely ennen jokaista peliä', async () => {
+    const { repo, db } = await device('played');
+    const team = await repo.saveTeam('p1', { name: 'P2018', level: 'kilpa', format: '5v5', playShare: 0.8 });
+    expect(team.playShare).toBe(0.8);
+    const e = await repo.createFixture('p1', {
+      kind: 'tournament',
+      date: '2026-11-08',
+      startTime: '13:45',
+      durationMin: 105,
+      teamId: team.id,
+      eventName: 'Winterliiga',
+      games: [{ time: '14:00' }, { time: '15:00' }, { time: '15:30' }],
+    });
+    const r = await repo.confirmPlanned(e.plan.id, TODAY);
+    // lämmittely 3 × 15 min, joukkueen arvio 80 %; pelin pituus 5v5-oletus 20 min
+    expect(r.session).toMatchObject({ warmupMin: 45, playShare: 0.8 });
+    expect(r.session.playedMin).toBeUndefined();
+    expect((await repo.getFootballDetails(r.session.id))!.gameLengthMin).toBe(20);
+    const fd = (await repo.getFootballDetails(r.session.id))!;
+    await repo.saveFootballDetails(r.session.id, {
+      attendance: 'full',
+      focusTags: [],
+      teamId: team.id,
+      games: [
+        { ...fd.games![0], played: 'full' },
+        { ...fd.games![1], played: 'none' },
+        { ...fd.games![2], played: 'part' },
+      ],
+    });
+    const s = (await db.sessions.get(r.session.id))!;
+    expect(s.playedMin).toBe(20 + 0 + 16); // osan: 80 % × 20
+    expect(s.warmupMin).toBe(45); // säilyy lisätietojen tallennuksessa
+    expect((await repo.getFootballDetails(r.session.id))!.games!.map((g) => g.played)).toEqual(['full', 'none', 'part']);
+    // tarkat minuutit ohittavat valinnan
+    await repo.saveFootballDetails(r.session.id, { attendance: 'full', focusTags: [], games: [{ played: 'full', playedMin: 12 }, { played: 'none' }, {}] });
+    expect((await db.sessions.get(r.session.id))!.playedMin).toBe(12 + 0 + 16);
+  });
+
+  it('pikalisätty turnaus: lämmittely pelien määrän mukaan ja joukkueen peliaika-arvio lisätiedoista', async () => {
+    const { repo, db } = await device('quickTournament');
+    const team = await repo.saveTeam('p1', { name: 'P2018', level: 'kilpa', format: '5v5', playShare: 0.6 });
+    const s = await repo.createSession({ profileId: 'p1', activityTypeId: 't:football_tournament', date: TODAY, durationMin: 105, effort: 0, muscle: false, bone: false });
+    expect(s.warmupMin).toBeUndefined();
+    await repo.saveFootballDetails(s.id, { attendance: 'full', focusTags: [], teamId: team.id, games: [{}, {}, {}] });
+    const after = (await db.sessions.get(s.id))!;
+    expect(after).toMatchObject({ warmupMin: 45, playShare: 0.6 });
+    expect(after.playedMin).toBeUndefined(); // ei merkintöjä → arvio (105 − 45) × 0,6 = 36 min
+    const fresh = await repo.createSession({ profileId: 'p1', activityTypeId: 't:football_tournament', date: TODAY, durationMin: 105, effort: 0, muscle: false, bone: false, warmupMin: 45, playShare: 0.6 });
+    expect(after.minutes).toEqual(fresh.minutes);
   });
 
   it('turnauksen otteluohjelma: kuittaus luo pelirivit, tulokset ja pelikohtaiset kommentit säilyvät', async () => {

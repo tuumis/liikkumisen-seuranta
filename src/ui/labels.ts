@@ -92,3 +92,6 @@ export const PROFILE_COLORS = ['#16a34a', '#2563eb', '#db2777', '#ea580c', '#7c3
 
 /** Prosenttiluku ilman desimaaleja, esim. 0.3 → "30 %". */
 export const pct = (x: number) => `${Math.round(x * 100)} %`;
+
+/** Pelaajan maalit: "<Nimi>: maalit" (ei taivutusta), ilman nimeä "Pelaajan maalit". */
+export const goalsLabel = (name?: string) => (name ? `${name}: maalit` : 'Pelaajan maalit');

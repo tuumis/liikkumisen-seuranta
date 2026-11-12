@@ -45,13 +45,27 @@ describe('A1–A5 kerran minuutit (tehomalli)', () => {
     expect(r.minutes).toEqual({ light: 26, moderate: 28, vigorous: 14 });
   });
 
-  it('A3 peli 90 min, pelattu 40 min → 8 / 18 / 12', () => {
+  // SPEC 16 (12.11.2026): peli osina – pelattu aika pelin teholla, lämmittely (oletus 15 min) treenin teholla, vaihtopenkki 0.
+  it('A3 peli 90 min, pelattu 40 min → pelattu 8 / 18 / 12 + lämmittely 15 min 5 / 5 / 2 = 13 / 23 / 14', () => {
     const r = computeSessionMinutes(game, { durationMin: 90, playedMin: 40, effort: 0 });
+    expect(r.minutes).toEqual({ light: 13, moderate: 23, vigorous: 14 });
+  });
+
+  it('A3 ilman lämmittelyä: pelattu 40 min → 8 / 18 / 12 (alkuperäinen esimerkki)', () => {
+    const r = computeSessionMinutes(game, { durationMin: 90, playedMin: 40, effort: 0, warmupMin: 0 });
     expect(r.minutes).toEqual({ light: 8, moderate: 18, vigorous: 12 });
   });
 
-  it('A3b peli ilman pelattuja minuutteja käyttää kestoa', () => {
+  it('A3b peli ilman pelattuja minuutteja: peliaika-arvio 70 % (kesto − lämmittely)', () => {
+    // 40 min: lämmittely 15, pelattu round(25 · 0,7) = 18 → 4 / 8 / 5 + 5 / 5 / 2
     const r = computeSessionMinutes(game, { durationMin: 40, effort: 0 });
+    expect(r.minutes).toEqual({ light: 9, moderate: 13, vigorous: 7 });
+    // joukkueen peliaika-arvio 80 %: pelattu 20 → 4 / 9 / 6 + 5 / 5 / 2
+    expect(computeSessionMinutes(game, { durationMin: 40, effort: 0, playShare: 0.8 }).minutes).toEqual({ light: 9, moderate: 14, vigorous: 8 });
+  });
+
+  it('A3d koko kesto pelattu: lämmittely ei mahdu, ei ylitä kestoa', () => {
+    const r = computeSessionMinutes(game, { durationMin: 40, playedMin: 40, effort: 0 });
     expect(r.minutes).toEqual({ light: 8, moderate: 18, vigorous: 12 });
   });
 

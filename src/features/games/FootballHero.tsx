@@ -12,6 +12,7 @@ import { IconTrophy } from '../../ui/icons';
 import { useCountUp } from '../../ui/motion';
 import { today as todayFn } from '../../ui/today';
 import { useFootball } from '../football/useFootball';
+import { goalsLabel } from '../../ui/labels';
 
 function Stat({ label, value, i }: { label: string; value: number | string; i: number }) {
   const n = typeof value === 'number' ? value : NaN;
@@ -67,7 +68,7 @@ export function FootballHero({ profile }: { profile: Profile }) {
             <Stat label="Pelit" value={stats.g.games} i={2} />
             <Stat label="V–T–H" value={`${stats.g.wins}–${stats.g.draws}–${stats.g.losses}`} i={3} />
             <Stat label="Maalit" value={`${stats.g.goalsFor}–${stats.g.goalsAgainst}`} i={4} />
-            <Stat label="Omat ⚽" value={stats.g.playerGoals} i={5} />
+            <Stat label={`${goalsLabel(profile.name)} ⚽`} value={stats.g.playerGoals} i={5} />
           </dl>
         )}
       </div>

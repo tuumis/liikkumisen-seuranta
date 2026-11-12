@@ -50,16 +50,16 @@ describe('jalkapallon lisätiedot', () => {
 
   it('peli: tulos ja vastustaja; pelatut minuutit päivittävät kerran laskentapohjan', async () => {
     const s = await repo.createSession(base(activityTypeId('football_game')));
-    expect(s.minutes).toEqual({ light: 18, moderate: 41, vigorous: 27 }); // 90 min pohjana
+    expect(s.minutes).toEqual({ light: 16, moderate: 29, vigorous: 18 }); // lämmittely 15 + pelattu 70 % × 75 = 53
     await repo.saveFootballDetails(s.id, { attendance: 'full', focusTags: [], opponent: 'HJK', goalsFor: 2, goalsAgainst: 1, playedMin: 40 });
     const after = (await db.sessions.get(s.id))!;
     expect(after.playedMin).toBe(40);
-    expect(after.minutes).toEqual({ light: 8, moderate: 18, vigorous: 12 }); // A3
+    expect(after.minutes).toEqual({ light: 13, moderate: 23, vigorous: 14 }); // A3 + lämmittely
     expect(after.durationMin).toBe(90);
     expect(await repo.getFootballDetails(s.id)).toMatchObject({ opponent: 'HJK', goalsFor: 2, goalsAgainst: 1 });
   });
 
-  it('turnaus: pelirivit → gamesCount ja pelattujen minuuttien summa', async () => {
+  it('turnaus: pelirivit → gamesCount ja pelattujen minuuttien summa (merkitsemätön peli peliaika-arviolla)', async () => {
     const s = await repo.createSession(base(activityTypeId('football_tournament'), { durationMin: 300 }));
     await repo.saveFootballDetails(s.id, {
       attendance: 'full',
@@ -76,7 +76,7 @@ describe('jalkapallon lisätiedot', () => {
     expect(d.gamesCount).toBe(3);
     expect(d.games![1]).toEqual({ opponent: 'HJK', goalsFor: 0, goalsAgainst: 3, playedMin: 10 });
     expect(d.games![2]).toEqual({ opponent: 'Honka' });
-    expect((await db.sessions.get(s.id))!.playedMin).toBe(25);
+    expect((await db.sessions.get(s.id))!.playedMin).toBe(15 + 10 + 14); // Honka: 70 % × 20 min
   });
 
   it('turnaus ilman rivejä: pelien määrä ja pelatut minuutit yhteensä', async () => {

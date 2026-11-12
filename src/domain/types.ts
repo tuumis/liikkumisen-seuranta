@@ -161,6 +161,10 @@ export interface Session extends SyncFields {
   startTime?: HHmm;
   durationMin: number;
   playedMin?: number; // peli ja turnaus
+  /** Peli ja turnaus: lämmittely (min, treenin teholla); puuttuessa 15. */
+  warmupMin?: number;
+  /** Peli ja turnaus: peliaika-arvio (osuus peliajasta kentällä), kun pelattuja minuutteja ei ole; puuttuessa 0,7. */
+  playShare?: number;
   effort: Effort;
   intensitySource: 'profile' | 'manual';
   sharesSnapshot?: IntensityShares; // käytetty profiili, kun source = 'profile'
@@ -195,12 +199,16 @@ export type GameFormat = '3v3' | '5v5' | '7v7' | '8v8' | '9v9' | '11v11';
 /** Pelipaikka: maalivahti, puolustus, keskikenttä, hyökkäys. */
 export type FieldPosition = 'gk' | 'def' | 'mid' | 'fwd';
 
+export type PlayedState = 'none' | 'part' | 'full';
+
 export interface GameResult {
   // yksi turnauksen peli
   opponent?: string;
   goalsFor?: number;
   goalsAgainst?: number;
   playedMin?: number;
+  /** Pelasiko: ei / osan (peliaika-arvio) / koko pelin; tarkat minuutit (playedMin) ohittavat. */
+  played?: PlayedState;
   /** Oman lapsen tekemät maalit tässä pelissä. */
   playerGoals?: number;
   /** Otteluohjelmasta: alkamisaika ja kenttä. */
@@ -239,6 +247,10 @@ export interface FootballDetails extends SyncFields {
   positions?: FieldPosition[];
   gamesCount?: number; // turnaus
   eventName?: string; // turnaus
+  /** Turnauksen yhden pelin pituus (min) otteluohjelmasta; pelirivien "Koko pelin" / "Osan" laskentaan. */
+  gameLengthMin?: number;
+  /** Peli: pelasiko (ei / osan / koko pelin). */
+  played?: PlayedState;
 }
 
 // ---------- joukkueet ja pelikalenteri (skeema v2) ----------
@@ -253,6 +265,8 @@ export interface Team extends SyncFields {
   photo?: string;
   /** Joukkueen tavallinen pelimuoto (oletus peleille), esim. 8v8. */
   format?: GameFormat;
+  /** Peliaika-arvio: osuus peliajasta kentällä (0,1–1); puuttuessa 0,7. */
+  playShare?: number;
   archived: boolean;
   createdAt: Timestamp;
 }

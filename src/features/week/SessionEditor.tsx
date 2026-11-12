@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { activityTypeId } from '../../domain/ids';
 import { computeSessionMinutes, INTENSITY_PRESETS, mvpaOf } from '../../domain/intensity';
 import type { Effort, IntensityMinutes, Session } from '../../domain/types';
 import { repo } from '../../db/repositories';
@@ -85,8 +86,12 @@ export function SessionEditor({
     const p = optionalMinutes.safeParse(played);
     if (!d.success || !p.success) return undefined;
     const shares = isPreset(mode) ? INTENSITY_PRESETS[mode] : profileShares;
-    return computeSessionMinutes({ ...type, shares }, { durationMin: d.data, playedMin: p.data, effort: mode === 'profile' ? effort : 0 }).minutes;
-  }, [type, session, profileShares, mode, duration, played, effort]);
+    const warmupShares = type.usesPlayedMinutes ? types?.find((t) => t.id === activityTypeId('football_training') && !t.deletedAt)?.shares : undefined;
+    return computeSessionMinutes(
+      { ...type, shares },
+      { durationMin: d.data, playedMin: p.data, effort: mode === 'profile' ? effort : 0, warmupMin: session.warmupMin, playShare: session.playShare, warmupShares },
+    ).minutes;
+  }, [type, types, session, profileShares, mode, duration, played, effort]);
 
   async function save() {
     if (!session || !type) return;
@@ -176,6 +181,7 @@ export function SessionEditor({
             <Field label="Pelatut minuutit (valinnainen)">
               <input className={inputClass} inputMode="numeric" value={played} onChange={(e) => setPlayed(e.target.value)} />
               {errors.played && <span className="mt-1 block text-sm text-red-700">{errors.played}</span>}
+              <span className="mt-1 block text-xs text-slate-500">Ilman pelattuja minuutteja arvio: lämmittely ~15 min treenin teholla ja peliaika-arvio (joukkueen asetus, oletus 70 %) pelin teholla; vaihtopenkki ei kerrytä liikuntaa.</span>
             </Field>
           )}
 

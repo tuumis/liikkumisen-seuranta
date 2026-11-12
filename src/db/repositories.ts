@@ -4,8 +4,9 @@
 
 import { Dexie, type Table } from 'dexie';
 import { CURRENT_SCHEMA_VERSION } from '../domain/migrations';
-import { dayFlagId, newId, sessionIdFromPlanned, SETTINGS_ID } from '../domain/ids';
-import { computeSessionMinutes, INTENSITY_PRESETS } from '../domain/intensity';
+import { activityTypeId, dayFlagId, newId, sessionIdFromPlanned, SETTINGS_ID } from '../domain/ids';
+import { computeSessionMinutes, DEFAULT_GAME_WARMUP_MIN, DEFAULT_PLAY_SHARE, INTENSITY_PRESETS, roundMinutes } from '../domain/intensity';
+import { defaultGameLength } from '../domain/tournamentTime';
 import { DEFAULT_SETTINGS } from '../domain/recommendations';
 import { addDays, isISODate } from '../domain/dates';
 import type {
@@ -25,6 +26,7 @@ import type {
   IntensityMinutes,
   IntensityPreset,
   IntensityShares,
+  PlayedState,
   ISODate,
   PlannedSession,
   Profile,
@@ -61,6 +63,9 @@ export interface SessionInput {
   startTime?: HHmm;
   durationMin: number;
   playedMin?: number;
+  /** Peli ja turnaus: lämmittely (min) ja peliaika-arvio (osuus); puuttuessa säilyy entinen tai oletus. */
+  warmupMin?: number;
+  playShare?: number;
   effort: Effort;
   /** Käsin syötetyt minuutit; puuttuu → lasketaan tehoprofiilista. */
   manual?: IntensityMinutes;
@@ -96,10 +101,12 @@ export interface FootballDetailsInput {
   /** Oma joukkue (linkki) ja taso; taso säätää ponnistelun (Elite kovempi, Haaste kevyempi). */
   teamId?: UUID;
   level?: GameLevel;
-  /** Oman lapsen maalit (peli; turnaus ilman pelirivejä). Pelirivien omat maalit summataan. */
+  /** Oman lapsen maalit (peli; turnaus ilman pelirivejä). Pelirivien pelaajan maalit summataan. */
   playerGoals?: number;
   format?: GameFormat;
   positions?: FieldPosition[];
+  /** Peli: pelasiko (ei / osan / koko pelin). */
+  played?: PlayedState;
 }
 
 /** Tulevan pelin tai turnauksen tiedot (pelikalenteri). */
@@ -306,8 +313,9 @@ export function createRepositories(db: AppDB = defaultDb) {
     return db.transaction('rw', db.sessions, db.activityTypes, db.meta, async () => {
       const type = await getActivityType(typeId);
       const rows = await recalculableSessions(typeId, from);
+      const warmupShares = await warmupSharesFor(type);
       for (const s of rows) {
-        const r = computeSessionMinutes(type, { durationMin: s.durationMin, playedMin: s.playedMin, effort: s.effort });
+        const r = computeSessionMinutes(type, { durationMin: s.durationMin, playedMin: s.playedMin, effort: s.effort, warmupMin: s.warmupMin, playShare: s.playShare, warmupShares });
         await db.sessions.put(await stamp({ ...s, minutes: r.minutes, sharesSnapshot: r.snapshot }));
       }
       return rows.length;
@@ -361,21 +369,39 @@ export function createRepositories(db: AppDB = defaultDb) {
     type: ActivityType,
     input: SessionInput,
     existing?: Session,
+    warmupShares?: IntensityShares,
   ): Pick<Session, 'intensitySource' | 'minutes' | 'sharesSnapshot' | 'intensityPreset'> {
     if (input.intensityPreset && !input.manual) {
-      const r = computeSessionMinutes({ ...type, shares: INTENSITY_PRESETS[input.intensityPreset] }, { ...input, effort: 0 });
+      const r = computeSessionMinutes({ ...type, shares: INTENSITY_PRESETS[input.intensityPreset] }, { ...input, effort: 0, warmupShares });
       return { intensitySource: 'profile', minutes: r.minutes, sharesSnapshot: r.snapshot, intensityPreset: input.intensityPreset };
     }
     const keepSnapshot = existing && existing.activityTypeId === type.id && existing.sharesSnapshot && !existing.intensityPreset;
     const shares = keepSnapshot ? existing.sharesSnapshot! : type.shares;
-    const r = computeSessionMinutes({ ...type, shares }, input);
+    const r = computeSessionMinutes({ ...type, shares }, { ...input, warmupShares });
     return input.manual
       ? { intensitySource: 'manual', minutes: r.minutes }
       : { intensitySource: 'profile', minutes: r.minutes, sharesSnapshot: r.snapshot };
   }
 
+  /** Lämmittelyn teho peliin ja turnaukseen: jalkapallotreenin profiili (käyttäjän muokattavissa). */
+  async function warmupSharesFor(type: ActivityType): Promise<IntensityShares | undefined> {
+    if (!type.usesPlayedMinutes) return undefined;
+    const t = await db.activityTypes.get(activityTypeId('football_training'));
+    return t && !t.deletedAt ? t.shares : undefined;
+  }
+
+  /** Pelin ja turnauksen lämmittely ja peliaika-arvio kerralle (vain lajeille, joilla pelatut minuutit). */
+  function setFootballTiming(s: Session, type: ActivityType, warmupMin?: number, playShare?: number) {
+    delete s.warmupMin;
+    delete s.playShare;
+    if (!type.usesPlayedMinutes) return;
+    if (warmupMin !== undefined && Number.isFinite(warmupMin) && warmupMin >= 0) s.warmupMin = Math.round(warmupMin);
+    if (playShare !== undefined && Number.isFinite(playShare) && playShare > 0 && playShare <= 1) s.playShare = playShare;
+  }
+
   async function createSession(input: SessionInput & { profileId: UUID }): Promise<Session> {
     const type = await getActivityType(input.activityTypeId);
+    const warmupShares = await warmupSharesFor(type);
     const ts = nowTimestamp();
     const session: Session = {
       id: newId(),
@@ -386,12 +412,13 @@ export function createRepositories(db: AppDB = defaultDb) {
       effort: input.effort,
       muscle: input.muscle,
       bone: input.bone,
-      ...sessionIntensity(type, input),
+      ...sessionIntensity(type, input, undefined, warmupShares),
       createdAt: ts,
       updatedAt: ts,
       updatedBy: await deviceId(),
     };
     if (type.usesPlayedMinutes && input.playedMin !== undefined) session.playedMin = input.playedMin;
+    setFootballTiming(session, type, input.warmupMin, input.playShare);
     if (input.startTime) session.startTime = input.startTime;
     if (input.note?.trim()) session.note = input.note.trim();
     const label = cleanLabel(input.label);
@@ -406,6 +433,9 @@ export function createRepositories(db: AppDB = defaultDb) {
       const current = await db.sessions.get(id);
       if (!current || current.deletedAt) throw new Error('Kertaa ei löydy');
       const type = await getActivityType(input.activityTypeId);
+      const warmupShares = await warmupSharesFor(type);
+      // Lämmittely ja peliaika-arvio säilyvät, ellei niitä anneta (esim. lisätietojen tallennus).
+      const eff: SessionInput = { ...input, warmupMin: input.warmupMin ?? current.warmupMin, playShare: input.playShare ?? current.playShare };
       const next: Session = await stamp({ ...current });
       for (const k of ['playedMin', 'sharesSnapshot', 'intensityPreset', 'note', 'startTime', 'label'] as const) delete next[k];
       Object.assign(next, {
@@ -415,9 +445,10 @@ export function createRepositories(db: AppDB = defaultDb) {
         effort: input.effort,
         muscle: input.muscle,
         bone: input.bone,
-        ...sessionIntensity(type, input, current),
+        ...sessionIntensity(type, eff, current, warmupShares),
       });
       if (type.usesPlayedMinutes && input.playedMin !== undefined) next.playedMin = input.playedMin;
+      setFootballTiming(next, type, eff.warmupMin, eff.playShare);
       if (input.startTime) next.startTime = input.startTime;
       if (input.note?.trim()) next.note = input.note.trim();
       const label = cleanLabel(input.label);
@@ -610,8 +641,12 @@ export function createRepositories(db: AppDB = defaultDb) {
       }
 
       const type = await getActivityType(plan.activityTypeId);
+      const warmupShares = await warmupSharesFor(type);
       const sid = sessionIdFromPlanned(planId);
       const tombstone = await db.sessions.get(sid);
+      const liveTeam = fixtureTeam && !fixtureTeam.deletedAt ? fixtureTeam : undefined;
+      // Peli ja turnaus: lämmittely ennen jokaista peliä ja joukkueen peliaika-arvio.
+      const gamesN = fixture?.games?.length || fixture?.gamesCount || 1;
       const input: SessionInput = {
         activityTypeId: type.id,
         date: plan.date,
@@ -620,6 +655,8 @@ export function createRepositories(db: AppDB = defaultDb) {
         effort: fixtureLevel ? LEVEL_EFFORT[fixtureLevel] : 0,
         muscle: type.muscleDefault === 'yes',
         bone: type.boneDefault === 'yes',
+        warmupMin: type.usesPlayedMinutes ? gamesN * (fixture?.warmupMin ?? DEFAULT_GAME_WARMUP_MIN) : undefined,
+        playShare: type.usesPlayedMinutes ? liveTeam?.playShare : undefined,
       };
       const ts = nowTimestamp();
       const by = await deviceId();
@@ -632,7 +669,7 @@ export function createRepositories(db: AppDB = defaultDb) {
         effort: input.effort,
         muscle: input.muscle,
         bone: input.bone,
-        ...sessionIntensity(type, input),
+        ...sessionIntensity(type, input, undefined, warmupShares),
         plannedSessionId: planId,
         createdAt: tombstone?.createdAt ?? ts,
         updatedAt: ts,
@@ -640,6 +677,7 @@ export function createRepositories(db: AppDB = defaultDb) {
       };
       if (plan.startTime) session.startTime = plan.startTime;
       if (plan.label) session.label = plan.label;
+      setFootballTiming(session, type, input.warmupMin, input.playShare);
       await db.sessions.put(session); // put herättää poistomerkityn henkiin
       if (fixture) {
         const existingFd = await db.footballDetails.get(sid);
@@ -660,6 +698,7 @@ export function createRepositories(db: AppDB = defaultDb) {
             fd.games = fixture.games.map((g) => ({ ...g }));
             fd.gamesCount = fixture.games.length;
           }
+          if (type.footballKind === 'tournament') fd.gameLengthMin = fixture.gameLengthMin ?? defaultGameLength(format);
           await db.footballDetails.put(fd);
         }
       }
@@ -750,18 +789,24 @@ export function createRepositories(db: AppDB = defaultDb) {
 
       const clean = (s?: string) => s?.trim().replace(/\s+/g, ' ') || undefined;
       const num = (n?: number) => (n === undefined || n === null || Number.isNaN(n) ? undefined : n);
+      const prev = await db.footballDetails.get(sessionId);
       const d: FootballDetails = await stamp({ sessionId, attendance: input.attendance, focusTags: [...new Set(input.focusTags)] });
+      if (prev && !prev.deletedAt && prev.gameLengthMin !== undefined) d.gameLengthMin = prev.gameLengthMin;
       const set = <K extends keyof FootballDetails>(k: K, v: FootballDetails[K] | undefined) => {
         if (v !== undefined) d[k] = v;
       };
       set('team', clean(input.team));
+      // Peliaika-arvio: kerran oma (kuittauksesta), muuten valitun joukkueen asetus.
+      let playShare = session.playShare;
       if (input.teamId) {
         const team = await db.teams.get(input.teamId);
         if (team && !team.deletedAt) {
           d.teamId = team.id;
           d.team = team.name;
+          if (playShare === undefined && type.usesPlayedMinutes) playShare = team.playShare;
         }
       }
+      let warmupMin = session.warmupMin;
       if (type.footballKind !== 'training') {
         set('level', input.level);
         if (isGameFormat(input.format)) d.format = input.format;
@@ -777,6 +822,7 @@ export function createRepositories(db: AppDB = defaultDb) {
         set('goalsFor', num(input.goalsFor));
         set('goalsAgainst', num(input.goalsAgainst));
         set('playerGoals', num(input.playerGoals));
+        if (input.played) d.played = input.played;
       }
       if (type.footballKind === 'tournament') {
         set('eventName', clean(input.eventName));
@@ -786,6 +832,7 @@ export function createRepositories(db: AppDB = defaultDb) {
           if (num(g.goalsFor) !== undefined) r.goalsFor = g.goalsFor;
           if (num(g.goalsAgainst) !== undefined) r.goalsAgainst = g.goalsAgainst;
           if (num(g.playedMin) !== undefined) r.playedMin = g.playedMin;
+          if (g.played) r.played = g.played;
           if (num(g.playerGoals) !== undefined) r.playerGoals = g.playerGoals;
           if (g.time) r.time = g.time;
           if (clean(g.location)) r.location = clean(g.location);
@@ -795,27 +842,37 @@ export function createRepositories(db: AppDB = defaultDb) {
         if (games.length) {
           d.games = games;
           d.gamesCount = games.length; // SPEC 8: kun pelirivejä on, gamesCount = rivien määrä
-          const withPlayed = games.filter((g) => g.playedMin !== undefined);
-          if (withPlayed.length) playedMin = withPlayed.reduce((a, g) => a + g.playedMin!, 0);
+          // Pelattu aika: tarkat minuutit, muuten Ei = 0, Koko pelin = pelin pituus, Osan / merkitsemätön = peliaika-arvio.
+          const len = d.gameLengthMin ?? defaultGameLength(d.format);
+          const share = playShare ?? DEFAULT_PLAY_SHARE;
+          const perGame = games.map((g) =>
+            g.playedMin !== undefined ? g.playedMin : g.played === 'full' ? len : g.played === 'none' ? 0 : g.played === 'part' ? roundMinutes(len * share) : undefined,
+          );
+          if (perGame.some((m) => m !== undefined)) playedMin = perGame.reduce<number>((a, m) => a + (m ?? roundMinutes(len * share)), 0);
           const withGoals = games.filter((g) => g.playerGoals !== undefined);
           if (withGoals.length) d.playerGoals = withGoals.reduce((a, g) => a + g.playerGoals!, 0);
         } else {
           set('gamesCount', num(input.gamesCount));
           set('playerGoals', num(input.playerGoals));
         }
+        // Lämmittely ennen jokaista peliä, jos kerralla ei vielä ole omaa (esim. pikalisäys tai vanha kerta).
+        if (warmupMin === undefined && d.gamesCount) warmupMin = d.gamesCount * DEFAULT_GAME_WARMUP_MIN;
       }
       await db.footballDetails.put(d); // put tyhjentää mahdollisen poistomerkinnän
 
       // Taso säätää ponnistelun profiililla lasketuille kerroille (ei käsin syötetyille eikä esiasetuksille).
       const levelEffort =
         d.level && session.intensitySource === 'profile' && !session.intensityPreset ? LEVEL_EFFORT[d.level] : session.effort;
-      if ((type.usesPlayedMinutes && playedMin !== session.playedMin) || levelEffort !== session.effort) {
+      const timingChanged = type.usesPlayedMinutes && (warmupMin !== session.warmupMin || playShare !== session.playShare);
+      if ((type.usesPlayedMinutes && playedMin !== session.playedMin) || levelEffort !== session.effort || timingChanged) {
         await updateSession(sessionId, {
           activityTypeId: session.activityTypeId,
           date: session.date,
           startTime: session.startTime,
           durationMin: session.durationMin,
           playedMin: type.usesPlayedMinutes ? playedMin : session.playedMin,
+          warmupMin,
+          playShare,
           effort: levelEffort,
           manual: session.intensitySource === 'manual' ? session.minutes : undefined,
           muscle: session.muscle,
@@ -878,7 +935,8 @@ export function createRepositories(db: AppDB = defaultDb) {
   }
 
   /** `photo`: undefined poistaa kuvan, kenttä puuttuu = kuva ennallaan. */
-  async function saveTeam(profileId: UUID, input: { name: string; level: GameLevel; photo?: string; format?: GameFormat }, id?: UUID): Promise<Team> {
+  async function saveTeam(profileId: UUID, input: { name: string; level: GameLevel; photo?: string; format?: GameFormat; playShare?: number }, id?: UUID): Promise<Team> {
+    const share = input.playShare !== undefined && input.playShare > 0 && input.playShare <= 1 ? input.playShare : undefined;
     const name = input.name.trim().replace(/\s+/g, ' ');
     if (!name) throw new Error('Anna joukkueen nimi');
     if (id) {
@@ -893,6 +951,10 @@ export function createRepositories(db: AppDB = defaultDb) {
         if (isGameFormat(input.format)) next.format = input.format;
         else delete next.format;
       }
+      if ('playShare' in input) {
+        if (share !== undefined) next.playShare = share;
+        else delete next.playShare;
+      }
       await db.teams.put(next);
       return next;
     }
@@ -900,6 +962,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     const team: Team = { id: newId(), profileId, name, level: input.level, archived: false, createdAt: ts, updatedAt: ts, updatedBy: await deviceId() };
     if (input.photo) team.photo = input.photo;
     if (isGameFormat(input.format)) team.format = input.format;
+    if (share !== undefined) team.playShare = share;
     await db.teams.add(team);
     return team;
   }

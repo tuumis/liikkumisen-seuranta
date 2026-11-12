@@ -76,7 +76,7 @@ export interface GameSummary {
   playedMinTotal: number;
   /** Pelatut minuutit per peli niistä peleistä, joille peliaika on kirjattu; null, jos ei yhtään. */
   playedMinAvg: number | null;
-  /** Oman lapsen maalit yhteensä ja montako peliä ne kattavat (pelit, joille omat maalit on kirjattu). */
+  /** Oman lapsen maalit yhteensä ja montako peliä ne kattavat (pelit, joille pelaajan maalit on kirjattu). */
   playerGoals: number;
   playerGoalsGames: number;
 }
@@ -396,7 +396,7 @@ export function gamesCsv(rows: GameRow[]): string {
     const s = v === undefined || v === null ? '' : String(v);
     return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  const header = ['Päivä', 'Tapahtuma', 'Peli nro', 'Oma joukkue', 'Vastustaja', 'Tehdyt', 'Päästetyt', 'Tulos', 'Pelatut min', 'Pelejä', 'Omat maalit', 'Pelimuoto', 'Pelipaikka'];
+  const header = ['Päivä', 'Tapahtuma', 'Peli nro', 'Oma joukkue', 'Vastustaja', 'Tehdyt', 'Päästetyt', 'Tulos', 'Pelatut min', 'Pelejä', 'Pelaajan maalit', 'Pelimuoto', 'Pelipaikka'];
   const lines = rows.map((r) => {
     const [y, m, d] = r.date.split('-');
     return [
