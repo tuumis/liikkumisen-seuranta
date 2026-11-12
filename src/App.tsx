@@ -9,6 +9,7 @@ import { Onboarding } from './features/onboarding/Onboarding';
 import { HelpSheet } from './features/help/HelpSheet';
 import type { SettingsSectionId } from './features/settings/SettingsView';
 import { GamesTab } from './features/games/GamesTab';
+import { Avatar } from './ui/Avatar';
 
 // Analyysi (Recharts) ladataan omana osanaan; service worker esivälimuistittaa senkin.
 const AnalysisView = lazy(() => import('./features/analysis/AnalysisView').then((m) => ({ default: m.AnalysisView })));
@@ -161,7 +162,7 @@ export default function App() {
                     onClick={() => select(p.id)}
                     className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium ${active ? 'bg-slate-900 text-white dark:bg-green-700' : 'text-slate-700 hover:bg-slate-50'}`}
                   >
-                    <span className="size-3 rounded-full ring-2 ring-white/60" style={{ backgroundColor: p.color }} aria-hidden />
+                    <Avatar name={p.name} photo={p.photo} color={p.color} size="sm" className="ring-2 ring-white/60" />
                     {p.name}
                   </button>
                 );
@@ -201,7 +202,7 @@ export default function App() {
                   onClick={() => select(p.id)}
                   className={`flex min-h-9 shrink-0 items-center gap-2 rounded-full px-3 text-sm font-medium ring-1 ${active ? 'bg-slate-900 text-white ring-slate-900 dark:bg-green-700 dark:ring-green-700' : 'bg-white text-slate-800 ring-slate-300'}`}
                 >
-                  <span className="size-2.5 rounded-full" style={{ backgroundColor: p.color }} aria-hidden />
+                  <Avatar name={p.name} photo={p.photo} color={p.color} size="xs" className="-ml-1.5" />
                   {p.name}
                 </button>
               );
@@ -215,7 +216,7 @@ export default function App() {
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{TAB_TITLE[tab]}</h1>
           {selected && (
             <span className="flex items-center gap-2 text-sm text-slate-500">
-              <span className="size-2.5 rounded-full" style={{ backgroundColor: selected.color }} aria-hidden />
+              <Avatar name={selected.name} photo={selected.photo} color={selected.color} size="sm" />
               {selected.name}
             </span>
           )}

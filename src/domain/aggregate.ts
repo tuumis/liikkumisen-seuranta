@@ -127,9 +127,9 @@ export function dayTotals(
 
 // ---------- 7.2 kelvolliset päivät ----------
 
-/** Seurannan alku = profiilin luontipäivä (paikallinen päivä). */
-export function trackingStart(profile: Pick<Profile, 'createdAt'>): ISODate {
-  return timestampToLocalDate(profile.createdAt);
+/** Seurannan alku = käyttäjän asettama päivä tai profiilin luontipäivä (paikallinen päivä). */
+export function trackingStart(profile: Pick<Profile, 'createdAt' | 'trackingStart'>): ISODate {
+  return profile.trackingStart ?? timestampToLocalDate(profile.createdAt);
 }
 
 /**
@@ -137,7 +137,7 @@ export function trackingStart(profile: Pick<Profile, 'createdAt'>): ISODate {
  */
 export function validDays(
   period: Period,
-  profile: Pick<Profile, 'id' | 'createdAt'>,
+  profile: Pick<Profile, 'id' | 'createdAt' | 'trackingStart'>,
   flags: DayFlag[],
   today: ISODate,
 ): ISODate[] {

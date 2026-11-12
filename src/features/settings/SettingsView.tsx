@@ -4,6 +4,7 @@ import { recommendationGroup } from '../../domain/groups';
 import type { Profile } from '../../domain/types';
 import { repo, type DeviceRole } from '../../db/repositories';
 import { requestPersistentStorage } from '../../db/storage';
+import { Avatar } from '../../ui/Avatar';
 import { Button, Card } from '../../ui/components';
 import { GROUP_LABEL, MONTHS } from '../../ui/labels';
 import { today } from '../../ui/today';
@@ -162,7 +163,7 @@ function ProfilesSection({ onProfileCreated }: { onProfileCreated: (id: string) 
       <ul className="divide-y divide-slate-100">
         {profiles?.map((p) => (
           <li key={p.id} className={`flex items-center gap-3 py-3 ${p.archived ? 'opacity-50' : ''}`}>
-            <span className="size-4 shrink-0 rounded-full" style={{ backgroundColor: p.color }} aria-hidden />
+            <Avatar name={p.name} photo={p.photo} color={p.color} size="md" />
             <div className="min-w-0 flex-1">
               <div className="truncate font-medium text-slate-900">
                 {p.name} {p.archived && <span className="text-xs font-normal">(arkistoitu)</span>}

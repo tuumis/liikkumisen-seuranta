@@ -68,6 +68,10 @@ export interface Profile extends SyncFields {
   schoolStart?: YearMonth; // koulun aloitus, lapsilla
   groupOverride?: RecommendationGroup;
   color: string;
+  /** Profiilikuva pienennettynä (JPEG data URL, ~256 px); vain tällä laitteella, varmuuskopiossa ja synkronoinnissa. */
+  photo?: string;
+  /** Seurannan alku, jos eri kuin profiilin luontipäivä (esim. aiemmin aloitettu seuranta). */
+  trackingStart?: ISODate;
   sortOrder: number;
   archived: boolean;
   createdAt: Timestamp;
@@ -184,6 +188,18 @@ export interface GameResult {
   goalsFor?: number;
   goalsAgainst?: number;
   playedMin?: number;
+  /** Otteluohjelmasta: alkamisaika ja kenttä. */
+  time?: HHmm;
+  location?: string;
+  /** Pelikohtainen kommentti (päiväkirja). */
+  note?: string;
+}
+
+/** Turnauksen otteluohjelman rivi (ennen pelejä). */
+export interface ScheduledGame {
+  opponent?: string;
+  time?: HHmm;
+  location?: string;
 }
 
 export interface FootballDetails extends SyncFields {
@@ -212,6 +228,8 @@ export interface Team extends SyncFields {
   profileId: UUID;
   name: string;
   level: GameLevel;
+  /** Joukkuekuva pienennettynä (JPEG data URL), valinnainen. */
+  photo?: string;
   archived: boolean;
   createdAt: Timestamp;
 }
@@ -229,6 +247,8 @@ export interface Fixture extends SyncFields {
   location?: string;
   level?: GameLevel;
   gamesCount?: number; // turnaus
+  /** Turnauksen otteluohjelma; kuittaus luo näistä pelirivit tulosten kirjaamista varten. */
+  games?: ScheduledGame[];
   note?: string;
 }
 

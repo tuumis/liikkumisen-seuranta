@@ -12,9 +12,15 @@ import { Sheet } from '../../ui/Sheet';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 
-export type FixtureDraft = { kind: 'game' | 'tournament'; entry?: FixtureEntry };
+export type FixtureDraft = {
+  kind: 'game' | 'tournament';
+  entry?: FixtureEntry;
+};
 
 const LEVELS: GameLevel[] = ['elite', 'kilpa', 'haaste'];
+
+type ScheduleRow = { time: string; opponent: string; location: string };
+const emptyRow = (): ScheduleRow => ({ time: '', opponent: '', location: '' });
 
 export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; draft: FixtureDraft | null; onClose: () => void }) {
   const toast = useToast();
@@ -31,6 +37,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
   const [level, setLevel] = useState<GameLevel | ''>('');
   const [location, setLocation] = useState('');
   const [note, setNote] = useState('');
+  const [schedule, setSchedule] = useState<ScheduleRow[]>([]);
   const [error, setError] = useState<string>();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -49,6 +56,13 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
     setLevel(f?.level ?? '');
     setLocation(f?.location ?? '');
     setNote(f?.note ?? '');
+    setSchedule(
+      (f?.games ?? []).map((g) => ({
+        time: g.time ?? '',
+        opponent: g.opponent ?? '',
+        location: g.location ?? '',
+      })),
+    );
     setError(undefined);
     setConfirmDelete(false);
   }, [draft]);
@@ -66,7 +80,8 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
     const dur = Number(duration);
     if (!isISODate(date)) return setError('Valitse päivä');
     if (!Number.isInteger(dur) || dur < 1 || dur > 1440) return setError('Tarkista kesto (min)');
-    const gc = gamesCount.trim() === '' ? undefined : Number(gamesCount);
+    const rows = schedule.filter((g) => g.time || g.opponent.trim() || g.location.trim());
+    const gc = rows.length ? rows.length : gamesCount.trim() === '' ? undefined : Number(gamesCount);
     if (gc !== undefined && (!Number.isInteger(gc) || gc < 1 || gc > 20)) return setError('Tarkista pelien määrä');
     const input: FixtureInput = {
       kind,
@@ -77,6 +92,14 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
       opponent: kind === 'game' ? opponent : undefined,
       eventName: kind === 'tournament' ? eventName : undefined,
       gamesCount: kind === 'tournament' ? gc : undefined,
+      games:
+        kind === 'tournament'
+          ? rows.map((g) => ({
+              time: g.time || undefined,
+              opponent: g.opponent,
+              location: g.location,
+            }))
+          : undefined,
       level: level || undefined,
       location,
       note,
@@ -151,19 +174,99 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
         {kind === 'game' ? (
           <Field label="Vastustaja">
             <input className={inputClass} value={opponent} onChange={(e) => setOpponent(e.target.value)} list="fx-opponents" maxLength={60} />
-            <datalist id="fx-opponents">{names?.opponents.map((o) => <option key={o} value={o} />)}</datalist>
+            <datalist id="fx-opponents">
+              {names?.opponents.map((o) => (
+                <option key={o} value={o} />
+              ))}
+            </datalist>
           </Field>
         ) : (
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-2">
               <Field label="Turnauksen nimi">
                 <input className={inputClass} value={eventName} onChange={(e) => setEventName(e.target.value)} list="fx-events" maxLength={60} />
-                <datalist id="fx-events">{names?.events.map((o) => <option key={o} value={o} />)}</datalist>
+                <datalist id="fx-events">
+                  {names?.events.map((o) => (
+                    <option key={o} value={o} />
+                  ))}
+                </datalist>
               </Field>
             </div>
             <Field label="Pelejä">
-              <input className={inputClass} inputMode="numeric" value={gamesCount} onChange={(e) => setGamesCount(e.target.value)} placeholder="esim. 4" />
+              {schedule.length ? (
+                <div className="flex min-h-11 items-center px-1 text-sm tabular-nums text-slate-700">{schedule.length}</div>
+              ) : (
+                <input className={inputClass} inputMode="numeric" value={gamesCount} onChange={(e) => setGamesCount(e.target.value)} placeholder="esim. 4" />
+              )}
             </Field>
+          </div>
+        )}
+
+        {kind === 'tournament' && (
+          <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200 dark:bg-slate-100">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-medium text-slate-800">Otteluohjelma</span>
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  setSchedule((cur) => {
+                    // Lisätään useita kerralla, jos pelimäärä on jo annettu.
+                    const n = cur.length === 0 && Number(gamesCount) > 1 && Number(gamesCount) <= 20 ? Number(gamesCount) : 1;
+                    return [...cur, ...Array.from({ length: n }, emptyRow)];
+                  })
+                }
+              >
+                + ottelu
+              </Button>
+            </div>
+            <p className="mt-0.5 text-xs text-slate-500">Valinnainen. Pelit näkyvät valmiina, kun turnaus kuitataan: lisää vain tulokset ja kommentit.</p>
+            {schedule.length > 0 && (
+              <ul className="mt-2 space-y-2">
+                {schedule.map((g, i) => (
+                  <li key={i} className="grid grid-cols-[7rem_1fr_auto] items-center gap-2">
+                    <input
+                      type="time"
+                      className={inputClass}
+                      value={g.time}
+                      aria-label={`Ottelu ${i + 1}: kello`}
+                      onChange={(e) => setSchedule((cur) => cur.map((x, j) => (j === i ? { ...x, time: e.target.value } : x)))}
+                    />
+                    <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                      <input
+                        className={inputClass}
+                        value={g.opponent}
+                        list="fx-opponents"
+                        maxLength={60}
+                        placeholder="Vastustaja"
+                        aria-label={`Ottelu ${i + 1}: vastustaja`}
+                        onChange={(e) => setSchedule((cur) => cur.map((x, j) => (j === i ? { ...x, opponent: e.target.value } : x)))}
+                      />
+                      <input
+                        className={inputClass}
+                        value={g.location}
+                        maxLength={40}
+                        placeholder="Kenttä"
+                        aria-label={`Ottelu ${i + 1}: kenttä`}
+                        onChange={(e) => setSchedule((cur) => cur.map((x, j) => (j === i ? { ...x, location: e.target.value } : x)))}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="min-h-11 min-w-11 rounded-xl text-slate-500 ring-1 ring-slate-300"
+                      aria-label={`Poista ottelu ${i + 1}`}
+                      onClick={() => setSchedule((cur) => cur.filter((_, j) => j !== i))}
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <datalist id="fx-opponents">
+              {names?.opponents.map((o) => (
+                <option key={o} value={o} />
+              ))}
+            </datalist>
           </div>
         )}
 

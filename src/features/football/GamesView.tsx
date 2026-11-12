@@ -153,7 +153,12 @@ function GameLine({ r, showDate }: { r: GameRow; showDate: boolean }) {
         <span className="block truncate text-sm text-slate-900">
           {r.team ?? 'Oma joukkue'} – {r.opponent ?? 'vastustaja ?'}
         </span>
-        {r.playedMin !== undefined && <span className="block text-xs text-slate-500">pelattu {r.playedMin} min</span>}
+        {(r.playedMin !== undefined || r.time) && (
+          <span className="block text-xs text-slate-500">
+            {[r.time && `klo ${r.time}`, r.playedMin !== undefined && `pelattu ${r.playedMin} min`].filter(Boolean).join(' · ')}
+          </span>
+        )}
+        {r.note && <span className="block text-xs italic text-slate-600">“{r.note}”</span>}
       </span>
       <span className={`shrink-0 text-sm tabular-nums ${r.outcome ? 'font-semibold text-slate-900' : 'text-slate-500'}`}>{res}</span>
       {r.outcome && <span className="w-6 shrink-0 rounded bg-slate-100 text-center text-xs font-semibold text-slate-700">{OUTCOME_LABEL[r.outcome]}</span>}

@@ -29,10 +29,10 @@ export function DiaryView({ profile }: { profile: Profile }) {
       .filter((s) => !s.deletedAt)
       .map((s) => ({ s, t: data.types.get(s.activityTypeId), d: data.details.get(s.id), kind: footballKindOf(s, data.types) }))
       .filter(({ kind }) => (filter === 'all' ? true : filter === 'training' ? kind === 'training' : kind === 'game' || kind === 'tournament'))
-      .filter(({ d, s }) => !onlyCommented || !!(d?.ratingNote || s.note))
+      .filter(({ d, s }) => !onlyCommented || hasComment(s, d))
       .filter(({ s, t, d }) => {
         if (!q) return true;
-        const hay = [t?.name, s.note, d?.ratingNote, d?.opponent, d?.team, d?.eventName, ...(d?.focusTags ?? []).map((x) => FOCUS_TAG_LABEL[x])]
+        const hay = [t?.name, s.note, d?.ratingNote, d?.opponent, d?.team, d?.eventName, ...(d?.games ?? []).flatMap((g) => [g.opponent, g.note]), ...(d?.focusTags ?? []).map((x) => FOCUS_TAG_LABEL[x])]
           .filter(Boolean)
           .join(' ')
           .toLocaleLowerCase('fi');
@@ -46,7 +46,7 @@ export function DiaryView({ profile }: { profile: Profile }) {
     const k = e.s.date.slice(0, 7);
     byMonth.set(k, [...(byMonth.get(k) ?? []), e]);
   }
-  const commented = (data?.sessions ?? []).filter((s) => !s.deletedAt && (data?.details.get(s.id)?.ratingNote || s.note)).length;
+  const commented = (data?.sessions ?? []).filter((s) => !s.deletedAt && hasComment(s, data?.details.get(s.id))).length;
 
   return (
     <div className="space-y-4">
@@ -97,6 +97,8 @@ export function DiaryView({ profile }: { profile: Profile }) {
   );
 }
 
+const hasComment = (s: Session, d?: FootballDetails) => !!(d?.ratingNote || s.note || d?.games?.some((g) => g.note));
+
 function DiaryEntry({ s, t, d, onDetails }: { s: Session; t?: ActivityType; d?: FootballDetails; onDetails: () => void }) {
   const toast = useToast();
   const [editing, setEditing] = useState(false);
@@ -141,6 +143,20 @@ function DiaryEntry({ s, t, d, onDetails }: { s: Session; t?: ActivityType; d?: 
               </span>
             ))}
           </div>
+          {d?.games && d.games.length > 0 && (
+            <ol className="mt-1.5 space-y-0.5 text-xs text-slate-700">
+              {d.games.map((g, i) => {
+                const o = outcomeOf(g.goalsFor, g.goalsAgainst);
+                return (
+                  <li key={i}>
+                    <span className="text-slate-500">{i + 1}.</span> {g.opponent ?? 'vastustaja ?'}
+                    {o && <span className="font-medium"> {g.goalsFor}–{g.goalsAgainst} {OUTCOME_LABEL[o]}</span>}
+                    {g.note && <span className="italic text-slate-600"> – {g.note}</span>}
+                  </li>
+                );
+              })}
+            </ol>
+          )}
 
           {editing ? (
             <div className="mt-2 space-y-2">

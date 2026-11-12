@@ -21,17 +21,28 @@ import { dateSchema, durationSchema, manualSchema, optionalMinutes, showStrength
 const DURATIONS = [15, 30, 45, 60, 75, 90];
 const CATEGORY_ORDER: Category[] = ['hobby', 'school_pe', 'school_recess', 'commute', 'self_directed', 'family', 'other'];
 
-function TypeButton({ t, onPick }: { t: ActivityType; onPick: (t: ActivityType) => void }) {
+/** Jalkapallon lajit (treeni, omatoiminen, peli, turnaus) näytetään omana ryhmänään. */
+const isFootball = (t: ActivityType) => t.sport === 'football' || !!t.footballKind;
+/** "Jalkapallo – treeni" → "Treeni" jalkapalloryhmän sisällä. */
+function shortFootballName(name: string): string {
+  const rest = name.replace(/^jalkapallo\s*[–-]\s*/i, '');
+  return rest === name ? name : rest.charAt(0).toUpperCase() + rest.slice(1);
+}
+
+function TypeButton({ t, onPick, label, football }: { t: ActivityType; onPick: (t: ActivityType) => void; label?: string; football?: boolean }) {
   return (
     <button
       type="button"
       onClick={() => onPick(t)}
-      className="flex min-h-20 flex-col items-center justify-center gap-1 rounded-2xl bg-slate-50 p-2 text-center ring-1 ring-slate-200 active:bg-green-50"
+      aria-label={t.name}
+      className={`flex min-h-20 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-center ring-1 ${
+        football ? 'bg-white ring-green-200 active:bg-green-100 dark:bg-slate-50' : 'bg-slate-50 ring-slate-200 active:bg-green-50'
+      }`}
     >
       <span className="text-2xl" aria-hidden>
         {t.icon}
       </span>
-      <span className="text-xs font-medium leading-tight text-slate-800">{t.name}</span>
+      <span className="text-xs font-medium leading-tight text-slate-800">{label ?? t.name}</span>
     </button>
   );
 }
@@ -90,14 +101,19 @@ export function QuickAdd({
   const recent = useMemo(() => {
     if (!types) return [];
     const byId = new Map(types.map((t) => [t.id, t]));
-    const list = (recentIds ?? []).map((id) => byId.get(id)).filter((t): t is ActivityType => !!t);
-    // Täydennetään oletusjärjestyksellä, kunnes kuusi painiketta on täynnä.
-    for (const t of types) {
+    const list = (recentIds ?? []).map((id) => byId.get(id)).filter((t): t is ActivityType => !!t && !isFootball(t));
+    // Täydennetään oletusjärjestyksellä, kunnes kuusi painiketta on täynnä (jalkapallo on omana ryhmänään).
+    for (const t of types.filter((x) => !isFootball(x))) {
       if (list.length >= 6) break;
       if (!list.includes(t)) list.push(t);
     }
     return list.slice(0, 6);
   }, [types, recentIds]);
+  // Järjestys: treeni, omatoiminen, peli, turnaus.
+  const football = useMemo(() => {
+    const rank = (t: ActivityType) => (t.footballKind === 'training' ? (t.category === 'hobby' ? 0 : 1) : t.footballKind === 'game' ? 2 : t.footballKind === 'tournament' ? 3 : 4);
+    return (types ?? []).filter(isFootball).sort((a, b) => rank(a) - rank(b));
+  }, [types]);
 
   const sameDay = useLiveQuery(
     async () => (type ? (await repo.sessionsInRange(profile.id, date, date)).filter((s) => s.activityTypeId === type.id).length : 0),
@@ -186,17 +202,28 @@ export function QuickAdd({
     <Sheet open={open} onClose={onClose} title={type ? type.name : 'Uusi kerta'}>
       {!type ? (
         <div className="space-y-3">
+          {football.length > 0 && (
+            <section className="rounded-2xl bg-green-50 p-2 ring-1 ring-green-200 dark:bg-[#10291d] dark:ring-green-900" aria-label="Jalkapallo">
+              <h3 className="mb-1.5 px-1 text-xs font-semibold uppercase tracking-wide text-green-800 dark:text-green-300">⚽ Jalkapallo</h3>
+              <div className={`grid gap-2 ${football.length >= 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>
+                {football.map((t) => (
+                  <TypeButton key={t.id} t={t} onPick={pick} label={shortFootballName(t.name)} football />
+                ))}
+              </div>
+            </section>
+          )}
+          <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Muut lajit</h3>
           <div className="grid grid-cols-3 gap-2">
             {recent.map((t) => (
               <TypeButton key={t.id} t={t} onPick={pick} />
             ))}
           </div>
           <Button variant="secondary" className="w-full" onClick={() => setShowAll(!showAll)} aria-expanded={showAll}>
-            {showAll ? 'Piilota lajit' : 'Kaikki lajit'}
+            {showAll ? 'Piilota muut lajit' : 'Kaikki muut lajit'}
           </Button>
           {showAll &&
             CATEGORY_ORDER.map((c) => {
-              const inCat = (types ?? []).filter((t) => t.category === c);
+              const inCat = (types ?? []).filter((t) => t.category === c && !isFootball(t));
               if (!inCat.length) return null;
               return (
                 <div key={c}>

@@ -11,6 +11,7 @@ import type { Category, Estimate, Profile } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { ESTIMATE_DEFAULT_TYPE_KEY, ESTIMATE_SUGGESTIONS } from '../../seed/activityTypes';
 import { Button, Card, EstimateBadge, Field, inputClass } from '../../ui/components';
+import { Segmented } from '../../ui/controls';
 import { formatDate } from '../../ui/format';
 import { CATEGORY_LABEL, pct } from '../../ui/labels';
 import { useToast } from '../../ui/Toast';
@@ -40,14 +41,25 @@ export function EstimatesSection({ profile }: { profile: Profile }) {
   return (
     <Card title={`Arkiliikunta (perusarviot) · ${profile.name}`}>
       <p className="text-sm text-slate-600">
-        Arvio tavallisesta liikkumisesta, jota ei kirjata kerta kerralta (esim. välitunnit). Arvio täyttää kategorian vain päivinä, joille siinä ei ole kirjauksia, ja se näytetään aina erikseen.
+        Arvio tavallisesta liikkumisesta, jota ei kirjata kerta kerralta (esim. välitunnit). Arvio täyttää kategorian vain päivinä, joille siinä ei ole kirjauksia, ja se näytetään
+        aina erikseen.
       </p>
       <ul className="mt-2 divide-y divide-slate-100">
         {active?.map((e) => {
           const wd = estimateMinutes(e, '2026-11-09');
           return (
             <li key={e.id} className="flex items-center gap-2 py-3">
-              <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setDraft({ category: e.category, label: e.label, existing: e })}>
+              <button
+                type="button"
+                className="min-w-0 flex-1 text-left"
+                onClick={() =>
+                  setDraft({
+                    category: e.category,
+                    label: e.label,
+                    existing: e,
+                  })
+                }
+              >
                 <span className="block truncate font-medium text-slate-900">{e.label}</span>
                 <span className="block text-xs text-slate-600">
                   {CATEGORY_LABEL[e.category]} · arki {e.weekdayMin} min/pv · viikonloppu {e.weekendMin} min/pv
@@ -78,7 +90,7 @@ export function EstimatesSection({ profile }: { profile: Profile }) {
       </div>
       {active && active.length > 0 && (
         <p className="mt-3 text-xs text-slate-500">
-          Muutos koskee tästä päivästä eteenpäin; aiempien päivien luvut eivät muutu.
+          Muokatessa voit valita, koskeeko muutos tästä päivästä eteenpäin (aiemmat päivät eivät muutu) vai korjataanko koko arvio alkamispäivää myöten.
         </p>
       )}
     </Card>
@@ -110,6 +122,9 @@ function EstimateForm({ profile, draft, onDone }: { profile: Profile; draft: Dra
   const [typeKey, setTypeKey] = useState<string>(() => (e ? '' : activityTypeId(ESTIMATE_DEFAULT_TYPE_KEY[draft.category])));
   const [error, setError] = useState<string>();
   const [confirmEnd, setConfirmEnd] = useState(false);
+  // Uusi arvio voi alkaa myös menneisyydestä; olemassa olevaa muutetaan tästä päivästä tai korjataan kokonaan.
+  const [mode, setMode] = useState<'forward' | 'correct'>('forward');
+  const [validFrom, setValidFrom] = useState<string>(e?.validFrom ?? today);
 
   // Tehoprofiili: valitun lajin profiili; muokattaessa säilyy arvion oma profiili, kunnes lajia vaihdetaan.
   const shares = typeKey ? types?.find((t) => t.id === typeKey)?.shares : e?.shares;
@@ -121,9 +136,21 @@ function EstimateForm({ profile, draft, onDone }: { profile: Profile; draft: Dra
     if (!label.trim()) return setError('Anna nimi');
     if (!w.success || !we.success) return setError('Tarkista minuutit');
     if (!shares) return setError('Valitse tehoprofiili');
-    await repo.saveEstimate(profile.id, { category, label, weekdayMin: w.data, weekendMin: we.data, shares }, today);
-    toast('Perusarvio tallennettu');
-    onDone();
+    const input = {
+      category,
+      label,
+      weekdayMin: w.data,
+      weekendMin: we.data,
+      shares,
+    };
+    try {
+      if (e && mode === 'correct') await repo.correctEstimate(e.id, input, validFrom, today);
+      else await repo.saveEstimate(profile.id, input, today, e ? today : validFrom);
+      toast('Perusarvio tallennettu');
+      onDone();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
   }
 
   async function end() {
@@ -165,6 +192,25 @@ function EstimateForm({ profile, draft, onDone }: { profile: Profile; draft: Dra
           </select>
         </Field>
       )}
+      {e && (
+        <div>
+          <div className="mb-1 text-sm font-medium text-slate-700">Muutos koskee</div>
+          <Segmented
+            label="Muutos koskee"
+            value={mode}
+            onChange={setMode}
+            options={[
+              { value: 'forward', label: 'Tästä päivästä' },
+              { value: 'correct', label: 'Koko arviota' },
+            ]}
+          />
+        </div>
+      )}
+      {(!e || mode === 'correct') && (
+        <Field label="Voimassa alkaen" hint={e ? 'Korjaus muuttaa myös aiempien päivien arvion.' : 'Voit valita myös menneen päivän, esim. seurannan alun.'}>
+          <input type="date" className={inputClass} value={validFrom} max={today} onChange={(ev) => setValidFrom(ev.target.value)} />
+        </Field>
+      )}
       <Slider label="Arkipäivä (ma–pe)" value={weekday} onChange={setWeekday} />
       <Slider label="Viikonloppu (la–su)" value={weekend} onChange={setWeekend} />
       <Field label="Tehoprofiili" hint="Kuinka suuri osa ajasta on arviolta kevyttä, reipasta ja rasittavaa.">
@@ -179,7 +225,8 @@ function EstimateForm({ profile, draft, onDone }: { profile: Profile; draft: Dra
       </Field>
       {preview && (
         <p className="flex flex-wrap items-center gap-1 text-sm text-slate-700">
-          <EstimateBadge /> Arkipäivänä kevyt {preview.light} · reipas {preview.moderate} · rasittava {preview.vigorous} min. Perusarvio ei tuota rasittavaa eikä vahvistavaa päivää.
+          <EstimateBadge /> Arkipäivänä kevyt {preview.light} · reipas {preview.moderate} · rasittava {preview.vigorous} min. Perusarvio ei tuota rasittavaa eikä vahvistavaa
+          päivää.
         </p>
       )}
       {error && <p className="text-sm text-red-700">{error}</p>}

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { z } from 'zod';
+import { isISODate, timestampToLocalDate } from '../../domain/dates';
 import { recommendationGroup } from '../../domain/groups';
 import type { Profile, RecommendationGroup } from '../../domain/types';
+import { PhotoPicker } from '../../ui/Avatar';
 import { Button, Field, inputClass } from '../../ui/components';
 import { GROUP_LABEL, MONTHS, PROFILE_COLORS } from '../../ui/labels';
 import { today } from '../../ui/today';
@@ -19,6 +21,7 @@ const schema = z
     schoolStartMonth: z.coerce.number().int().min(1).max(12),
     groupOverride: z.enum(['', 'early_years', 'school_age', 'adult']),
     color: z.string(),
+    trackingStart: z.string().refine((s) => isISODate(s) && s <= today(), 'Tarkista päivä'),
   })
   .superRefine((v, ctx) => {
     if (v.schoolStartYear !== '') {
@@ -32,6 +35,8 @@ const schema = z
 export type ProfileFormValues = Pick<Profile, 'name' | 'kind' | 'birthYear' | 'birthMonth' | 'color'> & {
   schoolStart: Profile['schoolStart'];
   groupOverride: Profile['groupOverride'];
+  trackingStart: Profile['trackingStart'];
+  photo: Profile['photo'];
 };
 
 export function ProfileForm({
@@ -52,7 +57,11 @@ export function ProfileForm({
     schoolStartMonth: String(initial?.schoolStart?.month ?? 8),
     groupOverride: (initial?.groupOverride ?? '') as '' | RecommendationGroup,
     color: initial?.color ?? PROFILE_COLORS[0],
+    trackingStart: initial?.trackingStart ?? (initial ? timestampToLocalDate(initial.createdAt) : today()),
   });
+  const [photo, setPhoto] = useState<string | undefined>(initial?.photo);
+  // Oletus = luontipäivä (uudella profiililla tänään); vain poikkeava päivä tallennetaan.
+  const defaultStart = initial ? timestampToLocalDate(initial.createdAt) : today();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const set = (k: keyof typeof raw) => (e: { target: { value: string } }) => { const val = e.target.value; setRaw((c) => ({ ...c, [k]: val })); };
@@ -96,6 +105,8 @@ export function ProfileForm({
             ? { year: Number(v.schoolStartYear), month: v.schoolStartMonth }
             : undefined,
         groupOverride: v.groupOverride || undefined,
+        trackingStart: v.trackingStart === defaultStart ? undefined : v.trackingStart,
+        photo,
       });
     } finally {
       setSaving(false);
@@ -185,6 +196,13 @@ export function ProfileForm({
           </span>
         )}
       </Field>
+
+      <Field label="Seuranta alkoi" hint="Analyysi laskee päivät tästä alkaen. Voit siirtää alkua aiemmaksi, jos kirjaat vanhoja kertoja.">
+        <input type="date" className={inputClass} value={raw.trackingStart} max={today()} onChange={set('trackingStart')} />
+        {errors.trackingStart && <span className="mt-1 block text-sm text-red-700">{errors.trackingStart}</span>}
+      </Field>
+
+      <PhotoPicker label="Profiilikuva" name={raw.name} value={photo} color={raw.color} onChange={setPhoto} />
 
       <fieldset>
         <legend className="mb-1 text-sm font-medium text-slate-700">Väri</legend>

@@ -89,6 +89,47 @@ describe('pelikalenteri', () => {
     expect(await repo.getFootballDetails(r.session.id)).toMatchObject({ level: 'haaste', eventName: 'Cup' });
   });
 
+  it('turnauksen otteluohjelma: kuittaus luo pelirivit, tulokset ja pelikohtaiset kommentit säilyvät', async () => {
+    const { repo, db } = await device('schedule');
+    const e = await repo.createFixture('p1', {
+      kind: 'tournament',
+      date: '2026-11-08',
+      durationMin: 300,
+      eventName: 'Cup',
+      gamesCount: 9,
+      games: [
+        { time: '09:00', opponent: ' HJK ', location: 'K1' },
+        { time: '', opponent: '', location: '' }, // tyhjä rivi ohitetaan
+        { time: '11:30', opponent: 'PK-35' },
+      ],
+    });
+    expect(e.fixture?.games).toEqual([{ time: '09:00', opponent: 'HJK', location: 'K1' }, { time: '11:30', opponent: 'PK-35' }]);
+    expect(e.fixture?.gamesCount).toBe(2);
+
+    const r = await repo.confirmPlanned(e.plan.id, TODAY);
+    const d = await repo.getFootballDetails(r.session.id);
+    expect(d?.games).toEqual([{ time: '09:00', opponent: 'HJK', location: 'K1' }, { time: '11:30', opponent: 'PK-35' }]);
+    expect(d?.gamesCount).toBe(2);
+
+    await repo.saveFootballDetails(r.session.id, {
+      attendance: 'full',
+      focusTags: [],
+      eventName: 'Cup',
+      games: [
+        { ...d!.games![0], goalsFor: 2, goalsAgainst: 1, note: '  Hyvä alku ' },
+        { ...d!.games![1], goalsFor: 0, goalsAgainst: 0 },
+      ],
+    });
+    const saved = await repo.getFootballDetails(r.session.id);
+    expect(saved?.games?.[0]).toEqual({ time: '09:00', opponent: 'HJK', location: 'K1', goalsFor: 2, goalsAgainst: 1, note: 'Hyvä alku' });
+    const sessions = await db.sessions.toArray();
+    const rows = gameRows(sessions, await repo.footballDetailsFor(sessions.map((s) => s.id)), new Map(BUILT_IN_ACTIVITY_TYPES.map((t) => [t.id, t])));
+    expect(rows.map((x) => [x.opponent, x.outcome, x.time, x.note])).toEqual([
+      ['HJK', 'W', '09:00', 'Hyvä alku'],
+      ['PK-35', 'D', '11:30', undefined],
+    ]);
+  });
+
   it('pelattua peliä ei voi muokata eikä poistaa kalenterista', async () => {
     const { repo } = await device('done');
     const e = await repo.createFixture('p1', { kind: 'game', date: '2026-11-10', durationMin: 60 });

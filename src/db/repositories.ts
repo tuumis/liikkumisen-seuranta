@@ -7,7 +7,7 @@ import { CURRENT_SCHEMA_VERSION } from '../domain/migrations';
 import { dayFlagId, newId, sessionIdFromPlanned, SETTINGS_ID } from '../domain/ids';
 import { computeSessionMinutes, INTENSITY_PRESETS } from '../domain/intensity';
 import { DEFAULT_SETTINGS } from '../domain/recommendations';
-import { addDays } from '../domain/dates';
+import { addDays, isISODate } from '../domain/dates';
 import type {
   ActivityType,
   Category,
@@ -33,6 +33,7 @@ import type {
   SettingsRow,
   SkipReason,
   SyncFields,
+  ScheduledGame,
   Team,
   TemplateItem,
   Timestamp,
@@ -103,6 +104,8 @@ export interface FixtureInput {
   location?: string;
   level?: GameLevel;
   gamesCount?: number;
+  /** Turnauksen otteluohjelma. */
+  games?: ScheduledGame[];
   note?: string;
 }
 
@@ -197,7 +200,7 @@ export function createRepositories(db: AppDB = defaultDb) {
   }
 
   type ProfileInput = Pick<Profile, 'name' | 'kind' | 'birthYear' | 'birthMonth' | 'color'> &
-    Partial<Pick<Profile, 'schoolStart' | 'groupOverride'>>;
+    Partial<Pick<Profile, 'schoolStart' | 'groupOverride' | 'trackingStart' | 'photo'>>;
 
   async function createProfile(input: ProfileInput): Promise<Profile> {
     const all = await db.profiles.toArray();
@@ -220,7 +223,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     if (!current || current.deletedAt) throw new Error('Profiilia ei löydy');
     const next: Profile = await stamp({ ...current, ...changes });
     // Valinnaisten kenttien tyhjennys: undefined poistaa kentän.
-    for (const k of ['schoolStart', 'groupOverride'] as const) {
+    for (const k of ['schoolStart', 'groupOverride', 'trackingStart', 'photo'] as const) {
       if (k in changes && changes[k] === undefined) delete next[k];
     }
     await db.profiles.put(next);
@@ -596,6 +599,11 @@ export function createRepositories(db: AppDB = defaultDb) {
           if (fixture.opponent) fd.opponent = fixture.opponent;
           if (fixture.eventName) fd.eventName = fixture.eventName;
           if (fixture.gamesCount) fd.gamesCount = fixture.gamesCount;
+          // Otteluohjelmasta valmiit pelirivit: tulos ja kommentti kirjataan pelien jälkeen.
+          if (fixture.games?.length) {
+            fd.games = fixture.games.map((g) => ({ ...g }));
+            fd.gamesCount = fixture.games.length;
+          }
           await db.footballDetails.put(fd);
         }
       }
@@ -716,6 +724,9 @@ export function createRepositories(db: AppDB = defaultDb) {
           if (num(g.goalsFor) !== undefined) r.goalsFor = g.goalsFor;
           if (num(g.goalsAgainst) !== undefined) r.goalsAgainst = g.goalsAgainst;
           if (num(g.playedMin) !== undefined) r.playedMin = g.playedMin;
+          if (g.time) r.time = g.time;
+          if (clean(g.location)) r.location = clean(g.location);
+          if (g.note?.trim()) r.note = g.note.trim().slice(0, 500);
           return r;
         });
         if (games.length) {
@@ -800,18 +811,24 @@ export function createRepositories(db: AppDB = defaultDb) {
     return (opts.includeArchived ? rows : rows.filter((t) => !t.archived)).sort((a, b) => a.name.localeCompare(b.name, 'fi'));
   }
 
-  async function saveTeam(profileId: UUID, input: { name: string; level: GameLevel }, id?: UUID): Promise<Team> {
+  /** `photo`: undefined poistaa kuvan, kenttä puuttuu = kuva ennallaan. */
+  async function saveTeam(profileId: UUID, input: { name: string; level: GameLevel; photo?: string }, id?: UUID): Promise<Team> {
     const name = input.name.trim().replace(/\s+/g, ' ');
     if (!name) throw new Error('Anna joukkueen nimi');
     if (id) {
       const current = await db.teams.get(id);
       if (!current || current.deletedAt) throw new Error('Joukkuetta ei löydy');
       const next = await stamp({ ...current, name, level: input.level });
+      if ('photo' in input) {
+        if (input.photo) next.photo = input.photo;
+        else delete next.photo;
+      }
       await db.teams.put(next);
       return next;
     }
     const ts = nowTimestamp();
     const team: Team = { id: newId(), profileId, name, level: input.level, archived: false, createdAt: ts, updatedAt: ts, updatedBy: await deviceId() };
+    if (input.photo) team.photo = input.photo;
     await db.teams.add(team);
     return team;
   }
@@ -845,6 +862,19 @@ export function createRepositories(db: AppDB = defaultDb) {
     if (clean(input.location)) f.location = clean(input.location);
     if (input.level) f.level = input.level;
     if (input.gamesCount) f.gamesCount = input.gamesCount;
+    const games = (input.games ?? [])
+      .map((g) => {
+        const r: ScheduledGame = {};
+        if (clean(g.opponent)) r.opponent = clean(g.opponent);
+        if (g.time) r.time = g.time;
+        if (clean(g.location)) r.location = clean(g.location);
+        return r;
+      })
+      .filter((g) => g.opponent || g.time || g.location);
+    if (input.kind === 'tournament' && games.length) {
+      f.games = games;
+      f.gamesCount = games.length;
+    }
     if (clean(input.note)) f.note = clean(input.note);
     return f;
   }
@@ -920,28 +950,23 @@ export function createRepositories(db: AppDB = defaultDb) {
    * tänään, jolloin menneiden päivien luvut eivät muutu. Tänään alkanut arvio
    * päivitetään paikallaan.
    */
-  async function saveEstimate(profileId: UUID, input: EstimateInput, today: ISODate): Promise<Estimate> {
+  async function saveEstimate(profileId: UUID, input: EstimateInput, today: ISODate, validFrom: ISODate = today): Promise<Estimate> {
+    if (!isISODate(validFrom) || validFrom > today) throw new Error('Tarkista alkamispäivä');
     return db.transaction('rw', db.estimates, db.meta, async () => {
       const current = (await activeEstimates(profileId, today)).find((e) => e.category === input.category);
-      const fields = {
-        category: input.category,
-        label: input.label.trim(),
-        weekdayMin: input.weekdayMin,
-        weekendMin: input.weekendMin,
-        shares: { ...input.shares },
-      };
-      if (current && current.validFrom === today) {
+      const fields = estimateFields(input);
+      if (current && current.validFrom === validFrom) {
         const next = await stamp({ ...current, ...fields });
         await db.estimates.put(next);
         return next;
       }
-      if (current) await db.estimates.put(await stamp({ ...current, validTo: addDays(today, -1) }));
+      await yieldTo(profileId, input.category, validFrom);
       const ts = nowTimestamp();
       const est: Estimate = {
         id: newId(),
         profileId,
         ...fields,
-        validFrom: today,
+        validFrom,
         createdAt: ts,
         updatedAt: ts,
         updatedBy: await deviceId(),
@@ -952,6 +977,45 @@ export function createRepositories(db: AppDB = defaultDb) {
   }
 
   /** Lopetus: päätetään eiliseen (historia säilyy); tänään alkanut poistetaan. */
+  function estimateFields(input: EstimateInput) {
+    return {
+      category: input.category,
+      label: input.label.trim(),
+      weekdayMin: input.weekdayMin,
+      weekendMin: input.weekendMin,
+      shares: { ...input.shares },
+    };
+  }
+
+  /**
+   * Saman kategorian muut arviot väistyvät päivästä `from` alkaen: aiemmin alkanut päätetään
+   * edelliseen päivään, samana päivänä tai myöhemmin alkanut poistetaan (uusi kattaa sen).
+   */
+  async function yieldTo(profileId: UUID, category: Category, from: ISODate, exceptId?: UUID): Promise<void> {
+    for (const o of await listEstimates(profileId)) {
+      if (o.category !== category || o.id === exceptId) continue;
+      if (o.validFrom >= from) await softDelete(db.estimates, o.id);
+      else if (!o.validTo || o.validTo >= from) await db.estimates.put(await stamp({ ...o, validTo: addDays(from, -1) }));
+    }
+  }
+
+  /**
+   * Arvion korjaus koko voimassaoloajalle: arvot ja alkamispäivä muuttuvat paikallaan
+   * (myös menneiden päivien luvut). Aiemmat saman kategorian arviot väistyvät.
+   */
+  async function correctEstimate(id: UUID, input: EstimateInput, validFrom: ISODate, today: ISODate): Promise<Estimate> {
+    if (!isISODate(validFrom) || validFrom > today) throw new Error('Tarkista alkamispäivä');
+    return db.transaction('rw', db.estimates, db.meta, async () => {
+      const e = await db.estimates.get(id);
+      if (!e || e.deletedAt) throw new Error('Arviota ei löydy');
+      if (e.validTo && e.validTo < validFrom) throw new Error('Alkamispäivä on päättymisen jälkeen');
+      await yieldTo(e.profileId, e.category, validFrom, e.id);
+      const next = await stamp({ ...e, ...estimateFields({ ...input, category: e.category }), validFrom });
+      await db.estimates.put(next);
+      return next;
+    });
+  }
+
   async function endEstimate(id: UUID, today: ISODate): Promise<void> {
     const e = await db.estimates.get(id);
     if (!e || e.deletedAt) return;
@@ -1064,6 +1128,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     listEstimates,
     activeEstimates,
     saveEstimate,
+    correctEstimate,
     endEstimate,
     dayFlagsInRange,
     setDayFlag,

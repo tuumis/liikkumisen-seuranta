@@ -6,6 +6,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { LEVEL_LABEL } from '../../domain/football';
 import type { ActivityType, GameLevel, Profile, Session, Team } from '../../domain/types';
 import { repo, type FixtureEntry } from '../../db/repositories';
+import { Avatar, PhotoPicker } from '../../ui/Avatar';
 import { Button, Card, inputClass } from '../../ui/components';
 import { Segmented, ToggleChip } from '../../ui/controls';
 import { dayLabel, formatDate } from '../../ui/format';
@@ -200,6 +201,17 @@ function FixtureSummary({ e, team }: { e: FixtureEntry; team?: Team }) {
         {tournament && f?.gamesCount && ` · ${f.gamesCount} peliä`}
         {f?.location && ` · ${f.location}`}
       </div>
+      {tournament && f?.games && f.games.length > 0 && (
+        <ol className="mt-1 space-y-0.5 text-xs text-slate-600">
+          {f.games.map((g, i) => (
+            <li key={i}>
+              {i + 1}. {g.time && `klo ${g.time} · `}
+              {g.opponent ?? 'vastustaja ?'}
+              {g.location && ` · ${g.location}`}
+            </li>
+          ))}
+        </ol>
+      )}
       {f?.note && <div className="mt-0.5 text-xs text-slate-500">{f.note}</div>}
     </div>
   );
@@ -229,16 +241,18 @@ function TeamsView({ profile }: { profile: Profile }) {
   const [editing, setEditing] = useState<Team | 'new' | null>(null);
   const [name, setName] = useState('');
   const [level, setLevel] = useState<GameLevel>('kilpa');
+  const [photo, setPhoto] = useState<string | undefined>();
 
   const open = (t: Team | 'new') => {
     setEditing(t);
     setName(t === 'new' ? '' : t.name);
     setLevel(t === 'new' ? 'kilpa' : t.level);
+    setPhoto(t === 'new' ? undefined : t.photo);
   };
 
   async function save() {
     try {
-      await repo.saveTeam(profile.id, { name, level }, editing && editing !== 'new' ? editing.id : undefined);
+      await repo.saveTeam(profile.id, { name, level, photo }, editing && editing !== 'new' ? editing.id : undefined);
       toast('Joukkue tallennettu');
       setEditing(null);
     } catch (e) {
@@ -275,6 +289,7 @@ function TeamsView({ profile }: { profile: Profile }) {
             </div>
             <p className="mt-1 text-xs text-slate-500">Elite = kovatempoinen (kovempi), Kilpa = reipas (tavallinen), Haaste = kevyempi. Tason voi vaihtaa yksittäiselle pelille tai turnaukselle.</p>
           </div>
+          <PhotoPicker label="Joukkuekuva" name={name} value={photo} fallback="👕" onChange={setPhoto} />
           <div className="flex gap-2">
             <Button type="submit" className="flex-1">
               Tallenna
@@ -289,18 +304,18 @@ function TeamsView({ profile }: { profile: Profile }) {
       <ul className="divide-y divide-slate-100">
         {teams?.map((t) => (
           <li key={t.id} className={`flex items-center gap-3 py-3 ${t.archived ? 'opacity-50' : ''}`}>
-            <span className="text-lg" aria-hidden>
-              👕
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate font-medium text-slate-900">{t.name}</span>
-              <span className="mt-0.5 inline-block">
-                <LevelBadge level={t.level} />
+            <button type="button" className="flex min-w-0 flex-1 items-center gap-3 text-left" onClick={() => open(t)} aria-label={`Muokkaa: ${t.name}`}>
+              <Avatar name={t.name} photo={t.photo} fallback="👕" size="md" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-medium text-slate-900">{t.name}</span>
+                <span className="mt-0.5 inline-block">
+                  <LevelBadge level={t.level} />
+                </span>
               </span>
-            </span>
-            <Button variant="ghost" className="px-2" onClick={() => open(t)}>
-              Muokkaa
-            </Button>
+              <span className="text-slate-400" aria-hidden>
+                ✎
+              </span>
+            </button>
             <Button variant="ghost" className="px-2" onClick={() => repo.setTeamArchived(t.id, !t.archived)}>
               {t.archived ? 'Palauta' : 'Arkistoi'}
             </Button>

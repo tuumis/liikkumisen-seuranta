@@ -102,6 +102,23 @@ describe('varmuuskopio', () => {
     expect(await dump(a.db)).toEqual(before);
   });
 
+  it('profiili- ja joukkuekuva kulkevat varmuuskopiossa; ulkoinen kuvaosoite hylätään', async () => {
+    const a = await device('photo');
+    const photo = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgK';
+    const p = await a.repo.createProfile({ name: 'A', kind: 'child', birthYear: 2018, birthMonth: 5, color: '#000', photo });
+    await a.repo.saveTeam(p.id, { name: 'P2018', level: 'kilpa', photo });
+    const file = await buildBackup(a.db);
+    await clearAll(a.db);
+    await a.repo.initialize();
+    await importBackup(a.db, toJson(file), () => {});
+    expect((await a.db.profiles.get(p.id))?.photo).toBe(photo);
+    expect((await a.db.teams.toArray())[0].photo).toBe(photo);
+
+    const bad = await buildBackup(a.db);
+    bad.data.profiles![0] = { ...bad.data.profiles![0], photo: 'https://example.com/x.jpg' } as never;
+    await expect(importBackup(a.db, toJson(bad), () => {})).rejects.toThrow();
+  });
+
   it('C2: käsin muutettu luku → tuonti hylätään tarkistussumman takia, tietokanta ei muutu', async () => {
     const a = await device('c2');
     await seedData(a.repo);

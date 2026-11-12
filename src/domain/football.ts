@@ -48,6 +48,9 @@ export interface GameRow {
   games: number;
   level?: GameLevel;
   teamId?: UUID;
+  /** Turnauksen pelin kellonaika ja kommentti. */
+  time?: string;
+  note?: string;
 }
 
 export interface GameSummary {
@@ -129,6 +132,8 @@ export function gameRows(sessions: Session[], details: Map<UUID, FootballDetails
           outcome: outcomeOf(g.goalsFor, g.goalsAgainst),
           playedMin: g.playedMin,
           games: 1,
+          ...(g.time ? { time: g.time } : {}),
+          ...(g.note ? { note: g.note } : {}),
         }),
       );
     } else {

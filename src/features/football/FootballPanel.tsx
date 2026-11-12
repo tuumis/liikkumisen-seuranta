@@ -15,7 +15,7 @@ import { useToast } from '../../ui/Toast';
 
 const PLAYED_PICKS = [10, 15, 20, 30, 40, 50, 60];
 
-type GameDraft = { opponent: string; goalsFor: string; goalsAgainst: string; playedMin: string };
+type GameDraft = { opponent: string; goalsFor: string; goalsAgainst: string; playedMin: string; time?: string; location?: string; note: string };
 const toNum = (s: string) => (s.trim() === '' ? undefined : Number.isInteger(Number(s)) && Number(s) >= 0 ? Number(s) : NaN);
 const str = (n?: number) => (n === undefined ? '' : String(n));
 
@@ -63,7 +63,15 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
     setEventName(d?.eventName ?? '');
     setGamesCount(str(d?.games?.length ? undefined : d?.gamesCount));
     setGames(
-      (d?.games ?? []).map((g) => ({ opponent: g.opponent ?? '', goalsFor: str(g.goalsFor), goalsAgainst: str(g.goalsAgainst), playedMin: str(g.playedMin) })),
+      (d?.games ?? []).map((g) => ({
+        opponent: g.opponent ?? '',
+        goalsFor: str(g.goalsFor),
+        goalsAgainst: str(g.goalsAgainst),
+        playedMin: str(g.playedMin),
+        time: g.time,
+        location: g.location,
+        note: g.note ?? '',
+      })),
     );
     setError(undefined);
   }, [session, existing]);
@@ -87,6 +95,9 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
       goalsFor: toNum(g.goalsFor),
       goalsAgainst: toNum(g.goalsAgainst),
       playedMin: toNum(g.playedMin),
+      time: g.time,
+      location: g.location,
+      note: g.note,
     }));
     const bad = [...Object.values(nums), ...rows.flatMap((r) => [r.goalsFor, r.goalsAgainst, r.playedMin])].some((n) => Number.isNaN(n));
     if (bad) return setError('Anna luvut kokonaislukuina');
@@ -291,7 +302,11 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
             {games.map((g, i) => (
               <div key={i} className="space-y-2 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-800">Peli {i + 1}</span>
+                  <span className="text-sm font-medium text-slate-800">
+                    Peli {i + 1}
+                    {g.time && <span className="font-normal text-slate-500"> · klo {g.time}</span>}
+                    {g.location && <span className="font-normal text-slate-500"> · {g.location}</span>}
+                  </span>
                   <button type="button" className="min-h-9 px-2 text-sm text-red-700" onClick={() => setGames((cur) => cur.filter((_, j) => j !== i))}>
                     Poista
                   </button>
@@ -326,9 +341,17 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
                     onChange={(e) => setGames((cur) => cur.map((x, j) => (j === i ? { ...x, playedMin: e.target.value } : x)))}
                   />
                 </div>
+                <input
+                  className={inputClass}
+                  value={g.note}
+                  maxLength={500}
+                  placeholder="Kommentti pelistä"
+                  aria-label={`Peli ${i + 1}: kommentti`}
+                  onChange={(e) => setGames((cur) => cur.map((x, j) => (j === i ? { ...x, note: e.target.value } : x)))}
+                />
               </div>
             ))}
-            <Button variant="secondary" className="w-full" onClick={() => setGames((cur) => [...cur, { opponent: '', goalsFor: '', goalsAgainst: '', playedMin: '' }])}>
+            <Button variant="secondary" className="w-full" onClick={() => setGames((cur) => [...cur, { opponent: '', goalsFor: '', goalsAgainst: '', playedMin: '', note: '' }])}>
               + peli
             </Button>
             {games.length > 0 && <p className="text-xs text-slate-500">Pelien määrä = rivien määrä. Pelattujen minuuttien summa on arvion laskentapohja.</p>}

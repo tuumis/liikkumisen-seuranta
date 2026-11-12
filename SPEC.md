@@ -797,7 +797,7 @@ function pickWinner<T extends SyncFields & { id: string }>(local: T | undefined,
 
 Sovellus käsittelee lapsen henkilö- ja liikuntatietoja, joten se kerää vain sen, mitä laskenta tarvitsee, eikä lähetä mitään mihinkään. Laitteelta lähtevät vain käyttäjän itse tallentamat synkronointi- ja varmuuskopiotiedostot.
 
-- **Tietojen minimointi:** nimeksi riittää lempinimi. Syntymästä tallennetaan vain vuosi ja kuukausi. Sukupuolta, painoa, pituutta, terveystietoja tai kuvia ei tallenneta.
+- **Tietojen minimointi:** nimeksi riittää lempinimi. Syntymästä tallennetaan vain vuosi ja kuukausi. Sukupuolta, painoa, pituutta tai terveystietoja ei tallenneta. Profiili- ja joukkuekuva on vapaaehtoinen: se pienennetään laitteella (noin 256 px, JPEG) ja tallennetaan vain IndexedDB:hen sekä käyttäjän omiin varmuuskopio- ja synkronointitiedostoihin (lisäys 16).
 - **Ei verkkoliikennettä:** ei analytiikkaa, virheraportointia, ulkoisia fontteja, CDN-skriptejä eikä kolmannen osapuolen palveluita. Sisältöturvakäytäntö (CSP) rajaa yhteydet omaan alkuperään (`default-src 'self'`).
 - **Paikallinen tallennus:** data on laitteiden IndexedDB:ssä ja synkronointitiedostoissa käyttäjän omassa pilvikansiossa (OneDrive tai iCloud Drive). Kansiota ei kannata jakaa muille. Julkaisupalvelin jakaa ainoastaan sovelluksen koodin.
 - **Vienti:** vientipainikkeen yhteydessä kerrotaan, että tiedosto sisältää lapsen tietoja ja se kannattaa säilyttää turvallisesti (esim. salattu pilvikansio).
@@ -955,7 +955,7 @@ A- ja B-kriteerit ovat automaattisia testejä (Vitest; B-sarjassa `fake-indexedd
 
 - [ ] **E1** Asennettu sovellus toimii lentotilassa kaikilta osin.
 - [ ] **E2** Tuotantoversio ei tee verkkokutsuja muualle kuin omiin staattisiin tiedostoihinsa (DevTools Network ja CSP `default-src 'self'`).
-- [ ] **E3** Profiilissa ei ole sukupuoli-, paino- eikä pituuskenttää; syntymästä tallentuu vain vuosi ja kuukausi.
+- [ ] **E3** Profiilissa ei ole sukupuoli-, paino- eikä pituuskenttää; syntymästä tallentuu vain vuosi ja kuukausi. Vapaaehtoinen kuva tallentuu vain pienennettynä (≤ 256 px) eikä poistu laitteelta muuten kuin käyttäjän omissa tiedostoissa.
 - [ ] **E4** "Tyhjennä kaikki tiedot" tyhjentää kaikki taulut.
 
 ### F. Synkronointi
@@ -997,3 +997,7 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
 - **Tuonti** tunnistaa tiedoston sisällöstä: varmuuskopion tuontiin valittu synkronointitiedosto yhdistetään, ja "Päivitä PC:ltä" hyväksyy myös varmuuskopion. Puhelimella vienti käyttää jakovalikkoa ("Tallenna Tiedostoihin").
 - **Suunnitelman muutos tälle kerralle** (kesto, kellonaika) myös etukäteen: `PlannedSession.overridden = true`, eikä viikkopohjan muokkaus palauta alkuperäistä. Kuittauksessa kestopikavalinnat (esim. 120 suunniteltu → "Tehty 60"); suunnitelman kesto säilyy vertailua varten.
 - **Jalkapallo-välilehti** (aiemmin Pelit): Päiväkirja · Kalenteri · Tulokset · Joukkueet. Päiväkirja kokoaa kaikki jalkapallokerrat kuukausittain; kommentti (`FootballDetails.ratingNote`, rivinvaihdot säilyvät, enintään 1000 merkkiä) lisätään suoraan listasta, ja listaa voi hakea ja suodattaa (treenit / pelit / vain kommentoidut).
+- **Turnauksen otteluohjelma:** `Fixture.games` = `{ time?, opponent?, location? }[]`; kuittaus luo niistä `FootballDetails.games`-rivit, joihin kirjataan tulos ja pelikohtainen kommentti (`GameResult.note`, myös `time` ja `location` säilyvät). Pelimäärä = rivien määrä.
+- **Alkamispäivät:** perusarvion voi aloittaa menneestä päivästä, ja voimassa olevan arvion voi korjata koko voimassaoloajalle alkamispäivää myöten (aiemmat saman kategorian arviot väistyvät). Profiilin `trackingStart` (valinnainen) korvaa luontipäivän seurannan alkuna (7.2).
+- **Kuvat:** `Profile.photo` ja `Team.photo` (valinnainen JPEG data URL, rajattu neliöksi ~256 px). Synkronoituvat ja kuuluvat varmuuskopioon; CSP sallii `img-src data:`.
+- **Pikalisäys:** jalkapallon lajit (treeni, omatoiminen, peli, turnaus) näkyvät omana ryhmänään ennen muita lajeja.

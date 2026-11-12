@@ -71,3 +71,41 @@ describe('perusarviot', () => {
     expect((await db.estimates.get(b.id))!.deletedAt).toBeDefined();
   });
 });
+
+describe('alkamispäivän muutos (lisäys 16)', () => {
+  it('uusi arvio voi alkaa menneestä päivästä, ei tulevasta', async () => {
+    const a = await repo.saveEstimate('p1', recess(), '2026-11-12', '2026-09-01');
+    expect(a.validFrom).toBe('2026-09-01');
+    expect((await repo.activeEstimates('p1', '2026-11-12')).map((e) => e.id)).toEqual([a.id]);
+    await expect(repo.saveEstimate('p1', recess(), '2026-11-12', '2026-11-20')).rejects.toThrow();
+  });
+
+  it('korjaus siirtää alkamispäivää ja arvoja paikallaan; aiempi arvio väistyy', async () => {
+    const old = await repo.saveEstimate('p1', recess({ weekdayMin: 30 }), '2026-10-01');
+    const cur = await repo.saveEstimate('p1', recess({ weekdayMin: 60 }), '2026-11-11');
+    expect((await db.estimates.get(old.id))!.validTo).toBe('2026-11-10');
+
+    // Korjataan nykyinen alkamaan 15.10.: vanha päättyy 14.10.
+    const fixed = await repo.correctEstimate(cur.id, recess({ weekdayMin: 45 }), '2026-10-15', '2026-11-12');
+    expect(fixed).toMatchObject({ id: cur.id, validFrom: '2026-10-15', weekdayMin: 45 });
+    expect((await db.estimates.get(old.id))!.validTo).toBe('2026-10-14');
+
+    // Korjataan alkamaan ennen vanhaa: vanha poistuu kokonaan.
+    await repo.correctEstimate(cur.id, recess({ weekdayMin: 45 }), '2026-09-01', '2026-11-12');
+    expect((await db.estimates.get(old.id))!.deletedAt).toBeTruthy();
+    expect((await repo.listEstimates('p1')).map((e) => e.validFrom)).toEqual(['2026-09-01']);
+  });
+});
+
+describe('seurannan alku', () => {
+  it('profiilin trackingStart korvaa luontipäivän; tyhjennys palauttaa luontipäivän', async () => {
+    const { trackingStart } = await import('../domain/aggregate');
+    const p = await repo.createProfile({ name: 'A', kind: 'child', birthYear: 2018, birthMonth: 5, color: '#000' });
+    await repo.updateProfile(p.id, { trackingStart: '2026-08-15' });
+    expect(trackingStart((await db.profiles.get(p.id))!)).toBe('2026-08-15');
+    await repo.updateProfile(p.id, { trackingStart: undefined });
+    const again = (await db.profiles.get(p.id))!;
+    expect('trackingStart' in again).toBe(false);
+    expect(trackingStart(again)).toBe(trackingStart({ createdAt: p.createdAt }));
+  });
+});

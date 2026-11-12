@@ -9,6 +9,8 @@ const ts = z.string().min(1);
 const sync = { updatedAt: ts, updatedBy: z.string().min(1), deletedAt: ts.optional() };
 const shares = z.object({ light: z.number().min(0).max(1), moderate: z.number().min(0).max(1), vigorous: z.number().min(0).max(1) });
 const minutes = z.object({ light: z.number().min(0), moderate: z.number().min(0), vigorous: z.number().min(0) });
+/** Pienennetty kuva (lisäys 16): vain base64-kuva-data-URL, ei ulkoisia osoitteita. */
+const photo = z.string().max(300_000).regex(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/);
 const category = z.enum(['hobby', 'school_pe', 'school_recess', 'commute', 'self_directed', 'family', 'other']);
 
 /** Tyhjennetty poistomerkintä (profiilin poisto): vain avain ja synkronointikentät. */
@@ -26,6 +28,8 @@ export const profileSchema = either(
     schoolStart: z.object({ year: z.number().int(), month: z.number().int().min(1).max(12) }).optional(),
     groupOverride: z.enum(['early_years', 'school_age', 'adult']).optional(),
     color: z.string(),
+    photo: photo.optional(),
+    trackingStart: iso.optional(),
     sortOrder: z.number(),
     archived: z.boolean(),
     createdAt: ts,
@@ -147,7 +151,7 @@ export const settingsSchema = z.looseObject({
 const level = z.enum(['elite', 'kilpa', 'haaste']);
 
 export const teamSchema = either(
-  z.looseObject({ id: z.string().min(1), profileId: z.string(), name: z.string(), level, archived: z.boolean(), createdAt: ts, ...sync }),
+  z.looseObject({ id: z.string().min(1), profileId: z.string(), name: z.string(), level, photo: photo.optional(), archived: z.boolean(), createdAt: ts, ...sync }),
 );
 
 export const fixtureSchema = either(
