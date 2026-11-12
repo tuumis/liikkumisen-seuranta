@@ -139,6 +139,8 @@ export interface PlannedSession extends SyncFields {
   status: PlannedStatus;
   skipReason?: SkipReason;
   sessionId?: UUID; // kun status = 'done'
+  /** Tätä kertaa on muutettu yksittäin (kesto/kellonaika); viikkopohjan muokkaus ei kumoa muutosta. */
+  overridden?: boolean;
   createdAt: Timestamp;
 }
 

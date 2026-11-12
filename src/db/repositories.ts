@@ -625,6 +625,21 @@ export function createRepositories(db: AppDB = defaultDb) {
     });
   }
 
+  /**
+   * Yksittäisen suunnitellun kerran muutos (kesto, kellonaika). Vain avoimelle kerralle;
+   * merkitään overridden, jotta viikkopohjan myöhempi muokkaus ei palauta alkuperäistä.
+   */
+  async function updatePlannedOccurrence(planId: UUID, changes: { durationMin: number; startTime?: HHmm }): Promise<PlannedSession> {
+    const plan = await db.plannedSessions.get(planId);
+    if (!plan || plan.deletedAt) throw new Error('Suunnitelmaa ei löydy');
+    if (plan.status !== 'open') throw new Error('Vain avointa suunnitelmaa voi muuttaa');
+    const next = await stamp({ ...plan, durationMin: changes.durationMin, overridden: true });
+    delete next.startTime;
+    if (changes.startTime) next.startTime = changes.startTime;
+    await db.plannedSessions.put(next);
+    return next;
+  }
+
   /** Ohitus: status skipped ja valinnainen syy. Kuitattua ei ohiteta (poista kerta ensin). */
   async function skipPlanned(planId: UUID, reason?: SkipReason): Promise<void> {
     const plan = await db.plannedSessions.get(planId);
@@ -686,7 +701,7 @@ export function createRepositories(db: AppDB = defaultDb) {
       if (type.footballKind !== 'training') set('level', input.level);
       set('parentRating', input.parentRating);
       set('enjoyment', input.enjoyment);
-      set('ratingNote', clean(input.ratingNote));
+      set('ratingNote', input.ratingNote?.trim().slice(0, 1000) || undefined); // rivinvaihdot säilyvät (päiväkirja)
       let playedMin = input.playedMin;
       if (type.footballKind === 'game') {
         set('opponent', clean(input.opponent));
@@ -732,6 +747,27 @@ export function createRepositories(db: AppDB = defaultDb) {
         });
       }
       return d;
+    });
+  }
+
+  /**
+   * Päiväkirjakommentti jalkapallokerralle (FootballDetails.ratingNote). Luo lisätiedot, jos
+   * niitä ei vielä ole (osallistuminen oletuksena kokonaan); tyhjä teksti poistaa kommentin.
+   */
+  async function setFootballNote(sessionId: UUID, note: string): Promise<void> {
+    await db.transaction('rw', [db.footballDetails, db.sessions, db.activityTypes, db.meta], async () => {
+      const session = await db.sessions.get(sessionId);
+      if (!session || session.deletedAt) throw new Error('Kertaa ei löydy');
+      if ((await getActivityType(session.activityTypeId)).sport !== 'football') throw new Error('Kerta ei ole jalkapalloa');
+      const current = await db.footballDetails.get(sessionId);
+      const base: FootballDetails =
+        current && !current.deletedAt ? { ...current } : { sessionId, attendance: 'full', focusTags: [], updatedAt: '', updatedBy: '' };
+      const next = await stamp(base);
+      delete next.deletedAt;
+      delete next.ratingNote;
+      const text = note.trim();
+      if (text) next.ratingNote = text.slice(0, 1000);
+      await db.footballDetails.put(next);
     });
   }
 
@@ -1011,6 +1047,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     confirmMany,
     undoConfirm,
     skipPlanned,
+    updatePlannedOccurrence,
     reopenPlanned,
     listTeams,
     saveTeam,
@@ -1022,6 +1059,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     getFootballDetails,
     footballDetailsFor,
     saveFootballDetails,
+    setFootballNote,
     footballNameSuggestions,
     listEstimates,
     activeEstimates,

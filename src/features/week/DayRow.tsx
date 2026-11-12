@@ -191,5 +191,6 @@ function footballSummary(kind: string | undefined, d: FootballDetails): string {
   if (d.enjoyment) parts.push(['', '🙁', '🙂', '😄'][d.enjoyment]);
   if (d.parentRating) parts.push('★'.repeat(d.parentRating));
   if (d.focusTags.length) parts.push(`${d.focusTags.length} tagia`);
+  if (d.ratingNote) parts.push(`💬 ${d.ratingNote.split(/\r?\n/)[0].slice(0, 60)}`);
   return parts.join(' · ');
 }

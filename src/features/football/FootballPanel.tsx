@@ -335,8 +335,8 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
           </>
         )}
 
-        <Field label="Huomio">
-          <input className={inputClass} value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} />
+        <Field label="Kommentti (päiväkirja)" hint="Lyhyt muistiinpano treenistä tai pelistä; löytyy myöhemmin Jalkapallo → Päiväkirja.">
+          <textarea className={`${inputClass} min-h-20 py-2`} value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} rows={3} />
         </Field>
 
         {error && <p className="text-sm text-red-700">{error}</p>}

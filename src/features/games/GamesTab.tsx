@@ -16,8 +16,9 @@ import { FootballPanel } from '../football/FootballPanel';
 import { GamesView } from '../football/GamesView';
 import { SkipReasons } from '../review/SkipReasons';
 import { FixtureSheet, type FixtureDraft } from './FixtureSheet';
+import { DiaryView } from './DiaryView';
 
-type View = 'calendar' | 'results' | 'teams';
+type View = 'diary' | 'calendar' | 'results' | 'teams';
 
 const LEVEL_CLASS: Record<GameLevel, string> = {
   elite: 'bg-red-50 text-red-900 ring-red-200',
@@ -31,7 +32,7 @@ export function LevelBadge({ level }: { level?: GameLevel }) {
 }
 
 export function GamesTab({ profile }: { profile?: Profile }) {
-  const [view, setView] = useState<View>('calendar');
+  const [view, setView] = useState<View>('diary');
   const [draft, setDraft] = useState<FixtureDraft | null>(null);
   if (!profile) return <Card>Lisää profiili Asetukset-välilehdellä.</Card>;
   return (
@@ -43,9 +44,10 @@ export function GamesTab({ profile }: { profile?: Profile }) {
             value={view}
             onChange={setView}
             options={[
-              { value: 'calendar', label: '📅 Kalenteri' },
-              { value: 'results', label: '📊 Tulokset' },
-              { value: 'teams', label: '👕 Joukkueet' },
+              { value: 'diary', label: 'Päiväkirja' },
+              { value: 'calendar', label: 'Kalenteri' },
+              { value: 'results', label: 'Tulokset' },
+              { value: 'teams', label: 'Joukkueet' },
             ]}
           />
         </div>
@@ -59,6 +61,7 @@ export function GamesTab({ profile }: { profile?: Profile }) {
         </div>
       </div>
 
+      {view === 'diary' && <DiaryView profile={profile} />}
       {view === 'calendar' && <CalendarView profile={profile} onEdit={(entry) => setDraft({ kind: 'game', entry })} />}
       {view === 'results' && <GamesView profile={profile} />}
       {view === 'teams' && <TeamsView profile={profile} />}

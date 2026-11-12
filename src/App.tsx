@@ -15,7 +15,7 @@ type Tab = 'week' | 'games' | 'analysis' | 'settings';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'week', label: 'Viikko', icon: '📅' },
-  { id: 'games', label: 'Pelit', icon: '⚽' },
+  { id: 'games', label: 'Jalkapallo', icon: '⚽' },
   { id: 'analysis', label: 'Analyysi', icon: '📊' },
   { id: 'settings', label: 'Asetukset', icon: '⚙️' },
 ];
@@ -105,7 +105,7 @@ export default function App() {
     );
   }
 
-  const TAB_TITLE: Record<Tab, string> = { week: 'Viikko', games: 'Pelit ja turnaukset', analysis: 'Analyysi', settings: 'Asetukset' };
+  const TAB_TITLE: Record<Tab, string> = { week: 'Viikko', games: 'Jalkapallo', analysis: 'Analyysi', settings: 'Asetukset' };
 
   return (
     <div className="min-h-dvh lg:pl-64">
