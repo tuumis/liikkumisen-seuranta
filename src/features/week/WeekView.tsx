@@ -9,7 +9,6 @@ import type { ActivityType, DayFlag, ISODate, PlannedSession, Profile, Recommend
 import { repo } from '../../db/repositories';
 import { Button, Card } from '../../ui/components';
 import { formatDate } from '../../ui/format';
-import { GoalCard } from '../analysis/GoalCard';
 import { useReport } from '../analysis/useReport';
 import { today as todayFn } from '../../ui/today';
 import { QuickAdd } from '../quick-add/QuickAdd';
@@ -19,7 +18,9 @@ import { PlanSheet } from './PlanSheet';
 import { BackupReminder, SyncBar } from '../sync/SyncBar';
 import { FootballPanel } from '../football/FootballPanel';
 import { DayRow } from './DayRow';
-import { HoursCard } from './HoursCard';
+import { WeekSummary } from './WeekSummary';
+import { GettingStarted } from './GettingStarted';
+import type { SettingsSectionId } from '../settings/SettingsView';
 import { DaySheet } from './DaySheet';
 import { SessionEditor } from './SessionEditor';
 
@@ -48,7 +49,7 @@ function UpdateBanner() {
   );
 }
 
-export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpenSettings: () => void }) {
+export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpenSettings: (section?: SettingsSectionId) => void }) {
   const today = todayFn();
   const [weekStart, setWeekStart] = useState<ISODate>(() => startOfIsoWeek(today));
   const [quickAdd, setQuickAdd] = useState<{ date?: ISODate } | null>(null);
@@ -108,6 +109,12 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     [footballIds],
   );
 
+  // Aloitusopas näytetään, kunnes profiililla on ensimmäinen kirjaus.
+  const hasAnySessions = useLiveQuery(
+    async () => (profile ? (await repo.sessionsInRange(profile.id, '0000-01-01', '9999-12-31')).length > 0 : true),
+    [profile?.id],
+  );
+
   const flagByDate = useMemo(() => new Map((flags ?? []).map((f) => [f.date, f])), [flags]);
 
   // Päiväkoosteet korvausperiaatteella (kirjaukset + perusarviot) ja suositusvertailu.
@@ -150,7 +157,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
       <div className="space-y-3 empty:hidden lg:col-span-12">
         <UpdateBanner />
         <SyncBar />
-        <BackupReminder onOpenSettings={onOpenSettings} />
+        <BackupReminder onOpenSettings={() => onOpenSettings('devices')} />
       </div>
 
       <div className="space-y-4 lg:col-span-7 xl:col-span-8">
@@ -186,18 +193,17 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             </Button>
           </div>
         )}
-        {profile && info && (
-          <div className="mt-3 space-y-1 border-t border-slate-100 pt-3 text-sm lg:hidden">
-            {report && <GoalCard report={report} variant="compact" />}
-            {summaryLines}
-          </div>
-        )}
+        {profile && info && <div className="mt-2 space-y-0.5 border-t border-slate-100 pt-2 text-center lg:text-left">{summaryLines}</div>}
         {!profile && <p className="mt-3 text-sm text-slate-600">Lisää profiili Asetukset-välilehdellä.</p>}
       </Card>
 
-      {profile && report && (
+      {profile && hasAnySessions === false && (
+        <GettingStarted onAdd={() => setQuickAdd({})} onOpenSettings={onOpenSettings} />
+      )}
+
+      {profile && report && hasAnySessions && (
         <div className="lg:hidden">
-          <HoursCard report={report} isCurrentWeek={isCurrent} />
+          <WeekSummary report={report} profile={profile} isCurrentWeek={isCurrent} />
         </div>
       )}
 
@@ -250,14 +256,11 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
 
       {profile && report && (
         <div className="hidden space-y-4 lg:sticky lg:top-8 lg:col-span-5 lg:block xl:col-span-4">
-          <HoursCard report={report} isCurrentWeek={isCurrent} />
-          <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-            <h2 className="mb-3 text-base font-semibold text-slate-900">Suositusvertailu</h2>
-            <div className="space-y-1 text-sm">
-              <GoalCard report={report} variant="compact" />
-              {summaryLines}
-            </div>
-          </section>
+          {hasAnySessions ? (
+            <WeekSummary report={report} profile={profile} isCurrentWeek={isCurrent} />
+          ) : (
+            <section className="rounded-2xl bg-white p-5 text-sm text-slate-600 shadow-sm ring-1 ring-slate-200">Viikon tilanne näkyy tässä ensimmäisen kirjauksen jälkeen.</section>
+          )}
         </div>
       )}
 

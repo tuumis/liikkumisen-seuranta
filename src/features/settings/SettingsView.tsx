@@ -16,21 +16,114 @@ import { InstallHint } from './InstallHint';
 import { AppearanceSection } from './AppearanceSection';
 import { ActivityTypesSection } from './ActivityTypesSection';
 
-export function SettingsView({ profile, onProfileCreated }: { profile?: Profile; onProfileCreated: (id: string) => void }) {
-  return (
-    <div className="space-y-4 lg:columns-2 lg:gap-6 lg:space-y-0 [&>*]:break-inside-avoid lg:[&>*]:mb-6">
-      <ProfilesSection onProfileCreated={onProfileCreated} />
-      {profile && <TemplateSection profile={profile} />}
-      {profile && <EstimatesSection profile={profile} />}
-      <ComparisonSection />
-      <ActivityTypesSection />
-      <AppearanceSection />
-      <DeviceSection />
-      <SyncSettingsSection />
-      <BackupSection />
-      <PrivacySection onCleared={() => window.location.reload()} />
+export type SettingsSectionId = 'profiles' | 'routine' | 'everyday' | 'goals' | 'devices' | 'appearance' | 'privacy';
+
+const SECTIONS: { id: SettingsSectionId; icon: string; title: string; text: string; needsProfile?: boolean }[] = [
+  { id: 'profiles', icon: '👤', title: 'Profiilit', text: 'Lapset ja aikuiset, syntymävuosi ja koulun aloitus' },
+  { id: 'routine', icon: '🔁', title: 'Viikkorytmi', text: 'Toistuvat treenit ja koululiikunta, jotka kuitataan viikolla', needsProfile: true },
+  { id: 'everyday', icon: '🏫', title: 'Arkiliikunta', text: 'Arvio välitunneista, koulumatkoista ja leikistä', needsProfile: true },
+  { id: 'goals', icon: '🎯', title: 'Tavoitteet ja lajit', text: 'Rasittavan päivän raja, pääluku ja lajien tehot' },
+  { id: 'devices', icon: '🔄', title: 'Laitteet ja varmuuskopio', text: 'PC ja puhelin, synkronointi, vienti ja tuonti' },
+  { id: 'appearance', icon: '🌗', title: 'Ulkoasu', text: 'Vaalea, tumma tai järjestelmän mukaan' },
+  { id: 'privacy', icon: '🔒', title: 'Tietosuoja ja poisto', text: 'Mitä tallennetaan ja tietojen poistaminen' },
+];
+
+/** Asetukset valikkona: kukin ryhmä avaa oman sivunsa (PC:llä valikko vasemmalla, sisältö oikealla). */
+export function SettingsView({
+  profile,
+  onProfileCreated,
+  section,
+  onSection,
+}: {
+  profile?: Profile;
+  onProfileCreated: (id: string) => void;
+  section?: SettingsSectionId;
+  onSection: (s?: SettingsSectionId) => void;
+}) {
+  const current = SECTIONS.find((x) => x.id === section);
+  const menu = (
+    <nav aria-label="Asetukset" className="space-y-2">
+      {SECTIONS.map((x) => (
+        <button
+          key={x.id}
+          type="button"
+          onClick={() => onSection(x.id)}
+          aria-current={section === x.id ? 'page' : undefined}
+          className={`flex w-full items-center gap-3 rounded-2xl p-3 text-left ring-1 transition-colors ${section === x.id ? 'bg-green-50 ring-green-200' : 'bg-white ring-slate-200 hover:bg-slate-50'}`}
+        >
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-xl" aria-hidden>
+            {x.icon}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-medium text-slate-900">{x.title}</span>
+            <span className="block text-xs text-slate-600">{x.text}</span>
+          </span>
+          <span className="text-slate-400" aria-hidden>
+            ›
+          </span>
+        </button>
+      ))}
+    </nav>
+  );
+
+  const content = current && (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 lg:hidden">
+        <Button variant="ghost" className="px-2" onClick={() => onSection(undefined)}>
+          ‹ Asetukset
+        </Button>
+      </div>
+      <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
+        <span aria-hidden>{current.icon}</span> {current.title}
+      </h2>
+      {current.needsProfile && !profile ? (
+        <Card>Lisää ensin profiili kohdassa Profiilit.</Card>
+      ) : (
+        <SectionContent id={current.id} profile={profile} onProfileCreated={onProfileCreated} />
+      )}
     </div>
   );
+
+  return (
+    <div className="lg:grid lg:grid-cols-12 lg:items-start lg:gap-6">
+      <div className={`lg:col-span-4 lg:block ${current ? 'hidden' : ''}`}>{menu}</div>
+      <div className="lg:col-span-8">
+        {content ?? (
+          <p className="hidden rounded-2xl bg-white p-6 text-sm text-slate-600 ring-1 ring-slate-200 lg:block">Valitse asetusryhmä vasemmalta.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SectionContent({ id, profile, onProfileCreated }: { id: SettingsSectionId; profile?: Profile; onProfileCreated: (id: string) => void }) {
+  switch (id) {
+    case 'profiles':
+      return <ProfilesSection onProfileCreated={onProfileCreated} />;
+    case 'routine':
+      return <TemplateSection profile={profile!} />;
+    case 'everyday':
+      return <EstimatesSection profile={profile!} />;
+    case 'goals':
+      return (
+        <>
+          <ComparisonSection />
+          <ActivityTypesSection />
+        </>
+      );
+    case 'devices':
+      return (
+        <>
+          <DeviceSection />
+          <SyncSettingsSection />
+          <BackupSection />
+        </>
+      );
+    case 'appearance':
+      return <AppearanceSection />;
+    case 'privacy':
+      return <PrivacySection onCleared={() => window.location.reload()} />;
+  }
 }
 
 function ProfilesSection({ onProfileCreated }: { onProfileCreated: (id: string) => void }) {

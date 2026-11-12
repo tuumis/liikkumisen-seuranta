@@ -61,6 +61,17 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
       </div>
 
       {step === 1 && (
+        <section className="rounded-2xl bg-gradient-to-br from-green-50 to-white p-5 ring-1 ring-green-200 dark:from-[#10291d] dark:to-[#121a2a]">
+          <h2 className="text-xl font-semibold tracking-tight text-slate-900">Tervetuloa! 👋</h2>
+          <ul className="mt-2 space-y-1 text-sm text-slate-700">
+            <li>⚽ Kirjaa lapsen liikunta muutamalla napautuksella.</li>
+            <li>📈 Näe viikon tilanne suhteessa suomalaisiin liikkumissuosituksiin.</li>
+            <li>🔒 Tiedot pysyvät vain tällä laitteella – ei tiliä, ei pilvipalvelua.</li>
+          </ul>
+        </section>
+      )}
+
+      {step === 1 && (
         <Card title="Kenen liikkumista seurataan?">
           <ProfileForm
             onSubmit={async (v) => {

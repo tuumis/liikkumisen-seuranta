@@ -45,7 +45,7 @@ export function TemplateSection({ profile }: { profile: Profile }) {
 
   if (editing) {
     return (
-      <Card title={editing === 'new' ? 'Uusi viikkopohjan rivi' : 'Muokkaa riviä'}>
+      <Card title={editing === 'new' ? 'Uusi toistuva kerta' : 'Muokkaa riviä'}>
         <TemplateForm profile={profile} item={editing === 'new' ? undefined : editing} onDone={() => setEditing(null)} />
       </Card>
     );
@@ -53,7 +53,7 @@ export function TemplateSection({ profile }: { profile: Profile }) {
 
   return (
     <Card
-      title={`Viikkopohja · ${profile.name}`}
+      title={`Viikkorytmi · ${profile.name}`}
       action={
         <Button variant="ghost" onClick={() => setEditing('new')}>
           + Lisää

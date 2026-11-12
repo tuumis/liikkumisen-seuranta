@@ -6,6 +6,8 @@ import { today } from './ui/today';
 import { WeekView } from './features/week/WeekView';
 import { SettingsView } from './features/settings/SettingsView';
 import { Onboarding } from './features/onboarding/Onboarding';
+import { HelpSheet } from './features/help/HelpSheet';
+import type { SettingsSectionId } from './features/settings/SettingsView';
 import { GamesTab } from './features/games/GamesTab';
 
 // Analyysi (Recharts) ladataan omana osanaan; service worker esivälimuistittaa senkin.
@@ -42,6 +44,12 @@ export default function App() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string>();
   const [tab, setTabState] = useState<Tab>(() => (store.get('tab') as Tab) ?? 'week');
+  const [settingsSection, setSettingsSection] = useState<SettingsSectionId | undefined>();
+  const [helpOpen, setHelpOpen] = useState(false);
+  const openSettings = (section?: SettingsSectionId) => {
+    setSettingsSection(section);
+    setTab('settings');
+  };
   const [selectedId, setSelectedIdState] = useState<string | undefined>(() => store.get('selectedProfileId'));
 
   useEffect(() => {
@@ -57,6 +65,7 @@ export default function App() {
   const onboarded = useLiveQuery(() => (ready ? repo.getMeta<boolean>('onboarded').then((v) => v ?? false) : null), [ready]) ?? null;
 
   const setTab = (t: Tab) => {
+    if (t === 'settings' && tab === 'settings') setSettingsSection(undefined);
     setTabState(t);
     store.set('tab', t);
   };
@@ -75,7 +84,10 @@ export default function App() {
 
   // Ensikäynnistys ilman profiileja → Asetukset.
   useEffect(() => {
-    if (ready && profiles && profiles.length === 0) setTabState('settings');
+    if (ready && profiles && profiles.length === 0) {
+      setTabState('settings');
+      setSettingsSection('profiles');
+    }
   }, [ready, profiles]);
 
   // Ensikäynnistys: ei profiileja eikä aloitusta tehty (SPEC 12). Päätetään kerran, jotta
@@ -157,12 +169,25 @@ export default function App() {
             </div>
           </div>
         )}
-        <div className="mt-auto px-6 pb-6 text-[11px] leading-relaxed text-slate-400">Tiedot pysyvät tällä laitteella. Ei verkkoliikennettä.</div>
+        <div className="mt-auto space-y-3 px-3 pb-6">
+          <button type="button" onClick={() => setHelpOpen(true)} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
+            <span className="text-lg" aria-hidden>
+              ❔
+            </span>
+            Ohje
+          </button>
+          <p className="px-3 text-[11px] leading-relaxed text-slate-400">Tiedot pysyvät tällä laitteella. Ei verkkoliikennettä.</p>
+        </div>
       </aside>
 
       {/* Kapea näyttö (puhelin): yläpalkki profiilisiruineen. */}
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50/95 px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur lg:hidden">
-        <h1 className="text-sm font-semibold tracking-wide text-green-800">Liikkumisen seuranta</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-sm font-semibold tracking-wide text-green-800">Liikkumisen seuranta</h1>
+          <button type="button" onClick={() => setHelpOpen(true)} className="-mr-2 flex min-h-9 items-center gap-1 rounded-full px-3 text-sm font-medium text-slate-600 hover:bg-slate-100" aria-label="Ohje">
+            ❔ Ohje
+          </button>
+        </div>
         {profiles && profiles.length > 0 && (
           <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1" role="tablist" aria-label="Profiilit">
             {profiles.map((p) => {
@@ -198,7 +223,7 @@ export default function App() {
         {!ready ? (
           <p className="text-sm text-slate-600">Ladataan…</p>
         ) : tab === 'week' ? (
-          <WeekView profile={selected} onOpenSettings={() => setTab('settings')} />
+          <WeekView profile={selected} onOpenSettings={openSettings} />
         ) : tab === 'games' ? (
           <GamesTab profile={selected} />
         ) : tab === 'analysis' ? (
@@ -206,7 +231,7 @@ export default function App() {
             <AnalysisView profile={selected} />
           </Suspense>
         ) : (
-          <SettingsView profile={selected} onProfileCreated={select} />
+          <SettingsView profile={selected} onProfileCreated={select} section={settingsSection} onSection={setSettingsSection} />
         )}
       </main>
 
@@ -220,7 +245,7 @@ export default function App() {
               aria-current={tab === t.id ? 'page' : undefined}
               className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs font-medium ${tab === t.id ? 'text-green-800' : 'text-slate-500'}`}
             >
-              <span className="text-lg" aria-hidden>
+              <span className={`flex h-7 w-12 items-center justify-center rounded-full text-lg transition-colors ${tab === t.id ? 'bg-green-100' : ''}`} aria-hidden>
                 {t.icon}
               </span>
               {t.label}
@@ -228,6 +253,7 @@ export default function App() {
           ))}
         </div>
       </nav>
+      <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   );
 }

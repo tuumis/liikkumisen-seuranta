@@ -38,7 +38,7 @@ export function EstimatesSection({ profile }: { profile: Profile }) {
   const freeCategories = (Object.keys(CATEGORY_LABEL) as Category[]).filter((c) => !used.has(c));
 
   return (
-    <Card title={`Perusarviot · ${profile.name}`}>
+    <Card title={`Arkiliikunta (perusarviot) · ${profile.name}`}>
       <p className="text-sm text-slate-600">
         Arvio tavallisesta liikkumisesta, jota ei kirjata kerta kerralta (esim. välitunnit). Arvio täyttää kategorian vain päivinä, joille siinä ei ole kirjauksia, ja se näytetään aina erikseen.
       </p>
