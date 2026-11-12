@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { AppUpdateProvider } from './features/update/appUpdate';
 import { ToastProvider } from './ui/Toast';
 import { ErrorBoundary } from './ui/ErrorBoundary';
 import { applyTheme, watchSystemTheme } from './ui/theme';
@@ -13,7 +14,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       <ToastProvider>
-        <App />
+        <AppUpdateProvider>
+          <App />
+        </AppUpdateProvider>
       </ToastProvider>
     </ErrorBoundary>
   </StrictMode>,

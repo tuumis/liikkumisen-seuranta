@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useRegisterSW } from 'virtual:pwa-register/react';
 import { addDays, datesBetween, isoWeek, startOfIsoWeek, weekPeriod } from '../../domain/dates';
 import { planAdherence } from '../../domain/adherence';
 import { planningThroughForWeek } from '../../domain/planning';
@@ -18,6 +17,7 @@ import { loadUnconfirmed, useMinuteTick } from '../review/unconfirmed';
 import { subscribeWeekRequest } from '../desktop/settings';
 import { PlanSheet } from './PlanSheet';
 import { BackupReminder, SyncBar } from '../sync/SyncBar';
+import { UpdateBanner } from '../update/appUpdate';
 import { FootballPanel } from '../football/FootballPanel';
 import { DayRow } from './DayRow';
 import { DayTable, fmtUnit, type MinuteUnit } from './DayTable';
@@ -44,24 +44,6 @@ export const DAY_BAR_TARGET: Record<RecommendationGroup, number> = {
   school_age: RECOMMENDATIONS.school_age.mvpaAvgMinPerDay.value,
   adult: RECOMMENDATIONS.adult.weightedMinPerWeek.value / 7,
 };
-
-function UpdateBanner() {
-  // Päivitysilmoitus näytetään vain Viikko-näkymässä (SPEC 10).
-  const {
-    needRefresh: [needRefresh, setNeedRefresh],
-    updateServiceWorker,
-  } = useRegisterSW();
-  if (!needRefresh) return null;
-  return (
-    <div className="anim-rise flex items-center gap-3 rounded-[1.5rem] bg-green-100 p-3 pl-4 shadow-sm">
-      <span className="flex-1 text-sm font-semibold text-green-900">Uusi versio saatavilla</span>
-      <Button onClick={() => updateServiceWorker(true)}>Päivitä</Button>
-      <Button variant="ghost" onClick={() => setNeedRefresh(false)}>
-        Myöhemmin
-      </Button>
-    </div>
-  );
-}
 
 export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpenSettings: (section?: SettingsSectionId) => void }) {
   const today = todayFn();
