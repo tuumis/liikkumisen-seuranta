@@ -72,48 +72,52 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
   const anyEstimate = days.some((d) => d.arkiEst > 0);
   const active = hover ?? days.findIndex((d) => d.date === today);
   const ad = active >= 0 ? days[active] : undefined;
+  const detail = !ad
+    ? ''
+    : ad.future
+      ? [ad.arkiEst > 0 && `Arkiliikuntaa arviolta ${ad.arkiEst} min`, ad.plan > 0 && `suunniteltu ${ad.plan} min`].filter(Boolean).join(' · ')
+      : ad.arkiConf + ad.arkiEst > 0
+        ? `Josta arkiliikuntaa ${ad.arkiConf + ad.arkiEst} min${ad.arkiEst ? ` (arvio ${ad.arkiEst})` : ''}`
+        : '';
 
   return (
     <section className="card anim-rise p-4 sm:p-5 lg:p-6" style={{ ['--i' as string]: 2 }}>
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
+      {/* Vakioasettelu: lukema ei purista nappeja eikä kaavio hypi, kun päivää vaihtaa. */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <SectionLabel>Päivittäin</SectionLabel>
-          <h2 className="font-display text-lg font-semibold text-slate-900">{mode === 'mvpa' ? title : 'Kaikki liikunta'}</h2>
-          <div className="mt-2 inline-flex rounded-xl bg-[var(--surface-sunk)] p-0.5 text-[11px] font-bold" role="radiogroup" aria-label="Kaavion sisältö">
-            {(
-              [
-                ['mvpa', 'Reipas + rasittava'],
-                ['total', 'Kaikki liikunta'],
-              ] as const
-            ).map(([k, l]) => (
-              <button
-                key={k}
-                type="button"
-                role="radio"
-                aria-checked={mode === k}
-                onClick={() => setMode(k)}
-                className={`press min-h-8 rounded-[10px] px-3 py-1.5 ${mode === k ? 'bg-[var(--surface-raised)] text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-              >
-                {l}
-              </button>
-            ))}
-          </div>
+          <h2 className="truncate font-display text-lg font-semibold text-slate-900">{mode === 'mvpa' ? title : 'Kaikki liikunta'}</h2>
         </div>
-        {ad && (
-          <div className="text-right" aria-live="polite">
-            <div className="stat text-2xl font-semibold text-slate-900">
-              {ad.total}
-              <span className="ml-1 font-sans text-xs font-semibold tracking-normal text-slate-500">min</span>
-            </div>
-            <div className="text-[11px] text-slate-500">
-              {dayLabel(ad.date)}
-              {ad.future
-                ? [ad.arkiEst > 0 && `arkiliikuntaa arviolta ${ad.arkiEst}`, ad.plan > 0 && `suunniteltu ${ad.plan}`].filter(Boolean).map((t) => ` · ${t}`).join('')
-                : ad.arkiConf + ad.arkiEst > 0 && ` · arkiliikuntaa ${ad.arkiConf + ad.arkiEst}${ad.arkiEst ? ` (arvio ${ad.arkiEst})` : ''}`}
-            </div>
+        <div className="min-w-[6.5rem] shrink-0 whitespace-nowrap text-right" aria-live="polite">
+          <div className="stat text-2xl font-semibold text-slate-900">
+            {ad ? ad.total : '–'}
+            <span className="ml-1 font-sans text-xs font-semibold tracking-normal text-slate-500">min</span>
           </div>
-        )}
+          <div className="text-[11px] text-slate-500">{ad ? dayLabel(ad.date) : '\u00a0'}</div>
+        </div>
       </div>
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <div className="inline-flex shrink-0 rounded-xl bg-[var(--surface-sunk)] p-0.5 text-[11px] font-bold" role="radiogroup" aria-label="Kaavion sisältö">
+          {(
+            [
+              ['mvpa', 'Reipas + rasittava'],
+              ['total', 'Kaikki liikunta'],
+            ] as const
+          ).map(([k, l]) => (
+            <button
+              key={k}
+              type="button"
+              role="radio"
+              aria-checked={mode === k}
+              onClick={() => setMode(k)}
+              className={`press min-h-8 whitespace-nowrap rounded-[10px] px-3 py-1.5 ${mode === k ? 'bg-[var(--surface-raised)] text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+      <p className="mb-6 mt-2 h-4 truncate text-[11px] text-slate-500">{detail || '\u00a0'}</p>
 
       <div className="relative" style={{ height: h + 28 }} onMouseLeave={() => setHover(null)}>
         {/* tavoiteviiva */}
