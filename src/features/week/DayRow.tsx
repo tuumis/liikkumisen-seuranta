@@ -1,5 +1,12 @@
-import type { ActivityType, DayFlag, DayTotals, FootballDetails, ISODate, PlannedSession, Session, UUID } from '../../domain/types';
-import { OUTCOME_LABEL, outcomeOf } from '../../domain/football';
+import type { ActivityType, DayFlag, DayTotals, Fixture, FootballDetails, ISODate, PlannedSession, Session, UUID } from '../../domain/types';
+import { LEVEL_LABEL, OUTCOME_LABEL, outcomeOf } from '../../domain/football';
+
+/** "vs HJK · Elite · " tulevan pelin suunnitelmariville. */
+function fixtureText(f?: Fixture): string {
+  if (!f) return '';
+  const parts = [f.opponent ? `vs ${f.opponent}` : f.eventName, f.level ? LEVEL_LABEL[f.level] : undefined, f.location].filter(Boolean);
+  return parts.length ? `${parts.join(' · ')} · ` : '';
+}
 import { mvpaOf } from '../../domain/intensity';
 import { dayLabel } from '../../ui/format';
 import { SKIP_REASON_LABEL } from '../../ui/labels';
@@ -15,6 +22,7 @@ export function DayRow({
   sessions,
   plans,
   plannedById,
+  fixtures,
   footballDetails,
   onFootball,
   types,
@@ -34,6 +42,8 @@ export function DayRow({
   /** Päivän avoimet ja ohitetut suunnitelmat (kuitatut näkyvät kertoina). */
   plans: PlannedSession[];
   plannedById: Map<UUID, PlannedSession>;
+  /** Tulevien pelien ja turnausten tiedot suunnitelmille (pelikalenteri). */
+  fixtures?: Map<UUID, Fixture>;
   /** Jalkapallokertojen lisätiedot (puuttuva → "Lisää tiedot"). */
   footballDetails?: Map<UUID, FootballDetails>;
   onFootball: (s: Session) => void;
@@ -144,7 +154,7 @@ export function DayRow({
                     <span className="block truncate text-xs text-slate-600">
                       {skipped
                         ? `Ei tehty${p.skipReason ? ` · ${SKIP_REASON_LABEL[p.skipReason].toLowerCase()}` : ''}`
-                        : `Suunniteltu${p.startTime ? ` klo ${p.startTime}` : ''} · ${p.durationMin} min`}
+                        : fixtureText(fixtures?.get(p.id)) + `Suunniteltu${p.startTime ? ` klo ${p.startTime}` : ''} · ${p.durationMin} min`}
                     </span>
                   </span>
                 </button>

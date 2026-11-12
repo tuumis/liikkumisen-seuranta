@@ -984,3 +984,14 @@ Kaikki tarkistettu 11.11.2026.
 | [Liikunta & Tiede 3/2021: Uusi suositus lapsille ja nuorille](https://www.lts.fi/liikunta-tiede/artikkelit/uusi-suositus-lapsille-ja-nuorille-tunti-paivassa-liikkumista.html) | Varhaisvuosien suositus (2016) voimassa alle kouluikäisille |
 | [UKK-instituutti: Liikkumissuositusten toteutumisen arviointi tarkentuu (13.7.2026)](https://www.sttinfo.fi/tiedote/72163235/lasten-ja-nuorten-liikkumissuositusten-toteutumisen-arviointi-tarkentuu?lang=fi) | Keskiarvo, päivittäinen ja PAD-menetelmä |
 | Iloa, leikkiä ja yhdessä tekemistä – Varhaisvuosien fyysisen aktiivisuuden suositukset, OKM 2016:21 | Alle kouluikäisten suosituksen alkuperäinen julkaisu (luvut UKK:n tiivistelmän kautta) |
+
+## 16. Lisäykset käyttöönoton jälkeen (12.11.2026)
+
+Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt **skeemaversio 2** (`migrateV1ToV2`: uudet taulut, olemassa oleva data ei muutu; fixture `src/domain/fixtures/backup-v1.json`, B7).
+
+- **Pelit-välilehti** (Viikko · Pelit · Analyysi · Asetukset): pelikalenteri, tulosta odottavat pelit, tulokset ja analyysi sekä omat joukkueet.
+- **`teams`** (synkronoituva): oma joukkue `{ id, profileId, name, level, archived }`.
+- **`fixtures`** (synkronoituva, avain `plannedSessionId`): tulevan pelin tai turnauksen tiedot (joukkue, vastustaja, turnauksen nimi, pelien määrä, paikka, taso). Tuleva peli on käsin lisätty `PlannedSession` (laji peli tai turnaus), joten se näkyy viikolla ja kuitataan kuten muutkin suunnitelmat; kuittaus esitäyttää `FootballDetails`-tiedot.
+- **Taso** `GameLevel` = Elite / Kilpa / Haaste joukkueelle (sarjataso) ja tapahtumakohtaisesti. Taso säätää ponnistelun pelin tehoprofiiliin: Elite = kovempi, Kilpa = tavallinen, Haaste = kevyempi (sovelluksen oma tulkinta). `FootballDetails` saa kentät `teamId` ja `level`.
+- **Uusi laji** `football_self` "Jalkapallo – omatoiminen": kevyt 50 / reipas 35 / rasittava 5 %, kategoria omaehtoinen, lasketaan jalkapallon harjoitusmäärään.
+- **Tuonti** tunnistaa tiedoston sisällöstä: varmuuskopion tuontiin valittu synkronointitiedosto yhdistetään, ja "Päivitä PC:ltä" hyväksyy myös varmuuskopion. Puhelimella vienti käyttää jakovalikkoa ("Tallenna Tiedostoihin").

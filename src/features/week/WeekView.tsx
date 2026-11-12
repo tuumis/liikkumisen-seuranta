@@ -82,6 +82,14 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     () => (profile ? repo.plansInRange(profile.id, period.start, period.end) : Promise.resolve([] as PlannedSession[])),
     [profile?.id, period.start, period.end],
   );
+  const fixtureEntries = useLiveQuery(
+    () => (profile ? repo.listFixtures(profile.id, period.start, period.end) : Promise.resolve([])),
+    [profile?.id, period.start, period.end],
+  );
+  const fixtureByPlan = useMemo(
+    () => new Map((fixtureEntries ?? []).filter((e) => e.fixture).map((e) => [e.plan.id, e.fixture!])),
+    [fixtureEntries],
+  );
   const plannedById = useMemo(() => new Map((plans ?? []).map((p) => [p.id, p])), [plans]);
   const unconfirmed = useLiveQuery(
     () => (profile ? repo.unconfirmedPlans(profile.id, today) : Promise.resolve([] as PlannedSession[])),
@@ -221,6 +229,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
                 sessions={(sessions ?? []).filter((s) => s.date === d)}
                 plans={(plans ?? []).filter((p) => p.date === d && p.status !== 'done')}
                 plannedById={plannedById}
+                fixtures={fixtureByPlan}
                 footballDetails={footballDetails}
                 onFootball={setFootball}
                 onPlanOpen={setPlanOpen}

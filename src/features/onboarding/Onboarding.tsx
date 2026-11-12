@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { activityTypeId } from '../../domain/ids';
 import type { Category, Profile } from '../../domain/types';
-import { mergeSyncFile } from '../../db/backup';
+import { mergeAnyFile } from '../../db/backup';
 import { repo, type DeviceRole } from '../../db/repositories';
 import { db } from '../../db/schema';
 import { requestPersistentStorage } from '../../db/storage';
@@ -38,7 +38,7 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
     const f = await pickTextFile();
     if (!f) return;
     try {
-      const s = await mergeSyncFile(db, f.text, await repo.deviceId());
+      const s = await mergeAnyFile(db, f.text, await repo.deviceId());
       setMessage(`Tiedot tuotu PC:ltä. ${summaryText(s)}.`);
       const first = (await repo.listProfiles())[0];
       if (first) setProfile(first);

@@ -12,9 +12,9 @@ const minutes = z.object({ light: z.number().min(0), moderate: z.number().min(0)
 const category = z.enum(['hobby', 'school_pe', 'school_recess', 'commute', 'self_directed', 'family', 'other']);
 
 /** Tyhjennetty poistomerkintä (profiilin poisto): vain avain ja synkronointikentät. */
-const tombstone = (key: 'id' | 'sessionId') => z.looseObject({ [key]: z.string().min(1), updatedAt: ts, updatedBy: z.string().min(1), deletedAt: ts });
+const tombstone = (key: 'id' | 'sessionId' | 'plannedSessionId') => z.looseObject({ [key]: z.string().min(1), updatedAt: ts, updatedBy: z.string().min(1), deletedAt: ts });
 
-const either = <T extends z.ZodType>(full: T, key: 'id' | 'sessionId' = 'id') => z.union([full, tombstone(key)]);
+const either = <T extends z.ZodType>(full: T, key: 'id' | 'sessionId' | 'plannedSessionId' = 'id') => z.union([full, tombstone(key)]);
 
 export const profileSchema = either(
   z.looseObject({
@@ -144,6 +144,17 @@ export const settingsSchema = z.looseObject({
   ...sync,
 });
 
+const level = z.enum(['elite', 'kilpa', 'haaste']);
+
+export const teamSchema = either(
+  z.looseObject({ id: z.string().min(1), profileId: z.string(), name: z.string(), level, archived: z.boolean(), createdAt: ts, ...sync }),
+);
+
+export const fixtureSchema = either(
+  z.looseObject({ plannedSessionId: z.string().min(1), level: level.optional(), ...sync }),
+  'plannedSessionId',
+);
+
 export const metaSchema = z.looseObject({ key: z.string().min(1), value: z.unknown() });
 
 const syncedData = {
@@ -156,6 +167,9 @@ const syncedData = {
   footballDetails: z.array(footballDetailsSchema),
   dayFlags: z.array(dayFlagSchema),
   settings: z.array(settingsSchema).default([]),
+  // Skeema v2; v1-tiedostoissa näitä ei ole.
+  teams: z.array(teamSchema).default([]),
+  fixtures: z.array(fixtureSchema).default([]),
 };
 
 const header = {

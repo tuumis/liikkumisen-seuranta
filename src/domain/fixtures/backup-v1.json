@@ -1,0 +1,113 @@
+{
+ "format": "liikkumisseuranta-backup",
+ "schemaVersion": 1,
+ "appVersion": "0.1.0",
+ "exportedAt": "2026-11-11T10:00:00.000Z",
+ "checksum": "sha256:fc0fe895989d1f2a67a360be3cfe311afc11db5d2f2c0afbaaf54965cf60a6d6",
+ "data": {
+  "profiles": [
+   {
+    "id": "p1",
+    "name": "Testi",
+    "kind": "child",
+    "birthYear": 2017,
+    "birthMonth": 5,
+    "color": "#16a34a",
+    "sortOrder": 0,
+    "archived": false,
+    "createdAt": "2026-11-11T10:00:00.000Z",
+    "updatedAt": "2026-11-11T10:00:00.000Z",
+    "updatedBy": "dev-v1"
+   }
+  ],
+  "activityTypes": [
+   {
+    "id": "t:football_game",
+    "key": "football_game",
+    "name": "Jalkapallo – peli",
+    "icon": "🥅",
+    "category": "hobby",
+    "movementGroup": "ball_games",
+    "shares": {
+     "light": 0.2,
+     "moderate": 0.45,
+     "vigorous": 0.3
+    },
+    "muscleDefault": "ask",
+    "boneDefault": "yes",
+    "sport": "football",
+    "footballKind": "game",
+    "usesPlayedMinutes": true,
+    "builtIn": true,
+    "archived": false,
+    "sortOrder": 1,
+    "updatedAt": "2026-11-11T00:00:00.000Z",
+    "updatedBy": "seed"
+   }
+  ],
+  "estimates": [],
+  "templateItems": [],
+  "plannedSessions": [],
+  "sessions": [
+   {
+    "id": "s1",
+    "profileId": "p1",
+    "activityTypeId": "t:football_game",
+    "date": "2026-11-08",
+    "durationMin": 90,
+    "playedMin": 40,
+    "effort": 0,
+    "intensitySource": "profile",
+    "sharesSnapshot": {
+     "light": 0.2,
+     "moderate": 0.45,
+     "vigorous": 0.3
+    },
+    "minutes": {
+     "light": 8,
+     "moderate": 18,
+     "vigorous": 12
+    },
+    "muscle": false,
+    "bone": true,
+    "createdAt": "2026-11-11T10:00:00.000Z",
+    "updatedAt": "2026-11-11T10:00:00.000Z",
+    "updatedBy": "dev-v1"
+   }
+  ],
+  "footballDetails": [
+   {
+    "sessionId": "s1",
+    "attendance": "full",
+    "team": "P2018 Valkoinen",
+    "opponent": "HJK",
+    "goalsFor": 3,
+    "goalsAgainst": 1,
+    "focusTags": [],
+    "updatedAt": "2026-11-11T10:00:00.000Z",
+    "updatedBy": "dev-v1"
+   }
+  ],
+  "dayFlags": [],
+  "settings": [
+   {
+    "id": "settings",
+    "vigorousDayMin": 10,
+    "primaryView": "logged_plus_estimate",
+    "backupReminderDays": 30,
+    "updatedAt": "2026-11-11T10:00:00.000Z",
+    "updatedBy": "dev-v1"
+   }
+  ],
+  "meta": [
+   {
+    "key": "schemaVersion",
+    "value": 1
+   },
+   {
+    "key": "lastExportAt",
+    "value": "2026-11-11T10:00:00.000Z"
+   }
+  ]
+ }
+}

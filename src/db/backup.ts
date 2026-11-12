@@ -102,10 +102,39 @@ export const toJson = (f: BackupFile | SyncFile) => JSON.stringify(f, null, 1);
 
 // ---------- jäsennys ja tarkistus ----------
 
+export type FileKind = 'backup' | 'sync' | 'other-json' | 'not-json';
+
+/**
+ * Tunnistaa tiedoston tyypin sisällöstä (ei tiedostonimestä): iOS voi nimetä tiedoston uudelleen
+ * tai käyttäjä voi valita synkronointitiedoston varmuuskopion sijaan.
+ */
+export function detectFileKind(text: string): FileKind {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text.replace(/^\uFEFF/, '').trim());
+  } catch {
+    return 'not-json';
+  }
+  const format = (raw as { format?: unknown } | null)?.format;
+  return format === BACKUP_FORMAT ? 'backup' : format === SYNC_FORMAT ? 'sync' : 'other-json';
+}
+
+/** Selkeä virheilmoitus tunnistetun tyypin mukaan. */
+export function wrongFileMessage(kind: FileKind, text: string): string {
+  if (kind === 'not-json') {
+    const start = text.trim().slice(0, 20).toLowerCase();
+    const wrapped = start.startsWith('<') || start.includes('bplist');
+    return wrapped
+      ? 'Tiedosto ei ole JSON-tiedosto: se näyttää tallentuneen verkkosivuna tai iOS-arkistona. Vie varmuuskopio uudelleen ja valitse jakovalikosta "Tallenna Tiedostoihin".'
+      : 'Tiedosto ei ole JSON-tiedosto (esim. CSV-vienti ei käy tuontiin). Valitse liikkumisseuranta-varmuuskopio-….json tai liikkuminen-pc.json.';
+  }
+  return 'Tiedosto on JSON-muodossa, mutta se ei ole liikkumisseurannan varmuuskopio eikä synkronointitiedosto.';
+}
+
 async function parse<T extends 'backup' | 'sync'>(text: string, kind: T): Promise<T extends 'backup' ? BackupFile : SyncFile> {
   let raw: unknown;
   try {
-    raw = JSON.parse(text.replace(/^﻿/, ''));
+    raw = JSON.parse(text.replace(/^\uFEFF/, '').trim());
   } catch {
     throw new ImportError('Tiedosto ei ole kelvollinen JSON-tiedosto.');
   }
@@ -181,6 +210,30 @@ export async function mergeSyncFile(db: AppDB, text: string, thisDevice: DeviceI
   });
 }
 
+/**
+ * Yhdistää varmuuskopion tiedot nykyisiin (ei korvaa): samat säännöt kuin synkronoinnissa.
+ * Käytetään, kun "Päivitä PC:ltä" -toiminnossa valitaan varmuuskopio synkronointitiedoston sijaan.
+ */
+export async function mergeBackupFile(db: AppDB, text: string, thisDevice: DeviceId): Promise<MergeSummary> {
+  const file = await parseBackup(text);
+  const incoming: TableMap = {};
+  for (const t of SYNCED_TABLES) incoming[t] = (file.data as TableMap)[t] ?? [];
+  return db.transaction('rw', [...tables(db), db.meta], async () => {
+    const local = await readSynced(db);
+    const result = mergeSnapshot(local as never, incoming as never, { thisDevice, incomingDevice: 'backup' });
+    for (const [t, rows] of Object.entries(result.writes)) await db.table(t).bulkPut(rows!);
+    return { ...result, incomingDevice: 'backup', incomingRole: 'pc' as const, incomingExportedAt: file.exportedAt };
+  });
+}
+
+/** Yhdistää kumman tahansa tiedostotyypin; muu sisältö hylätään selkeällä viestillä. */
+export async function mergeAnyFile(db: AppDB, text: string, thisDevice: DeviceId): Promise<MergeSummary & { kind: 'backup' | 'sync' }> {
+  const kind = detectFileKind(text);
+  if (kind === 'sync') return { ...(await mergeSyncFile(db, text, thisDevice)), kind };
+  if (kind === 'backup') return { ...(await mergeBackupFile(db, text, thisDevice)), kind };
+  throw new ImportError(wrongFileMessage(kind, text));
+}
+
 /** Odottavat kirjaukset: tämän laitteen muutokset edellisen "Lähetä PC:lle" jälkeen. */
 export async function pendingCount(db: AppDB, thisDevice: DeviceId): Promise<number> {
   const since = (await getMeta<Timestamp>(db, 'lastSentAt')) ?? '';
@@ -219,7 +272,7 @@ export async function purgeProfile(db: AppDB, profileId: UUID, deviceId: DeviceI
     const ts = nowTimestamp();
     const stub = { updatedAt: ts, updatedBy: deviceId, deletedAt: ts };
     let n = 0;
-    const purge = async (table: SyncedTable, ids: string[], key: 'id' | 'sessionId' = 'id') => {
+    const purge = async (table: SyncedTable, ids: string[], key: 'id' | 'sessionId' | 'plannedSessionId' = 'id') => {
       if (!ids.length) return;
       await db.table(table).bulkPut(ids.map((id) => ({ [key]: id, ...stub })));
       n += ids.length;
@@ -231,7 +284,10 @@ export async function purgeProfile(db: AppDB, profileId: UUID, deviceId: DeviceI
     const football = (await db.footballDetails.bulkGet(sessionIds)).filter(Boolean).map((d) => d!.sessionId);
     await purge('footballDetails', football, 'sessionId');
     await purge('sessions', sessionIds);
-    for (const t of ['estimates', 'templateItems', 'plannedSessions', 'dayFlags'] as const) await purge(t, await ownIds(t));
+    const planIds = await ownIds('plannedSessions');
+    const fixtures = (await db.fixtures.bulkGet(planIds)).filter(Boolean).map((f) => f!.plannedSessionId);
+    await purge('fixtures', fixtures, 'plannedSessionId');
+    for (const t of ['estimates', 'templateItems', 'plannedSessions', 'dayFlags', 'teams'] as const) await purge(t, await ownIds(t));
     await purge('profiles', [profileId]);
     await db.meta.delete(`plannedThrough:${profileId}`);
     return n;

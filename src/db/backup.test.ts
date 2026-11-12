@@ -93,7 +93,7 @@ describe('varmuuskopio', () => {
     await seedData(a.repo);
     const before = await dump(a.db);
     const file = await buildBackup(a.db);
-    expect(file).toMatchObject({ format: 'liikkumisseuranta-backup', schemaVersion: 1, appVersion: '0.1.0' });
+    expect(file).toMatchObject({ format: 'liikkumisseuranta-backup', schemaVersion: 2, appVersion: '0.1.0' });
     expect(file.checksum).toMatch(/^sha256:[0-9a-f]{64}$/);
 
     await clearAll(a.db);
@@ -156,7 +156,7 @@ describe('varmuuskopio', () => {
     const a = await device('bad');
     await expect(importBackup(a.db, '{', () => {})).rejects.toThrow(/JSON/);
     await expect(importBackup(a.db, '{"format":"muu","schemaVersion":1}', () => {})).rejects.toThrow(/varmuuskopio/);
-    const newer = await resign(await buildBackup(a.db), (f) => (f.schemaVersion = 2));
+    const newer = await resign(await buildBackup(a.db), (f) => (f.schemaVersion = 3));
     await expect(importBackup(a.db, newer, () => {})).rejects.toThrow('Päivitä sovellus tällä laitteella ensin');
   });
 
@@ -199,7 +199,7 @@ describe('synkronointi PC ↔ puhelin', () => {
     const { pc, phone } = await pair();
     const r = await send(pc, 'pc', phone);
     expect(r).toMatchObject({ added: 0, updated: 0, deleted: 0 });
-    expect(await phone.db.activityTypes.count()).toBe(17);
+    expect(await phone.db.activityTypes.count()).toBe(18);
   });
 
   it('F1: molemmat ajavat ensurePlanned offline-tilassa → yhdistämisen jälkeen 3 suunnitelmaa, ei 6', async () => {
@@ -272,7 +272,7 @@ describe('synkronointi PC ↔ puhelin', () => {
     const { pc, phone } = await pair();
     await seedData(pc.repo);
     const f = await buildSyncFile(pc.db, pc.id, 'pc');
-    f.schemaVersion = 2;
+    f.schemaVersion = 3;
     f.checksum = await dataChecksum(f.data);
     const before = await dump(phone.db);
     await expect(mergeSyncFile(phone.db, toJson(f), phone.id)).rejects.toThrow('Päivitä sovellus tällä laitteella ensin');
@@ -338,3 +338,47 @@ describe('profiilin poisto', () => {
 });
 
 beforeEach(() => {});
+
+describe('tiedostotyypin tunnistus (iOS-tuonti)', () => {
+  it('tunnistaa varmuuskopion, synkronointitiedoston, BOMin ja väärät tiedostot', async () => {
+    const { detectFileKind, wrongFileMessage } = await import('./backup');
+    const a = await device('kind');
+    const backupText = toJson(await buildBackup(a.db));
+    const syncText = toJson(await buildSyncFile(a.db, a.id, 'pc'));
+    expect(detectFileKind(backupText)).toBe('backup');
+    expect(detectFileKind('﻿' + syncText + '\n')).toBe('sync');
+    expect(detectFileKind('Profiili;Päivä\n')).toBe('not-json');
+    expect(detectFileKind('{"a":1}')).toBe('other-json');
+    expect(wrongFileMessage('not-json', '<!DOCTYPE html><html>')).toMatch(/verkkosivuna/);
+  });
+
+  it('"Päivitä PC:ltä" hyväksyy myös varmuuskopion ja yhdistää sen', async () => {
+    const { mergeAnyFile } = await import('./backup');
+    const pc = await device('any-pc');
+    const phone = await device('any-phone');
+    await seedData(pc.repo);
+    await phone.repo.createSession(sessionInput({ date: '2026-11-01', note: 'puhelimen oma' }));
+    const r = await mergeAnyFile(phone.db, toJson(await buildBackup(pc.db)), phone.id);
+    expect(r.kind).toBe('backup');
+    expect(r.added).toBeGreaterThan(0);
+    expect(await phone.db.sessions.count()).toBe(2); // oma kerta säilyi (yhdistys, ei korvaus)
+    const s = await mergeAnyFile(phone.db, toJson(await buildSyncFile(pc.db, pc.id, 'pc')), phone.id);
+    expect(s).toMatchObject({ kind: 'sync', added: 0, updated: 0, deleted: 0 });
+    await expect(mergeAnyFile(phone.db, 'Profiili;Päivä', phone.id)).rejects.toThrow(/JSON/);
+  });
+});
+
+describe('B7: skeemaversioiden fixturet ja migraatioketju', () => {
+  it('v1-varmuuskopio (fixture) tuodaan nykyiseen versioon; uudet taulut tyhjinä', async () => {
+    const text = (await import('../domain/fixtures/backup-v1.json?raw')).default;
+    const a = await device('b7');
+    await importBackup(a.db, text, () => {});
+    expect(await a.db.sessions.get('s1')).toMatchObject({ playedMin: 40, minutes: { light: 8, moderate: 18, vigorous: 12 } });
+    expect(await a.db.footballDetails.get('s1')).toMatchObject({ opponent: 'HJK', goalsFor: 3 });
+    expect(await a.db.teams.count()).toBe(0);
+    expect(await a.db.fixtures.count()).toBe(0);
+    expect(await a.repo.getMeta('schemaVersion')).toBe(2);
+    // Vanhan asetusrivin puuttuvat kentät saavat oletukset.
+    expect((await a.repo.getSettings()).vigorousDayRule).toBe('age');
+  });
+});

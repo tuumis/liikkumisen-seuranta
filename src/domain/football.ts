@@ -7,7 +7,9 @@ import { seasonPeriod, minDate } from './dates';
 import type {
   ActivityType,
   AdherenceSummary,
+  Effort,
   FocusTag,
+  GameLevel,
   FootballDetails,
   FootballKind,
   ISODate,
@@ -18,6 +20,13 @@ import type {
 } from './types';
 
 export type GameOutcome = 'W' | 'D' | 'L';
+
+/**
+ * Taso ponnisteluna pelin tehoprofiiliin (käyttäjän vahvistama): Elite = kovempi,
+ * Kilpa = tavallinen, Haaste = kevyempi. Tehoprofiili itse säilyy (peli 20/45/30 %).
+ */
+export const LEVEL_EFFORT: Readonly<Record<GameLevel, Effort>> = Object.freeze({ elite: 1, kilpa: 0, haaste: -1 });
+export const LEVEL_LABEL: Readonly<Record<GameLevel, string>> = Object.freeze({ elite: 'Elite', kilpa: 'Kilpa', haaste: 'Haaste' });
 
 /** Yksi pelilistan rivi (SPEC 8 "Pelilista"). */
 export interface GameRow {
@@ -37,6 +46,8 @@ export interface GameRow {
   playedMin?: number;
   /** Montako peliä rivi edustaa: 1, tai turnaus ilman pelirivejä = gamesCount. */
   games: number;
+  level?: GameLevel;
+  teamId?: UUID;
 }
 
 export interface GameSummary {
@@ -87,8 +98,10 @@ export function gameRows(sessions: Session[], details: Map<UUID, FootballDetails
     const d = details.get(s.id);
     const fd = d && !d.deletedAt ? d : undefined;
     const team = cleanName(fd?.team);
+    const extra = { ...(fd?.level ? { level: fd.level } : {}), ...(fd?.teamId ? { teamId: fd.teamId } : {}) };
     if (kind === 'game') {
       rows.push({
+        ...extra,
         sessionId: s.id,
         date: s.date,
         kind,
@@ -103,6 +116,7 @@ export function gameRows(sessions: Session[], details: Map<UUID, FootballDetails
     } else if (fd?.games && fd.games.length > 0) {
       fd.games.forEach((g, i) =>
         rows.push({
+          ...extra,
           sessionId: s.id,
           date: s.date,
           kind,
@@ -119,6 +133,7 @@ export function gameRows(sessions: Session[], details: Map<UUID, FootballDetails
       );
     } else {
       rows.push({
+        ...extra,
         sessionId: s.id,
         date: s.date,
         kind,

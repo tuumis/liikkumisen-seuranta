@@ -160,8 +160,8 @@ describe('tunnisteet ja siemendata', () => {
     expect(newId()).toMatch(/^[0-9a-f-]{36}$/);
   });
 
-  it('17 sisäänrakennettua lajia, pysyvät avaimet, kelvolliset profiilit', () => {
-    expect(BUILT_IN_ACTIVITY_TYPES).toHaveLength(17);
+  it('18 sisäänrakennettua lajia, pysyvät avaimet, kelvolliset profiilit', () => {
+    expect(BUILT_IN_ACTIVITY_TYPES).toHaveLength(18);
     const ids = BUILT_IN_ACTIVITY_TYPES.map((t) => t.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const t of BUILT_IN_ACTIVITY_TYPES) {
@@ -173,7 +173,10 @@ describe('tunnisteet ja siemendata', () => {
       ['training', false],
       ['game', true],
       ['tournament', true],
+      ['training', false], // omatoiminen
     ]);
+    const self = BUILT_IN_ACTIVITY_TYPES.find((t) => t.key === 'football_self')!;
+    expect(self).toMatchObject({ id: 't:football_self', category: 'self_directed', sortOrder: 2.5, shares: { light: 0.5, moderate: 0.35, vigorous: 0.05 } });
   });
 
   it('suositukset ovat jäädytettyjä', () => {
@@ -182,9 +185,10 @@ describe('tunnisteet ja siemendata', () => {
   });
 
   it('migraatioketju v1 → nykyinen; uudempi hylätään', () => {
-    expect(CURRENT_SCHEMA_VERSION).toBe(1);
+    expect(CURRENT_SCHEMA_VERSION).toBe(2);
     const data = { profiles: [] };
-    expect(migrateToCurrent(data, 1)).toBe(data);
-    expect(() => migrateToCurrent(data, 2)).toThrow('Päivitä sovellus tällä laitteella ensin');
+    expect(migrateToCurrent(data, 2)).toBe(data);
+    expect(migrateToCurrent(data, 1)).toEqual({ profiles: [], teams: [], fixtures: [] });
+    expect(() => migrateToCurrent(data, 3)).toThrow('Päivitä sovellus tällä laitteella ensin');
   });
 });

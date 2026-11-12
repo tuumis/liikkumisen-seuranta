@@ -12,12 +12,14 @@ import type {
   ActivityType,
   DayFlag,
   Estimate,
+  Fixture,
   FootballDetails,
   MetaRow,
   PlannedSession,
   Profile,
   Session,
   SettingsRow,
+  Team,
   TemplateItem,
 } from '../domain/types';
 
@@ -33,6 +35,8 @@ export class AppDB extends Dexie {
   footballDetails!: EntityTable<FootballDetails, 'sessionId'>;
   dayFlags!: EntityTable<DayFlag, 'id'>;
   settings!: EntityTable<SettingsRow, 'id'>;
+  teams!: EntityTable<Team, 'id'>;
+  fixtures!: EntityTable<Fixture, 'plannedSessionId'>;
   meta!: EntityTable<MetaRow, 'key'>;
 
   constructor(name = DB_NAME) {
@@ -49,6 +53,16 @@ export class AppDB extends Dexie {
       settings: 'id, updatedAt',
       meta: 'key',
     });
+    // Versio 2: joukkueet ja pelikalenteri. Uudet taulut alkavat tyhjinä, joten upgrade ei muuta
+    // olemassa olevaa dataa (migrateV1ToV2 tekee saman varmuuskopion tuonnissa).
+    this.version(2)
+      .stores({
+        teams: 'id, profileId, updatedAt',
+        fixtures: 'plannedSessionId, updatedAt',
+      })
+      .upgrade(async (tx) => {
+        await tx.table('meta').put({ key: 'schemaVersion', value: 2 });
+      });
   }
 }
 

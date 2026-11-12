@@ -6,14 +6,16 @@ import { today } from './ui/today';
 import { WeekView } from './features/week/WeekView';
 import { SettingsView } from './features/settings/SettingsView';
 import { Onboarding } from './features/onboarding/Onboarding';
+import { GamesTab } from './features/games/GamesTab';
 
 // Analyysi (Recharts) ladataan omana osanaan; service worker esivälimuistittaa senkin.
 const AnalysisView = lazy(() => import('./features/analysis/AnalysisView').then((m) => ({ default: m.AnalysisView })));
 
-type Tab = 'week' | 'analysis' | 'settings';
+type Tab = 'week' | 'games' | 'analysis' | 'settings';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'week', label: 'Viikko', icon: '📅' },
+  { id: 'games', label: 'Pelit', icon: '⚽' },
   { id: 'analysis', label: 'Analyysi', icon: '📊' },
   { id: 'settings', label: 'Asetukset', icon: '⚙️' },
 ];
@@ -103,7 +105,7 @@ export default function App() {
     );
   }
 
-  const TAB_TITLE: Record<Tab, string> = { week: 'Viikko', analysis: 'Analyysi', settings: 'Asetukset' };
+  const TAB_TITLE: Record<Tab, string> = { week: 'Viikko', games: 'Pelit ja turnaukset', analysis: 'Analyysi', settings: 'Asetukset' };
 
   return (
     <div className="min-h-dvh lg:pl-64">
@@ -197,6 +199,8 @@ export default function App() {
           <p className="text-sm text-slate-600">Ladataan…</p>
         ) : tab === 'week' ? (
           <WeekView profile={selected} onOpenSettings={() => setTab('settings')} />
+        ) : tab === 'games' ? (
+          <GamesTab profile={selected} />
         ) : tab === 'analysis' ? (
           <Suspense fallback={<p className="text-sm text-slate-600">Ladataan…</p>}>
             <AnalysisView profile={selected} />
@@ -207,7 +211,7 @@ export default function App() {
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] lg:hidden">
-        <div className="mx-auto grid max-w-xl grid-cols-3">
+        <div className="mx-auto grid max-w-xl grid-cols-4">
           {TABS.map((t) => (
             <button
               key={t.id}

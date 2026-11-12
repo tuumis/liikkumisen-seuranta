@@ -24,7 +24,8 @@ export function downloadText(filename: string, text: string, mime = 'application
 }
 
 /** Avaa tiedostonvalitsimen; null, jos käyttäjä peruu. */
-export function pickTextFile(accept = '.json,application/json'): Promise<{ name: string; text: string } | null> {
+// iOS voi jättää .json-tiedostot valitsematta tarkalla accept-arvolla, joten hyväksytään myös teksti.
+export function pickTextFile(accept = '.json,application/json,text/json,text/plain'): Promise<{ name: string; text: string } | null> {
   return new Promise((resolve) => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -42,8 +43,8 @@ export function pickTextFile(accept = '.json,application/json'): Promise<{ name:
  * Jako Web Share API:lla ("Tallenna Tiedostoihin"); jos ei tuettu, tiedosto ladataan.
  * @returns 'shared' | 'downloaded' | 'cancelled'
  */
-export async function shareOrDownload(filename: string, text: string): Promise<'shared' | 'downloaded' | 'cancelled'> {
-  const file = new File([text], filename, { type: 'application/json' });
+export async function shareOrDownload(filename: string, text: string, mime = 'application/json'): Promise<'shared' | 'downloaded' | 'cancelled'> {
+  const file = new File([text], filename, { type: mime });
   if (navigator.canShare?.({ files: [file] }) && navigator.share) {
     try {
       await navigator.share({ files: [file], title: filename });
@@ -53,7 +54,17 @@ export async function shareOrDownload(filename: string, text: string): Promise<'
       // Muu virhe → varalla lataus.
     }
   }
-  downloadText(filename, text);
+  downloadText(filename, text, mime);
+  return 'downloaded';
+}
+
+/** Kosketuslaite (puhelin): jako "Tallenna Tiedostoihin" toimii kotinäytön sovelluksessa latausta luotettavammin. */
+const isTouchDevice = () => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
+
+/** Tiedoston tallennus: puhelimella jakovalikko, PC:llä lataus. */
+export async function saveFile(filename: string, text: string, mime = 'application/json'): Promise<'shared' | 'downloaded' | 'cancelled'> {
+  if (isTouchDevice()) return shareOrDownload(filename, text, mime);
+  downloadText(filename, text, mime);
   return 'downloaded';
 }
 

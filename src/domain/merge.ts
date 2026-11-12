@@ -16,7 +16,7 @@ export function pickWinner<T extends SyncFields>(local: T | undefined, incoming:
 
 /** Taulun pääavain. */
 export const keyOf = (table: SyncedTable, row: Record<string, unknown>): string =>
-  String(table === 'footballDetails' ? row.sessionId : row.id);
+  String(table === 'footballDetails' ? row.sessionId : table === 'fixtures' ? row.plannedSessionId : row.id);
 
 export interface Conflict {
   table: SyncedTable;

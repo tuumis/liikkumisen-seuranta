@@ -4,23 +4,26 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { sessionsCsv } from '../../domain/csv';
 import type { ActivityType, Profile } from '../../domain/types';
-import { buildBackup, clearAll, importBackup, purgeProfile, toJson } from '../../db/backup';
+import { buildBackup, clearAll, detectFileKind, importBackup, mergeAnyFile, purgeProfile, toJson, wrongFileMessage } from '../../db/backup';
+import { summaryText } from '../sync/useSync';
 import { repo } from '../../db/repositories';
 import { db } from '../../db/schema';
 import { Button, Card, inputClass } from '../../ui/components';
 import { formatDate } from '../../ui/format';
 import { useToast } from '../../ui/Toast';
 import { localDateOf } from '../../domain/dates';
-import { downloadText, pickFolder, pickTextFile, supportsFolder } from '../sync/fileIO';
+import { pickFolder, pickTextFile, saveFile, supportsFolder } from '../sync/fileIO';
 import { ago } from '../sync/SyncBar';
 import { useSyncState } from '../sync/useSync';
 
 const stamp = () => localDateOf(new Date());
 
-async function exportBackup() {
+async function exportBackup(): Promise<string> {
   const file = await buildBackup(db);
-  downloadText(`liikkumisseuranta-varmuuskopio-${stamp()}.json`, toJson(file));
+  const r = await saveFile(`liikkumisseuranta-varmuuskopio-${stamp()}.json`, toJson(file));
+  if (r === 'cancelled') return 'Vienti peruttiin';
   await repo.setMeta('lastExportAt', file.exportedAt);
+  return r === 'shared' ? 'Varmuuskopio jaettu – tallenna se Tiedostoihin tai pilvikansioon' : 'Varmuuskopio ladattu';
 }
 
 export function BackupSection() {
@@ -34,8 +37,17 @@ export function BackupSection() {
     if (!f) return;
     setBusy(true);
     try {
-      // Ennen tuontia ladataan automaattisesti varmuuskopio nykytilasta (SPEC 10, C4).
-      await importBackup(db, f.text, (current) => downloadText(`liikkumisseuranta-ennen-tuontia-${stamp()}.json`, toJson(current)));
+      const kind = detectFileKind(f.text);
+      if (kind === 'sync') {
+        // Synkronointitiedosto (esim. liikkuminen-pc.json): yhdistetään, ei korvata.
+        const s = await mergeAnyFile(db, f.text, await repo.deviceId());
+        toast(`Tiedosto oli synkronointitiedosto, joten tiedot yhdistettiin. ${summaryText(s)}`);
+        setConfirmImport(false);
+        return;
+      }
+      if (kind !== 'backup') throw new Error(wrongFileMessage(kind, f.text));
+      // Ennen tuontia tallennetaan automaattisesti varmuuskopio nykytilasta (SPEC 10, C4).
+      await importBackup(db, f.text, (current) => void saveFile(`liikkumisseuranta-ennen-tuontia-${stamp()}.json`, toJson(current)));
       toast('Varmuuskopio tuotu. Ennen tuontia tallennettiin varmuuskopio nykytilasta.');
       setConfirmImport(false);
     } catch (e) {
@@ -54,7 +66,7 @@ export function BackupSection() {
       types: new Map<string, ActivityType>(typesList.map((t) => [t.id, t])),
       details: await repo.footballDetailsFor(live.map((s) => s.id)),
     });
-    downloadText(`liikkumisseuranta-kerrat-${stamp()}.csv`, csv, 'text/csv');
+    await saveFile(`liikkumisseuranta-kerrat-${stamp()}.csv`, csv, 'text/csv');
   }
 
   return (
@@ -64,7 +76,7 @@ export function BackupSection() {
           Tiedosto sisältää lapsen tietoja. Säilytä se turvallisesti, esim. salatussa pilvikansiossa, äläkä jaa sitä muille.
         </p>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => exportBackup().then(() => toast('Varmuuskopio ladattu'))}>Vie varmuuskopio (JSON)</Button>
+          <Button onClick={() => exportBackup().then(toast, (e) => toast(e instanceof Error ? e.message : String(e)))}>Vie varmuuskopio (JSON)</Button>
           <Button variant="secondary" onClick={exportCsv}>
             Vie kerrat (CSV)
           </Button>

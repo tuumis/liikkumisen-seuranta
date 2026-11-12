@@ -5,7 +5,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { defaultPlanningThrough } from '../../domain/planning';
 import { SYNC_FILE_NAME } from '../../domain/version';
 import type { Timestamp } from '../../domain/types';
-import { buildSyncFile, markSent, mergeSyncFile, pendingCount, toJson, type MergeSummary } from '../../db/backup';
+import { buildSyncFile, markSent, mergeAnyFile, mergeSyncFile, pendingCount, toJson, type MergeSummary } from '../../db/backup';
 import { repo } from '../../db/repositories';
 import { db } from '../../db/schema';
 import { today } from '../../ui/today';
@@ -74,7 +74,8 @@ export function useSyncActions() {
   const importFile = useCallback(async (): Promise<SyncOutcome | null> => {
     const f = await pickTextFile();
     if (!f) return null;
-    const summary = await mergeSyncFile(db, f.text, await repo.deviceId());
+    // Hyväksyy sekä synkronointitiedoston että varmuuskopion (tunnistus sisällöstä).
+    const summary = await mergeAnyFile(db, f.text, await repo.deviceId());
     await ensurePlannedAll();
     await repo.setMeta('lastSyncRunAt', new Date().toISOString());
     return { summary, message: summaryText(summary) };

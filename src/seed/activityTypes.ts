@@ -48,7 +48,13 @@ const ROWS: Row[] = [
   ['running', 'Juoksu (aikuinen)', '🏃', 'self_directed', 'endurance', 0, 0.4, 0.6, 'no', 'no'],
   ['gym', 'Kuntosali (aikuinen)', '🏋️', 'self_directed', 'strength', 0.5, 0.25, 0, 'yes', 'no'],
   ['other', 'Muu', '✳️', 'other', 'other', 0.5, 0.2, 0, 'ask', 'ask'],
+  // Lisätty 12.11.2026 (käyttäjän pyyntö): omatoiminen pallottelu, pääosin kevyttä ja reipasta.
+  // Lasketaan jalkapallon harjoitusmäärään, mutta kategoria on omaehtoinen (ei ohjattu).
+  ['football_self', 'Jalkapallo – omatoiminen', '🥾', 'self_directed', 'ball_games', 0.5, 0.35, 0.05, 'ask', 'yes', 'training'],
 ];
+
+/** Myöhemmin lisättyjen lajien järjestys, jotta aiemmat lajit säilyttävät sortOrder-arvonsa. */
+const SORT_ORDER: Record<string, number> = { football_self: 2.5 };
 
 /**
  * Perusarvion oletustehoprofiili kategorian tyypillisestä lajista (sovelluksen
@@ -86,7 +92,7 @@ export const BUILT_IN_ACTIVITY_TYPES: readonly ActivityType[] = Object.freeze(
       usesPlayedMinutes: footballKind === 'game' || footballKind === 'tournament',
       builtIn: true,
       archived: false,
-      sortOrder: i,
+      sortOrder: SORT_ORDER[key] ?? i,
       updatedAt: SEED_TIMESTAMP,
       updatedBy: SEED_DEVICE,
     };

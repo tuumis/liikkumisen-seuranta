@@ -16,8 +16,10 @@ import type {
   DeviceId,
   Effort,
   Estimate,
+  Fixture,
   FocusTag,
   FootballDetails,
+  GameLevel,
   GameResult,
   HHmm,
   IntensityMinutes,
@@ -31,10 +33,13 @@ import type {
   SettingsRow,
   SkipReason,
   SyncFields,
+  Team,
   TemplateItem,
+  Timestamp,
   UUID,
   Weekday,
 } from '../domain/types';
+import { LEVEL_EFFORT } from '../domain/football';
 import { BUILT_IN_ACTIVITY_TYPES } from '../seed/activityTypes';
 import { nowTimestamp } from './clock';
 import { createPlanner } from './ensurePlanned';
@@ -81,6 +86,29 @@ export interface FootballDetailsInput {
   games?: GameResult[];
   /** Pelin tai turnauksen pelatut minuutit (laskentapohja); turnauksessa pelirivien summa voittaa. */
   playedMin?: number;
+  /** Oma joukkue (linkki) ja taso; taso säätää ponnistelun (Elite kovempi, Haaste kevyempi). */
+  teamId?: UUID;
+  level?: GameLevel;
+}
+
+/** Tulevan pelin tai turnauksen tiedot (pelikalenteri). */
+export interface FixtureInput {
+  kind: 'game' | 'tournament';
+  date: ISODate;
+  startTime?: HHmm;
+  durationMin: number;
+  teamId?: UUID;
+  opponent?: string;
+  eventName?: string;
+  location?: string;
+  level?: GameLevel;
+  gamesCount?: number;
+  note?: string;
+}
+
+export interface FixtureEntry {
+  plan: PlannedSession;
+  fixture?: Fixture;
 }
 
 /** Perusarvion tallennettavat tiedot. */
@@ -506,10 +534,14 @@ export function createRepositories(db: AppDB = defaultDb) {
     today: ISODate,
     opts: { durationMin?: number } = {},
   ): Promise<{ session: Session; created: boolean }> {
-    return db.transaction('rw', [db.sessions, db.plannedSessions, db.activityTypes, db.meta], async () => {
+    return db.transaction('rw', [db.sessions, db.plannedSessions, db.activityTypes, db.fixtures, db.teams, db.footballDetails, db.meta], async () => {
       const plan = await db.plannedSessions.get(planId);
       if (!plan || plan.deletedAt) throw new Error('Suunnitelmaa ei löydy');
       if (plan.date > today) throw new Error('Tulevaa kertaa ei voi kuitata tehdyksi');
+      const fx = await db.fixtures.get(planId);
+      const fixture = fx && !fx.deletedAt ? fx : undefined;
+      const fixtureTeam = fixture?.teamId ? await db.teams.get(fixture.teamId) : undefined;
+      const fixtureLevel = fixture?.level ?? (fixtureTeam && !fixtureTeam.deletedAt ? fixtureTeam.level : undefined);
 
       const linked = live(await db.sessions.where('plannedSessionId').equals(planId).toArray())[0];
       if (linked) {
@@ -529,7 +561,7 @@ export function createRepositories(db: AppDB = defaultDb) {
         date: plan.date,
         startTime: plan.startTime,
         durationMin: opts.durationMin ?? plan.durationMin,
-        effort: 0,
+        effort: fixtureLevel ? LEVEL_EFFORT[fixtureLevel] : 0,
         muscle: type.muscleDefault === 'yes',
         bone: type.boneDefault === 'yes',
       };
@@ -541,7 +573,7 @@ export function createRepositories(db: AppDB = defaultDb) {
         activityTypeId: type.id,
         date: plan.date,
         durationMin: input.durationMin,
-        effort: 0,
+        effort: input.effort,
         muscle: input.muscle,
         bone: input.bone,
         ...sessionIntensity(type, input),
@@ -552,6 +584,21 @@ export function createRepositories(db: AppDB = defaultDb) {
       };
       if (plan.startTime) session.startTime = plan.startTime;
       await db.sessions.put(session); // put herättää poistomerkityn henkiin
+      if (fixture) {
+        const existingFd = await db.footballDetails.get(sid);
+        if (!existingFd || existingFd.deletedAt) {
+          const fd: FootballDetails = { sessionId: sid, attendance: 'full', focusTags: [], updatedAt: ts, updatedBy: by };
+          if (fixtureTeam && !fixtureTeam.deletedAt) {
+            fd.teamId = fixtureTeam.id;
+            fd.team = fixtureTeam.name;
+          }
+          if (fixtureLevel) fd.level = fixtureLevel;
+          if (fixture.opponent) fd.opponent = fixture.opponent;
+          if (fixture.eventName) fd.eventName = fixture.eventName;
+          if (fixture.gamesCount) fd.gamesCount = fixture.gamesCount;
+          await db.footballDetails.put(fd);
+        }
+      }
       const donePlan: PlannedSession = { ...plan, status: 'done', sessionId: sid, updatedAt: ts, updatedBy: by };
       delete donePlan.skipReason;
       await db.plannedSessions.put(donePlan);
@@ -562,7 +609,7 @@ export function createRepositories(db: AppDB = defaultDb) {
   /** "Merkitse loput tehdyiksi": kuittaa kaikki; palauttaa luodut kerrat kumoamista varten. */
   async function confirmMany(planIds: UUID[], today: ISODate): Promise<UUID[]> {
     const created: UUID[] = [];
-    await db.transaction('rw', [db.sessions, db.plannedSessions, db.activityTypes, db.meta], async () => {
+    await db.transaction('rw', [db.sessions, db.plannedSessions, db.activityTypes, db.fixtures, db.teams, db.footballDetails, db.meta], async () => {
       for (const id of planIds) {
         const r = await confirmPlanned(id, today);
         if (r.created) created.push(r.session.id);
@@ -616,7 +663,7 @@ export function createRepositories(db: AppDB = defaultDb) {
    * minuutit lasketaan uudelleen. Pelissä pelatut minuutit tallentuvat kertaan.
    */
   async function saveFootballDetails(sessionId: UUID, input: FootballDetailsInput): Promise<FootballDetails> {
-    return db.transaction('rw', [db.footballDetails, db.sessions, db.activityTypes, db.meta], async () => {
+    return db.transaction('rw', [db.footballDetails, db.sessions, db.activityTypes, db.teams, db.meta], async () => {
       const session = await db.sessions.get(sessionId);
       if (!session || session.deletedAt) throw new Error('Kertaa ei löydy');
       const type = await getActivityType(session.activityTypeId);
@@ -629,6 +676,14 @@ export function createRepositories(db: AppDB = defaultDb) {
         if (v !== undefined) d[k] = v;
       };
       set('team', clean(input.team));
+      if (input.teamId) {
+        const team = await db.teams.get(input.teamId);
+        if (team && !team.deletedAt) {
+          d.teamId = team.id;
+          d.team = team.name;
+        }
+      }
+      if (type.footballKind !== 'training') set('level', input.level);
       set('parentRating', input.parentRating);
       set('enjoyment', input.enjoyment);
       set('ratingNote', clean(input.ratingNote));
@@ -659,14 +714,17 @@ export function createRepositories(db: AppDB = defaultDb) {
       }
       await db.footballDetails.put(d); // put tyhjentää mahdollisen poistomerkinnän
 
-      if (type.usesPlayedMinutes && playedMin !== session.playedMin) {
+      // Taso säätää ponnistelun profiililla lasketuille kerroille (ei käsin syötetyille eikä esiasetuksille).
+      const levelEffort =
+        d.level && session.intensitySource === 'profile' && !session.intensityPreset ? LEVEL_EFFORT[d.level] : session.effort;
+      if ((type.usesPlayedMinutes && playedMin !== session.playedMin) || levelEffort !== session.effort) {
         await updateSession(sessionId, {
           activityTypeId: session.activityTypeId,
           date: session.date,
           startTime: session.startTime,
           durationMin: session.durationMin,
-          playedMin,
-          effort: session.effort,
+          playedMin: type.usesPlayedMinutes ? playedMin : session.playedMin,
+          effort: levelEffort,
           manual: session.intensitySource === 'manual' ? session.minutes : undefined,
           muscle: session.muscle,
           bone: session.bone,
@@ -697,6 +755,111 @@ export function createRepositories(db: AppDB = defaultDb) {
       for (const g of d.games ?? []) add(acc.opponents, g.opponent);
     }
     return { teams: [...acc.teams.values()], opponents: [...acc.opponents.values()], events: [...acc.events.values()] };
+  }
+
+  // ---------- joukkueet (skeema v2) ----------
+
+  async function listTeams(profileId: UUID, opts: { includeArchived?: boolean } = {}): Promise<Team[]> {
+    const rows = live(await db.teams.where('profileId').equals(profileId).toArray());
+    return (opts.includeArchived ? rows : rows.filter((t) => !t.archived)).sort((a, b) => a.name.localeCompare(b.name, 'fi'));
+  }
+
+  async function saveTeam(profileId: UUID, input: { name: string; level: GameLevel }, id?: UUID): Promise<Team> {
+    const name = input.name.trim().replace(/\s+/g, ' ');
+    if (!name) throw new Error('Anna joukkueen nimi');
+    if (id) {
+      const current = await db.teams.get(id);
+      if (!current || current.deletedAt) throw new Error('Joukkuetta ei löydy');
+      const next = await stamp({ ...current, name, level: input.level });
+      await db.teams.put(next);
+      return next;
+    }
+    const ts = nowTimestamp();
+    const team: Team = { id: newId(), profileId, name, level: input.level, archived: false, createdAt: ts, updatedAt: ts, updatedBy: await deviceId() };
+    await db.teams.add(team);
+    return team;
+  }
+
+  async function setTeamArchived(id: UUID, archived: boolean): Promise<void> {
+    const current = await db.teams.get(id);
+    if (current) await db.teams.put(await stamp({ ...current, archived }));
+  }
+
+  // ---------- pelikalenteri: tulevat pelit ja turnaukset (skeema v2) ----------
+
+  const FIXTURE_TYPE = { game: 't:football_game', tournament: 't:football_tournament' } as const;
+
+  /** Pelien ja turnausten suunnitelmat lisätietoineen aikaväliltä (oletus: kaikki). */
+  async function listFixtures(profileId: UUID, from: ISODate = '0000-01-01', to: ISODate = '9999-12-31'): Promise<FixtureEntry[]> {
+    const typeIds = new Set<string>(Object.values(FIXTURE_TYPE));
+    const plans = (await plansInRange(profileId, from, to)).filter((p) => typeIds.has(p.activityTypeId));
+    const fixtures = await db.fixtures.bulkGet(plans.map((p) => p.id));
+    return plans.map((plan, i) => {
+      const f = fixtures[i];
+      return f && !f.deletedAt ? { plan, fixture: f } : { plan };
+    });
+  }
+
+  function fixtureRow(planId: UUID, input: FixtureInput, by: string, ts: Timestamp): Fixture {
+    const f: Fixture = { plannedSessionId: planId, updatedAt: ts, updatedBy: by };
+    const clean = (s?: string) => s?.trim().replace(/\s+/g, ' ') || undefined;
+    if (input.teamId) f.teamId = input.teamId;
+    if (clean(input.opponent)) f.opponent = clean(input.opponent);
+    if (clean(input.eventName)) f.eventName = clean(input.eventName);
+    if (clean(input.location)) f.location = clean(input.location);
+    if (input.level) f.level = input.level;
+    if (input.gamesCount) f.gamesCount = input.gamesCount;
+    if (clean(input.note)) f.note = clean(input.note);
+    return f;
+  }
+
+  /** Uusi peli tai turnaus kalenteriin: käsin lisätty suunnitelma + lisätiedot. */
+  async function createFixture(profileId: UUID, input: FixtureInput): Promise<FixtureEntry> {
+    return db.transaction('rw', [db.plannedSessions, db.fixtures, db.meta], async () => {
+      const ts = nowTimestamp();
+      const by = await deviceId();
+      const plan: PlannedSession = {
+        id: newId(),
+        profileId,
+        activityTypeId: FIXTURE_TYPE[input.kind],
+        date: input.date,
+        durationMin: input.durationMin,
+        status: 'open',
+        createdAt: ts,
+        updatedAt: ts,
+        updatedBy: by,
+      };
+      if (input.startTime) plan.startTime = input.startTime;
+      const fixture = fixtureRow(plan.id, input, by, ts);
+      await db.plannedSessions.add(plan);
+      await db.fixtures.put(fixture);
+      return { plan, fixture };
+    });
+  }
+
+  /** Muokkaus (vain kuittaamaton): päivä, aika, kesto ja lisätiedot. */
+  async function updateFixture(planId: UUID, input: FixtureInput): Promise<void> {
+    await db.transaction('rw', [db.plannedSessions, db.fixtures, db.meta], async () => {
+      const plan = await db.plannedSessions.get(planId);
+      if (!plan || plan.deletedAt) throw new Error('Peliä ei löydy');
+      if (plan.status === 'done') throw new Error('Pelattu peli: muokkaa tulosta pelin kerrasta');
+      const next = await stamp({ ...plan, activityTypeId: FIXTURE_TYPE[input.kind], date: input.date, durationMin: input.durationMin });
+      delete next.startTime;
+      if (input.startTime) next.startTime = input.startTime;
+      await db.plannedSessions.put(next);
+      await db.fixtures.put(fixtureRow(planId, input, next.updatedBy, next.updatedAt));
+    });
+  }
+
+  /** Poisto kalenterista (poistomerkintä); pelattua peliä ei poisteta täältä. */
+  async function deleteFixture(planId: UUID): Promise<void> {
+    await db.transaction('rw', [db.plannedSessions, db.fixtures, db.meta], async () => {
+      const plan = await db.plannedSessions.get(planId);
+      if (!plan || plan.deletedAt) return;
+      if (plan.status === 'done') throw new Error('Pelattu peli: poista pelin kerta Viikko-näkymästä');
+      await softDelete(db.plannedSessions, planId);
+      if (await db.fixtures.get(planId)) await softDelete(db.fixtures, planId);
+    });
   }
 
   // ---------- perusarviot (kerros 1) ----------
@@ -849,6 +1012,13 @@ export function createRepositories(db: AppDB = defaultDb) {
     undoConfirm,
     skipPlanned,
     reopenPlanned,
+    listTeams,
+    saveTeam,
+    setTeamArchived,
+    listFixtures,
+    createFixture,
+    updateFixture,
+    deleteFixture,
     getFootballDetails,
     footballDetailsFor,
     saveFootballDetails,

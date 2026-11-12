@@ -75,6 +75,8 @@ export interface Profile extends SyncFields {
 
 // ---------- liikkumismuoto ----------
 export type FootballKind = 'training' | 'game' | 'tournament';
+/** Sarja- tai turnaustaso: Elite = kovatempoinen, Kilpa = reipas, Haaste = kevyempi. */
+export type GameLevel = 'elite' | 'kilpa' | 'haaste';
 
 export interface ActivityType extends SyncFields {
   id: UUID;
@@ -186,6 +188,8 @@ export interface FootballDetails extends SyncFields {
   sessionId: UUID; // pääavain, 1:1 Session; laji kertoo treeni/peli/turnaus
   attendance: 'full' | 'partial';
   team?: string; // oma joukkue, esim. 'P2018 Valkoinen'
+  teamId?: UUID; // linkki joukkueeseen (skeema v2)
+  level?: GameLevel; // pelin tai turnauksen taso (skeema v2)
   games?: GameResult[]; // turnauksen pelit
   focusTags: FocusTag[];
   parentRating?: 1 | 2 | 3 | 4 | 5;
@@ -196,6 +200,34 @@ export interface FootballDetails extends SyncFields {
   goalsAgainst?: number;
   gamesCount?: number; // turnaus
   eventName?: string; // turnaus
+}
+
+// ---------- joukkueet ja pelikalenteri (skeema v2) ----------
+
+/** Oma joukkue; oletustaso on joukkueen sarjataso, jonka voi vaihtaa tapahtumakohtaisesti. */
+export interface Team extends SyncFields {
+  id: UUID;
+  profileId: UUID;
+  name: string;
+  level: GameLevel;
+  archived: boolean;
+  createdAt: Timestamp;
+}
+
+/**
+ * Tulevan pelin tai turnauksen tiedot, 1:1 suunniteltuun kertaan (PlannedSession, laji peli
+ * tai turnaus). Suunnitelma näkyy viikolla ja kuitataan kuten muutkin; kuittaus esitäyttää
+ * jalkapallon lisätiedot näistä tiedoista.
+ */
+export interface Fixture extends SyncFields {
+  plannedSessionId: UUID; // pääavain
+  teamId?: UUID;
+  opponent?: string;
+  eventName?: string; // turnaus
+  location?: string;
+  level?: GameLevel;
+  gamesCount?: number; // turnaus
+  note?: string;
 }
 
 // ---------- muut ----------

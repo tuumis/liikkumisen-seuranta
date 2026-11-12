@@ -3,7 +3,8 @@
 
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import type { ActivityType, FocusTag, GameResult, Session } from '../../domain/types';
+import type { ActivityType, FocusTag, GameLevel, GameResult, Session } from '../../domain/types';
+import { LEVEL_LABEL } from '../../domain/football';
 import { repo, type FootballDetailsInput } from '../../db/repositories';
 import { Button, Field, inputClass } from '../../ui/components';
 import { Segmented, ToggleChip } from '../../ui/controls';
@@ -29,6 +30,9 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
   const [tags, setTags] = useState<FocusTag[]>([]);
   const [note, setNote] = useState('');
   const [team, setTeam] = useState('');
+  const [teamId, setTeamId] = useState('');
+  const [level, setLevel] = useState<GameLevel | ''>('');
+  const teams = useLiveQuery(() => (session ? repo.listTeams(session.profileId) : undefined), [session?.profileId]);
   const [opponent, setOpponent] = useState('');
   const [gf, setGf] = useState('');
   const [ga, setGa] = useState('');
@@ -50,6 +54,8 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
     setTags(d?.focusTags ?? []);
     setNote(d?.ratingNote ?? '');
     setTeam(d?.team ?? '');
+    setTeamId(d?.teamId ?? '');
+    setLevel(d?.level ?? '');
     setOpponent(d?.opponent ?? '');
     setGf(str(d?.goalsFor));
     setGa(str(d?.goalsAgainst));
@@ -65,7 +71,12 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
   // Uudelle kerralle ehdotetaan viimeksi käytettyä omaa joukkuetta.
   useEffect(() => {
     if (existing === null && names?.teams[0] && kind !== 'training') setTeam((t) => t || names.teams[0]);
-  }, [existing, names, kind]);
+    // Uudelle kerralle oma joukkue, jos niitä on vain yksi (taso joukkueen sarjatasosta).
+    if (existing === null && teams?.length === 1 && kind !== 'training') {
+      setTeamId((t) => t || teams[0].id);
+      setLevel((l) => l || teams[0].level);
+    }
+  }, [existing, names, kind, teams]);
 
   if (!session || !type) return null;
 
@@ -87,6 +98,8 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
       enjoyment,
       ratingNote: note,
       team,
+      teamId: teamId || undefined,
+      level: level || undefined,
       opponent,
       goalsFor: nums.gf,
       goalsAgainst: nums.ga,
@@ -185,10 +198,48 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
         </div>
 
         {(kind === 'game' || kind === 'tournament') && (
-          <Field label="Oma joukkue">
-            <input className={inputClass} value={team} onChange={(e) => setTeam(e.target.value)} list="fb-teams" placeholder="esim. P2018 Valkoinen" maxLength={60} />
-            {list('fb-teams', names?.teams)}
-          </Field>
+          <>
+            {teams && teams.length > 0 ? (
+              <Field label="Oma joukkue">
+                <select
+                  className={inputClass}
+                  value={teamId}
+                  onChange={(e) => {
+                    const t = teams.find((x) => x.id === e.target.value);
+                    setTeamId(e.target.value);
+                    if (t) {
+                      setTeam(t.name);
+                      setLevel(t.level);
+                    }
+                  }}
+                >
+                  <option value="">– muu joukkue –</option>
+                  {teams.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({LEVEL_LABEL[t.level]})
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ) : null}
+            {!teamId && (
+              <Field label={teams && teams.length > 0 ? 'Muu joukkue' : 'Oma joukkue'}>
+                <input className={inputClass} value={team} onChange={(e) => setTeam(e.target.value)} list="fb-teams" placeholder="esim. P2018 Valkoinen" maxLength={60} />
+                {list('fb-teams', names?.teams)}
+              </Field>
+            )}
+            <div>
+              <div className="mb-1 text-sm font-medium text-slate-700">Taso</div>
+              <div className="flex flex-wrap gap-2">
+                {(['elite', 'kilpa', 'haaste'] as GameLevel[]).map((l) => (
+                  <ToggleChip key={l} on={level === l} onChange={() => setLevel(level === l ? '' : l)}>
+                    {LEVEL_LABEL[l]}
+                  </ToggleChip>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-slate-500">Taso säätää tehoarviota: Elite = kovempi, Kilpa = tavallinen, Haaste = kevyempi.</p>
+            </div>
+          </>
         )}
 
         {kind === 'game' && (
