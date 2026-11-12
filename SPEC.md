@@ -742,7 +742,7 @@ PC on päälaite: suurin osa kirjauksista ja kuittauksista tehdään siellä. Pu
 | `liikkuminen-pc.json` | PC | puhelin |
 | `liikkuminen-puhelin.json` | puhelin | PC |
 
-Tiedostoja on kaksi, jotta kumpikaan laite ei koskaan ylikirjoita toisen kirjoittamaa tiedostoa. Muoto on sama kuin varmuuskopiossa, mutta `"format": "liikkumisseuranta-sync"`, ja mukana ovat `deviceId` ja `deviceRole`. Tiedosto sisältää kaikki synkronoitavat taulut poistomerkintöineen täytenä tilannekuvana, koska dataa on vähän. Tarkistussumma ja skeemaversio toimivat kuten varmuuskopiossa.
+Tiedostoja on kaksi, jotta kumpikaan laite ei koskaan ylikirjoita toisen kirjoittamaa tiedostoa. **Muutos (lisäys 16):** käytössä on yksi yhteinen tiedosto `liikkuminen.json`, jonka molemmat laitteet tallentavat samalla nimellä. Puhelin voi korvata tiedoston ("Korvaa") tai tallentaa rinnalle kopion ("Säilytä molemmat"). Turvallisuus säilyy, koska PC yhdistää tiedoston aina ennen kirjoitusta (jos sen on tallentanut toinen laite PC:n oman kirjoituksen jälkeen, tunnistus `deviceId`:stä ja muokkausajasta), ja yhdistäminen on viimeisin-voittaa-periaatteella idempotentti: korvauksessa pois jääneet PC:n muutokset palaavat tiedostoon PC:n seuraavassa synkronoinnissa. Oman laitteen tiedostoa ei yhdistetä. Vanha `liikkuminen-puhelin.json` luetaan edelleen siirtymää varten; vanhat tiedostot voi poistaa. Muoto on sama kuin varmuuskopiossa, mutta `"format": "liikkumisseuranta-sync"`, ja mukana ovat `deviceId` ja `deviceRole`. Tiedosto sisältää kaikki synkronoitavat taulut poistomerkintöineen täytenä tilannekuvana, koska dataa on vähän. Tarkistussumma ja skeemaversio toimivat kuten varmuuskopiossa.
 
 **PC: "Synkronoi" (yksi painallus)**
 

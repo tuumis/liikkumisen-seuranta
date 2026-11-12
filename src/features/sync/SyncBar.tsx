@@ -9,7 +9,7 @@ import { Button } from '../../ui/components';
 import { useToast } from '../../ui/Toast';
 import { ConflictSheet } from './ConflictSheet';
 import { folderPermission, readFolderFile, supportsFolder } from './fileIO';
-import { useSyncActions, useSyncState } from './useSync';
+import { syncFileDevice, useSyncActions, useSyncState } from './useSync';
 
 const DAY = 86_400_000;
 
@@ -39,9 +39,12 @@ export function SyncBar() {
       try {
         const handle = await repo.getMeta<FileSystemDirectoryHandle>('syncFolderHandle');
         if (!handle || !(await folderPermission(handle, false))) return;
-        const f = await readFolderFile(handle, SYNC_FILE_NAME.phone);
-        const readAt = (await repo.getMeta<number>('phoneFileReadAt')) ?? 0;
-        if (!cancelled) setPhoneHasNew(!!f && f.lastModified > readAt);
+        const [shared, legacy] = await Promise.all([readFolderFile(handle, SYNC_FILE_NAME.shared), readFolderFile(handle, SYNC_FILE_NAME.legacyPhone)]);
+        const [ownWrite, readAt] = await Promise.all([repo.getMeta<number>('syncFileWrittenAt'), repo.getMeta<number>('phoneFileReadAt')]);
+        // Yhteinen tiedosto on uusi vain, jos sen on tallentanut toinen laite PC:n oman kirjoituksen jälkeen.
+        const sharedNew = !!shared && shared.lastModified > (ownWrite ?? 0) && syncFileDevice(await shared.text()) !== (await repo.getMeta<string>('deviceId'));
+        const fresh = sharedNew || (!!legacy && legacy.lastModified > (readAt ?? 0));
+        if (!cancelled) setPhoneHasNew(fresh);
       } catch {
         /* ei muistutusta */
       }

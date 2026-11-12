@@ -22,6 +22,22 @@ export interface SyncState {
   pending: number;
 }
 
+/** Synkronointitiedoston kirjoittanut laite (tiedoston sisällöstä); undefined, jos ei luettavissa. */
+export function syncFileDevice(text: string): string | undefined {
+  try {
+    const v = JSON.parse(text) as { format?: string; deviceId?: string };
+    return v.format === 'liikkumisseuranta-sync' ? v.deviceId : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Yhdistää kaksi yhteenvetoa (yhteinen tiedosto + vanha puhelimen tiedosto samassa synkronoinnissa). */
+function combine(a: MergeSummary | undefined, b: MergeSummary): MergeSummary {
+  if (!a) return b;
+  return { ...b, added: a.added + b.added, updated: a.updated + b.updated, deleted: a.deleted + b.deleted, conflicts: [...a.conflicts, ...b.conflicts] };
+}
+
 async function ensurePlannedAll() {
   const t = today();
   for (const p of await repo.listProfiles()) await repo.ensurePlanned(p.id, defaultPlanningThrough(t), t);
@@ -58,24 +74,38 @@ export function useSyncActions() {
     if (!(await folderPermission(handle, true))) throw new Error('Kansion käyttöoikeus puuttuu.');
 
     let summary: MergeSummary | undefined;
-    const phoneFile = await readFolderFile(handle, SYNC_FILE_NAME.phone);
+    // 1) Yhteinen tiedosto: jos joku muu (puhelin) on tallentanut sen PC:n oman kirjoituksen jälkeen, yhdistetään.
+    const shared = await readFolderFile(handle, SYNC_FILE_NAME.shared);
+    const ownWrite = (await repo.getMeta<number>('syncFileWrittenAt')) ?? 0;
+    if (shared && shared.lastModified > ownWrite) {
+      const text = await shared.text();
+      const by = syncFileDevice(text);
+      if (by && by !== deviceId) summary = await mergeSyncFile(db, text, deviceId);
+    }
+    // 2) Vanha puhelimen tiedosto (ennen yhteistä nimeä), jos se on muuttunut edellisen lukukerran jälkeen.
+    const legacy = await readFolderFile(handle, SYNC_FILE_NAME.legacyPhone);
     const readAt = (await repo.getMeta<number>('phoneFileReadAt')) ?? 0;
-    if (phoneFile && phoneFile.lastModified > readAt) {
-      summary = await mergeSyncFile(db, await phoneFile.text(), deviceId);
-      await repo.setMeta('phoneFileReadAt', phoneFile.lastModified);
+    if (legacy && legacy.lastModified > readAt) {
+      summary = combine(summary, await mergeSyncFile(db, await legacy.text(), deviceId));
+      await repo.setMeta('phoneFileReadAt', legacy.lastModified);
     }
     await ensurePlannedAll();
-    await writeFolderFile(handle, SYNC_FILE_NAME.pc, toJson(await buildSyncFile(db, deviceId, 'pc')));
+    // 3) Kirjoitetaan yhdistetty tilannekuva yhteiseen tiedostoon ja muistetaan oma kirjoitusaika.
+    await writeFolderFile(handle, SYNC_FILE_NAME.shared, toJson(await buildSyncFile(db, deviceId, 'pc')));
+    await repo.setMeta('syncFileWrittenAt', (await readFolderFile(handle, SYNC_FILE_NAME.shared))?.lastModified ?? Date.now());
     await repo.setMeta('lastSyncRunAt', new Date().toISOString());
-    return { summary, wrote: true, message: summary ? summaryText(summary) : 'PC:n tiedosto päivitetty; puhelimelta ei uutta' };
+    return { summary, wrote: true, message: summary ? summaryText(summary) : 'Tiedosto liikkuminen.json päivitetty; puhelimelta ei uutta' };
   }, []);
 
   /** PC ilman kansiotukea: tuo puhelimen tiedosto. */
   const importFile = useCallback(async (): Promise<SyncOutcome | null> => {
     const f = await pickTextFile();
     if (!f) return null;
+    const me = await repo.deviceId();
+    // Oma tiedosto (esim. puhelin tallensi liikkuminen.json, eikä PC ole vielä synkronoinut): ei yhdistettävää.
+    if (syncFileDevice(f.text) === me) return { message: 'Tiedosto on tämän laitteen oma tallennus – toinen laite ei ole vielä päivittänyt sitä' };
     // Hyväksyy sekä synkronointitiedoston että varmuuskopion (tunnistus sisällöstä).
-    const summary = await mergeAnyFile(db, f.text, await repo.deviceId());
+    const summary = await mergeAnyFile(db, f.text, me);
     await ensurePlannedAll();
     await repo.setMeta('lastSyncRunAt', new Date().toISOString());
     return { summary, message: summaryText(summary) };
@@ -83,17 +113,19 @@ export function useSyncActions() {
 
   /** PC ilman kansiotukea: lataa PC:n tiedosto. */
   const downloadPcFile = useCallback(async () => {
-    downloadText(SYNC_FILE_NAME.pc, toJson(await buildSyncFile(db, await repo.deviceId(), 'pc')));
+    downloadText(SYNC_FILE_NAME.shared, toJson(await buildSyncFile(db, await repo.deviceId(), 'pc')));
     await repo.setMeta('lastSyncRunAt', new Date().toISOString());
   }, []);
 
-  /** Puhelin: "Lähetä PC:lle" – jako tai lataus nimellä liikkuminen-puhelin.json. */
+  /** Puhelin: "Lähetä PC:lle" – jako tai lataus nimellä liikkuminen.json (korvaa PC:n tiedoston tai tallenna rinnalle). */
   const phoneSend = useCallback(async (): Promise<string> => {
     const text = toJson(await buildSyncFile(db, await repo.deviceId(), 'phone'));
-    const r = await shareOrDownload(SYNC_FILE_NAME.phone, text);
+    const r = await shareOrDownload(SYNC_FILE_NAME.shared, text);
     if (r === 'cancelled') return 'Lähetys peruttiin';
     await markSent(db);
-    return r === 'shared' ? 'Tiedosto jaettu – tallenna se pilvikansioon nimellä liikkuminen-puhelin.json' : 'Tiedosto ladattu – siirrä se pilvikansioon';
+    return r === 'shared'
+      ? 'Tiedosto jaettu – tallenna pilvikansioon nimellä liikkuminen.json ("Korvaa" tai "Säilytä molemmat")'
+      : 'Tiedosto ladattu – siirrä se pilvikansioon nimellä liikkuminen.json';
   }, []);
 
   return { pcSync, importFile, downloadPcFile, phoneSend };

@@ -126,7 +126,7 @@ export function wrongFileMessage(kind: FileKind, text: string): string {
     const wrapped = start.startsWith('<') || start.includes('bplist');
     return wrapped
       ? 'Tiedosto ei ole JSON-tiedosto: se näyttää tallentuneen verkkosivuna tai iOS-arkistona. Vie varmuuskopio uudelleen ja valitse jakovalikosta "Tallenna Tiedostoihin".'
-      : 'Tiedosto ei ole JSON-tiedosto (esim. CSV-vienti ei käy tuontiin). Valitse liikkumisseuranta-varmuuskopio-….json tai liikkuminen-pc.json.';
+      : 'Tiedosto ei ole JSON-tiedosto (esim. CSV-vienti ei käy tuontiin). Valitse liikkumisseuranta-varmuuskopio-….json tai liikkuminen.json.';
   }
   return 'Tiedosto on JSON-muodossa, mutta se ei ole liikkumisseurannan varmuuskopio eikä synkronointitiedosto.';
 }

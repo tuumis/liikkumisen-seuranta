@@ -4,5 +4,9 @@ export const APP_VERSION = '0.1.0';
 export const BACKUP_FORMAT = 'liikkumisseuranta-backup';
 export const SYNC_FORMAT = 'liikkumisseuranta-sync';
 
-/** Synkronointitiedostot pilvikansiossa: kumpikin laite kirjoittaa vain omaansa (SPEC 10). */
-export const SYNC_FILE_NAME = { pc: 'liikkuminen-pc.json', phone: 'liikkuminen-puhelin.json' } as const;
+/**
+ * Synkronointitiedosto pilvikansiossa: molemmat laitteet tallentavat samalla nimellä (lisäys 16).
+ * PC yhdistää tiedoston aina ennen kirjoitusta, joten puhelimen tallennus voi korvata sen.
+ * Aiemmat kahden tiedoston nimet luetaan edelleen (siirtymä).
+ */
+export const SYNC_FILE_NAME = { shared: 'liikkuminen.json', legacyPc: 'liikkuminen-pc.json', legacyPhone: 'liikkuminen-puhelin.json' } as const;

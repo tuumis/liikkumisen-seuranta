@@ -39,7 +39,7 @@ export function BackupSection() {
     try {
       const kind = detectFileKind(f.text);
       if (kind === 'sync') {
-        // Synkronointitiedosto (esim. liikkuminen-pc.json): yhdistetään, ei korvata.
+        // Synkronointitiedosto (esim. liikkuminen.json): yhdistetään, ei korvata.
         const s = await mergeAnyFile(db, f.text, await repo.deviceId());
         toast(`Tiedosto oli synkronointitiedosto, joten tiedot yhdistettiin. ${summaryText(s)}`);
         setConfirmImport(false);
@@ -116,7 +116,7 @@ export function SyncSettingsSection() {
         {state.role === 'pc' ? (
           <>
             <p className="text-slate-600">
-              Valitse pilvikansio (OneDrive tai iCloud Drive), joka näkyy molemmilla laitteilla. PC kirjoittaa tiedoston <code>liikkuminen-pc.json</code> ja lukee puhelimen tiedoston <code>liikkuminen-puhelin.json</code>.
+              Valitse pilvikansio (OneDrive tai iCloud Drive), joka näkyy molemmilla laitteilla. Molemmat laitteet käyttävät samaa tiedostoa <code>liikkuminen.json</code>: PC lukee ja yhdistää puhelimen tallentaman version ennen kuin kirjoittaa sen uudelleen, joten mitään ei katoa. Vanhat tiedostot <code>liikkuminen-pc.json</code> ja <code>liikkuminen-puhelin.json</code> voi poistaa, kun olet synkronoinut kerran.
             </p>
             {supportsFolder() ? (
               <Button
@@ -138,7 +138,7 @@ export function SyncSettingsSection() {
           </>
         ) : (
           <p className="text-slate-600">
-            "Päivitä PC:ltä" lukee tiedoston <code>liikkuminen-pc.json</code>. "Lähetä PC:lle" jakaa tiedoston <code>liikkuminen-puhelin.json</code> – tallenna se samaan pilvikansioon.
+            "Päivitä PC:ltä" lukee tiedoston <code>liikkuminen.json</code>. "Lähetä PC:lle" jakaa saman nimisen tiedoston: tallenna se pilvikansioon ja valitse "Korvaa" (tavallinen tapa) tai "Säilytä molemmat", jos haluat erillisen kopion. PC:n omat muutokset eivät katoa korvattaessa, vaan palaavat tiedostoon PC:n seuraavassa synkronoinnissa.
           </p>
         )}
         <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-xs">
