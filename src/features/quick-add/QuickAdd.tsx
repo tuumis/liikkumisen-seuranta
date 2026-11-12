@@ -9,6 +9,8 @@ import type { ActivityType, Category, Effort, IntensityMinutes, ISODate, Profile
 import { repo } from '../../db/repositories';
 import { requestPersistentStorage } from '../../db/storage';
 import { IconBall } from '../../ui/icons';
+import { TermInfo } from '../../ui/glossary';
+import { LabelField } from '../week/LabelField';
 import { Button, inputClass } from '../../ui/components';
 import { ToggleChip } from '../../ui/controls';
 import { IntensityPicker, isPreset, type IntensityMode, type ManualDraft } from '../week/IntensityPicker';
@@ -76,6 +78,7 @@ export function QuickAdd({
   const [muscle, setMuscle] = useState(false);
   const [bone, setBone] = useState(false);
   const [note, setNote] = useState('');
+  const [label, setLabel] = useState('');
   const [played, setPlayed] = useState('');
   /** Valittu kesto (pikavalinta tai "Muu"); tallennus vasta Tallenna-painikkeesta. */
   const [duration, setDuration] = useState('');
@@ -91,6 +94,7 @@ export function QuickAdd({
     setDate(initialDate && initialDate <= today ? initialDate : today);
     setEffort(0);
     setNote('');
+    setLabel('');
     setMode('profile');
     setManual({ light: '', moderate: '', vigorous: '' });
     setPlayed('');
@@ -154,6 +158,7 @@ export function QuickAdd({
     setMuscle(d.muscle);
     setBone(d.bone);
     setPlayed('');
+    setLabel('');
   }
 
   async function save() {
@@ -186,10 +191,11 @@ export function QuickAdd({
         muscle: showStrength(type.muscleDefault) && muscle,
         bone: showStrength(type.boneDefault) && bone,
         note,
+        label,
       });
       void requestPersistentStorage();
       onClose();
-      toast(`Tallennettu: ${type.name} ${dur.data} min`, { label: 'Kumoa', run: () => repo.deleteSession(s.id).then(() => {}) }, 'success');
+      toast(`Tallennettu: ${type.name}${label.trim() ? ` (${label.trim()})` : ''} ${dur.data} min`, { label: 'Kumoa', run: () => repo.deleteSession(s.id).then(() => {}) }, 'success');
       onSaved?.(s);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -342,6 +348,8 @@ export function QuickAdd({
             </label>
           )}
 
+          <LabelField profileId={profile.id} activityTypeId={type.id} value={label} onChange={setLabel} />
+
           <div className="space-y-3 border-t border-slate-100 pt-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Valinnaiset</div>
             <IntensityPicker
@@ -355,17 +363,26 @@ export function QuickAdd({
               onManual={setManual}
             />
             {(showStrength(type.muscleDefault) || showStrength(type.boneDefault)) && (
-              <div className="flex flex-wrap gap-2">
-                {showStrength(type.muscleDefault) && (
-                  <ToggleChip on={muscle} onChange={setMuscle}>
-                    Lihaksia vahvistava
-                  </ToggleChip>
-                )}
-                {showStrength(type.boneDefault) && (
-                  <ToggleChip on={bone} onChange={setBone}>
-                    Luustoa vahvistava
-                  </ToggleChip>
-                )}
+              <div className="space-y-1.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  {showStrength(type.muscleDefault) && (
+                    <span className="inline-flex items-center gap-1">
+                      <ToggleChip on={muscle} onChange={setMuscle}>
+                        Lihaksia vahvistava
+                      </ToggleChip>
+                      <TermInfo id="muscle" />
+                    </span>
+                  )}
+                  {showStrength(type.boneDefault) && (
+                    <span className="inline-flex items-center gap-1">
+                      <ToggleChip on={bone} onChange={setBone}>
+                        Luustoa vahvistava
+                      </ToggleChip>
+                      <TermInfo id="bone" align="right" />
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500">Lihakset: kiipeily, punnerrukset, kuntopiiri. Luusto: hypyt, juoksu, pallopelit.</p>
               </div>
             )}
             <input className={inputClass} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Muistiinpano" maxLength={200} aria-label="Muistiinpano" />

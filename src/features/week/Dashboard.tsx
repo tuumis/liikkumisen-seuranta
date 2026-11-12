@@ -12,6 +12,7 @@ import { EmptyState, SectionLabel } from '../../ui/components';
 import { dayLabel, formatDate } from '../../ui/format';
 import { IconBolt, IconBone, IconCalendarClock, IconHistory, IconLeaf } from '../../ui/icons';
 import { useMounted } from '../../ui/motion';
+import { Term } from '../../ui/glossary';
 import { Collapse, CollapseToggle, useCollapsible } from '../../ui/Collapse';
 
 const WD = ['Ma', 'Ti', 'Ke', 'To', 'Pe', 'La', 'Su'];
@@ -183,10 +184,10 @@ export function RhythmCard({ report, today }: { report: PeriodReport; today: ISO
   const min = report.vigorousDay.min;
   const rows = [
     ...(group === 'school_age'
-      ? [{ key: 'vig', label: 'Rasittava päivä', sub: `≥ ${min} min`, Icon: IconBolt, on: (i: number) => report.allDays[i].logged.vigorous >= min, target: 3 }]
+      ? [{ key: 'vig', term: 'vigorous_day' as const, label: 'Rasittava päivä', sub: `≥ ${min} min`, Icon: IconBolt, on: (i: number) => report.allDays[i].logged.vigorous >= min, target: 3 }]
       : []),
-    { key: 'mus', label: 'Lihaksia vahvistava', sub: 'kirjattu kerta', Icon: IconLeaf, on: (i: number) => report.allDays[i].muscle, target: group === 'adult' ? 2 : 3 },
-    ...(group === 'school_age' ? [{ key: 'bone', label: 'Luustoa vahvistava', sub: 'kirjattu kerta', Icon: IconBone, on: (i: number) => report.allDays[i].bone, target: 3 }] : []),
+    { key: 'mus', term: 'muscle' as const, label: 'Lihaksia vahvistava', sub: 'kirjattu kerta', Icon: IconLeaf, on: (i: number) => report.allDays[i].muscle, target: group === 'adult' ? 2 : 3 },
+    ...(group === 'school_age' ? [{ key: 'bone', term: 'bone' as const, label: 'Luustoa vahvistava', sub: 'kirjattu kerta', Icon: IconBone, on: (i: number) => report.allDays[i].bone, target: 3 }] : []),
   ];
 
   return (
@@ -201,7 +202,9 @@ export function RhythmCard({ report, today }: { report: PeriodReport; today: ISO
               <div className="mb-2 flex items-baseline justify-between gap-2">
                 <span className="flex items-center gap-2 text-sm font-semibold text-slate-800">
                   <r.Icon size="1rem" className="text-green-700 dark:text-green-400" />
-                  {r.label}
+                  <Term id={r.term} vigorousMin={min} align="left">
+                    {r.label}
+                  </Term>
                   <span className="text-xs font-medium text-slate-500">{r.sub}</span>
                 </span>
                 <span className={`stat text-lg font-semibold ${count >= r.target ? 'text-green-700 dark:text-green-400' : 'text-slate-900'}`}>
@@ -290,9 +293,9 @@ export function UpcomingCard({
                   </span>
                   <TypeIcon t={t} size="sm" />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-slate-900">{f?.opponent ? `vs ${f.opponent}` : f?.eventName ?? t?.name ?? 'Laji'}</span>
+                    <span className="block truncate text-sm font-semibold text-slate-900">{f?.opponent ? `vs ${f.opponent}` : f?.eventName ?? p.label ?? t?.name ?? 'Laji'}</span>
                     <span className="block truncate text-xs text-slate-500">
-                      {f ? `${t?.name ?? ''} · ` : ''}
+                      {f || p.label ? `${t?.name ?? ''} · ` : ''}
                       {p.startTime ? `klo ${p.startTime} · ` : ''}
                       {p.durationMin} min
                     </span>
@@ -314,7 +317,7 @@ export function RecentCard({ profile, today, types, onOpen }: { profile: Profile
   const from = addDays(today, -30);
   const sessions = useLiveQuery(() => repo.sessionsInRange(profile.id, from, today), [profile.id, from, today]);
   const [open, toggle] = useCollapsible('recent');
-  const list = [...(sessions ?? [])].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
+  const list = [...(sessions ?? [])].filter((s) => s.durationMin > 0).sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
 
   return (
     <section className="card anim-rise p-4 sm:p-5" style={{ ['--i' as string]: 5 }}>
@@ -339,8 +342,11 @@ export function RecentCard({ profile, today, types, onOpen }: { profile: Profile
                 <button type="button" onClick={() => onOpen(s)} className="press flex w-full items-center gap-3 rounded-2xl p-2 text-left hover:bg-[var(--surface-sunk)]">
                   <TypeIcon t={t} size="sm" />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-slate-900">{t?.name ?? 'Laji'}</span>
-                    <span className="block truncate text-xs text-slate-500">{dayLabel(s.date)}</span>
+                    <span className="block truncate text-sm font-semibold text-slate-900">{s.label ?? t?.name ?? 'Laji'}</span>
+                    <span className="block truncate text-xs text-slate-500">
+                      {dayLabel(s.date)}
+                      {s.label && ` · ${t?.name ?? ''}`}
+                    </span>
                   </span>
                   <span className="text-right">
                     <span className="stat block text-base font-semibold text-slate-900">

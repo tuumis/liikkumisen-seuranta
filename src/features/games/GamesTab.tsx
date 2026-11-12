@@ -41,29 +41,54 @@ export function GamesTab({ profile }: { profile?: Profile }) {
   return (
     <div className="space-y-5">
       <FootballHero profile={profile} />
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="w-full min-w-0 sm:w-auto sm:flex-1">
-          <Segmented<View>
-            label="Pelit"
-            value={view}
-            onChange={setView}
-            options={[
-              { value: 'diary', label: 'Päiväkirja' },
-              { value: 'calendar', label: 'Kalenteri' },
-              { value: 'results', label: 'Tulokset' },
-              { value: 'teams', label: 'Joukkueet' },
-            ]}
-          />
+
+      {/* Selkeät lisäystoiminnot: mitä painike tekee ja milloin sitä käytetään. */}
+      <section className="card p-4 sm:p-5" aria-labelledby="fx-add-title">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="fx-add-title" className="font-display text-lg font-semibold text-slate-900">
+            Lisää kalenteriin
+          </h2>
+          <span className="text-xs text-slate-500">Tulevat pelit näkyvät myös Viikko-näkymässä</span>
         </div>
-        <div className="flex w-full gap-2 sm:w-auto">
-          <Button className="flex-1 sm:flex-none" onClick={() => setDraft({ kind: 'game' })}>
-            <IconPlus size="1rem" /> Peli
-          </Button>
-          <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setDraft({ kind: 'tournament' })}>
-            <IconPlus size="1rem" /> Turnaus
-          </Button>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {(
+            [
+              ['game', '🥅', 'Tuleva peli', 'Yksi ottelu: päivä, kellonaika, vastustaja ja taso.'],
+              ['tournament', '🏆', 'Tuleva turnaus', 'Useita pelejä: otteluohjelma valmiiksi, tulokset pelien jälkeen.'],
+            ] as const
+          ).map(([kind, icon, title, text]) => (
+            <button
+              key={kind}
+              type="button"
+              onClick={() => setDraft({ kind })}
+              className={`press card-interactive flex items-center gap-3 rounded-[1.25rem] p-3 text-left ${kind === 'game' ? 'bg-green-700 text-white shadow-md' : 'card-sunk'}`}
+            >
+              <span className={`flex size-11 shrink-0 items-center justify-center rounded-2xl text-xl ${kind === 'game' ? 'bg-white/15' : 'bg-[var(--surface-raised)] shadow-xs'}`} aria-hidden>
+                {icon}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-1 font-semibold">
+                  <IconPlus size="0.95rem" /> {title}
+                </span>
+                <span className={`block text-xs leading-snug ${kind === 'game' ? 'text-white/80' : 'text-slate-500'}`}>{text}</span>
+              </span>
+            </button>
+          ))}
         </div>
-      </div>
+        <p className="mt-2 text-xs text-slate-500">Jo pelatun pelin tai treenin kirjaat Viikko-näkymän +-painikkeella. Kalenterin pelille tulos kirjataan Kalenteri-kohdan "Kirjaa tulos" -painikkeella.</p>
+      </section>
+
+      <Segmented<View>
+        label="Jalkapallon näkymä"
+        value={view}
+        onChange={setView}
+        options={[
+          { value: 'diary', label: 'Päiväkirja' },
+          { value: 'calendar', label: 'Kalenteri' },
+          { value: 'results', label: 'Tulokset' },
+          { value: 'teams', label: 'Joukkueet' },
+        ]}
+      />
 
       {view === 'diary' && <DiaryView profile={profile} />}
       {view === 'calendar' && <CalendarView profile={profile} onEdit={(entry) => setDraft({ kind: 'game', entry })} />}

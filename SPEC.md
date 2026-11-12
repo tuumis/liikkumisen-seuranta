@@ -1014,3 +1014,12 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
 - **Pienennettävät kortit** (Liikuntaa viikossa, Viikon liikuntatunnit, Tulevat kerrat, Viimeisimmät kirjaukset, Tarkemmat luvut), tila muistetaan laitteella. "Viikon liikuntatunnit" (arvio ja toteuma, kaikki liikunta kestona) on "Liikuntaa viikossa" -kortin alla; "Tarkemmat luvut" sisältää suositusvertailun.
 - **Päiväkortti:** päivän kokonaisminuutit (kaikki liikunta) reippaan ja rasittavan mittarin yläpuolella, molemmissa selite.
 - **Suunnitellun kerran poisto kokonaan** (`deletePlanned`, kumottavissa `restorePlanned`): kerta ei näy viikolla eikä toteutumassa; poistomerkintä saa `overridden`-tiedon, jotta viikkopohjan muokkaus ei luo sitä uudelleen; pelikalenterin tiedot poistuvat mukana. Kuitattua ei poisteta. Oletus on edelleen "Ei tehty".
+- **Arvio koko viikolle (ennuste):** toteutunut + avoimet suunnitellut kerrat (tulevat ja kuittaamattomat) + arkiliikunnan arvio tulevina päivinä; "Ei tehty" ja poistetut putoavat pois, suunnittelemattomat kirjaukset tulevat mukaan (`WeeklyHours.forecast`). Viikkopohjan suunnitelma näkyy vertailuna.
+- **Takautuvat kerrat:** viikkorytmin rivillä "Luo myös menneet kerrat" (alkupäivästä eiliseen, enintään 12 vk) kuitattaviksi.
+- **Selitteet** termeille rasittava päivä, lihaksia vahvistava, luustoa vahvistava, reipas ja rasittava, arkiliikunta ja liikuntaa yhteensä (`ui/glossary.tsx`), hiirellä tai napautuksella.
+- **Arkiliikunta päivätasolla:** päiväkortissa oma "Arkiliikunta (arvio)" -rivi; vanhempi voi vahvistaa arvion, muuttaa minuutteja tai merkitä "Ei tänä päivänä" (0 min). Valinta tallentuu saman kategorian kirjauksena, jolloin korvausperiaatteen mukaan perusarviota ei sille päivälle käytetä. Päivän otsikossa "josta arvio N".
+- **Tarkenne** (`label`, enintään 40 merkkiä) kerroille, viikkorytmin riveille ja niistä syntyville suunnitelmille (esim. Joukkuetreeni, Talenttitreeni, Taitokoulu, Futsal); aiemmat tarkenteet ehdotuksina.
+- **Näkymä** (Asetukset → Ulkoasu): Kattava tai Yksinkertainen (Viikko: vain tilanne ja päivät).
+- **Jalkapallo:** selkeä "Lisää kalenteriin" -osio (Tuleva peli / Tuleva turnaus selitteineen).
+- **Analyysi muokattavissa:** käyttäjä valitsee näkyvät kortit ja järjestyksen (laitekohtainen); palstat täyttyvät ylhäältä alas.
+- **Välilehdet** pysyvät muistissa ja siirtymä koskee vain sisältöaluetta.

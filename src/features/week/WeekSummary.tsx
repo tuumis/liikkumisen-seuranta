@@ -13,13 +13,14 @@ import { useCountUp } from '../../ui/motion';
 import { ProgressRing } from '../../ui/ProgressRing';
 import { IconPlus } from '../../ui/icons';
 import { GoalCard } from '../analysis/GoalCard';
+import { Term, type TermId } from '../../ui/glossary';
 import { Collapse, CollapseToggle, useCollapsible } from '../../ui/Collapse';
 
 const pick = (d: DualMeasure, s: Settings) => (s.primaryView === 'logged' ? d.logged : d.combined);
 
 export interface WeekModel {
   main: { label: string; value: number; unit: string; target: string; m: Measure; shortfall: string } | null;
-  tiles: { label: string; value: string; sub?: string }[];
+  tiles: { label: string; value: string; sub?: string; term?: TermId }[];
 }
 
 /** Pääluku ja tunnusluvut suositusryhmän mukaan (kouluikäinen, alle kouluikäinen, aikuinen). */
@@ -31,6 +32,7 @@ export function weekModel(report: PeriodReport, settings: Settings): WeekModel {
   const mvpaMin = report.days.reduce((a, d) => a + d.mvpaCombined, 0);
   const hoursTile = {
     label: 'Liikuntaa yhteensä',
+    term: 'total' as TermId,
     value: formatHours(h.actualMin),
     sub: `josta reipasta ja rasittavaa ≈ ${formatHours(mvpaMin)}${report.group.group === 'school_age' ? ` · ${hoursBand(h.actualMin).label.toLowerCase()}` : ''}`,
   };
@@ -42,8 +44,8 @@ export function weekModel(report: PeriodReport, settings: Settings): WeekModel {
       main: { label: 'Reipasta ja rasittavaa keskimäärin', value: m.actual, unit: 'min / päivä', target: `tavoite ${m.target} min/pv`, m, shortfall: aboutMinutes(m, 'min/pv') },
       tiles: [
         hoursTile,
-        { label: 'Rasittavia päiviä', value: `${s.vigorousDays.actual}/${s.vigorousDays.target}`, sub: `≥ ${report.vigorousDay.min} min päivässä` },
-        { label: 'Lihas · luusto', value: `${s.muscleDays.actual} · ${s.boneDays.actual}`, sub: `tavoite ${RECOMMENDATIONS.school_age.muscleDaysPerWeek.value} pv kumpaakin` },
+        { label: 'Rasittavia päiviä', term: 'vigorous_day', value: `${s.vigorousDays.actual}/${s.vigorousDays.target}`, sub: `≥ ${report.vigorousDay.min} min päivässä` },
+        { label: 'Lihas · luusto', term: 'muscle', value: `${s.muscleDays.actual} · ${s.boneDays.actual}`, sub: `tavoite ${RECOMMENDATIONS.school_age.muscleDaysPerWeek.value} pv kumpaakin` },
       ],
     };
   }
@@ -149,7 +151,15 @@ export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: Pe
               <dl className="grid grid-cols-3 gap-2 sm:mt-5 sm:gap-3">
                 {tiles.map((t, i) => (
                   <div key={t.label} className="anim-rise rounded-2xl bg-white/[0.08] px-3 py-2.5 ring-1 ring-white/[0.08]" style={{ ['--i' as string]: i + 2 }}>
-                    <dt className="min-h-[2lh] text-[10px] font-bold uppercase leading-tight tracking-wide text-[var(--hero-ink-soft)] sm:min-h-0 sm:text-[10.5px]">{t.label}</dt>
+                    <dt className="min-h-[2lh] text-[10px] font-bold uppercase leading-tight tracking-wide text-[var(--hero-ink-soft)] sm:min-h-0 sm:text-[10.5px]">
+                      {t.term ? (
+                        <Term id={t.term} vigorousMin={report.vigorousDay.min} className="!decoration-white/40 text-left" align={i === 2 ? 'right' : 'left'}>
+                          {t.label}
+                        </Term>
+                      ) : (
+                        t.label
+                      )}
+                    </dt>
                     <dd className="stat mt-1.5 text-[22px] font-semibold lg:text-[26px]">{t.value}</dd>
                     {t.sub && <dd className="mt-1 line-clamp-2 text-[11px] leading-snug text-[var(--hero-ink-soft)]">{t.sub}</dd>}
                   </div>

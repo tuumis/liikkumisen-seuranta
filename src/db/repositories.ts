@@ -69,6 +69,8 @@ export interface SessionInput {
   muscle: boolean;
   bone: boolean;
   note?: string;
+  /** Tarkenne (esim. "Talenttitreeni"), enintään 40 merkkiä. */
+  label?: string;
 }
 
 /** Jalkapallon lisätietojen tallennettavat tiedot (kaikki valinnaisia osallistumista lukuun ottamatta). */
@@ -139,6 +141,7 @@ export interface TemplateItemInput {
   validFrom: ISODate;
   validTo?: ISODate;
   note?: string;
+  label?: string;
 }
 
 /** Poistetun kerran ja siihen liittyneiden tietueiden aiemmat versiot. */
@@ -147,6 +150,9 @@ export interface DeleteUndo {
   football?: FootballDetails;
   plan?: PlannedSession;
 }
+
+/** Tarkenne siistittynä (välilyönnit, enintään 40 merkkiä); tyhjä → undefined. */
+const cleanLabel = (s?: string) => s?.trim().replace(/\s+/g, ' ').slice(0, 40) || undefined;
 
 export function createRepositories(db: AppDB = defaultDb) {
   // ---------- meta (laitekohtainen) ----------
@@ -310,6 +316,20 @@ export function createRepositories(db: AppDB = defaultDb) {
   }
 
   /** Viimeksi käytetyt lajit (uusin kirjaus ensin), enintään n kpl. */
+  /** Lajille aiemmin käytetyt tarkenteet (uusin ensin, myös viikkopohjasta), ehdotuksiksi. */
+  async function recentLabels(profileId: UUID, activityTypeId: UUID, n = 8): Promise<string[]> {
+    const sessions = live(await db.sessions.where('[profileId+date]').between([profileId, Dexie.minKey], [profileId, Dexie.maxKey]).toArray())
+      .filter((s) => s.activityTypeId === activityTypeId && s.label)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const items = live(await db.templateItems.where('profileId').equals(profileId).toArray()).filter((i) => i.activityTypeId === activityTypeId && i.label);
+    const out: string[] = [];
+    for (const l of [...items.map((i) => i.label!), ...sessions.map((s) => s.label!)]) {
+      if (!out.some((x) => x.toLocaleLowerCase('fi') === l.toLocaleLowerCase('fi'))) out.push(l);
+      if (out.length >= n) break;
+    }
+    return out;
+  }
+
   async function recentActivityTypeIds(profileId: UUID, n = 6): Promise<UUID[]> {
     const rows = live(
       await db.sessions.where('[profileId+date]').between([profileId, Dexie.minKey], [profileId, Dexie.maxKey]).toArray(),
@@ -364,6 +384,8 @@ export function createRepositories(db: AppDB = defaultDb) {
     if (type.usesPlayedMinutes && input.playedMin !== undefined) session.playedMin = input.playedMin;
     if (input.startTime) session.startTime = input.startTime;
     if (input.note?.trim()) session.note = input.note.trim();
+    const label = cleanLabel(input.label);
+    if (label) session.label = label;
     await db.sessions.add(session);
     return session;
   }
@@ -374,7 +396,7 @@ export function createRepositories(db: AppDB = defaultDb) {
       if (!current || current.deletedAt) throw new Error('Kertaa ei löydy');
       const type = await getActivityType(input.activityTypeId);
       const next: Session = await stamp({ ...current });
-      for (const k of ['playedMin', 'sharesSnapshot', 'intensityPreset', 'note', 'startTime'] as const) delete next[k];
+      for (const k of ['playedMin', 'sharesSnapshot', 'intensityPreset', 'note', 'startTime', 'label'] as const) delete next[k];
       Object.assign(next, {
         activityTypeId: type.id,
         date: input.date,
@@ -387,6 +409,8 @@ export function createRepositories(db: AppDB = defaultDb) {
       if (type.usesPlayedMinutes && input.playedMin !== undefined) next.playedMin = input.playedMin;
       if (input.startTime) next.startTime = input.startTime;
       if (input.note?.trim()) next.note = input.note.trim();
+      const label = cleanLabel(input.label);
+      if (label) next.label = label;
       await db.sessions.put(next);
       return next;
     });
@@ -461,10 +485,12 @@ export function createRepositories(db: AppDB = defaultDb) {
       durationMin: input.durationMin,
       validFrom: input.validFrom,
     };
-    for (const k of ['startTime', 'validTo', 'note'] as const) delete next[k];
+    for (const k of ['startTime', 'validTo', 'note', 'label'] as const) delete next[k];
     if (input.startTime) next.startTime = input.startTime;
     if (input.validTo) next.validTo = input.validTo;
     if (input.note?.trim()) next.note = input.note.trim();
+    const label = cleanLabel(input.label);
+    if (label) next.label = label;
     return next;
   }
 
@@ -602,6 +628,7 @@ export function createRepositories(db: AppDB = defaultDb) {
         updatedBy: by,
       };
       if (plan.startTime) session.startTime = plan.startTime;
+      if (plan.label) session.label = plan.label;
       await db.sessions.put(session); // put herättää poistomerkityn henkiin
       if (fixture) {
         const existingFd = await db.footballDetails.get(sid);
@@ -1162,6 +1189,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     recalculateSessions,
     sessionsInRange,
     recentActivityTypeIds,
+    recentLabels,
     createSession,
     updateSession,
     deleteSession,

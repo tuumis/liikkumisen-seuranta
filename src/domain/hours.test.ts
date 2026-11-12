@@ -131,3 +131,16 @@ describe('viikon liikuntamäärän luokat', () => {
     expect(HOURS_BANDS).toHaveLength(6);
   });
 });
+
+describe('arkiliikunta päiväkohtaisesti', () => {
+  it('vahvistettu (kirjattu) tai "ei tänä päivänä" (0 min) korvaa perusarvion sinä päivänä', async () => {
+    const { dayTotals } = await import('./aggregate');
+    const types = typesMap();
+    const zero = session({ date: '2026-11-11', activityTypeId: RECESS, durationMin: 0, minutes: M });
+    const h = weeklyHours({ ...base, sessions: [zero], estimates: [recess] });
+    expect(h.days.find((d) => d.date === '2026-11-11')).toMatchObject({ actualMin: 0 });
+    expect(h.actual.estimate).toBe(4 * 60);
+    const t = dayTotals('2026-11-11', [zero], [recess], types);
+    expect(t.estimatedCategories).toEqual([]);
+  });
+});

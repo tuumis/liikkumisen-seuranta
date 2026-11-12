@@ -12,6 +12,7 @@ import { formatDate } from '../../ui/format';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { durationSchema, issuesByField } from '../week/sessionForm';
+import { LabelField } from '../week/LabelField';
 
 const WEEKDAYS: { value: Weekday; label: string }[] = [
   { value: 1, label: 'Ma' },
@@ -32,6 +33,7 @@ const schema = z
     validFrom: z.string().refine(isISODate, 'Valitse alkupäivä'),
     validTo: z.string().refine((s) => s === '' || isISODate(s), 'Tarkista päättymispäivä'),
     note: z.string().max(200),
+    label: z.string().max(40),
   })
   .refine((v) => v.validTo === '' || v.validTo >= v.validFrom, { path: ['validTo'], message: 'Päättyy ennen alkua' });
 
@@ -70,7 +72,10 @@ export function TemplateSection({ profile }: { profile: Profile }) {
           <li key={i.id}>
             <button type="button" onClick={() => setEditing(i)} className="flex w-full items-center gap-3 py-3 text-left active:bg-slate-50">
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-medium text-slate-900">{typeName(i.activityTypeId)}</span>
+                <span className="block truncate font-medium text-slate-900">
+                  {typeName(i.activityTypeId)}
+                  {i.label && <span className="ml-1.5 rounded-full bg-[var(--surface-sage)] px-2 py-0.5 text-xs font-semibold text-green-900">{i.label}</span>}
+                </span>
                 <span className="block text-xs text-slate-600">
                   {i.weekdays.map((d) => WEEKDAYS[d - 1].label).join(', ')}
                   {i.startTime && ` klo ${i.startTime}`} · {i.durationMin} min
@@ -103,6 +108,7 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
     validFrom: item?.validFrom ?? today,
     validTo: item?.validTo ?? '',
     note: item?.note ?? '',
+    label: item?.label ?? '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -131,6 +137,7 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
       validFrom: r.data.validFrom,
       validTo: r.data.validTo || undefined,
       note: r.data.note,
+      label: r.data.label,
     };
     try {
       const saved = item ? await repo.updateTemplateItem(item.id, input, today) : await repo.createTemplateItem(profile.id, input, today);
@@ -220,6 +227,8 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
           {err('validTo')}
         </Field>
       </div>
+
+      <LabelField profileId={profile.id} activityTypeId={v.activityTypeId} value={v.label} onChange={(l) => setV((c) => ({ ...c, label: l }))} placeholder="esim. Joukkuetreeni, Taitokoulu" />
 
       <Field label="Muistiinpano">
         <input className={inputClass} value={v.note} maxLength={200} onChange={(e) => setV((c) => ({ ...c, note: e.target.value }))} placeholder="esim. syyskausi" />

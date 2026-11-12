@@ -188,3 +188,28 @@ describe('päivämerkinnät', () => {
     expect(await db.dayFlags.count()).toBe(1);
   });
 });
+
+describe('tarkenne (label)', () => {
+  it('kerta, viikkopohja ja kuittaus kuljettavat tarkenteen; ehdotukset uusin ensin ilman kaksoiskappaleita', async () => {
+    const { createRepositories } = await import('./repositories');
+    const { AppDB } = await import('./schema');
+    const { activityTypeId, plannedSessionId } = await import('../domain/ids');
+    const db = new AppDB(`label-${Date.now()}`);
+    const r = createRepositories(db);
+    await r.initialize();
+    const T = activityTypeId('football_training');
+    const item = await r.createTemplateItem('p1', { activityTypeId: T, weekdays: [2], durationMin: 90, validFrom: '2026-11-01', label: '  Talentti   treeni ' }, '2026-11-09');
+    expect(item.label).toBe('Talentti treeni');
+    const plan = (await r.plansInRange('p1', '2026-11-10', '2026-11-10'))[0];
+    expect(plan.label).toBe('Talentti treeni');
+    const c = await r.confirmPlanned(plannedSessionId(item.id, '2026-11-10'), '2026-11-10');
+    expect(c.session.label).toBe('Talentti treeni');
+    const s = await r.createSession({ profileId: 'p1', activityTypeId: T, date: '2026-11-11', durationMin: 60, effort: 0, muscle: false, bone: false, label: 'Futsal' });
+    expect(s.label).toBe('Futsal');
+    const u = await r.updateSession(s.id, { activityTypeId: T, date: '2026-11-11', durationMin: 60, effort: 0, muscle: false, bone: false, label: '' });
+    expect(u.label).toBeUndefined();
+    await r.createSession({ profileId: 'p1', activityTypeId: T, date: '2026-11-12', durationMin: 60, effort: 0, muscle: false, bone: false, label: 'talentti treeni' });
+    expect(await r.recentLabels('p1', T)).toEqual(['Talentti treeni']);
+    await db.delete();
+  });
+});

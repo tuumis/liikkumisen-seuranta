@@ -16,6 +16,8 @@ import { useLongPress } from '../../ui/useLongPress';
 import { IconButton } from '../review/ReviewSheet';
 import { FLAG_LABEL } from './DaySheet';
 import { TypeIcon } from './Dashboard';
+import { IconSun } from '../../ui/icons';
+import { CATEGORY_LABEL } from '../../ui/labels';
 
 export function DayRow({
   index = 0,
@@ -37,6 +39,7 @@ export function DayRow({
   onEdit,
   onPlanOpen,
   onPlanConfirm,
+  onEstimate,
 }: {
   /** Järjestys porrastettua sisääntuloa varten. */
   index?: number;
@@ -63,6 +66,8 @@ export function DayRow({
   onEdit: (s: Session) => void;
   onPlanOpen: (p: PlannedSession) => void;
   onPlanConfirm: (p: PlannedSession) => void;
+  /** Avaa päivän arkiliikunnan tarkistuksen (vahvista / muuta / ei tänään). */
+  onEstimate?: () => void;
 }) {
   const press = useLongPress(onOpenMenu);
   const estimated = sessions.some((s) => s.intensitySource === 'profile');
@@ -72,6 +77,9 @@ export function DayRow({
   const estPct = Math.min(100 - loggedPct, (est / barTarget) * 100);
 
   const dayNo = Number(date.slice(8, 10));
+  // Arkiliikunnan arvio, joka on mukana päivän luvuissa (menneet ja tämä päivä, ei sairas-/matkapäivinä).
+  const estMin = hours ? hours.actualMin - hours.actualLoggedMin : 0;
+  const estimateRow = !isFuture && !flag && estMin > 0 && totals && totals.estimatedCategories.length > 0 ? { minutes: estMin, categories: totals.estimatedCategories } : null;
   const weekday = dayLabel(date).split(' ')[0];
   const full = formatDate(date, 'EEEE');
   const weekdayName = full.charAt(0).toUpperCase() + full.slice(1);
@@ -115,7 +123,9 @@ export function DayRow({
                   }
                 >
                   <span className="stat text-[15px]">{hours.actualMin}</span>
-                  <span className="text-[11px] font-semibold text-slate-500">min yhteensä</span>
+                  <span className="text-[11px] font-semibold text-slate-500">
+                    min{hours.actualMin > hours.actualLoggedMin ? `, josta arvio ${hours.actualMin - hours.actualLoggedMin}` : ' yhteensä'}
+                  </span>
                 </InfoTip>
               )}
               <div className="flex items-center gap-1.5">
@@ -157,7 +167,7 @@ export function DayRow({
         </div>
       </div>
 
-      {sessions.length + plans.length > 0 ? (
+      {sessions.length + plans.length + (estimateRow ? 1 : 0) > 0 ? (
         <ul className="space-y-1 px-2 pb-2.5">
           {sessions.map((s) => {
             const t = types.get(s.activityTypeId);
@@ -171,13 +181,28 @@ export function DayRow({
                 <button type="button" onClick={() => onEdit(s)} className="press flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-2 py-2 text-left hover:bg-[color-mix(in_oklab,var(--surface-sunk)_70%,transparent)]">
                   <TypeIcon t={t} size="sm" />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-slate-900">{t?.name ?? 'Tuntematon laji'}</span>
+                    <span className="block truncate text-sm font-semibold text-slate-900">
+                      {s.label ? (
+                        <>
+                          {s.label} <span className="font-medium text-slate-500">· {t?.name ?? 'Laji'}</span>
+                        </>
+                      ) : (
+                        (t?.name ?? 'Tuntematon laji')
+                      )}
+                    </span>
                     <span className="block truncate text-xs text-slate-500">
-                      {s.durationMin} min
+                      {s.durationMin === 0 ? (
+                        'Ei tänä päivänä (merkitty) – arkiliikuntaa ei lasketa'
+                      ) : (
+                        <>
+                          {s.durationMin} min
                       {plan && plan.durationMin !== s.durationMin && ` (suunn. ${plan.durationMin})`}
                       {s.playedMin !== undefined && ` · pelattu ${s.playedMin}`} · {s.intensitySource === 'manual' ? 'reipas+rasittava' : 'arvio: reipas+rasittava'} {mvpaOf(s.minutes)} min
                       {tags && ` · ${tags}`}
                       {s.note && ` · ${s.note}`}
+                    
+                        </>
+                      )}
                     </span>
                     {fbText && <span className="block truncate text-xs font-medium text-slate-700">{fbText}</span>}
                   </span>
@@ -194,6 +219,26 @@ export function DayRow({
               </li>
             );
           })}
+          {estimateRow && (
+            <li className="flex items-center gap-2 rounded-2xl border border-dashed border-amber-300 bg-amber-50/60 pr-1 dark:border-amber-800">
+              <button type="button" onClick={onEstimate} className="press flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-2 py-2 text-left">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-800" aria-hidden>
+                  <IconSun size="1.15rem" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-slate-800">
+                    Arkiliikunta <span className="font-medium text-amber-800">(arvio)</span>
+                  </span>
+                  <span className="block truncate text-xs text-slate-500">
+                    {estimateRow.categories.map((c) => CATEGORY_LABEL[c].toLowerCase()).join(', ')} · {estimateRow.minutes} min
+                  </span>
+                </span>
+              </button>
+              <button type="button" onClick={onEstimate} className="press min-h-9 shrink-0 rounded-full bg-amber-100 px-3 text-xs font-bold text-amber-900 hover:bg-amber-200">
+                Tarkista
+              </button>
+            </li>
+          )}
           {plans.map((p) => {
             const t = types.get(p.activityTypeId);
             const skipped = p.status === 'skipped';
@@ -202,7 +247,9 @@ export function DayRow({
                 <button type="button" onClick={() => onPlanOpen(p)} className="press flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-2 py-2 text-left">
                   <TypeIcon t={t} size="sm" muted />
                   <span className="min-w-0 flex-1">
-                    <span className={`block truncate text-sm font-semibold text-slate-600 ${skipped ? 'line-through' : ''}`}>{t?.name ?? 'Laji'}</span>
+                    <span className={`block truncate text-sm font-semibold text-slate-600 ${skipped ? 'line-through' : ''}`}>
+                      {p.label ? `${p.label} · ${t?.name ?? 'Laji'}` : (t?.name ?? 'Laji')}
+                    </span>
                     <span className="block truncate text-xs text-slate-500">
                       {skipped
                         ? `Ei tehty${p.skipReason ? ` · ${SKIP_REASON_LABEL[p.skipReason].toLowerCase()}` : ''}`

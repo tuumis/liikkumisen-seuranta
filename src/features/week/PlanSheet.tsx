@@ -83,7 +83,7 @@ export function PlanSheet({
   }
 
   return (
-    <Sheet open onClose={onClose} title={`${type?.icon ?? ''} ${type?.name ?? 'Suunnitelma'}`.trim()}>
+    <Sheet open onClose={onClose} title={`${type?.icon ?? ''} ${plan.label ?? type?.name ?? 'Suunnitelma'}`.trim()}>
       <div className="space-y-4">
         <p className="text-sm text-slate-700">
           Suunniteltu {dayLabel(plan.date)}

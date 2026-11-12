@@ -19,7 +19,9 @@ import { useReport } from './useReport';
 import { FootballSection } from '../football/FootballSection';
 import { GamesView } from '../football/GamesView';
 import { HighlightsCard } from './HighlightsCard';
-import { IconChevronLeft, IconChevronRight } from '../../ui/icons';
+import { IconChevronLeft, IconChevronRight, IconSettings } from '../../ui/icons';
+import { Sheet } from '../../ui/Sheet';
+import { ANALYSIS_CARDS, useAnalysisLayout } from './layout';
 
 export function AnalysisView({ profile }: { profile?: Profile }) {
   const today = todayFn();
@@ -29,6 +31,9 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
   const wk = isoWeek(weekStart);
   const isCurrent = weekStart === startOfIsoWeek(today);
   const [games, setGames] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const layoutApi = useAnalysisLayout();
+  const visible = layoutApi.layout.order.filter((id) => !layoutApi.layout.hidden.includes(id));
 
   if (games && profile) return <GamesView profile={profile} onBack={() => setGames(false)} />;
 
@@ -55,7 +60,11 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
             Tämä viikko
           </Button>
         )}
-        <span className="w-full text-xs text-slate-500 sm:ml-auto sm:w-auto">Kuukausi-, kausi- ja vuosinäkymä tulossa. Kohokohdat voi jo katsoa kuukaudelta ja kaudelta.</span>
+        <span className="ml-auto">
+          <Button variant="secondary" onClick={() => setEditing(true)}>
+            <IconSettings size="1rem" /> Muokkaa näkymää
+          </Button>
+        </span>
       </div>
 
       {!profile && <Card>Lisää profiili Asetukset-välilehdellä.</Card>}
@@ -73,41 +82,57 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
       )}
 
       {profile && report && (
-        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12 lg:gap-6">
-          {/* Pääpalsta: suositusvertailu, päivittäinen kaavio ja tunnit. */}
-          <div className="min-w-0 space-y-5 lg:col-span-7 xl:col-span-8">
-            <Card title={`Tavoitteet · ${profile.name}`} eyebrow="Suositusvertailu" className="anim-rise">
-              <GoalCard report={report} variant="full" />
-            </Card>
-            <Card title={report.group.group === 'early_years' ? 'Vauhdikas liikkuminen päivittäin' : 'Reipas ja rasittava päivittäin'} eyebrow="Päivittäin" className="anim-rise">
-              <DailyMvpaChart
-                days={report.allDays}
-                validDates={report.validDates}
-                target={DAY_BAR_TARGET[report.group.group]}
-                targetLabel={
-                  report.group.group === 'adult'
-                    ? `tahti ${Math.round(DAY_BAR_TARGET.adult)} min/pv (150 min/vko)`
-                    : `suositus ${DAY_BAR_TARGET[report.group.group]} min/pv`
-                }
-              />
-            </Card>
-            <HoursCard report={report} isCurrentWeek={isCurrent} />
-            <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2">
-              <CategoryCard report={report} />
-              <div className="space-y-5">
-                <AdherenceCard report={report} />
-                <QualityCard report={report} />
-              </div>
-            </div>
+        <>
+          {/* Käyttäjän valitsemat kortit omassa järjestyksessään; palstat täyttyvät ylhäältä alas ilman aukkoja. */}
+          <div className="columns-1 gap-5 lg:columns-2 lg:gap-6 2xl:columns-3">
+            {visible.map((id) => {
+              const card =
+                id === 'goals' ? (
+                  <Card title={`Tavoitteet · ${profile.name}`} eyebrow="Suositusvertailu">
+                    <GoalCard report={report} variant="full" />
+                  </Card>
+                ) : id === 'daily' ? (
+                  <Card title={report.group.group === 'early_years' ? 'Vauhdikas liikkuminen päivittäin' : 'Reipas ja rasittava päivittäin'} eyebrow="Päivittäin">
+                    <DailyMvpaChart
+                      days={report.allDays}
+                      validDates={report.validDates}
+                      target={DAY_BAR_TARGET[report.group.group]}
+                      targetLabel={
+                        report.group.group === 'adult'
+                          ? `tahti ${Math.round(DAY_BAR_TARGET.adult)} min/pv (150 min/vko)`
+                          : `suositus ${DAY_BAR_TARGET[report.group.group]} min/pv`
+                      }
+                    />
+                  </Card>
+                ) : id === 'gauge' ? (
+                  report.group.group === 'school_age' ? <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} /> : null
+                ) : id === 'hours' ? (
+                  <HoursCard report={report} isCurrentWeek={isCurrent} />
+                ) : id === 'highlights' ? (
+                  <HighlightsCard profile={profile} week={period} />
+                ) : id === 'football' ? (
+                  <FootballSection profileId={profile.id} week={period} onOpenGames={() => setGames(true)} />
+                ) : id === 'categories' ? (
+                  <CategoryCard report={report} />
+                ) : id === 'adherence' ? (
+                  <AdherenceCard report={report} />
+                ) : (
+                  <QualityCard report={report} />
+                );
+              return (
+                <div key={id} className="anim-rise mb-5 break-inside-avoid empty:hidden lg:mb-6">
+                  {card}
+                </div>
+              );
+            })}
           </div>
-
-          {/* Sivupalsta: liikuntamäärä, kohokohdat ja jalkapallo. */}
-          <div className="min-w-0 space-y-5 lg:col-span-5 xl:col-span-4">
-            {report.group.group === 'school_age' && <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} />}
-            <HighlightsCard profile={profile} week={period} />
-            <FootballSection profileId={profile.id} week={period} onOpenGames={() => setGames(true)} />
-          </div>
-        </div>
+          {visible.length === 0 && (
+            <Card>
+              <p className="text-sm text-slate-600">Kaikki kortit on piilotettu. Valitse näytettävät kortit painikkeesta "Muokkaa näkymää".</p>
+            </Card>
+          )}
+          <EditLayoutSheet open={editing} onClose={() => setEditing(false)} api={layoutApi} />
+        </>
       )}
 
       <Rationale />
@@ -277,5 +302,52 @@ function Rationale() {
         </>
       )}
     </Card>
+  );
+}
+
+/** Näkymän muokkaus: korttien näkyvyys ja järjestys. */
+function EditLayoutSheet({ open, onClose, api }: { open: boolean; onClose: () => void; api: ReturnType<typeof useAnalysisLayout> }) {
+  const { layout, toggle, move, reset } = api;
+  return (
+    <Sheet open={open} onClose={onClose} title="Muokkaa Analyysi-näkymää">
+      <p className="mb-3 text-sm text-slate-600">Valitse näytettävät kortit ja niiden järjestys. PC:llä kortit asettuvat palstoihin ylhäältä alas tässä järjestyksessä.</p>
+      <ul className="space-y-2">
+        {layout.order.map((id, i) => {
+          const c = ANALYSIS_CARDS.find((x) => x.id === id)!;
+          const on = !layout.hidden.includes(id);
+          return (
+            <li key={id} className={`flex items-center gap-2 rounded-2xl p-2 pl-3 ${on ? 'card' : 'card-sunk opacity-70'}`}>
+              <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
+                <input type="checkbox" className="size-5 shrink-0 accent-green-700" checked={on} onChange={() => toggle(id)} />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-slate-900">{c.title}</span>
+                  <span className="block text-xs leading-snug text-slate-500">{c.text}</span>
+                </span>
+              </label>
+              <div className="flex shrink-0 gap-1">
+                <button type="button" disabled={i === 0} onClick={() => move(id, -1)} className="press flex size-9 items-center justify-center rounded-xl bg-[var(--surface-sunk)] text-slate-600 disabled:opacity-30" aria-label={`Siirrä ylös: ${c.title}`}>
+                  <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden>
+                    <path d="m6 15 6-6 6 6" />
+                  </svg>
+                </button>
+                <button type="button" disabled={i === layout.order.length - 1} onClick={() => move(id, 1)} className="press flex size-9 items-center justify-center rounded-xl bg-[var(--surface-sunk)] text-slate-600 disabled:opacity-30" aria-label={`Siirrä alas: ${c.title}`}>
+                  <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden>
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="mt-4 flex gap-2">
+        <Button className="flex-1" onClick={onClose}>
+          Valmis
+        </Button>
+        <Button variant="secondary" onClick={reset}>
+          Palauta oletus
+        </Button>
+      </div>
+    </Sheet>
   );
 }

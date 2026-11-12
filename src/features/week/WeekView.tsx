@@ -5,7 +5,7 @@ import { addDays, datesBetween, isoWeek, startOfIsoWeek, weekPeriod } from '../.
 import { planAdherence } from '../../domain/adherence';
 import { planningThroughForWeek } from '../../domain/planning';
 import { RECOMMENDATIONS } from '../../domain/recommendations';
-import type { ActivityType, DayFlag, ISODate, PlannedSession, Profile, RecommendationGroup, Session } from '../../domain/types';
+import type { ActivityType, Category, DayFlag, ISODate, PlannedSession, Profile, RecommendationGroup, Session } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { Button, Card } from '../../ui/components';
 import { formatDate } from '../../ui/format';
@@ -21,12 +21,14 @@ import { DayRow } from './DayRow';
 import { WeekDetails, WeekHero } from './WeekSummary';
 import { DailyChart, RecentCard, RhythmCard, UpcomingCard } from './Dashboard';
 import { useScrolling } from '../../ui/motion';
+import { useViewMode } from '../../ui/theme';
 import { IconCalendarClock, IconChevronLeft, IconChevronRight, IconPlus } from '../../ui/icons';
 import { HoursGauge } from './HoursGauge';
 import { HoursCard } from './HoursCard';
 import { GettingStarted } from './GettingStarted';
 import type { SettingsSectionId } from '../settings/SettingsView';
 import { DaySheet } from './DaySheet';
+import { EstimateDaySheet } from './EstimateDaySheet';
 import { SessionEditor } from './SessionEditor';
 
 /** Päivän MVPA-palkin täysi pituus (min) ryhmän päivätavoitteesta. */
@@ -60,6 +62,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
   const [quickAdd, setQuickAdd] = useState<{ date?: ISODate } | null>(null);
   const [editing, setEditing] = useState<Session | null>(null);
   const [dayMenu, setDayMenu] = useState<ISODate | null>(null);
+  const [estimateDay, setEstimateDay] = useState<{ date: ISODate; categories: Category[] } | null>(null);
   const [planOpen, setPlanOpen] = useState<PlannedSession | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [football, setFootball] = useState<Session | null>(null);
@@ -124,6 +127,8 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
 
   // Päiväkoosteet korvausperiaatteella (kirjaukset + perusarviot) ja suositusvertailu.
   const report = useReport(profile, period);
+  const [viewMode] = useViewMode();
+  const simple = viewMode === 'simple';
   // +-painike väistyy vierityksen ajaksi ja palaa, kun vieritys pysähtyy.
   const scrolling = useScrolling();
   // Liikuntamäärän luokat (7 h = 60 min/pv) koskevat kouluikäisiä.
@@ -207,7 +212,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
           {adherence.planned > 0 && ` · suunniteltu ${adherence.planned}, tehty ${adherence.done}`}
         </span>
       </div>
-      <ol className="space-y-2.5 2xl:grid 2xl:grid-cols-2 2xl:gap-3 2xl:space-y-0" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} aria-label="Viikon päivät">
+      <ol className={`space-y-2.5 2xl:grid 2xl:grid-cols-2 2xl:gap-3 2xl:space-y-0 ${simple ? 'lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0' : ''}`} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} aria-label="Viikon päivät">
         {dates.map((d, i) => (
           <DayRow
             key={d}
@@ -230,6 +235,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             barTarget={DAY_BAR_TARGET[info?.group ?? 'school_age']}
             onOpenMenu={() => setDayMenu(d)}
             onEdit={setEditing}
+            onEstimate={() => setEstimateDay({ date: d, categories: report?.allDays[i]?.estimatedCategories ?? [] })}
           />
         ))}
       </ol>
@@ -256,9 +262,10 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
       {profile && report && (
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12 lg:gap-6">
           {/* Pääpalsta: tilanne, päivittäinen jakauma ja päivät. */}
-          <div className="min-w-0 space-y-5 lg:col-span-7 xl:col-span-8">
+          <div className={`min-w-0 space-y-5 ${simple ? 'lg:col-span-12' : 'lg:col-span-7 xl:col-span-8'}`}>
             <WeekHero report={report} profile={profile} isCurrentWeek={isCurrent} onAdd={() => setQuickAdd({})} />
             {reviewButton}
+            {!simple && (
             <div className="grid grid-cols-1 gap-5 2xl:grid-cols-5">
               <div className="2xl:col-span-3">
                 <DailyChart report={report} today={today} target={DAY_BAR_TARGET[info?.group ?? 'school_age']} title={chartTitle} />
@@ -267,22 +274,34 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
                 <RhythmCard report={report} today={today} />
               </div>
             </div>
+            )}
+            {!simple && (
             <div className="space-y-5 lg:hidden">
               {showGauge && <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} />}
               <HoursCard report={report} isCurrentWeek={isCurrent} />
             </div>
+            )}
+            {!simple && (
             <div className="lg:hidden">
               <UpcomingCard profile={profile} today={today} types={typeMap} onOpen={setPlanOpen} />
             </div>
+            )}
             {dayList}
+            {!simple && (
             <div className="space-y-5 lg:hidden">
               <RecentCard profile={profile} today={today} types={typeMap} onOpen={setEditing} />
               <WeekDetails report={report} isCurrentWeek={isCurrent} />
             </div>
+            )}
+            {simple && (
+              <p className="text-center text-xs text-slate-500">
+                Yksinkertainen näkymä. Kaaviot ja tarkemmat luvut saat näkyviin kohdasta Asetukset → Ulkoasu → Näkymä.
+              </p>
+            )}
           </div>
 
           {/* Sivupalsta (PC): määrä, tulevat ja viimeisimmät, tarkemmat luvut. */}
-          <aside className="hidden min-w-0 space-y-5 lg:col-span-5 lg:block xl:col-span-4" aria-label="Viikon yhteenveto">
+          <aside className={`hidden min-w-0 space-y-5 lg:col-span-5 xl:col-span-4 ${simple ? '' : 'lg:block'}`} aria-label="Viikon yhteenveto">
             {showGauge && <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} />}
             <HoursCard report={report} isCurrentWeek={isCurrent} />
             <UpcomingCard profile={profile} today={today} types={typeMap} onOpen={setPlanOpen} />
@@ -322,6 +341,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             type={football ? typeMap.get(football.activityTypeId) : undefined}
             onClose={() => setFootball(null)}
           />
+          <EstimateDaySheet date={estimateDay?.date ?? null} categories={estimateDay?.categories ?? []} profile={profile} onClose={() => setEstimateDay(null)} />
           <DaySheet
             date={dayMenu}
             flag={dayMenu ? flagByDate.get(dayMenu) : undefined}

@@ -126,6 +126,8 @@ export interface TemplateItem extends SyncFields {
   validTo?: ISODate; // esim. syyskausi; mukaan luettu päivä
   active: boolean;
   note?: string;
+  /** Tarkenne, joka näkyy viikolla (esim. "Talenttitreeni"); siirtyy suunnitelmiin ja kertoihin. */
+  label?: string;
   createdAt: Timestamp;
 }
 
@@ -145,6 +147,8 @@ export interface PlannedSession extends SyncFields {
   sessionId?: UUID; // kun status = 'done'
   /** Tätä kertaa on muutettu yksittäin (kesto/kellonaika); viikkopohjan muokkaus ei kumoa muutosta. */
   overridden?: boolean;
+  /** Tarkenne viikkopohjasta (esim. "Futsal"). */
+  label?: string;
   createdAt: Timestamp;
 }
 
@@ -167,6 +171,8 @@ export interface Session extends SyncFields {
   bone: boolean;
   plannedSessionId?: UUID;
   note?: string;
+  /** Tarkenne lajin nimen rinnalle (esim. "Joukkuetreeni", "Taitokoulu", "Uinti koululiikunnassa"). */
+  label?: string;
   createdAt: Timestamp;
 }
 

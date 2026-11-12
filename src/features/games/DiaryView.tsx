@@ -33,7 +33,7 @@ export function DiaryView({ profile }: { profile: Profile }) {
       .filter(({ d, s }) => !onlyCommented || hasComment(s, d))
       .filter(({ s, t, d }) => {
         if (!q) return true;
-        const hay = [t?.name, s.note, d?.ratingNote, d?.opponent, d?.team, d?.eventName, ...(d?.games ?? []).flatMap((g) => [g.opponent, g.note]), ...(d?.focusTags ?? []).map((x) => FOCUS_TAG_LABEL[x])]
+        const hay = [t?.name, s.label, s.note, d?.ratingNote, d?.opponent, d?.team, d?.eventName, ...(d?.games ?? []).flatMap((g) => [g.opponent, g.note]), ...(d?.focusTags ?? []).map((x) => FOCUS_TAG_LABEL[x])]
           .filter(Boolean)
           .join(' ')
           .toLocaleLowerCase('fi');
@@ -119,7 +119,10 @@ function DiaryEntry({ s, t, d, onDetails }: { s: Session; t?: ActivityType; d?: 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2">
             <span className="font-semibold text-slate-900">{dayLabel(s.date)}</span>
-            <span className="text-sm text-slate-700">{t?.name ?? 'Jalkapallo'}</span>
+            <span className="text-sm text-slate-700">
+              {s.label && <strong className="font-semibold text-slate-900">{s.label} · </strong>}
+              {t?.name ?? 'Jalkapallo'}
+            </span>
             <span className="text-xs text-slate-500">
               {s.durationMin} min{s.playedMin !== undefined ? ` · pelattu ${s.playedMin}` : ''}
             </span>

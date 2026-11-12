@@ -131,3 +131,39 @@ export function useThemeVersion(): number {
 /** Design systemin tokenin arvo (esim. '--viz-logged') nykyisessä teemassa. */
 export const cssVar = (name: string, fallback = '') =>
   (typeof document !== 'undefined' && getComputedStyle(document.documentElement).getPropertyValue(name).trim()) || fallback;
+
+// ---------- näkymä: kattava vai yksinkertainen ----------
+
+export type ViewMode = 'full' | 'simple';
+const VIEW_KEY = 'viewMode';
+
+export function getViewMode(): ViewMode {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'simple' ? 'simple' : 'full';
+  } catch {
+    return 'full';
+  }
+}
+
+/** Laitekohtainen näkymävalinta; muutos välittyy kaikille käyttäjille (viewmodechange). */
+export function useViewMode(): [ViewMode, (m: ViewMode) => void] {
+  const [mode, setMode] = useState<ViewMode>(getViewMode);
+  useEffect(() => {
+    const update = () => setMode(getViewMode());
+    window.addEventListener('viewmodechange', update);
+    return () => window.removeEventListener('viewmodechange', update);
+  }, []);
+  return [
+    mode,
+    (m) => {
+      try {
+        if (m === 'full') localStorage.removeItem(VIEW_KEY);
+        else localStorage.setItem(VIEW_KEY, m);
+      } catch {
+        /* ei tallennusta */
+      }
+      setMode(m);
+      window.dispatchEvent(new Event('viewmodechange'));
+    },
+  ];
+}

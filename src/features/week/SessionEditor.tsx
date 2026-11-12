@@ -9,6 +9,8 @@ import { Button, EstimateBadge, Field, inputClass } from '../../ui/components';
 import { ToggleChip } from '../../ui/controls';
 import { IntensityPicker, isPreset, type IntensityMode } from './IntensityPicker';
 import { Sheet } from '../../ui/Sheet';
+import { LabelField } from './LabelField';
+import { TermInfo } from '../../ui/glossary';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { dateSchema, durationSchema, manualSchema, optionalMinutes, showStrength } from './sessionForm';
@@ -36,6 +38,7 @@ export function SessionEditor({
   const [muscle, setMuscle] = useState(false);
   const [bone, setBone] = useState(false);
   const [note, setNote] = useState('');
+  const [label, setLabel] = useState('');
   const [mode, setMode] = useState<IntensityMode>('profile');
   const [manual, setManual] = useState({ light: '', moderate: '', vigorous: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -52,6 +55,7 @@ export function SessionEditor({
     setMuscle(session.muscle);
     setBone(session.bone);
     setNote(session.note ?? '');
+    setLabel(session.label ?? '');
     setMode(session.intensitySource === 'manual' ? 'manual' : (session.intensityPreset ?? 'profile'));
     setManual({
       light: String(session.minutes.light),
@@ -115,6 +119,7 @@ export function SessionEditor({
         muscle: showStrength(type.muscleDefault, muscle) && muscle,
         bone: showStrength(type.boneDefault, bone) && bone,
         note,
+        label,
       });
       onClose();
       toast('Muutokset tallennettu');
@@ -175,17 +180,26 @@ export function SessionEditor({
           )}
 
           {type && (showStrength(type.muscleDefault, muscle) || showStrength(type.boneDefault, bone)) && (
-            <div className="flex flex-wrap gap-2">
-              {showStrength(type.muscleDefault, muscle) && (
-                <ToggleChip on={muscle} onChange={setMuscle}>
-                  Lihaksia vahvistava
-                </ToggleChip>
-              )}
-              {showStrength(type.boneDefault, bone) && (
-                <ToggleChip on={bone} onChange={setBone}>
-                  Luustoa vahvistava
-                </ToggleChip>
-              )}
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                {showStrength(type.muscleDefault, muscle) && (
+                  <span className="inline-flex items-center gap-1">
+                    <ToggleChip on={muscle} onChange={setMuscle}>
+                      Lihaksia vahvistava
+                    </ToggleChip>
+                    <TermInfo id="muscle" />
+                  </span>
+                )}
+                {showStrength(type.boneDefault, bone) && (
+                  <span className="inline-flex items-center gap-1">
+                    <ToggleChip on={bone} onChange={setBone}>
+                      Luustoa vahvistava
+                    </ToggleChip>
+                    <TermInfo id="bone" align="right" />
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500">Lihakset: kiipeily, punnerrukset, kuntopiiri. Luusto: hypyt, juoksu, pallopelit.</p>
             </div>
           )}
 
@@ -210,6 +224,8 @@ export function SessionEditor({
               {errors.manual && <p className="mt-1 text-sm text-red-700">{errors.manual}</p>}
             </div>
           )}
+
+          {type && <LabelField profileId={session.profileId} activityTypeId={type.id} value={label} onChange={setLabel} />}
 
           <Field label="Muistiinpano">
             <input className={inputClass} value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} />

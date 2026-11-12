@@ -91,7 +91,7 @@ export function HoursCard({ report, isCurrentWeek }: { report: PeriodReport; isC
                       <span className="tabular-nums">+ {formatHours(f.openPlans)}</span>
                     </div>
                     <div className="flex justify-between gap-2">
-                      <span>arkiliikunta loppuviikko</span>
+                      <span>arkiliikunta tulevina päivinä (arvio)</span>
                       <span className="tabular-nums">+ {formatHours(f.estimateAhead)}</span>
                     </div>
                   </>
