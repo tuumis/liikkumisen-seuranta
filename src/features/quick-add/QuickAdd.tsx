@@ -18,6 +18,7 @@ import { dayLabel } from '../../ui/format';
 import { CATEGORY_LABEL } from '../../ui/labels';
 import { Sheet } from '../../ui/Sheet';
 import { useToast } from '../../ui/Toast';
+import { markFresh } from '../../ui/fresh';
 import { today as todayFn } from '../../ui/today';
 import { dateSchema, durationSchema, manualSchema, optionalMinutes, showStrength, strengthDefaults } from '../week/sessionForm';
 
@@ -193,6 +194,7 @@ export function QuickAdd({
         note,
         label,
       });
+      markFresh(s.id);
       void requestPersistentStorage();
       onClose();
       toast(`Tallennettu: ${type.name}${label.trim() ? ` (${label.trim()})` : ''} ${dur.data} min`, { label: 'Kumoa', run: () => repo.deleteSession(s.id).then(() => {}) }, 'success');

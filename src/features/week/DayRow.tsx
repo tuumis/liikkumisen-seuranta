@@ -17,6 +17,7 @@ import { IconButton } from '../review/ReviewSheet';
 import { FLAG_LABEL } from './DaySheet';
 import { TypeIcon } from './Dashboard';
 import { IconSun } from '../../ui/icons';
+import { isFresh, useConfirmFeedback } from '../../ui/fresh';
 import { CATEGORY_LABEL } from '../../ui/labels';
 import { isEstimateConfirmation } from '../../domain/hours';
 
@@ -91,6 +92,8 @@ export function DayRow({
           confirmed: confirmed.map((s) => ({ id: s.id, name: CATEGORY_LABEL[types.get(s.activityTypeId)?.category ?? 'other'], min: s.durationMin })),
         }
       : null;
+  // Kuittauksen palaute: suunnitelma painuu pois ennen kuin kerta ilmestyy tilalle (välähdys + valintamerkki).
+  const { leaving, confirm: confirmWithFeedback } = useConfirmFeedback(onPlanConfirm);
   const weekday = dayLabel(date).split(' ')[0];
   const full = formatDate(date, 'EEEE');
   const weekdayName = full.charAt(0).toUpperCase() + full.slice(1);
@@ -141,8 +144,8 @@ export function DayRow({
               )}
               <div className="flex items-center gap-1.5">
               <div className="flex h-1.5 w-12 shrink-0 gap-[2px] overflow-hidden rounded-full bg-[var(--viz-track)]" aria-hidden>
-                <div className="anim-grow-x h-full rounded-full" style={{ width: `${loggedPct}%`, background: 'var(--viz-logged)' }} />
-                {estPct > 0 && <div className="anim-grow-x h-full rounded-full" style={{ width: `${estPct}%`, background: 'var(--viz-estimate)' }} />}
+                <div className="anim-grow-x h-full rounded-full" style={{ width: `${loggedPct}%`, background: 'var(--viz-logged)', transition: 'width 0.7s var(--ease-out)' }} />
+                {estPct > 0 && <div className="anim-grow-x h-full rounded-full" style={{ width: `${estPct}%`, background: 'var(--viz-estimate)', transition: 'width 0.7s var(--ease-out)' }} />}
               </div>
               <InfoTip
                 className="shrink-0 whitespace-nowrap text-[11px] font-semibold text-slate-700"
@@ -188,9 +191,18 @@ export function DayRow({
             const fd = isFootball ? footballDetails?.get(s.id) : undefined;
             const fbText = fd ? footballSummary(t?.footballKind, fd) : '';
             return (
-              <li key={s.id} className="flex items-center gap-1">
+              <li key={s.id} className={`flex items-center gap-1 rounded-2xl ${isFresh(s.id) ? 'row-fresh' : ''}`}>
                 <button type="button" onClick={() => onEdit(s)} className="press flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-2 py-2 text-left hover:bg-[color-mix(in_oklab,var(--surface-sunk)_70%,transparent)]">
-                  <TypeIcon t={t} size="sm" />
+                  <span className="relative shrink-0">
+                    <TypeIcon t={t} size="sm" />
+                    {isFresh(s.id) && (
+                      <span className="fresh-check absolute -bottom-1 -right-1 flex size-4 items-center justify-center rounded-full bg-green-700 text-white ring-2 ring-[var(--surface)]" aria-hidden>
+                        <svg viewBox="0 0 16 16" className="size-2.5" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M3.5 8.5 6.5 11.5 12.5 4.5" pathLength={1} />
+                        </svg>
+                      </span>
+                    )}
+                  </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-slate-900">
                       {s.label ? (
@@ -283,7 +295,10 @@ export function DayRow({
             const t = types.get(p.activityTypeId);
             const skipped = p.status === 'skipped';
             return (
-              <li key={p.id} className="flex items-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-[color-mix(in_oklab,var(--surface)_60%,transparent)] pr-1">
+              <li
+                key={p.id}
+                className={`flex items-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-[color-mix(in_oklab,var(--surface)_60%,transparent)] pr-1 ${leaving.has(p.id) ? 'plan-leaving' : ''}`}
+              >
                 <button type="button" onClick={() => onPlanOpen(p)} className="press flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-2 py-2 text-left">
                   <TypeIcon t={t} size="sm" muted />
                   <span className="min-w-0 flex-1">
@@ -299,7 +314,7 @@ export function DayRow({
                 </button>
                 {!skipped && (
                   <div className="flex shrink-0 gap-1">
-                    <IconButton label="Tehty kuten suunniteltu" tone="green" disabled={isFuture} onClick={() => onPlanConfirm(p)}>
+                    <IconButton label="Tehty kuten suunniteltu" tone="green" disabled={isFuture} onClick={() => confirmWithFeedback(p)}>
                       ✓
                     </IconButton>
                     <IconButton label="Ei tehty" tone="red" onClick={() => onPlanOpen(p)}>

@@ -15,6 +15,7 @@ import { IconPlus } from '../../ui/icons';
 import { GoalCard } from '../analysis/GoalCard';
 import { Term, type TermId } from '../../ui/glossary';
 import { Collapse, CollapseToggle, useCollapsible } from '../../ui/Collapse';
+import { Sparks, useCelebrateOnce, useMetStreak } from './celebrate';
 
 const pick = (d: DualMeasure, s: Settings) => (s.primaryView === 'logged' ? d.logged : d.combined);
 
@@ -97,6 +98,9 @@ export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: Pe
   const ev = report.evaluation;
   const shown = useCountUp(main ? main.value : 0);
   const decimals = main && main.unit.startsWith('min / päivä') ? 0 : 0;
+  const met = !!main && ev.evaluable && main.m.status === 'met';
+  const streak = useMetStreak(profile, report.period.start, met);
+  const party = useCelebrateOnce(profile.id, report.period.start, met && isCurrentWeek);
 
   return (
     <section className="hero anim-rise p-5 sm:p-6 lg:p-7" style={{ ['--i' as string]: 0 }} aria-label="Viikon tilanne">
@@ -108,6 +112,7 @@ export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: Pe
           {main && ev.evaluable && (
             <span className={`anim-pop shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${PILL[main.m.status]}`} style={{ animationDelay: '0.9s' }}>
               {ICON[main.m.status]} {main.m.status === 'met' ? 'Suositus täyttyi' : main.m.status === 'near' ? 'Lähellä' : 'Alle suosituksen'}
+              {met && streak >= 2 && <span className="font-semibold opacity-80"> · {streak} vk putkeen</span>}
             </span>
           )}
         </div>
@@ -122,7 +127,12 @@ export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: Pe
           </div>
         ) : (
           <div className={`mt-4 flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-7 ${ev.quality.lowData ? 'opacity-80' : ''}`}>
-            <div className="flex items-center gap-5">
+            <div className={`relative flex items-center gap-5 ${party.sparks ? 'celebrate' : ''}`}>
+              {party.sparks && (
+                <span className="absolute left-0 top-0 size-[136px]">
+                  <Sparks />
+                </span>
+              )}
               <ProgressRing
                 value={main.m.ratio}
                 size={136}
@@ -167,6 +177,11 @@ export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: Pe
               </dl>
             </div>
           </div>
+        )}
+        {party.message && met && (
+          <p className="anim-pop mt-4 text-sm font-semibold text-[var(--hero-accent)]" style={{ animationDelay: '1.2s' }} role="status">
+            Hienoa – viikon suositus täyttyi{streak >= 2 ? `, ${streak}. viikko putkeen` : ''}!
+          </p>
         )}
         {ev.evaluable && ev.quality.lowData && <p className="mt-3 text-xs text-[var(--hero-ink-soft)]">Kirjauksia on vielä vähän, joten vertailu on suuntaa antava.</p>}
         <p className="mt-4 text-[11px] text-[var(--hero-ink-soft)] opacity-80">≈ arvio lajin tyypillisestä tehosta · {profile.name}</p>

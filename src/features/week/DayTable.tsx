@@ -12,6 +12,7 @@ import type { ActivityType, Category, DayFlag, DayTotals, FootballDetails, ISODa
 import { dayLabel } from '../../ui/format';
 import { IconBolt, IconBone, IconCheck, IconLeaf, IconPlus } from '../../ui/icons';
 import { useToast } from '../../ui/Toast';
+import { isFresh, useConfirmFeedback } from '../../ui/fresh';
 import { repo } from '../../db/repositories';
 import { FLAG_LABEL } from './DaySheet';
 import { confirmDayEstimates } from './EstimateDaySheet';
@@ -132,6 +133,7 @@ export function DayTable({
     setColsRaw([...n].join(','));
   };
   const [colMenu, setColMenu] = useState(false);
+  const { leaving, confirm: confirmWithFeedback } = useConfirmFeedback(onPlanConfirm);
   const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!colMenu) return;
@@ -333,8 +335,16 @@ export function DayTable({
                       {listed.map((s) => {
                         const t = types.get(s.activityTypeId);
                         return (
-                          <button key={s.id} type="button" onClick={() => onEdit(s)} className={`${chip} bg-[var(--surface-sage)] text-slate-800 hover:brightness-95`} title={`${t?.name ?? ''} ${s.durationMin} min`}>
-                            <span aria-hidden>{t?.icon}</span>
+                          <button key={s.id} type="button" onClick={() => onEdit(s)} className={`${chip} bg-[var(--surface-sage)] text-slate-800 hover:brightness-95 ${isFresh(s.id) ? 'row-fresh' : ''}`} title={`${t?.name ?? ''} ${s.durationMin} min`}>
+                            {isFresh(s.id) ? (
+                              <span className="fresh-check flex size-4 items-center justify-center rounded-full bg-green-700 text-white" aria-hidden>
+                                <svg viewBox="0 0 16 16" className="size-2.5" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M3.5 8.5 6.5 11.5 12.5 4.5" pathLength={1} />
+                                </svg>
+                              </span>
+                            ) : (
+                              <span aria-hidden>{t?.icon}</span>
+                            )}
                             <span className="truncate">{shortName(s, t)}</span>
                             <span className="tabular-nums text-slate-500">{s.durationMin}</span>
                           </button>
@@ -344,7 +354,7 @@ export function DayTable({
                         const t = types.get(p.activityTypeId);
                         const skipped = p.status === 'skipped';
                         return (
-                          <span key={p.id} className="inline-flex max-w-full items-center gap-0.5">
+                          <span key={p.id} className={`inline-flex max-w-full items-center gap-0.5 ${leaving.has(p.id) ? 'plan-leaving' : ''}`}>
                             <button
                               type="button"
                               onClick={() => onPlanOpen(p)}
@@ -358,7 +368,7 @@ export function DayTable({
                               <span className="tabular-nums">{p.durationMin}</span>
                             </button>
                             {!skipped && !r.isFuture && (
-                              <button type="button" onClick={() => onPlanConfirm(p)} className={tick} aria-label={`Tehty kuten suunniteltu: ${t?.name ?? ''}`} title="Tehty kuten suunniteltu">
+                              <button type="button" onClick={() => confirmWithFeedback(p)} className={tick} aria-label={`Tehty kuten suunniteltu: ${t?.name ?? ''}`} title="Tehty kuten suunniteltu">
                                 <IconCheck size="0.85rem" />
                               </button>
                             )}
