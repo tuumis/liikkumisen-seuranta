@@ -562,7 +562,7 @@ body {
     linear-gradient(180deg, var(--side-from) 0%, var(--side-to) 100%);
 }
 
-/* ---------- väriteemat (Asetukset → Ulkoasu); oletus Metsä. Kaaviovärit validoitu jokaiselle. ---------- */
+/* ---------- väriteemat (Asetukset → Ulkoasu); oletus Vuono (theme.ts DEFAULT_ACCENT), Metsä on CSS:n perustaso. Kaaviovärit validoitu jokaiselle. ---------- */
 :root {
   --color-green-50: #eef4ee;
   --color-green-100: #dce8dc;

@@ -1,4 +1,4 @@
-// Ulkoasu: järjestelmä / vaalea / tumma. Laitekohtainen käyttöliittymäasetus (localStorage),
+// Ulkoasu: järjestelmä / vaalea / tumma (oletus vaalea), väriteema oletuksena Vuono. Laitekohtainen käyttöliittymäasetus (localStorage),
 // ei synkronoidu. public/theme-init.js asettaa teeman jo ennen Reactin käynnistystä (ei välähdystä).
 
 import { useEffect, useState } from 'react';
@@ -10,9 +10,9 @@ const media = () => window.matchMedia?.('(prefers-color-scheme: dark)');
 export function getThemeChoice(): ThemeChoice {
   try {
     const v = localStorage.getItem(KEY);
-    return v === 'light' || v === 'dark' ? v : 'system';
+    return v === 'system' || v === 'dark' ? v : 'light';
   } catch {
-    return 'system';
+    return 'light';
   }
 }
 
@@ -26,7 +26,7 @@ export function applyTheme(choice: ThemeChoice = getThemeChoice()): void {
 
 export function setThemeChoice(choice: ThemeChoice): void {
   try {
-    if (choice === 'system') localStorage.removeItem(KEY);
+    if (choice === 'light') localStorage.removeItem(KEY);
     else localStorage.setItem(KEY, choice);
   } catch {
     /* ei tallennusta */
@@ -74,19 +74,21 @@ export function useThemeChoice(): [ThemeChoice, (c: ThemeChoice) => void] {
 
 export type AccentTheme = 'forest' | 'fjord' | 'heather' | 'graphite';
 export const ACCENT_THEMES: { id: AccentTheme; label: string; text: string; swatch: [string, string, string] }[] = [
-  { id: 'forest', label: 'Metsä', text: 'Metsänvihreä ja hiekka', swatch: ['#244c3b', '#dce8dc', '#e6bd89'] },
   { id: 'fjord', label: 'Vuono', text: 'Syvä sinivihreä ja persikka', swatch: ['#1f4a5b', '#d6e8ee', '#efbf94'] },
+  { id: 'forest', label: 'Metsä', text: 'Metsänvihreä ja hiekka', swatch: ['#244c3b', '#dce8dc', '#e6bd89'] },
   { id: 'heather', label: 'Kanerva', text: 'Luumu ja ruusukulta', swatch: ['#4a2f55', '#ebe0ee', '#ecb9a2'] },
   { id: 'graphite', label: 'Grafiitti', text: 'Hiilenharmaa ja meripihka', swatch: ['#2f3a40', '#e3e7e9', '#e8b562'] },
 ];
 const ACCENT_KEY = 'accent';
+/** Oletusväriteema, kun laitteella ei ole valintaa. */
+export const DEFAULT_ACCENT: AccentTheme = 'fjord';
 
 export function getAccent(): AccentTheme {
   try {
     const v = localStorage.getItem(ACCENT_KEY);
-    return ACCENT_THEMES.some((t) => t.id === v) ? (v as AccentTheme) : 'forest';
+    return ACCENT_THEMES.some((t) => t.id === v) ? (v as AccentTheme) : DEFAULT_ACCENT;
   } catch {
-    return 'forest';
+    return DEFAULT_ACCENT;
   }
 }
 
@@ -102,7 +104,7 @@ export function useAccent(): [AccentTheme, (a: AccentTheme) => void] {
     accent,
     (a) => {
       try {
-        if (a === 'forest') localStorage.removeItem(ACCENT_KEY);
+        if (a === DEFAULT_ACCENT) localStorage.removeItem(ACCENT_KEY);
         else localStorage.setItem(ACCENT_KEY, a);
       } catch {
         /* ei tallennusta */

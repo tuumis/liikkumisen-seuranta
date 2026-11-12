@@ -49,7 +49,7 @@ export function AppearanceSection() {
             { value: 'dark', label: 'Tumma' },
           ]}
         />
-        <p className="mt-2 text-xs text-slate-500">"Järjestelmä" seuraa laitteen asetusta. Valinta koskee vain tätä laitetta.</p>
+        <p className="mt-2 text-xs text-slate-500">Oletus on vaalea. "Järjestelmä" seuraa laitteen asetusta. Valinta koskee vain tätä laitetta.</p>
       </Card>
 
       <Card title="Väriteema">
