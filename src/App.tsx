@@ -11,6 +11,7 @@ import { HelpSheet } from './features/help/HelpSheet';
 import type { SettingsSectionId } from './features/settings/SettingsView';
 import { GamesTab } from './features/games/GamesTab';
 import { DesktopAgent } from './features/desktop/DesktopAgent';
+import { SyncBar } from './features/sync/SyncBar';
 import { Avatar } from './ui/Avatar';
 import { formatDate } from './ui/format';
 import { IconBall, IconChart, IconHelp, IconLeaf, IconSettings, IconWeek } from './ui/icons';
@@ -198,6 +199,7 @@ export default function App() {
           </div>
         )}
         <div className="mt-auto space-y-3 px-4 pb-7">
+          <SyncBar variant="sidebar" />
           <button type="button" onClick={() => setHelpOpen(true)} className="press flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-sm font-semibold text-[var(--side-ink-soft)] hover:bg-white/[0.06] hover:text-white">
             <IconHelp size="1.25rem" />
             Ohje

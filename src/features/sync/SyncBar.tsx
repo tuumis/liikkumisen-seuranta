@@ -1,4 +1,5 @@
-// Viikko-näkymän synkronointipalkki (SPEC 12 "Synkronointi") ja muistutukset (SPEC 10).
+// Synkronointi (SPEC 12 "Synkronointi") ja muistutukset (SPEC 10): PC:n leveällä näytöllä sivupalkin alaosassa,
+// muuten (puhelin, kapea ikkuna) Viikko-näkymän palkkina.
 
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -6,6 +7,8 @@ import type { MergeSummary } from '../../db/backup';
 import { repo } from '../../db/repositories';
 import { SYNC_FILE_NAME } from '../../domain/version';
 import { Button } from '../../ui/components';
+import { IconSync } from '../../ui/icons';
+import { useMinuteTick } from '../review/unconfirmed';
 import { useToast } from '../../ui/Toast';
 import { ConflictSheet } from './ConflictSheet';
 import { folderPermission, readFolderFile, supportsFolder } from './fileIO';
@@ -23,7 +26,9 @@ export function ago(ts?: string): string {
   return `${Math.round(h / 24)} pv sitten`;
 }
 
-export function SyncBar() {
+/** variant 'bar' = Viikko-näkymä (PC:llä vain kapeassa ikkunassa), 'sidebar' = PC:n sivupalkki (vain PC-rooli). */
+export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' }) {
+  useMinuteTick(); // "Synkronoitu N min sitten" pysyy ajan tasalla
   const state = useSyncState();
   const actions = useSyncActions();
   const toast = useToast();
@@ -54,7 +59,7 @@ export function SyncBar() {
     };
   }, [state?.role, state?.hasFolder, state?.lastSyncRunAt]);
 
-  if (!state?.role) return null;
+  if (!state?.role || (variant === 'sidebar' && state.role !== 'pc')) return null;
 
   async function run(f: () => Promise<{ summary?: MergeSummary; message: string } | null | string>) {
     setBusy(true);
@@ -78,10 +83,53 @@ export function SyncBar() {
   const stale = state.lastSyncAt ? Date.now() - new Date(state.lastSyncAt).getTime() > 7 * DAY : false;
   const pcDays = state.lastIncomingExportedAt ? Math.floor((Date.now() - new Date(state.lastIncomingExportedAt).getTime()) / DAY) : undefined;
 
+  const sideBtn = 'press flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-left hover:bg-white/[0.06] disabled:opacity-60';
+  if (variant === 'sidebar') {
+    const sub = busy ? 'Synkronoidaan…' : phoneHasNew ? 'Puhelimella uusia kirjauksia' : `Synkronoitu ${ago(state.lastSyncRunAt)}`;
+    return (
+      <>
+        {supportsFolder() ? (
+          <button type="button" disabled={busy} onClick={() => run(actions.pcSync)} className={`${sideBtn} group`} aria-label={`Synkronoi puhelimen kanssa. ${sub}`}>
+            <span className="relative text-[var(--side-ink-soft)] group-hover:text-white">
+              <IconSync size="1.25rem" className={busy ? 'animate-spin [animation-direction:reverse]' : ''} />
+              {phoneHasNew && !busy && <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-[var(--hero-accent)] ring-2 ring-[var(--side-from)]" aria-hidden />}
+            </span>
+            <span className="min-w-0 leading-tight">
+              <span className="block text-sm font-semibold text-[var(--side-ink-soft)] group-hover:text-white">Synkronoi</span>
+              <span className={`block truncate text-[11px] ${phoneHasNew && !busy ? 'font-semibold text-[var(--hero-accent)]' : 'text-[var(--side-muted)]'}`}>{sub}</span>
+            </span>
+          </button>
+        ) : (
+          <div className="px-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--side-ink-soft)]">
+              <IconSync size="1.25rem" />
+              Synkronointi
+            </div>
+            <div className="mt-0.5 pl-7 text-[11px] text-[var(--side-muted)]">Synkronoitu {ago(state.lastSyncRunAt)}</div>
+            <div className="mt-2 flex gap-2 pl-7">
+              <button type="button" disabled={busy} onClick={() => run(actions.importFile)} className="press rounded-full bg-white/[0.08] px-3 py-1.5 text-xs font-semibold text-[var(--side-ink)] hover:bg-white/[0.14] disabled:opacity-60">
+                Tuo puhelimelta
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => run(async () => (await actions.downloadPcFile(), 'PC:n tiedosto ladattu – siirrä se pilvikansioon'))}
+                className="press rounded-full bg-white/[0.08] px-3 py-1.5 text-xs font-semibold text-[var(--side-ink)] hover:bg-white/[0.14] disabled:opacity-60"
+              >
+                Lataa
+              </button>
+            </div>
+          </div>
+        )}
+        <ConflictSheet summary={conflicts} onClose={() => setConflicts(null)} />
+      </>
+    );
+  }
+
   return (
     <>
       {state.role === 'pc' ? (
-        <div className="space-y-2">
+        <div className="space-y-2 lg:hidden">
           {phoneHasNew && <div className="rounded-2xl bg-sky-50 p-3 text-sm text-sky-950 ring-1 ring-sky-200">Puhelimella on uusia kirjauksia – synkronoi</div>}
           <div className="card flex items-center gap-2 !rounded-2xl p-2 pl-3">
             <span className="flex-1 text-xs text-slate-600">Synkronoitu {ago(state.lastSyncRunAt)}</span>

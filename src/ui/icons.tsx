@@ -134,6 +134,14 @@ export const IconRepeat = (p: IconProps) => (
     <path d="M20 12.5v1a4 4 0 0 1-4 4H4" />
   </svg>
 );
+export const IconSync = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M19.5 9A8 8 0 0 0 5.2 7.2L3.5 9" />
+    <path d="M3.5 4.5V9H8" />
+    <path d="M4.5 15a8 8 0 0 0 14.3 1.8l1.7-1.8" />
+    <path d="M20.5 19.5V15H16" />
+  </svg>
+);
 export const IconSun = (p: IconProps) => (
   <svg {...base(p)}>
     <circle cx="12" cy="12" r="3.8" />
