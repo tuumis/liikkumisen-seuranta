@@ -10,6 +10,7 @@ import { ToggleChip } from '../../ui/controls';
 import { dayLabel, formatDate } from '../../ui/format';
 import { ENJOYMENT_LABEL, FOCUS_TAG_LABEL } from '../../ui/labels';
 import { useToast } from '../../ui/Toast';
+import { TypeIcon } from '../week/Dashboard';
 import { FootballPanel } from '../football/FootballPanel';
 import { useFootball } from '../football/useFootball';
 
@@ -112,11 +113,9 @@ function DiaryEntry({ s, t, d, onDetails }: { s: Session; t?: ActivityType; d?: 
   }
 
   return (
-    <li className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+    <li className="card p-4 sm:p-5">
       <div className="flex items-start gap-3">
-        <span className="text-xl" aria-hidden>
-          {t?.icon ?? '⚽'}
-        </span>
+        <TypeIcon t={t} size="sm" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2">
             <span className="font-semibold text-slate-900">{dayLabel(s.date)}</span>

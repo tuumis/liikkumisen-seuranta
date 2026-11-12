@@ -237,7 +237,7 @@ export function SessionEditor({
             <button
               type="button"
               onClick={remove}
-              className={`min-h-11 rounded-xl px-4 text-sm font-medium ring-1 ${confirmDelete ? 'bg-red-700 text-white ring-red-700' : 'bg-white text-red-700 ring-red-300 active:bg-red-50'}`}
+              className={`min-h-11 rounded-xl px-4 text-sm font-medium ring-1 ${confirmDelete ? 'bg-red-700 text-white ring-red-700' : 'bg-[var(--surface-raised)] text-red-700 ring-red-200 active:bg-red-50'}`}
             >
               {confirmDelete ? 'Vahvista poisto' : 'Poista'}
             </button>

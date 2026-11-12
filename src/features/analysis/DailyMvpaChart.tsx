@@ -52,7 +52,7 @@ function TooltipBox({ active, payload }: { active?: boolean; payload?: { payload
   if (!active || !payload?.length) return null;
   const r = payload[0].payload;
   return (
-    <div className="rounded-xl bg-white px-3 py-2 text-xs text-slate-800 shadow-lg ring-1 ring-slate-200">
+    <div className="rounded-xl bg-[var(--surface-raised)] px-3 py-2 text-xs text-slate-800 shadow-lg ring-1 ring-slate-200">
       <div className="font-semibold">{r.label}</div>
       <div className="mt-1 flex items-center gap-2">
         <span className="size-2 rounded-sm" style={{ background: SERIES.logged }} /> kirjattu {r.logged} min

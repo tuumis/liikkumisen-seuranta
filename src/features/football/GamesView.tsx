@@ -109,7 +109,7 @@ export function GamesView({ profile, onBack }: { profile: Profile; onBack?: () =
           <Button variant="ghost" onClick={onBack} className="px-2">
             ‹ Analyysi
           </Button>
-          <h2 className="text-base font-semibold text-slate-900">Pelit ja tulokset · {profile.name}</h2>
+          <h2 className="font-display text-lg font-semibold text-slate-900">Pelit ja tulokset · {profile.name}</h2>
         </div>
       )}
 

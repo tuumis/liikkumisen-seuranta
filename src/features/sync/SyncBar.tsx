@@ -80,7 +80,7 @@ export function SyncBar() {
       {state.role === 'pc' ? (
         <div className="space-y-2">
           {phoneHasNew && <div className="rounded-2xl bg-sky-50 p-3 text-sm text-sky-950 ring-1 ring-sky-200">Puhelimella on uusia kirjauksia – synkronoi</div>}
-          <div className="flex items-center gap-2 rounded-2xl bg-white p-2 pl-3 ring-1 ring-slate-200">
+          <div className="card flex items-center gap-2 !rounded-2xl p-2 pl-3">
             <span className="flex-1 text-xs text-slate-600">Synkronoitu {ago(state.lastSyncRunAt)}</span>
             {supportsFolder() ? (
               <Button disabled={busy} onClick={() => run(actions.pcSync)}>
@@ -101,7 +101,7 @@ export function SyncBar() {
       ) : (
         <div className="space-y-2">
           {stale && <div className="rounded-2xl bg-sky-50 p-3 text-sm text-sky-950 ring-1 ring-sky-200">Tiedot PC:ltä {pcDays ?? '?'} päivän takaa</div>}
-          <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-white p-2 pl-3 ring-1 ring-slate-200">
+          <div className="card flex flex-wrap items-center gap-2 !rounded-2xl p-2 pl-3">
             <span className="min-w-0 flex-1 text-xs text-slate-600">
               {state.pending > 0 ? `${state.pending} odottaa siirtoa PC:lle` : `PC:ltä ${ago(state.lastSyncAt)}`}
             </span>

@@ -241,7 +241,7 @@ function EstimateForm({ profile, draft, onDone }: { profile: Profile; draft: Dra
           <button
             type="button"
             onClick={end}
-            className={`min-h-11 rounded-xl px-3 text-sm font-medium ring-1 ${confirmEnd ? 'bg-red-700 text-white ring-red-700' : 'bg-white text-red-700 ring-red-300'}`}
+            className={`min-h-11 rounded-xl px-3 text-sm font-medium ring-1 ${confirmEnd ? 'bg-red-700 text-white ring-red-700' : 'bg-[var(--surface-raised)] text-red-700 ring-red-200'}`}
           >
             {confirmEnd ? 'Vahvista' : 'Lopeta'}
           </button>

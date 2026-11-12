@@ -1,16 +1,230 @@
 @import 'tailwindcss';
 
+/*
+ * Liikkumisen seuranta – design system.
+ * Kaikki värit, pinnat, varjot, pyöristykset ja liike määritellään tässä tokeneina. Komponentit
+ * käyttävät Tailwindin slate-, green- ja amber-asteikkoja, jotka on kartoitettu tämän tuotteen
+ * omiin sävyihin: lämmin luonnonvalkoinen, salvia, metsänvihreä, hiekka ja hiilenharmaa.
+ */
+
 /* Tumma tila html.dark-luokalla (valinta Asetuksissa: järjestelmä / vaalea / tumma). */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Järjestelmäfontit: ei ulkoisia fontteja (SPEC 11). */
-@theme {
-  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+/* Fontit sovelluksen mukana (ei verkkoliikennettä, SPEC 11). Vain latin-osajoukko: ä, ö ja å mukana. */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url('@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/fraunces/files/fraunces-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+@theme {
+  --font-sans: 'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+
+  /* Neutraalit: hiilenharmaa (#26342E) – luonnonvalkoinen (#F6F5F0), hieman vihertävä. */
+  --color-slate-50: #f6f5f0;
+  --color-slate-100: #efede6;
+  --color-slate-200: #e5e2d8;
+  --color-slate-300: #d2cec1;
+  --color-slate-400: #a5a89e;
+  --color-slate-500: #7a827b;
+  --color-slate-600: #5a645d;
+  --color-slate-700: #434f48;
+  --color-slate-800: #33403a;
+  --color-slate-900: #26342e;
+  --color-slate-950: #1a2520;
+
+  /* Metsänvihreä (700 = #244C3B, pääpainike) ja salvia (100 = #DCE8DC). */
+  --color-green-50: #eef4ee;
+  --color-green-100: #dce8dc;
+  --color-green-200: #c3d8c6;
+  --color-green-300: #9dbfa4;
+  --color-green-400: #6f9e7d;
+  --color-green-500: #4b8061;
+  --color-green-600: #34664d;
+  --color-green-700: #244c3b;
+  --color-green-800: #1c3d30;
+  --color-green-900: #152f25;
+  --color-green-950: #0d1f18;
+
+  /* Hiekka (400 = #DDA96E): arviot, korosteet ja huomiot. */
+  --color-amber-50: #fbf6ee;
+  --color-amber-100: #f5e7d2;
+  --color-amber-200: #eed4b0;
+  --color-amber-300: #e5bd8b;
+  --color-amber-400: #dda96e;
+  --color-amber-500: #c98e4e;
+  --color-amber-600: #a8713a;
+  --color-amber-700: #86582d;
+  --color-amber-800: #6a4526;
+  --color-amber-900: #533720;
+  --color-amber-950: #2e1e10;
+
+  /* Pyöristykset: yksi asteikko koko sovellukselle. */
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.75rem;
+
+  /* Pehmeät, kerrostetut varjot (sävytetty hiilenharmaalla, ei mustalla). */
+  --shadow-xs: 0 1px 2px rgb(38 52 46 / 0.05);
+  --shadow-sm: 0 1px 2px rgb(38 52 46 / 0.04), 0 6px 18px -8px rgb(38 52 46 / 0.12);
+  --shadow-md: 0 2px 4px rgb(38 52 46 / 0.04), 0 12px 28px -10px rgb(38 52 46 / 0.18);
+  --shadow-lg: 0 4px 8px rgb(38 52 46 / 0.05), 0 24px 48px -16px rgb(38 52 46 / 0.24);
+  --shadow-xl: 0 8px 16px rgb(38 52 46 / 0.06), 0 32px 64px -20px rgb(38 52 46 / 0.3);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ---------- semanttiset tokenit ---------- */
+:root {
+  --bg: #f6f5f0;
+  --surface: #fffefb;
+  --surface-raised: #ffffff;
+  --surface-sunk: #efede6;
+  --surface-sage: #e4ede3;
+  --line: #e5e2d8;
+  --line-strong: #d2cec1;
+  --ink: #26342e;
+  --ink-soft: #4a5750;
+  --ink-muted: #7a827b;
+  --forest: #244c3b;
+  --forest-deep: #1a3a2d;
+  --sage: #dce8dc;
+  --sand: #dda96e;
+  --sand-soft: #f3e3cc;
+  --focus: #34664d;
+
+  /* Kaaviot (validoitu: valoisuus, kroma, CVD-erottuvuus, kontrasti pintaa vasten). */
+  --viz-logged: #127a4e;
+  --viz-estimate: #c4823f;
+  --viz-estimate-soft: #c4823f;
+  --viz-track: #ebe8df;
+  --viz-track-line: #b9b5a8;
+  --viz-track-fill: #f7f5ef;
+
+  /* Viikon liikuntamäärän luokat: yksi sävy (metsä), vaaleasta tummaan = vähemmästä enempään. */
+  --band-1: #e3ede2;
+  --band-2: #c3d8c6;
+  --band-3: #9dbfa4;
+  --band-4: #6f9e7d;
+  --band-5: #3f7559;
+  --band-6: #244c3b;
+
+  /* Sankarikortti (metsä): liukuväri ja sen päällä oleva teksti. */
+  --hero-from: #2c5a46;
+  --hero-to: #1a3a2d;
+  --hero-ink: #f6f5f0;
+  --hero-ink-soft: #c9dccb;
+  --hero-track: rgb(246 245 240 / 0.16);
+  --hero-accent: #e6bd89;
+
+  color-scheme: light;
+}
+
+/*
+ * Tumma tila: neutraali asteikko käännetään (tekstit, reunat ja taustat vaihtuvat kerralla),
+ * pinnat ovat syvää metsänharmaata ja korosteet vaaleampia vastineita.
+ */
+.dark {
+  --color-slate-50: #0f1613;
+  --color-slate-100: #1a2420;
+  --color-slate-200: #25302a;
+  --color-slate-300: #34413a;
+  --color-slate-400: #5d6b63;
+  --color-slate-500: #8f9b94;
+  --color-slate-600: #a9b3ad;
+  --color-slate-700: #c6cec8;
+  --color-slate-800: #dde3de;
+  --color-slate-900: #eef2ee;
+  --color-slate-950: #f7f9f7;
+  --color-green-700: #2f6a51;
+  --color-green-800: #25583f;
+
+  --bg: #0f1613;
+  --surface: #161f1b;
+  --surface-raised: #1c2621;
+  --surface-sunk: #121a16;
+  --surface-sage: #1a2a22;
+  --line: #25302a;
+  --line-strong: #34413a;
+  --ink: #eef2ee;
+  --ink-soft: #c6cec8;
+  --ink-muted: #8f9b94;
+  --forest: #3e8a66;
+  --sage: #1f3328;
+  --sand: #e0b17a;
+  --sand-soft: #3a2c19;
+  --focus: #7cc39b;
+
+  --viz-logged: #3ba878;
+  --viz-estimate: #b97a33;
+  --viz-estimate-soft: #b97a33;
+  --viz-track: #25302a;
+  --viz-track-line: #5d6b63;
+  --viz-track-fill: #121a16;
+
+  /* Tummalla pinnalla järjestys kääntyy: enemmän = kirkkaampi. */
+  --band-1: #1d2d25;
+  --band-2: #244232;
+  --band-3: #2e5c44;
+  --band-4: #3e7c5d;
+  --band-5: #5fa27f;
+  --band-6: #9ccbb0;
+
+  --hero-from: #1f4535;
+  --hero-to: #11261d;
+  --hero-ink: #eef2ee;
+  --hero-ink-soft: #a8c4b2;
+  --hero-track: rgb(238 242 238 / 0.12);
+  --hero-accent: #e0b17a;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 18px -8px rgb(0 0 0 / 0.5);
+  --shadow-md: 0 2px 4px rgb(0 0 0 / 0.3), 0 12px 28px -10px rgb(0 0 0 / 0.55);
+  --shadow-lg: 0 4px 8px rgb(0 0 0 / 0.3), 0 24px 48px -16px rgb(0 0 0 / 0.6);
+  --shadow-xl: 0 8px 16px rgb(0 0 0 / 0.35), 0 32px 64px -20px rgb(0 0 0 / 0.65);
+
+  color-scheme: dark;
+}
+
+/* ---------- perusta ---------- */
 html {
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
+  background: var(--bg);
+}
+
+body {
+  @apply antialiased;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv11', 'ss01';
+  overflow-x: hidden;
+  /* Kerroksellinen tausta: hento salvia- ja hiekkahehku paperinsävyisellä pohjalla. */
+  background:
+    radial-gradient(1200px 600px at 0% -10%, rgb(220 232 220 / 0.7), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgb(243 227 204 / 0.45), transparent 55%),
+    var(--bg);
+  background-attachment: fixed;
+}
+.dark body {
+  background:
+    radial-gradient(1200px 600px at 0% -10%, rgb(36 76 59 / 0.35), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgb(221 169 110 / 0.07), transparent 55%),
+    var(--bg);
+  background-attachment: fixed;
 }
 
 /* Pitkä painallus ei avaa iOS:n tekstivalikkoa. */
@@ -18,116 +232,306 @@ html {
   -webkit-touch-callout: none;
 }
 
-body {
-  @apply bg-slate-50 text-slate-900 antialiased;
-  overflow-x: hidden;
+/* Näkyvä, yhtenäinen fokus näppäimistökäyttäjille. */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 0.625rem;
 }
 
-/* Kaavioiden ja palkkien värit (kategoriset paikat 1–2, validoitu vaalealle ja tummalle pinnalle). */
-:root {
-  --viz-logged: #2a78d6;
-  --viz-estimate: #eb6834;
-  --viz-estimate-soft: #86b6ef;
-  --viz-track: #e2e8f0;
-  --viz-track-line: #94a3b8;
-  --viz-track-fill: #f8fafc;
-  --surface: #ffffff;
-  /* Viikon liikuntamäärän luokat: yksi sävy (sininen), vaaleasta tummaan = vähemmästä enempään. */
-  --band-1: #dbe7f7;
-  --band-2: #b5cff0;
-  --band-3: #86b6ef;
-  --band-4: #5598e4;
-  --band-5: #2a78d6;
-  --band-6: #1b55a3;
+::selection {
+  background: var(--sage);
+  color: var(--ink);
 }
 
-/*
- * Tumma tila teemakerroksena: harmaasävyasteikko (slate) käännetään, jolloin tekstit, reunat ja
- * taustat vaihtuvat yhdellä kertaa. Kortit (bg-white) saavat tumman pinnan, ja vaaleat
- * korostesävyt (ilmoitukset, merkit) korvataan tummilla vastineilla. Vahvat painikevärit pysyvät.
- */
-.dark {
-  --color-slate-50: #0b1220;
-  --color-slate-100: #1a2435;
-  --color-slate-200: #263246;
-  --color-slate-300: #354357;
-  --color-slate-400: #64748b;
-  --color-slate-500: #94a3b8;
-  --color-slate-600: #aab6c8;
-  --color-slate-700: #cbd5e1;
-  --color-slate-800: #e2e8f0;
-  --color-slate-900: #f1f5f9;
-  --color-slate-950: #f8fafc;
-
-  --viz-logged: #3987e5;
-  --viz-estimate: #d95926;
-  --viz-estimate-soft: #2f5f9e;
-  --viz-track: #263246;
-  --viz-track-line: #64748b;
-  --viz-track-fill: #0f1726;
-  --surface: #121a2a;
-  /* Tummalla pinnalla järjestys kääntyy: enemmän = kirkkaampi. */
-  --band-1: #1c2b44;
-  --band-2: #22406b;
-  --band-3: #2a5793;
-  --band-4: #3571bd;
-  --band-5: #4f8fe0;
-  --band-6: #86b6ef;
+/* Otsikot: Fraunces (näyttävä, lämmin), leipäteksti Manrope. */
+.font-display,
+.display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  letter-spacing: -0.015em;
+}
+/* Tilastoluvut: tasalevyiset numerot, tiivis välistys. */
+.stat {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
 
-/* Elementit, joilla on oma dark:bg-*-luokka, jätetään ohituksen ulkopuolelle. */
+/* ---------- pinnat ---------- */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius-3xl);
+  box-shadow: var(--shadow-sm), inset 0 0 0 1px rgb(38 52 46 / 0.045);
+}
+.dark .card {
+  box-shadow: var(--shadow-sm), inset 0 0 0 1px rgb(238 242 238 / 0.05);
+}
+.card-sunk {
+  background: var(--surface-sunk);
+  border-radius: var(--radius-2xl);
+}
+.card-sage {
+  background: linear-gradient(160deg, var(--surface-sage), color-mix(in oklab, var(--surface-sage) 70%, var(--surface)));
+  border-radius: var(--radius-3xl);
+}
+/* Klikattava kortti: kevyt nosto hiiren alla (vain hover-laitteilla). */
+.card-interactive {
+  transition:
+    transform 0.25s var(--ease-out),
+    box-shadow 0.25s var(--ease-out);
+}
+@media (hover: hover) {
+  .card-interactive:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md), inset 0 0 0 1px rgb(38 52 46 / 0.05);
+  }
+}
+.card-interactive:active {
+  transform: translateY(0) scale(0.99);
+}
+
+/* Sankarikortti: metsänvihreä liukuväri, kevyt valoreunus ja syvyys. */
+.hero {
+  position: relative;
+  overflow: hidden;
+  color: var(--hero-ink);
+  background: radial-gradient(120% 140% at 100% 0%, rgb(221 169 110 / 0.18), transparent 50%), linear-gradient(155deg, var(--hero-from), var(--hero-to));
+  border-radius: var(--radius-3xl);
+  box-shadow: var(--shadow-lg), inset 0 1px 0 rgb(255 255 255 / 0.08);
+}
+.hero::after {
+  /* hienovarainen ääriviivakuvio (korkeuskäyrät) syvyyden tunteeksi */
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-radial-gradient(circle at 110% -10%, transparent 0 22px, rgb(255 255 255 / 0.035) 22px 23px);
+}
+
+/* Lomakekentän kuori (myös kellonaika-valitsin). */
+.field-shell {
+  border-radius: var(--radius-xl);
+  background: var(--surface-sunk);
+  box-shadow: inset 0 0 0 1px var(--line);
+  transition:
+    box-shadow 0.15s,
+    background-color 0.15s;
+}
+.field-shell:focus-within {
+  background: var(--surface-raised);
+  box-shadow:
+    inset 0 0 0 1.5px var(--focus),
+    0 0 0 4px color-mix(in oklab, var(--focus) 18%, transparent);
+}
+
+/* Painikkeiden painallus: kevyt pienennys. */
+.press {
+  transition:
+    transform 0.15s var(--ease-out),
+    background-color 0.15s,
+    box-shadow 0.2s,
+    color 0.15s;
+}
+.press:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Lataustila: hento hohtava luuranko. */
+.skeleton {
+  border-radius: var(--radius-xl);
+  background: linear-gradient(90deg, var(--surface-sunk) 0%, var(--line) 50%, var(--surface-sunk) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+/* ---------- liike ---------- */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+@keyframes sheet-scale {
+  from {
+    transform: translateY(8px) scale(0.98);
+    opacity: 0;
+  }
+}
+@keyframes draw {
+  from {
+    stroke-dashoffset: var(--len, 100);
+  }
+}
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Porrastettu sisääntulo: style={{ '--i': n }} määrää viiveen. */
+.anim-rise {
+  animation: rise 0.55s var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+.anim-fade {
+  animation: fade 0.4s var(--ease-out) both;
+}
+.anim-pop {
+  animation: pop 0.45s var(--ease-out) both;
+}
+.anim-grow-y {
+  transform-origin: bottom;
+  animation: grow-y 0.7s var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 45ms + 120ms);
+}
+.anim-grow-x {
+  transform-origin: left;
+  animation: grow-x 0.8s var(--ease-out) both;
+  animation-delay: 150ms;
+}
+.anim-draw {
+  animation: draw 1s var(--ease-out) both;
+  animation-delay: 150ms;
+}
+.anim-sheet {
+  animation: sheet-up 0.35s var(--ease-out) both;
+}
+@media (min-width: 1024px) {
+  .anim-sheet {
+    animation-name: sheet-scale;
+  }
+}
+
+/* Näkymänvaihto (View Transitions API, jos selain tukee): pehmeä ristihäivytys ja nosto. */
+::view-transition-old(root) {
+  animation: 0.18s ease-out both fade reverse;
+}
+::view-transition-new(root) {
+  animation: 0.32s var(--ease-out) both rise;
+}
+
+/* Liikkeen vähentäminen: animaatiot ja siirtymät pois, sisältö näkyy heti. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}
+
+/* ---------- tumman tilan korostepinnat (Tailwindin vaaleat sävyt) ---------- */
 .dark .bg-white:not([class*='dark:bg-']) {
   background-color: var(--surface);
 }
-
-/* Korostepinnat */
 .dark .bg-green-50,
 .dark .bg-green-100 {
-  background-color: #10291d;
+  background-color: #17291f;
 }
 .dark .bg-amber-50 {
-  background-color: #2a2010;
+  background-color: #2a2114;
 }
 .dark .bg-amber-100 {
-  background-color: #3a2c12;
+  background-color: #3a2c18;
 }
 .dark .bg-red-50 {
-  background-color: #2c1416;
+  background-color: #2c1617;
 }
 .dark .bg-sky-50 {
-  background-color: #0e2433;
+  background-color: #10232b;
 }
 .dark .ring-green-200 {
-  --tw-ring-color: #1f4d33;
+  --tw-ring-color: #2a4a38;
 }
 .dark .ring-amber-200 {
-  --tw-ring-color: #5c4416;
+  --tw-ring-color: #5a4320;
 }
 .dark .ring-red-200,
 .dark .ring-red-300 {
   --tw-ring-color: #6b2a2e;
 }
 .dark .ring-sky-200 {
-  --tw-ring-color: #1d4a66;
+  --tw-ring-color: #1d4a5a;
 }
-
-/* Korostetekstit tummalla pinnalla */
 .dark .text-green-800,
 .dark .text-green-900 {
-  color: #6ee7a0;
+  color: #9fd4b4;
 }
 .dark .text-amber-800,
 .dark .text-amber-900,
 .dark .text-amber-950 {
-  color: #fcd38a;
+  color: #ecc898;
 }
 .dark .text-red-700 {
-  color: #f87171;
+  color: #f08a85;
 }
 .dark .text-red-900,
 .dark .text-red-950 {
-  color: #fecaca;
+  color: #f6cfcc;
 }
 .dark .text-sky-950 {
-  color: #bae6fd;
+  color: #bfe3ee;
+}
+
+/* Sivupalkki (PC): syvä metsänvihreä liukuväri ja hento valoreunus. */
+.sidebar {
+  background:
+    radial-gradient(400px 300px at 0% 0%, rgb(221 169 110 / 0.12), transparent 60%),
+    linear-gradient(180deg, #244c3b 0%, #1a3a2d 100%);
+  box-shadow: inset -1px 0 0 rgb(255 255 255 / 0.06);
+}
+.dark .sidebar {
+  background:
+    radial-gradient(400px 300px at 0% 0%, rgb(221 169 110 / 0.08), transparent 60%),
+    linear-gradient(180deg, #16291f 0%, #0d1913 100%);
 }

@@ -18,7 +18,7 @@ export function HoursGauge({ hours, isCurrentWeek, className = '' }: { hours: We
   const x = xOf(hours.actualMin);
 
   return (
-    <section className={`@container rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 lg:p-5 ${className}`} aria-labelledby="hours-gauge-title">
+    <section className={`@container card p-4 sm:p-5 lg:p-6 ${className}`} aria-labelledby="hours-gauge-title">
       <div className="flex items-baseline justify-between gap-2">
         <h2 id="hours-gauge-title" className="text-base font-semibold text-slate-900">
           Liikuntaa viikossa

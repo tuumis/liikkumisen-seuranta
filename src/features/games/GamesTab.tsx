@@ -18,13 +18,15 @@ import { GamesView } from '../football/GamesView';
 import { SkipReasons } from '../review/SkipReasons';
 import { FixtureSheet, type FixtureDraft } from './FixtureSheet';
 import { DiaryView } from './DiaryView';
+import { FootballHero } from './FootballHero';
+import { IconPlus } from '../../ui/icons';
 
 type View = 'diary' | 'calendar' | 'results' | 'teams';
 
 const LEVEL_CLASS: Record<GameLevel, string> = {
-  elite: 'bg-red-50 text-red-900 ring-red-200',
-  kilpa: 'bg-amber-50 text-amber-900 ring-amber-200',
-  haaste: 'bg-green-50 text-green-900 ring-green-200',
+  elite: 'bg-[#244c3b] text-[#f6f5f0] ring-[#244c3b] dark:bg-[#3e8a66] dark:ring-[#3e8a66]',
+  kilpa: 'bg-amber-100 text-amber-900 ring-amber-200',
+  haaste: 'bg-green-100 text-green-900 ring-green-200',
 };
 
 export function LevelBadge({ level }: { level?: GameLevel }) {
@@ -37,7 +39,8 @@ export function GamesTab({ profile }: { profile?: Profile }) {
   const [draft, setDraft] = useState<FixtureDraft | null>(null);
   if (!profile) return <Card>Lisää profiili Asetukset-välilehdellä.</Card>;
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <FootballHero profile={profile} />
       <div className="flex flex-wrap items-center gap-2">
         <div className="w-full min-w-0 sm:w-auto sm:flex-1">
           <Segmented<View>
@@ -54,10 +57,10 @@ export function GamesTab({ profile }: { profile?: Profile }) {
         </div>
         <div className="flex w-full gap-2 sm:w-auto">
           <Button className="flex-1 sm:flex-none" onClick={() => setDraft({ kind: 'game' })}>
-            + Peli
+            <IconPlus size="1rem" /> Peli
           </Button>
           <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setDraft({ kind: 'tournament' })}>
-            + Turnaus
+            <IconPlus size="1rem" /> Turnaus
           </Button>
         </div>
       </div>
@@ -132,7 +135,7 @@ function CalendarView({ profile, onEdit }: { profile: Profile; onEdit: (e: Fixtu
           ) : (
             <ul className="space-y-2">
               {pending.map((e) => (
-                <li key={e.plan.id} className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                <li key={e.plan.id} className="card-sunk p-3">
                   <FixtureSummary e={e} team={e.fixture?.teamId ? teamById.get(e.fixture.teamId) : undefined} />
                   {skipping === e.plan.id ? (
                     <div className="mt-2">
@@ -222,7 +225,7 @@ function FixtureRow({ e, team, today, onClick }: { e: FixtureEntry; team?: Team;
   const days = Math.round((Date.parse(e.plan.date) - Date.parse(today)) / 86_400_000);
   return (
     <li>
-      <button type="button" onClick={onClick} className="flex w-full items-center gap-3 rounded-xl bg-slate-50 p-3 text-left ring-1 ring-slate-200 hover:bg-slate-100">
+      <button type="button" onClick={onClick} className="press card-sunk flex w-full items-center gap-3 p-3 text-left hover:bg-slate-100">
         <div className="w-12 shrink-0 text-center">
           <div className="text-lg font-semibold leading-none text-slate-900">{Number(e.plan.date.slice(8, 10))}</div>
           <div className="text-[11px] uppercase text-slate-500">{formatDate(e.plan.date, 'EEEEEE')}</div>
@@ -274,7 +277,7 @@ function TeamsView({ profile }: { profile: Profile }) {
     >
       {editing && (
         <form
-          className="mb-4 space-y-3 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200"
+          className="mb-4 space-y-3 card-sunk p-3"
           onSubmit={(e) => {
             e.preventDefault();
             void save();

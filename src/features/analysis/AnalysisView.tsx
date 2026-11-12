@@ -34,7 +34,7 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
     <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0 2xl:grid-cols-3">
       <Card className="lg:col-span-2 2xl:col-span-3">
         <div className="mb-2 grid grid-cols-4 gap-1 rounded-xl bg-slate-100 p-1 text-sm" role="radiogroup" aria-label="Jakso">
-          <span role="radio" aria-checked className="rounded-lg bg-white py-2 text-center font-medium text-slate-900 shadow-sm">
+          <span role="radio" aria-checked className="rounded-xl bg-[var(--surface-raised)] py-2 text-center font-semibold text-slate-900 shadow-sm">
             Viikko
           </span>
           {['Kuukausi', 'Kausi', 'Vuosi'].map((l) => (

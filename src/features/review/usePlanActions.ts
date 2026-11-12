@@ -25,7 +25,7 @@ export function usePlanActions(onOpenSession: (s: Session) => void, onConfirmed?
       toast(`Kuitattu: ${dayLabel(plan.date)} ${r.session.durationMin} min`, {
         label: 'Kumoa',
         run: () => repo.undoConfirm([r.session.id]),
-      });
+      }, 'success');
       onConfirmed?.(r.session);
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e));

@@ -4,13 +4,16 @@ interface ToastAction {
   label: string;
   run: () => void | Promise<void>;
 }
+type ToastKind = 'info' | 'success' | 'error';
 interface ToastState {
   id: number;
   text: string;
   action?: ToastAction;
+  kind: ToastKind;
 }
 
-type Show = (text: string, action?: ToastAction) => void;
+/** kind 'success' näyttää piirtyvän valintamerkin (onnistunut tallennus). */
+type Show = (text: string, action?: ToastAction, kind?: ToastKind) => void;
 
 const ToastContext = createContext<Show>(() => {});
 
@@ -22,10 +25,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const seq = useRef(0);
 
-  const show = useCallback<Show>((text, action) => {
+  const show = useCallback<Show>((text, action, kind = 'info') => {
     clearTimeout(timer.current);
     const id = ++seq.current;
-    setToast({ id, text, action });
+    setToast({ id, text, action, kind });
     timer.current = setTimeout(() => setToast((t) => (t?.id === id ? null : t)), TOAST_MS);
   }, []);
 
@@ -34,14 +37,31 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={show}>
       {children}
-      <div className="pointer-events-none fixed inset-x-0 bottom-20 z-40 flex justify-center px-4 lg:bottom-6 lg:left-64" aria-live="polite">
+      <div className="pointer-events-none fixed inset-x-0 bottom-24 z-40 flex justify-center px-4 lg:bottom-8 lg:left-72" aria-live="polite">
         {toast && (
-          <div className="pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-2xl bg-slate-900 px-4 py-2 text-sm text-white shadow-lg dark:bg-[#26344d] dark:ring-1 dark:ring-slate-300">
-            <span className="flex-1">{toast.text}</span>
+          <div
+            key={toast.id}
+            className="anim-pop pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-2xl bg-[#1f2c26] px-4 py-2.5 text-sm font-medium text-[#f6f5f0] shadow-xl ring-1 ring-white/10 dark:bg-[#2a3a32]"
+          >
+            {toast.kind !== 'info' && (
+              <span
+                className={`flex size-7 shrink-0 items-center justify-center rounded-full ${toast.kind === 'success' ? 'bg-[#dce8dc] text-[#244c3b]' : 'bg-red-200 text-red-900'}`}
+                aria-hidden
+              >
+                <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
+                  {toast.kind === 'success' ? (
+                    <path d="m5 12.5 4.2 4.2L19 7" className="anim-draw" style={{ strokeDasharray: 22, ['--len' as string]: 22 }} />
+                  ) : (
+                    <path d="M12 7v6M12 17v.01" />
+                  )}
+                </svg>
+              </span>
+            )}
+            <span className="flex-1 py-1">{toast.text}</span>
             {toast.action && (
               <button
                 type="button"
-                className="min-h-11 rounded-lg px-3 font-semibold text-green-300 active:bg-white/10"
+                className="press min-h-10 rounded-lg px-3 font-semibold text-[#e6bd89] hover:bg-white/10"
                 onClick={async () => {
                   const a = toast.action!;
                   clearTimeout(timer.current);

@@ -5,6 +5,7 @@ import type { Profile } from '../../domain/types';
 import { repo, type DeviceRole } from '../../db/repositories';
 import { requestPersistentStorage } from '../../db/storage';
 import { Avatar } from '../../ui/Avatar';
+import { IconChevronRight, IconContrast, IconDevices, IconLock, IconRepeat, IconSun, IconTarget, IconUser } from '../../ui/icons';
 import { Button, Card } from '../../ui/components';
 import { GROUP_LABEL, MONTHS } from '../../ui/labels';
 import { today } from '../../ui/today';
@@ -19,14 +20,14 @@ import { ActivityTypesSection } from './ActivityTypesSection';
 
 export type SettingsSectionId = 'profiles' | 'routine' | 'everyday' | 'goals' | 'devices' | 'appearance' | 'privacy';
 
-const SECTIONS: { id: SettingsSectionId; icon: string; title: string; text: string; needsProfile?: boolean }[] = [
-  { id: 'profiles', icon: '👤', title: 'Profiilit', text: 'Lapset ja aikuiset, syntymävuosi ja koulun aloitus' },
-  { id: 'routine', icon: '🔁', title: 'Viikkorytmi', text: 'Toistuvat treenit ja koululiikunta, jotka kuitataan viikolla', needsProfile: true },
-  { id: 'everyday', icon: '🏫', title: 'Arkiliikunta', text: 'Arvio välitunneista, koulumatkoista ja leikistä', needsProfile: true },
-  { id: 'goals', icon: '🎯', title: 'Tavoitteet ja lajit', text: 'Rasittavan päivän raja, pääluku ja lajien tehot' },
-  { id: 'devices', icon: '🔄', title: 'Laitteet ja varmuuskopio', text: 'PC ja puhelin, synkronointi, vienti ja tuonti' },
-  { id: 'appearance', icon: '🌗', title: 'Ulkoasu', text: 'Vaalea, tumma tai järjestelmän mukaan' },
-  { id: 'privacy', icon: '🔒', title: 'Tietosuoja ja poisto', text: 'Mitä tallennetaan ja tietojen poistaminen' },
+const SECTIONS: { id: SettingsSectionId; Icon: typeof IconUser; title: string; text: string; needsProfile?: boolean }[] = [
+  { id: 'profiles', Icon: IconUser, title: 'Profiilit', text: 'Lapset ja aikuiset, syntymävuosi ja koulun aloitus' },
+  { id: 'routine', Icon: IconRepeat, title: 'Viikkorytmi', text: 'Toistuvat treenit ja koululiikunta, jotka kuitataan viikolla', needsProfile: true },
+  { id: 'everyday', Icon: IconSun, title: 'Arkiliikunta', text: 'Arvio välitunneista, koulumatkoista ja leikistä', needsProfile: true },
+  { id: 'goals', Icon: IconTarget, title: 'Tavoitteet ja lajit', text: 'Rasittavan päivän raja, pääluku ja lajien tehot' },
+  { id: 'devices', Icon: IconDevices, title: 'Laitteet ja varmuuskopio', text: 'PC ja puhelin, synkronointi, vienti ja tuonti' },
+  { id: 'appearance', Icon: IconContrast, title: 'Ulkoasu', text: 'Vaalea, tumma tai järjestelmän mukaan' },
+  { id: 'privacy', Icon: IconLock, title: 'Tietosuoja ja poisto', text: 'Mitä tallennetaan ja tietojen poistaminen' },
 ];
 
 /** Asetukset valikkona: kukin ryhmä avaa oman sivunsa (PC:llä valikko vasemmalla, sisältö oikealla). */
@@ -48,24 +49,28 @@ export function SettingsView({
   }, [section, onSection]);
   const menu = (
     <nav aria-label="Asetukset" className="space-y-2">
-      {SECTIONS.map((x) => (
+      {SECTIONS.map((x, i) => (
         <button
           key={x.id}
           type="button"
           onClick={() => onSection(x.id)}
           aria-current={section === x.id ? 'page' : undefined}
-          className={`flex w-full items-center gap-3 rounded-2xl p-3 text-left ring-1 transition-colors ${section === x.id ? 'bg-green-50 ring-green-200' : 'bg-white ring-slate-200 hover:bg-slate-50'}`}
+          className={`press anim-rise flex w-full items-center gap-3 rounded-[1.4rem] p-3 text-left transition-[background-color,box-shadow] ${
+            section === x.id ? 'bg-green-700 text-white shadow-[0_10px_24px_-12px_rgb(36_76_59/0.8)]' : 'card card-interactive'
+          }`}
+          style={{ ['--i' as string]: i }}
         >
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-xl" aria-hidden>
-            {x.icon}
+          <span
+            className={`flex size-11 shrink-0 items-center justify-center rounded-2xl ${section === x.id ? 'bg-white/15 text-white' : 'bg-[var(--surface-sage)] text-green-800'}`}
+            aria-hidden
+          >
+            <x.Icon size="1.3rem" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block font-medium text-slate-900">{x.title}</span>
-            <span className="block text-xs text-slate-600">{x.text}</span>
+            <span className={`block font-semibold ${section === x.id ? 'text-white' : 'text-slate-900'}`}>{x.title}</span>
+            <span className={`block text-xs leading-snug ${section === x.id ? 'text-white/75' : 'text-slate-500'}`}>{x.text}</span>
           </span>
-          <span className="text-slate-400" aria-hidden>
-            ›
-          </span>
+          <IconChevronRight className={section === x.id ? 'text-white/70' : 'text-slate-400'} />
         </button>
       ))}
     </nav>
@@ -78,8 +83,11 @@ export function SettingsView({
           ‹ Asetukset
         </Button>
       </div>
-      <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
-        <span aria-hidden>{current.icon}</span> {current.title}
+      <h2 className="flex items-center gap-2 font-display text-xl font-semibold text-slate-900">
+        <span className="flex size-9 items-center justify-center rounded-xl bg-[var(--surface-sage)] text-green-800" aria-hidden>
+          <current.Icon size="1.15rem" />
+        </span>
+        {current.title}
       </h2>
       {current.needsProfile && !profile ? (
         <Card>Lisää ensin profiili kohdassa Profiilit.</Card>
@@ -94,7 +102,7 @@ export function SettingsView({
       <div className={`lg:col-span-4 lg:block 2xl:col-span-3 ${current ? 'hidden' : ''}`}>{menu}</div>
       <div className="lg:col-span-8 2xl:col-span-9">
         {content ?? (
-          <p className="hidden rounded-2xl bg-white p-6 text-sm text-slate-600 ring-1 ring-slate-200 lg:block">Valitse asetusryhmä vasemmalta.</p>
+          <p className="hidden card p-6 text-sm text-slate-600 lg:block">Valitse asetusryhmä vasemmalta.</p>
         )}
       </div>
     </div>
@@ -218,7 +226,7 @@ function DeviceSection() {
               type="button"
               onClick={() => repo.setDeviceRole(r)}
               aria-pressed={role === r}
-              className={`min-h-11 rounded-xl text-sm font-medium ring-1 ${role === r ? 'bg-green-700 text-white ring-green-700' : 'bg-white text-slate-800 ring-slate-300'}`}
+              className={`min-h-11 rounded-xl text-sm font-medium ring-1 ${role === r ? 'bg-green-700 text-white ring-green-700' : 'bg-[var(--surface-sunk)] text-slate-800 ring-slate-200'}`}
             >
               {r === 'pc' ? 'PC (päälaite)' : 'Puhelin'}
             </button>

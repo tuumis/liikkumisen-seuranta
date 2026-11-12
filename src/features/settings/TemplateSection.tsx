@@ -7,6 +7,7 @@ import { isISODate } from '../../domain/dates';
 import type { Profile, TemplateItem, Weekday } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { Button, Card, Field, inputClass } from '../../ui/components';
+import { TimeField } from '../../ui/TimeField';
 import { formatDate } from '../../ui/format';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
@@ -178,7 +179,7 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
               type="button"
               aria-pressed={v.weekdays.includes(d.value)}
               onClick={() => toggleDay(d.value)}
-              className={`min-h-11 rounded-xl text-sm font-medium ring-1 ${v.weekdays.includes(d.value) ? 'bg-green-700 text-white ring-green-700' : 'bg-white text-slate-800 ring-slate-300'}`}
+              className={`min-h-11 rounded-xl text-sm font-medium ring-1 ${v.weekdays.includes(d.value) ? 'bg-green-700 text-white ring-green-700' : 'bg-[var(--surface-sunk)] text-slate-800 ring-slate-200'}`}
             >
               {d.label}
             </button>
@@ -189,7 +190,7 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Kellonaika (valinnainen)">
-          <input type="time" className={inputClass} value={v.startTime} onChange={(e) => setV((c) => ({ ...c, startTime: e.target.value }))} />
+          <TimeField label="Kellonaika" value={v.startTime} onChange={(t) => setV((c) => ({ ...c, startTime: t }))} />
           {err('startTime')}
         </Field>
         <Field label="Kesto (min)">
@@ -229,7 +230,7 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
           <button
             type="button"
             onClick={remove}
-            className={`min-h-11 rounded-xl px-3 text-sm font-medium ring-1 ${confirmDelete ? 'bg-red-700 text-white ring-red-700' : 'bg-white text-red-700 ring-red-300'}`}
+            className={`min-h-11 rounded-xl px-3 text-sm font-medium ring-1 ${confirmDelete ? 'bg-red-700 text-white ring-red-700' : 'bg-[var(--surface-raised)] text-red-700 ring-red-200'}`}
           >
             {confirmDelete ? 'Vahvista' : 'Poista'}
           </button>

@@ -170,7 +170,7 @@ function TwoStep({ label, warning, confirmLabel, onConfirm }: { label: string; w
   const [busy, setBusy] = useState(false);
   if (!open)
     return (
-      <button type="button" onClick={() => setOpen(true)} className="min-h-11 w-full rounded-xl bg-white px-4 text-sm font-medium text-red-700 ring-1 ring-red-300 active:bg-red-50">
+      <button type="button" onClick={() => setOpen(true)} className="press min-h-11 w-full rounded-xl bg-[var(--surface-raised)] px-4 text-sm font-semibold text-red-700 shadow-xs ring-1 ring-red-200 hover:bg-red-50">
         {label}
       </button>
     );

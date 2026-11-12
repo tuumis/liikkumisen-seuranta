@@ -68,7 +68,7 @@ function ReviewRow({
   const [error, setError] = useState<string>();
 
   return (
-    <li className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+    <li className="card-sunk p-3">
       <div className="flex items-center gap-3">
         <span className="text-xl" aria-hidden>
           {type?.icon ?? '•'}
@@ -143,9 +143,9 @@ export function IconButton({
   disabled?: boolean;
 }) {
   const tones = {
-    green: 'bg-green-700 text-white active:bg-green-800',
-    red: 'bg-white text-red-700 ring-1 ring-red-300 active:bg-red-50',
-    slate: 'bg-white text-slate-700 ring-1 ring-slate-300 active:bg-slate-100',
+    green: 'bg-green-700 text-white shadow-[0_6px_14px_-6px_rgb(36_76_59/0.7)] hover:bg-green-800',
+    red: 'bg-[var(--surface-raised)] text-red-700 shadow-xs ring-1 ring-red-200 hover:bg-red-50',
+    slate: 'bg-[var(--surface-raised)] text-slate-700 shadow-xs ring-1 ring-slate-200 hover:bg-slate-100',
   };
   return (
     <button
@@ -154,7 +154,7 @@ export function IconButton({
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className={`flex size-11 items-center justify-center rounded-xl text-lg font-semibold disabled:opacity-30 ${tones[tone]}`}
+      className={`press flex size-10 items-center justify-center rounded-xl text-base font-bold disabled:opacity-30 disabled:shadow-none ${tones[tone]}`}
     >
       {children}
     </button>

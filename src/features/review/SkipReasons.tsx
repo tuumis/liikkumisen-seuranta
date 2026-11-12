@@ -10,7 +10,7 @@ export function SkipReasons({ onPick, onCancel }: { onPick: (r?: SkipReason) => 
           key={r}
           type="button"
           onClick={() => onPick(r)}
-          className="min-h-10 rounded-full bg-white px-3 text-sm font-medium text-slate-800 ring-1 ring-slate-300 active:bg-slate-100"
+          className="press min-h-10 rounded-full bg-[var(--surface-sunk)] px-3.5 text-sm font-semibold text-slate-800 ring-1 ring-slate-200 hover:bg-slate-100"
         >
           {SKIP_REASON_LABEL[r]}
         </button>

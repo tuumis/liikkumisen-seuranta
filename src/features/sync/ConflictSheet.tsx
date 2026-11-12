@@ -46,7 +46,7 @@ export function ConflictSheet({ summary, onClose }: { summary: MergeSummary | nu
       <p className="mb-2 text-sm text-slate-600">Näitä tietueita oli muokattu molemmilla laitteilla edellisen synkronoinnin jälkeen. Uudempi muutos jäi voimaan.</p>
       <ul className="space-y-2">
         {summary.conflicts.map((c) => (
-          <li key={`${c.table}:${c.key}`} className="rounded-xl bg-slate-50 p-3 text-sm text-slate-800 ring-1 ring-slate-200">
+          <li key={`${c.table}:${c.key}`} className="card-sunk p-3 text-sm text-slate-800">
             {describe(c)}
           </li>
         ))}

@@ -178,7 +178,7 @@ function TypeEditor({ type, onClose }: { type: ActivityType | null; onClose: () 
         <p className="text-xs text-slate-500">Muutos koskee uusia kirjauksia. Vanhat kerrat säilyttävät oman profiilinsa, ellet laske niitä uudelleen.</p>
 
         {saved && (
-          <div className="space-y-2 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
+          <div className="space-y-2 card-sunk p-3">
             <div className="text-sm font-medium text-slate-800">Laske uudelleen</div>
             <p className="text-xs text-slate-600">
               Lasketaan tämän lajin kerrat uudella profiililla valitusta päivästä alkaen. Käsin syötettyjä ja "enimmäkseen …" -valinnalla kirjattuja kertoja ei muuteta.
@@ -186,7 +186,7 @@ function TypeEditor({ type, onClose }: { type: ActivityType | null; onClose: () 
             <div className="flex flex-wrap items-center gap-2">
               <label className="text-sm text-slate-700">
                 Alkaen{' '}
-                <input type="date" className="min-h-10 rounded-lg border border-slate-300 bg-white px-2 text-sm" value={from} max={today} onChange={(e) => e.target.value && setFrom(e.target.value)} />
+                <input type="date" className="field-shell min-h-10 border-0 px-2 text-sm" value={from} max={today} onChange={(e) => e.target.value && setFrom(e.target.value)} />
               </label>
               <Button variant="secondary" disabled={!affected} onClick={recalc}>
                 Laske uudelleen ({affected ?? 0} {affected === 1 ? 'kerta' : 'kertaa'})

@@ -18,10 +18,10 @@ import { PlanSheet } from './PlanSheet';
 import { BackupReminder, SyncBar } from '../sync/SyncBar';
 import { FootballPanel } from '../football/FootballPanel';
 import { DayRow } from './DayRow';
-import { WeekSummary } from './WeekSummary';
+import { WeekDetails, WeekHero } from './WeekSummary';
+import { DailyChart, RecentCard, RhythmCard, UpcomingCard } from './Dashboard';
+import { IconCalendarClock, IconChevronLeft, IconChevronRight, IconPlus } from '../../ui/icons';
 import { HoursGauge } from './HoursGauge';
-import { HoursCard } from './HoursCard';
-import { GoalCard } from '../analysis/GoalCard';
 import { GettingStarted } from './GettingStarted';
 import type { SettingsSectionId } from '../settings/SettingsView';
 import { DaySheet } from './DaySheet';
@@ -42,8 +42,8 @@ function UpdateBanner() {
   } = useRegisterSW();
   if (!needRefresh) return null;
   return (
-    <div className="flex items-center gap-3 rounded-2xl bg-green-50 p-3 ring-1 ring-green-200">
-      <span className="flex-1 text-sm text-green-900">Uusi versio saatavilla</span>
+    <div className="anim-rise flex items-center gap-3 rounded-[1.5rem] bg-green-100 p-3 pl-4 shadow-sm">
+      <span className="flex-1 text-sm font-semibold text-green-900">Uusi versio saatavilla</span>
       <Button onClick={() => updateServiceWorker(true)}>Päivitä</Button>
       <Button variant="ghost" onClick={() => setNeedRefresh(false)}>
         Myöhemmin
@@ -143,156 +143,155 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     if (Math.abs(dx) > 60 && Math.abs(dy) < 40) go(dx < 0 ? 1 : -1);
   };
 
-  const summaryLines = profile && info && (
-    <>
-      <div className="pt-1 text-xs text-slate-600">
-        Kirjattu {week.count} {week.count === 1 ? 'kerta' : 'kertaa'} · kesto yhteensä {week.duration} min
-      </div>
-      {adherence.planned > 0 && (
-        <div className="text-xs text-slate-700">
-          Suunniteltu {adherence.planned} · tehty {adherence.done} · ei tehty {adherence.skipped}
-          {adherence.unconfirmed > 0 && ` · kuittaamatta ${adherence.unconfirmed}`}
-        </div>
-      )}
-    </>
+  const reviewButton = profile && (unconfirmed?.length ?? 0) > 0 && (
+    <button
+      type="button"
+      onClick={() => setReviewOpen(true)}
+      className="press card-interactive anim-rise flex w-full items-center gap-3 rounded-[1.5rem] bg-amber-100 p-4 text-left shadow-sm"
+      style={{ ['--i' as string]: 1 }}
+    >
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-amber-400/40 text-amber-900" aria-hidden>
+        <IconCalendarClock size="1.25rem" />
+      </span>
+      <span className="flex-1 text-sm text-amber-950">
+        <strong className="block font-display text-base">Käy viikko läpi</strong>
+        {unconfirmed!.length} {unconfirmed!.length === 1 ? 'kuittaamaton suunnitelma' : 'kuittaamatonta suunnitelmaa'}
+      </span>
+      <IconChevronRight className="text-amber-900" />
+    </button>
   );
 
+  const weekSwitcher = (
+    <div className="anim-fade flex items-center gap-2">
+      <div className="flex flex-1 items-center gap-1 rounded-2xl bg-[var(--surface)] p-1 shadow-sm lg:flex-none">
+        <button type="button" onClick={() => go(-1)} className="press flex size-10 items-center justify-center rounded-xl text-slate-600 hover:bg-[var(--surface-sunk)] hover:text-slate-900" aria-label="Edellinen viikko">
+          <IconChevronLeft />
+        </button>
+        <div className="min-w-0 flex-1 px-2 text-center lg:w-56 lg:flex-none">
+          <div className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500">Viikko {wk.week}</div>
+          <div className="truncate text-sm font-bold text-slate-900">
+            {formatDate(period.start, 'd.M.')} – {formatDate(period.end, 'd.M.yyyy')}
+          </div>
+        </div>
+        <button type="button" onClick={() => go(1)} className="press flex size-10 items-center justify-center rounded-xl text-slate-600 hover:bg-[var(--surface-sunk)] hover:text-slate-900" aria-label="Seuraava viikko">
+          <IconChevronRight />
+        </button>
+      </div>
+      {!isCurrent && (
+        <Button variant="secondary" onClick={() => setWeekStart(startOfIsoWeek(today))}>
+          Tämä viikko
+        </Button>
+      )}
+      {profile && (
+        <span className="ml-auto hidden lg:block">
+          <Button onClick={() => setQuickAdd({})}>
+            <IconPlus size="1.1rem" /> Lisää kerta
+          </Button>
+        </span>
+      )}
+    </div>
+  );
+
+  const dayList = profile && (
+    <section className="space-y-3" aria-labelledby="days-title">
+      <div className="flex items-baseline justify-between gap-2 px-1">
+        <h2 id="days-title" className="font-display text-lg font-semibold text-slate-900">
+          Päivät
+        </h2>
+        <span className="truncate text-xs text-slate-500">
+          {week.count} {week.count === 1 ? 'kerta' : 'kertaa'} · {week.duration} min
+          {adherence.planned > 0 && ` · suunniteltu ${adherence.planned}, tehty ${adherence.done}`}
+        </span>
+      </div>
+      <ol className="space-y-2.5 2xl:grid 2xl:grid-cols-2 2xl:gap-3 2xl:space-y-0" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} aria-label="Viikon päivät">
+        {dates.map((d, i) => (
+          <DayRow
+            key={d}
+            index={i}
+            date={d}
+            isToday={d === today}
+            isFuture={d > today}
+            totals={report?.allDays[i]}
+            sessions={(sessions ?? []).filter((s) => s.date === d)}
+            plans={(plans ?? []).filter((p) => p.date === d && p.status !== 'done')}
+            plannedById={plannedById}
+            fixtures={fixtureByPlan}
+            footballDetails={footballDetails}
+            onFootball={setFootball}
+            onPlanOpen={setPlanOpen}
+            onPlanConfirm={(p) => void planActions.confirm(p)}
+            types={typeMap}
+            flag={flagByDate.get(d)}
+            barTarget={DAY_BAR_TARGET[info?.group ?? 'school_age']}
+            onOpenMenu={() => setDayMenu(d)}
+            onEdit={setEditing}
+          />
+        ))}
+      </ol>
+      <p className="text-center text-xs text-slate-500 lg:hidden">Pitkä painallus päivään: sairas- tai matkapäivä. Pyyhkäise vaihtaaksesi viikkoa.</p>
+      <p className="hidden text-center text-xs text-slate-500 lg:block">Päivän ⋯ tai hiiren oikea painike: lisää kerta, sairas- tai matkapäivä.</p>
+    </section>
+  );
+
+  const chartTitle = info?.group === 'early_years' ? 'Vauhdikas liikkuminen' : 'Reipas ja rasittava';
+
   return (
-    <div className="space-y-4 lg:grid lg:grid-cols-12 lg:items-start lg:gap-6 lg:space-y-0">
-      <div className="space-y-3 empty:hidden lg:col-span-12">
+    <div className="space-y-5">
+      <div className="space-y-3 empty:hidden">
         <UpdateBanner />
         <SyncBar />
         <BackupReminder onOpenSettings={() => onOpenSettings('devices')} />
       </div>
 
-      <div className="space-y-4 lg:col-span-7 2xl:col-span-6">
-      <Card>
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => go(-1)} className="min-h-11 min-w-11 rounded-full text-xl text-slate-700 hover:bg-slate-100 active:bg-slate-100" aria-label="Edellinen viikko">
-            ‹
-          </button>
-          <div className="flex-1 text-center lg:text-left">
-            <div className="text-sm text-slate-600">Viikko {wk.week}</div>
-            <div className="text-base font-semibold text-slate-900 lg:text-lg">
-              {formatDate(period.start, 'd.M.')} – {formatDate(period.end, 'd.M.yyyy')}
-            </div>
-          </div>
-          {!isCurrent && (
-            <Button variant="ghost" className="hidden lg:inline-flex lg:items-center" onClick={() => setWeekStart(startOfIsoWeek(today))}>
-              Tämä viikko
-            </Button>
-          )}
-          {profile && (
-            <Button className="hidden lg:inline-flex lg:items-center" onClick={() => setQuickAdd({})}>
-              + Lisää kerta
-            </Button>
-          )}
-          <button type="button" onClick={() => go(1)} className="min-h-11 min-w-11 rounded-full text-xl text-slate-700 hover:bg-slate-100 active:bg-slate-100" aria-label="Seuraava viikko">
-            ›
-          </button>
-        </div>
-        {!isCurrent && (
-          <div className="mt-1 text-center lg:hidden">
-            <Button variant="ghost" onClick={() => setWeekStart(startOfIsoWeek(today))}>
-              Tämä viikko
-            </Button>
-          </div>
-        )}
-        {profile && info && <div className="mt-2 space-y-0.5 border-t border-slate-100 pt-2 text-center lg:text-left">{summaryLines}</div>}
-        {!profile && <p className="mt-3 text-sm text-slate-600">Lisää profiili Asetukset-välilehdellä.</p>}
-      </Card>
+      {weekSwitcher}
+      {!profile && <Card>Lisää profiili Asetukset-välilehdellä.</Card>}
 
-      {profile && hasAnySessions === false && (
-        <GettingStarted onAdd={() => setQuickAdd({})} onOpenSettings={onOpenSettings} />
-      )}
-
-      {profile && report && hasAnySessions && (
-        <div className="space-y-4 lg:hidden">
-          <WeekSummary report={report} profile={profile} isCurrentWeek={isCurrent} />
-          {showGauge && <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} />}
-        </div>
-      )}
-
-      {profile && (unconfirmed?.length ?? 0) > 0 && (
-        <button
-          type="button"
-          onClick={() => setReviewOpen(true)}
-          className="flex w-full items-center gap-3 rounded-2xl bg-amber-50 p-3 text-left ring-1 ring-amber-200 hover:bg-amber-100 active:bg-amber-100"
-        >
-          <span className="flex-1 text-sm text-amber-950">
-            <strong>Käy viikko läpi</strong> · {unconfirmed!.length} {unconfirmed!.length === 1 ? 'kuittaamaton suunnitelma' : 'kuittaamatonta suunnitelmaa'}
-          </span>
-          <span className="text-amber-900" aria-hidden>
-            ›
-          </span>
-        </button>
-      )}
-
-      {profile && (
-        <>
-          <ol className="space-y-2" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} aria-label="Viikon päivät">
-            {dates.map((d, i) => (
-              <DayRow
-                key={d}
-                date={d}
-                isToday={d === today}
-                isFuture={d > today}
-                totals={report?.allDays[i]}
-                sessions={(sessions ?? []).filter((s) => s.date === d)}
-                plans={(plans ?? []).filter((p) => p.date === d && p.status !== 'done')}
-                plannedById={plannedById}
-                fixtures={fixtureByPlan}
-                footballDetails={footballDetails}
-                onFootball={setFootball}
-                onPlanOpen={setPlanOpen}
-                onPlanConfirm={(p) => void planActions.confirm(p)}
-                types={typeMap}
-                flag={flagByDate.get(d)}
-                barTarget={DAY_BAR_TARGET[info?.group ?? 'school_age']}
-                onOpenMenu={() => setDayMenu(d)}
-                onEdit={setEditing}
-              />
-            ))}
-          </ol>
-          <p className="text-center text-xs text-slate-500 lg:hidden">Pitkä painallus päivään: sairas- tai matkapäivä. Pyyhkäise vaihtaaksesi viikkoa.</p>
-          <p className="hidden text-center text-xs text-slate-500 lg:block">Päivän ⋯ tai hiiren oikea painike: lisää kerta, sairas- tai matkapäivä.</p>
-        </>
-      )}
-      </div>
+      {profile && hasAnySessions === false && <GettingStarted onAdd={() => setQuickAdd({})} onOpenSettings={onOpenSettings} />}
 
       {profile && report && (
-        <div className="hidden space-y-4 lg:col-span-5 lg:block 2xl:col-span-6 2xl:grid 2xl:grid-cols-2 2xl:items-start 2xl:gap-6 2xl:space-y-0">
-          {hasAnySessions ? (
-            <>
-              <div className="space-y-4">
-                <WeekSummary report={report} profile={profile} isCurrentWeek={isCurrent} wide />
-                <div className="hidden rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 2xl:block">
-                  <GoalCard report={report} variant="compact" />
-                </div>
+        <div className="grid items-start gap-5 lg:grid-cols-12 lg:gap-6">
+          {/* Pääpalsta: tilanne, päivittäinen jakauma ja päivät. */}
+          <div className="space-y-5 lg:col-span-7 xl:col-span-8">
+            <WeekHero report={report} profile={profile} isCurrentWeek={isCurrent} onAdd={() => setQuickAdd({})} />
+            {reviewButton}
+            <div className="grid gap-5 2xl:grid-cols-5">
+              <div className="2xl:col-span-3">
+                <DailyChart report={report} today={today} target={DAY_BAR_TARGET[info?.group ?? 'school_age']} title={chartTitle} />
               </div>
-              <div className="space-y-4">
-                {showGauge && <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} />}
-                <div className="hidden 2xl:block">
-                  <HoursCard report={report} isCurrentWeek={isCurrent} />
-                </div>
+              <div className="2xl:col-span-2">
+                <RhythmCard report={report} today={today} />
               </div>
-            </>
-          ) : (
-            <section className="rounded-2xl bg-white p-5 text-sm text-slate-600 shadow-sm ring-1 ring-slate-200">Viikon tilanne näkyy tässä ensimmäisen kirjauksen jälkeen.</section>
-          )}
+            </div>
+            <div className="lg:hidden">{showGauge && <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} />}</div>
+            <div className="lg:hidden">
+              <UpcomingCard profile={profile} today={today} types={typeMap} onOpen={setPlanOpen} />
+            </div>
+            {dayList}
+            <div className="space-y-5 lg:hidden">
+              <RecentCard profile={profile} today={today} types={typeMap} onOpen={setEditing} />
+              <WeekDetails report={report} isCurrentWeek={isCurrent} />
+            </div>
+          </div>
+
+          {/* Sivupalsta (PC): määrä, tulevat ja viimeisimmät, tarkemmat luvut. */}
+          <aside className="hidden space-y-5 lg:col-span-5 lg:block xl:col-span-4" aria-label="Viikon yhteenveto">
+            {showGauge && <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} />}
+            <UpcomingCard profile={profile} today={today} types={typeMap} onOpen={setPlanOpen} />
+            <RecentCard profile={profile} today={today} types={typeMap} onOpen={setEditing} />
+            <WeekDetails report={report} isCurrentWeek={isCurrent} />
+          </aside>
         </div>
       )}
 
       {profile && (
         <>
-
           <button
             type="button"
             onClick={() => setQuickAdd({})}
-            className="fixed bottom-20 right-4 z-20 flex size-14 items-center justify-center rounded-full bg-green-700 text-3xl text-white shadow-lg active:bg-green-800 sm:right-[max(1rem,calc(50%-17rem))] lg:hidden"
+            className="press fixed bottom-[6.75rem] right-5 z-20 flex size-16 items-center justify-center rounded-[1.4rem] bg-green-700 text-white shadow-[0_14px_30px_-10px_rgb(36_76_59/0.8)] hover:bg-green-800 sm:right-[max(1.25rem,calc(50%-19rem))] md:right-[max(1.25rem,calc(50%-21rem))] lg:hidden"
             aria-label="Lisää kerta"
           >
-            +
+            <IconPlus size="1.75rem" strokeWidth={2.2} />
           </button>
 
           <QuickAdd open={!!quickAdd} onClose={() => setQuickAdd(null)} profile={profile} initialDate={quickAdd?.date} onSaved={openFootballIfAny} />

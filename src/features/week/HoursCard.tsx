@@ -46,14 +46,14 @@ export function HoursCard({ report, isCurrentWeek }: { report: PeriodReport; isC
   const empty = h.expectedMin === 0 && h.actualMin === 0;
 
   return (
-    <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 lg:p-5">
-      <h2 className="text-base font-semibold text-slate-900">Viikon liikuntatunnit</h2>
+    <section className="card p-4 sm:p-5 lg:p-6">
+      <h2 className="font-display text-lg font-semibold text-slate-900">Viikon liikuntatunnit</h2>
       {empty ? (
         <p className="mt-2 text-sm text-slate-600">Ei vielä arviota eikä kirjauksia. Lisää viikkopohja ja perusarviot Asetuksissa, niin arvio näkyy tässä.</p>
       ) : (
         <>
           <div className="mt-3 grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
+            <div className="card-sunk p-3">
               <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Toteuma</div>
               <div className="mt-0.5 text-3xl font-semibold tabular-nums text-slate-900">{formatHours(h.actualMin)}</div>
               <Split sessions={h.actual.sessions} estimate={h.actual.estimate} sessionsLabel="kirjattu" />

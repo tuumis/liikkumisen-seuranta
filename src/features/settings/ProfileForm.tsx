@@ -128,7 +128,7 @@ export function ProfileForm({
               key={k}
               type="button"
               onClick={() => setRaw((cur) => ({ ...cur, kind: k }))}
-              className={`min-h-11 rounded-xl text-sm font-medium ring-1 ${raw.kind === k ? 'bg-green-700 text-white ring-green-700' : 'bg-white text-slate-800 ring-slate-300'}`}
+              className={`min-h-11 rounded-xl text-sm font-medium ring-1 ${raw.kind === k ? 'bg-green-700 text-white ring-green-700' : 'bg-[var(--surface-sunk)] text-slate-800 ring-slate-200'}`}
               aria-pressed={raw.kind === k}
             >
               {k === 'child' ? 'Lapsi' : 'Aikuinen'}

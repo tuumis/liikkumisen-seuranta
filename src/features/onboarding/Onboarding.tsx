@@ -52,7 +52,7 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
     <div className="mx-auto max-w-xl space-y-4 px-4 py-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-green-800">Liikkumisen seuranta</h1>
+          <h1 className="font-display text-xl font-semibold text-slate-900">Liikkumisen seuranta</h1>
           <p className="text-xs text-slate-500">Aloitus · vaihe {step}/4</p>
         </div>
         <Button variant="ghost" onClick={finish}>
@@ -61,9 +61,9 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
       </div>
 
       {step === 1 && (
-        <section className="rounded-2xl bg-gradient-to-br from-green-50 to-white p-5 ring-1 ring-green-200 dark:from-[#10291d] dark:to-[#121a2a]">
-          <h2 className="text-xl font-semibold tracking-tight text-slate-900">Tervetuloa! 👋</h2>
-          <ul className="mt-2 space-y-1 text-sm text-slate-700">
+        <section className="hero anim-rise p-6">
+          <h2 className="relative z-10 font-display text-3xl font-semibold tracking-tight">Tervetuloa</h2>
+          <ul className="relative z-10 mt-3 space-y-1.5 text-sm text-[var(--hero-ink-soft)]">
             <li>⚽ Kirjaa lapsen liikunta muutamalla napautuksella.</li>
             <li>📈 Näe viikon tilanne suhteessa suomalaisiin liikkumissuosituksiin.</li>
             <li>🔒 Tiedot pysyvät vain tällä laitteella – ei tiliä, ei pilvipalvelua.</li>
@@ -207,7 +207,7 @@ function DeviceStep({ message, onDone }: { message?: string; onDone: () => void 
             type="button"
             onClick={() => repo.setDeviceRole(r)}
             aria-pressed={role === r}
-            className={`min-h-12 rounded-xl text-sm font-medium ring-1 ${role === r ? 'bg-green-700 text-white ring-green-700' : 'bg-white text-slate-800 ring-slate-300'}`}
+            className={`min-h-12 rounded-xl text-sm font-medium ring-1 ${role === r ? 'bg-green-700 text-white ring-green-700' : 'bg-[var(--surface-sunk)] text-slate-800 ring-slate-200'}`}
           >
             {r === 'pc' ? 'PC (päälaite)' : 'Puhelin'}
           </button>

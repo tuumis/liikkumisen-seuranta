@@ -8,6 +8,7 @@ import { addDays } from '../../domain/dates';
 import type { ActivityType, Category, Effort, IntensityMinutes, ISODate, Profile, Session } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { requestPersistentStorage } from '../../db/storage';
+import { IconBall } from '../../ui/icons';
 import { Button, inputClass } from '../../ui/components';
 import { ToggleChip } from '../../ui/controls';
 import { IntensityPicker, isPreset, type IntensityMode, type ManualDraft } from '../week/IntensityPicker';
@@ -35,14 +36,14 @@ function TypeButton({ t, onPick, label, football }: { t: ActivityType; onPick: (
       type="button"
       onClick={() => onPick(t)}
       aria-label={t.name}
-      className={`flex min-h-20 flex-col items-center justify-center gap-1 rounded-2xl p-2 text-center ring-1 ${
-        football ? 'bg-white ring-green-200 active:bg-green-100 dark:bg-slate-50' : 'bg-slate-50 ring-slate-200 active:bg-green-50'
+      className={`press card-interactive group flex min-h-[5.5rem] flex-col items-center justify-center gap-1.5 rounded-[1.25rem] p-2 text-center ${
+        football ? 'bg-[var(--surface-raised)] shadow-sm' : 'card'
       }`}
     >
-      <span className="text-2xl" aria-hidden>
+      <span className="flex size-10 items-center justify-center rounded-2xl bg-[var(--surface-sage)] text-2xl transition-transform duration-300 group-hover:scale-110" aria-hidden>
         {t.icon}
       </span>
-      <span className="text-xs font-medium leading-tight text-slate-800">{label ?? t.name}</span>
+      <span className="text-xs font-semibold leading-tight text-slate-800">{label ?? t.name}</span>
     </button>
   );
 }
@@ -138,7 +139,7 @@ export function QuickAdd({
       toast(`Kuitattu suunniteltu: ${type!.name} ${r.session.durationMin} min`, {
         label: 'Kumoa',
         run: () => repo.undoConfirm([r.session.id]),
-      });
+      }, 'success');
       if (r.created) onSaved?.(r.session);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -188,7 +189,7 @@ export function QuickAdd({
       });
       void requestPersistentStorage();
       onClose();
-      toast(`Tallennettu: ${type.name} ${dur.data} min`, { label: 'Kumoa', run: () => repo.deleteSession(s.id).then(() => {}) });
+      toast(`Tallennettu: ${type.name} ${dur.data} min`, { label: 'Kumoa', run: () => repo.deleteSession(s.id).then(() => {}) }, 'success');
       onSaved?.(s);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -203,8 +204,10 @@ export function QuickAdd({
       {!type ? (
         <div className="space-y-3">
           {football.length > 0 && (
-            <section className="rounded-2xl bg-green-50 p-2 ring-1 ring-green-200 dark:bg-[#10291d] dark:ring-green-900" aria-label="Jalkapallo">
-              <h3 className="mb-1.5 px-1 text-xs font-semibold uppercase tracking-wide text-green-800 dark:text-green-300">⚽ Jalkapallo</h3>
+            <section className="card-sage p-2.5" aria-label="Jalkapallo">
+              <h3 className="mb-2 flex items-center gap-1.5 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-green-800">
+                <IconBall size="0.95rem" /> Jalkapallo
+              </h3>
               <div className={`grid gap-2 ${football.length >= 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>
                 {football.map((t) => (
                   <TypeButton key={t.id} t={t} onPick={pick} label={shortFootballName(t.name)} football />
@@ -212,7 +215,7 @@ export function QuickAdd({
               </div>
             </section>
           )}
-          <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Muut lajit</h3>
+          <h3 className="px-1 pt-1 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">Muut lajit</h3>
           <div className="grid grid-cols-3 gap-2">
             {recent.map((t) => (
               <TypeButton key={t.id} t={t} onPick={pick} />
@@ -227,7 +230,7 @@ export function QuickAdd({
               if (!inCat.length) return null;
               return (
                 <div key={c}>
-                  <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{CATEGORY_LABEL[c]}</h3>
+                  <h3 className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">{CATEGORY_LABEL[c]}</h3>
                   <div className="grid grid-cols-3 gap-2">
                     {inCat.map((t) => (
                       <TypeButton key={t.id} t={t} onPick={pick} />
@@ -240,7 +243,7 @@ export function QuickAdd({
       ) : (
         <div className="space-y-4">
           {openPlan && (
-            <div className="space-y-2 rounded-xl bg-amber-50 p-3 ring-1 ring-amber-200">
+            <div className="space-y-2 rounded-2xl bg-amber-100 p-3.5">
               <p className="text-sm text-amber-900">
                 Päivälle {dayLabel(date)} on suunniteltu {type.name.toLowerCase()}
                 {openPlan.startTime && ` klo ${openPlan.startTime}`} ({openPlan.durationMin} min).
@@ -251,7 +254,7 @@ export function QuickAdd({
             </div>
           )}
           {sameDay ? (
-            <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900 ring-1 ring-amber-200">
+            <p className="rounded-2xl bg-amber-100 p-3.5 text-sm text-amber-900">
               Päivälle {dayLabel(date)} on jo kirjattu {type.name.toLowerCase()} ({sameDay} kpl). Voit silti lisätä uuden kerran.
             </p>
           ) : null}
@@ -267,7 +270,7 @@ export function QuickAdd({
               </ToggleChip>
               <input
                 type="date"
-                className="min-h-10 rounded-full border border-slate-300 bg-white px-3 text-sm"
+                className="field-shell min-h-10 rounded-full border-0 px-3 text-sm font-semibold text-slate-800"
                 value={date}
                 max={today}
                 onChange={(e) => e.target.value && setDate(e.target.value)}
@@ -292,7 +295,7 @@ export function QuickAdd({
                       setDuration(String(m));
                       setError(undefined);
                     }}
-                    className={`min-h-12 rounded-xl text-base font-semibold ring-1 ${on ? 'bg-green-700 text-white ring-green-700' : 'bg-white text-slate-900 ring-slate-300 hover:bg-slate-50'}`}
+                    className={`press stat min-h-14 rounded-2xl text-xl font-semibold ${on ? 'bg-green-700 text-white shadow-[0_8px_18px_-8px_rgb(36_76_59/0.7)]' : 'bg-[var(--surface-sunk)] text-slate-900 shadow-[inset_0_0_0_1px_var(--line)] hover:bg-slate-100'}`}
                   >
                     {m}
                   </button>
@@ -306,7 +309,7 @@ export function QuickAdd({
                   setCustom(true);
                   setDuration('');
                 }}
-                className={`col-span-2 min-h-12 rounded-xl text-sm font-medium ring-1 ${custom ? 'bg-green-700 text-white ring-green-700' : 'bg-white text-slate-900 ring-slate-300 hover:bg-slate-50'}`}
+                className={`press col-span-2 min-h-14 rounded-2xl text-sm font-semibold ${custom ? 'bg-green-700 text-white' : 'bg-[var(--surface-sunk)] text-slate-900 shadow-[inset_0_0_0_1px_var(--line)] hover:bg-slate-100'}`}
               >
                 Muu
               </button>
@@ -369,13 +372,13 @@ export function QuickAdd({
           </div>
 
           {/* Aina näkyvä tallennus: kertoo päivän ja keston ennen tallennusta. */}
-          <div className="sticky bottom-0 -mx-4 space-y-2 border-t border-slate-200 bg-white px-4 pb-1 pt-3 lg:-mx-6 lg:px-6">
+          <div className="sticky bottom-0 -mx-5 space-y-2 bg-[linear-gradient(to_top,var(--surface)_75%,transparent)] px-5 pb-1 pt-5 lg:-mx-7 lg:px-7">
             {error && <p className="text-sm text-red-700">{error}</p>}
             <div className="flex gap-2">
               <Button variant="ghost" className="shrink-0 px-3" onClick={() => setType(null)}>
                 ← Laji
               </Button>
-              <Button className="flex-1" disabled={saving || !duration} onClick={() => void save()}>
+              <Button className="min-h-12 flex-1 text-[15px]" disabled={saving || !duration} onClick={() => void save()}>
                 {duration ? `Tallenna · ${dayLabel(date)} · ${duration} min` : 'Valitse kesto'}
               </Button>
             </div>

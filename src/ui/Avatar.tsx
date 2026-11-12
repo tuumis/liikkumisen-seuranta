@@ -83,7 +83,7 @@ export function PhotoPicker({
             type="button"
             disabled={busy}
             onClick={() => input.current?.click()}
-            className="min-h-11 rounded-xl bg-white px-3 text-sm font-medium text-slate-800 ring-1 ring-slate-300 hover:bg-slate-50 disabled:opacity-50"
+            className="press min-h-11 rounded-xl bg-[var(--surface-raised)] px-3 text-sm font-semibold text-slate-800 shadow-xs ring-1 ring-slate-200 hover:bg-slate-100 disabled:opacity-50"
           >
             {busy ? 'Käsitellään…' : value ? 'Vaihda kuva' : 'Lisää kuva'}
           </button>

@@ -20,7 +20,7 @@ type GameDraft = { opponent: string; goalsFor: string; goalsAgainst: string; pla
 /** Oman lapsen maalit: nopea − / + -valitsin (tyhjä = ei kirjattu). */
 function GoalStepper({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
   const n = value === '' ? undefined : Number(value);
-  const btn = 'flex size-11 items-center justify-center rounded-xl bg-white text-xl font-semibold text-slate-800 ring-1 ring-slate-300 active:bg-slate-100 disabled:opacity-40';
+  const btn = 'press flex size-11 items-center justify-center rounded-xl bg-[var(--surface-raised)] text-xl font-semibold text-slate-800 shadow-xs ring-1 ring-slate-300 active:bg-slate-100 disabled:opacity-40';
   return (
     <div className="flex items-center gap-2" role="group" aria-label={label}>
       <button type="button" className={btn} aria-label="Vähemmän" disabled={n === undefined} onClick={() => onChange(n === undefined || n <= 0 ? '' : String(n - 1))}>
@@ -153,7 +153,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
     setSaving(true);
     try {
       await repo.saveFootballDetails(session!.id, input);
-      toast('Lisätiedot tallennettu');
+      toast('Lisätiedot tallennettu', undefined, 'success');
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -316,7 +316,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
                     {m}
                   </ToggleChip>
                 ))}
-                <input className="min-h-10 w-20 rounded-full border border-slate-300 px-3 text-sm" inputMode="numeric" value={played} onChange={(e) => setPlayed(e.target.value)} aria-label="Pelatut minuutit" placeholder="muu" />
+                <input className="field-shell min-h-10 w-20 rounded-full border-0 px-3 text-sm" inputMode="numeric" value={played} onChange={(e) => setPlayed(e.target.value)} aria-label="Pelatut minuutit" placeholder="muu" />
               </div>
               <p className="mt-1 text-xs text-slate-500">Arvio lasketaan pelatuista minuuteista; vaihtopenkki ei kerrytä liikuntaa.</p>
             </div>
@@ -361,7 +361,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
             )}
             {list('fb-opponents', names?.opponents)}
             {games.map((g, i) => (
-              <div key={i} className="space-y-2 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
+              <div key={i} className="space-y-2 card-sunk p-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-slate-800">
                     Peli {i + 1}

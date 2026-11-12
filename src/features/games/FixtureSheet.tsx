@@ -7,6 +7,7 @@ import { GAME_FORMATS, LEVEL_LABEL } from '../../domain/football';
 import type { GameFormat, GameLevel, Profile } from '../../domain/types';
 import { repo, type FixtureEntry, type FixtureInput } from '../../db/repositories';
 import { Button, Field, inputClass } from '../../ui/components';
+import { TimeField } from '../../ui/TimeField';
 import { Segmented, ToggleChip } from '../../ui/controls';
 import { Sheet } from '../../ui/Sheet';
 import { useToast } from '../../ui/Toast';
@@ -156,7 +157,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
             <input type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
           <Field label="Kello">
-            <input type="time" className={inputClass} value={time} onChange={(e) => setTime(e.target.value)} />
+            <TimeField label="Kello" value={time} onChange={setTime} />
           </Field>
           <Field label="Kesto (min)">
             <input className={inputClass} inputMode="numeric" value={duration} onChange={(e) => setDuration(e.target.value)} />
@@ -206,7 +207,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
         )}
 
         {kind === 'tournament' && (
-          <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200 dark:bg-slate-100">
+          <div className="card-sunk p-3">
             <div className="flex items-center justify-between gap-2">
               <span className="text-sm font-medium text-slate-800">Otteluohjelma</span>
               <Button
@@ -227,12 +228,10 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
               <ul className="mt-2 space-y-2">
                 {schedule.map((g, i) => (
                   <li key={i} className="grid grid-cols-[7rem_1fr_auto] items-center gap-2">
-                    <input
-                      type="time"
-                      className={inputClass}
+                    <TimeField
+                      label={`Ottelu ${i + 1}: kello`}
                       value={g.time}
-                      aria-label={`Ottelu ${i + 1}: kello`}
-                      onChange={(e) => setSchedule((cur) => cur.map((x, j) => (j === i ? { ...x, time: e.target.value } : x)))}
+                      onChange={(t) => setSchedule((cur) => cur.map((x, j) => (j === i ? { ...x, time: t } : x)))}
                     />
                     <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
                       <input
@@ -318,7 +317,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
             <button
               type="button"
               onClick={remove}
-              className={`min-h-11 rounded-xl px-3 text-sm font-medium ring-1 ${confirmDelete ? 'bg-red-700 text-white ring-red-700' : 'bg-white text-red-700 ring-red-300'}`}
+              className={`min-h-11 rounded-xl px-3 text-sm font-medium ring-1 ${confirmDelete ? 'bg-red-700 text-white ring-red-700' : 'bg-[var(--surface-raised)] text-red-700 ring-red-200'}`}
             >
               {confirmDelete ? 'Vahvista' : 'Poista'}
             </button>

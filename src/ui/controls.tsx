@@ -14,7 +14,7 @@ export function Segmented<T extends string | number>({
   label: string;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="grid auto-cols-fr grid-flow-col gap-1 rounded-xl bg-slate-100 p-1">
+    <div role="radiogroup" aria-label={label} className="grid auto-cols-fr grid-flow-col gap-1 rounded-2xl bg-[var(--surface-sunk)] p-1 shadow-[inset_0_0_0_1px_var(--line)]">
       {options.map((o) => (
         <button
           key={String(o.value)}
@@ -22,7 +22,7 @@ export function Segmented<T extends string | number>({
           role="radio"
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
-          className={`min-h-10 rounded-lg px-2 text-sm font-medium ${value === o.value ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-300' : 'text-slate-600'}`}
+          className={`press min-h-10 rounded-xl px-2 text-sm font-semibold ${value === o.value ? 'bg-[var(--surface-raised)] text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
         >
           {o.label}
         </button>
@@ -44,9 +44,15 @@ export function ToggleChip({ on, onChange, children }: { on: boolean; onChange: 
       type="button"
       aria-pressed={on}
       onClick={() => onChange(!on)}
-      className={`min-h-10 rounded-full px-3 text-sm font-medium ring-1 ${on ? 'bg-green-700 text-white ring-green-700' : 'bg-white text-slate-700 ring-slate-300'}`}
+      className={`press inline-flex min-h-10 items-center gap-1 rounded-full px-3.5 text-sm font-semibold ${
+        on ? 'bg-green-700 text-white shadow-[0_4px_12px_-4px_rgb(36_76_59/0.5)]' : 'bg-[var(--surface-sunk)] text-slate-700 shadow-[inset_0_0_0_1px_var(--line)] hover:text-slate-900'
+      }`}
     >
-      {on ? '✓ ' : ''}
+      {on && (
+        <svg viewBox="0 0 24 24" className="anim-pop size-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="m5 12.5 4.2 4.2L19 7" />
+        </svg>
+      )}
       {children}
     </button>
   );

@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { IconClose } from './icons';
 
 /** Alapaneeli (bottom sheet). Sulkeutuu taustan napautuksella ja Esc-näppäimellä. */
 export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
@@ -20,20 +21,20 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-30 flex items-end justify-center lg:items-center lg:p-6" role="presentation">
-      <div className="absolute inset-0 bg-slate-900/40 dark:bg-black/60" onClick={onClose} aria-hidden />
+      <div className="anim-fade absolute inset-0 bg-[#1a2520]/45 backdrop-blur-[2px] dark:bg-black/60" onClick={onClose} aria-hidden />
       <div
         ref={panel}
         role="dialog"
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className="relative max-h-[88dvh] w-full max-w-xl overflow-y-auto rounded-t-3xl bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-xl focus:outline-none lg:max-w-lg lg:rounded-3xl lg:px-6 lg:pb-6 lg:pt-5"
+        className="anim-sheet relative max-h-[90dvh] w-full max-w-xl overflow-y-auto overscroll-contain rounded-t-[2rem] bg-[var(--surface)] px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 shadow-xl focus:outline-none lg:max-w-xl lg:rounded-[2rem] lg:px-7 lg:pb-7 lg:pt-6"
       >
-        <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-slate-300 lg:hidden" aria-hidden />
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="text-base font-semibold text-slate-900">{title}</h2>
-          <button type="button" onClick={onClose} className="min-h-11 min-w-11 rounded-full text-xl text-slate-500 active:bg-slate-100" aria-label="Sulje">
-            ×
+        <div className="mx-auto mb-3 h-1.5 w-11 rounded-full bg-slate-300 lg:hidden" aria-hidden />
+        <div className="sticky -top-3 z-10 -mx-5 mb-4 flex items-center justify-between gap-2 bg-[var(--surface)]/95 px-5 py-1 backdrop-blur lg:-top-6 lg:-mx-7 lg:px-7">
+          <h2 className="font-display text-xl font-semibold leading-tight text-slate-900">{title}</h2>
+          <button type="button" onClick={onClose} className="press flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--surface-sunk)] text-slate-600 hover:text-slate-900" aria-label="Sulje">
+            <IconClose size="1.1rem" />
           </button>
         </div>
         {children}

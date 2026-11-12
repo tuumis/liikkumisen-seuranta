@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import type { ActivityType, PlannedSession, Session } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { Button, Field, inputClass } from '../../ui/components';
+import { TimeField } from '../../ui/TimeField';
 import { dayLabel } from '../../ui/format';
 import { SKIP_REASON_LABEL } from '../../ui/labels';
 import { Sheet } from '../../ui/Sheet';
@@ -60,7 +61,7 @@ export function PlanSheet({
     if (!d.success) return setError(d.error.issues[0].message);
     try {
       await repo.updatePlannedOccurrence(plan!.id, { durationMin: d.data, startTime: editTime || undefined });
-      toast(`Suunnitelma muutettu: ${dayLabel(plan!.date)} ${d.data} min`);
+      toast(`Suunnitelma muutettu: ${dayLabel(plan!.date)} ${d.data} min`, undefined, 'success');
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -92,7 +93,7 @@ export function PlanSheet({
                   key={m}
                   type="button"
                   onClick={run(() => actions.confirm(plan, m === plan.durationMin ? undefined : m))}
-                  className={`min-h-12 rounded-xl text-base font-semibold ring-1 ${m === plan.durationMin ? 'bg-green-700 text-white ring-green-700' : 'bg-white text-slate-900 ring-slate-300 hover:bg-slate-50'}`}
+                  className={`press stat min-h-14 rounded-2xl text-xl font-semibold ${m === plan.durationMin ? 'bg-green-700 text-white shadow-[0_8px_18px_-8px_rgb(36_76_59/0.7)]' : 'bg-[var(--surface-sunk)] text-slate-900 shadow-[inset_0_0_0_1px_var(--line)] hover:bg-slate-100'}`}
                   aria-label={`Tehty ${m} min`}
                 >
                   {m}
@@ -118,7 +119,7 @@ export function PlanSheet({
         )}
 
         {plan.status === 'open' && (
-          <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
+          <div className="card-sunk p-3">
             {!editing ? (
               <button type="button" className="w-full text-left text-sm font-medium text-green-800" onClick={() => setEditing(true)}>
                 ✎ Muuta tätä suunnitelmaa (kesto, kellonaika)
@@ -136,7 +137,7 @@ export function PlanSheet({
                     <input className={inputClass} inputMode="numeric" value={editDuration} onChange={(e) => setEditDuration(e.target.value)} />
                   </Field>
                   <Field label="Kellonaika">
-                    <input type="time" className={inputClass} value={editTime} onChange={(e) => setEditTime(e.target.value)} />
+                    <TimeField label="Kellonaika" value={editTime} onChange={setEditTime} />
                   </Field>
                 </div>
                 <p className="text-xs text-slate-500">
