@@ -8,11 +8,12 @@ import { footballKindOf, gameRows, seasonKey, summarizeGames } from '../../domai
 import type { Profile } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { dayLabel } from '../../ui/format';
-import { IconTrophy } from '../../ui/icons';
+import { IconSparkle, IconTrophy } from '../../ui/icons';
 import { useCountUp } from '../../ui/motion';
 import { today as todayFn } from '../../ui/today';
 import { useFootball } from '../football/useFootball';
 import { goalsLabel } from '../../ui/labels';
+import { dispatchCommand } from '../desktop/commands';
 
 function Stat({ label, value, i }: { label: string; value: number | string; i: number }) {
   const n = typeof value === 'number' ? value : NaN;
@@ -45,6 +46,13 @@ export function FootballHero({ profile }: { profile: Profile }) {
         <div className="min-w-0 lg:w-64">
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--hero-ink-soft)]">{seasonKey(today)}</div>
           <div className="mt-1 font-display text-2xl font-semibold leading-snug">Kausi tähän mennessä</div>
+          <button
+            type="button"
+            onClick={() => dispatchCommand({ kind: 'story' })}
+            className="press mt-3 inline-flex min-h-9 items-center gap-2 rounded-full bg-[var(--hero-accent)] px-3.5 text-xs font-bold text-[#1c2b24] shadow-md hover:brightness-105"
+          >
+            <IconSparkle size="0.95rem" /> Kauden kooste
+          </button>
           {next ? (
             <div className="mt-3 flex items-center gap-3 rounded-2xl bg-white/[0.1] p-3 ring-1 ring-white/10">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--hero-accent)] text-[var(--hero-to)]" aria-hidden>

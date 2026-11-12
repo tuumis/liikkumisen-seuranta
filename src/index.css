@@ -497,6 +497,20 @@ body {
   animation: check-draw 0.35s var(--ease-out) 0.3s backwards;
 }
 
+/* Tarinakortit: sisältö nousee porrastetusti, palkit kasvavat. */
+.story-in {
+  animation: rise 0.5s var(--ease-out) backwards;
+  animation-delay: var(--d, 0ms);
+}
+.story-bar {
+  transform-origin: left;
+  animation: grow-x 0.8s var(--ease-out) backwards;
+  animation-delay: var(--d, 0ms);
+}
+.story-card {
+  touch-action: pan-y;
+}
+
 /* Porrastettu sisääntulo: style={{ '--i': n }} määrää viiveen. */
 .anim-rise {
   animation: rise 0.4s var(--ease-out) backwards;

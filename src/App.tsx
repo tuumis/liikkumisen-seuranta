@@ -15,6 +15,7 @@ import { SyncBar } from './features/sync/SyncBar';
 import { SidebarUpdate } from './features/update/appUpdate';
 import { consumeLaunchAction, dispatchCommand, type AppCommand } from './features/desktop/commands';
 import { CommandPalette } from './features/desktop/CommandPalette';
+import { StoryHost } from './features/story/StoryViewer';
 import { Avatar } from './ui/Avatar';
 import { formatDate } from './ui/format';
 import { IconBall, IconChart, IconHelp, IconLeaf, IconSearch, IconSettings, IconWeek } from './ui/icons';
@@ -350,6 +351,7 @@ export default function App() {
         </div>
       </nav>
       <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} />
+      {ready && <StoryHost profile={selected} />}
       {ready && profiles && (
         <CommandPalette
           profiles={profiles}
