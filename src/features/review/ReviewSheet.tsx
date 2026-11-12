@@ -1,10 +1,9 @@
-// "Käy viikko läpi" (SPEC 12): kaikki kuittaamattomat (open, päivä < tänään).
+// "Käy viikko läpi" (SPEC 12): kaikki kuittaamattomat (open, päivä < tänään, sekä tämän päivän jo päättyneet).
 // Rivillä ✓ kuten suunniteltu, ✗ ei tehty → valinnainen syy, ✎ muokkaa kestoa.
 
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import type { ActivityType, PlannedSession, Profile, Session, UUID } from '../../domain/types';
-import { repo } from '../../db/repositories';
 import { Button, inputClass } from '../../ui/components';
 import { dayLabel } from '../../ui/format';
 import { Sheet } from '../../ui/Sheet';
@@ -12,6 +11,7 @@ import { today } from '../../ui/today';
 import { durationSchema } from '../week/sessionForm';
 import { SkipReasons } from './SkipReasons';
 import { usePlanActions } from './usePlanActions';
+import { loadUnconfirmed, useMinuteTick } from './unconfirmed';
 
 export function ReviewSheet({
   open,
@@ -26,7 +26,8 @@ export function ReviewSheet({
   types: Map<UUID, ActivityType>;
   onOpenSession: (s: Session) => void;
 }) {
-  const plans = useLiveQuery(() => repo.unconfirmedPlans(profile.id, today()), [profile.id]);
+  const minute = useMinuteTick();
+  const plans = useLiveQuery(() => loadUnconfirmed(profile.id, today()), [profile.id, minute]);
   const actions = usePlanActions(onOpenSession);
 
   return (

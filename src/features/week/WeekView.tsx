@@ -14,6 +14,8 @@ import { today as todayFn } from '../../ui/today';
 import { QuickAdd } from '../quick-add/QuickAdd';
 import { ReviewSheet } from '../review/ReviewSheet';
 import { usePlanActions } from '../review/usePlanActions';
+import { loadUnconfirmed, useMinuteTick } from '../review/unconfirmed';
+import { subscribeWeekRequest } from '../desktop/settings';
 import { PlanSheet } from './PlanSheet';
 import { BackupReminder, SyncBar } from '../sync/SyncBar';
 import { FootballPanel } from '../football/FootballPanel';
@@ -105,9 +107,19 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     [fixtureEntries],
   );
   const plannedById = useMemo(() => new Map((plans ?? []).map((p) => [p.id, p])), [plans]);
+  const minute = useMinuteTick();
   const unconfirmed = useLiveQuery(
-    () => (profile ? repo.unconfirmedPlans(profile.id, today) : Promise.resolve([] as PlannedSession[])),
-    [profile?.id, today],
+    () => (profile ? loadUnconfirmed(profile.id, today) : Promise.resolve([] as PlannedSession[])),
+    [profile?.id, today, minute],
+  );
+  // Ilmoituksen klikkaus (työpöytätila): kuluva viikko ja tarvittaessa "Käy viikko läpi".
+  useEffect(
+    () =>
+      subscribeWeekRequest((review) => {
+        setWeekStart(startOfIsoWeek(todayFn()));
+        if (review) setReviewOpen(true);
+      }),
+    [],
   );
   const adherence = planAdherence(plans ?? [], sessions ?? [], today);
 

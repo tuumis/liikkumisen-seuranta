@@ -5,7 +5,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { defaultPlanningThrough } from '../../domain/planning';
 import { SYNC_FILE_NAME } from '../../domain/version';
 import type { Timestamp } from '../../domain/types';
-import { buildSyncFile, markSent, mergeAnyFile, mergeSyncFile, pendingCount, toJson, type MergeSummary } from '../../db/backup';
+import { buildSyncFile, changedSince, markSent, mergeAnyFile, mergeSyncFile, pendingCount, toJson, type MergeSummary } from '../../db/backup';
 import { repo } from '../../db/repositories';
 import { db } from '../../db/schema';
 import { today } from '../../ui/today';
@@ -61,6 +61,64 @@ export function useSyncState(): SyncState | undefined {
 
 export type SyncOutcome = { summary?: MergeSummary; wrote?: boolean; message: string };
 
+/** Kansion tiedostojen luku ja yhdistäminen (PC); palauttaa yhteenvedon, jos jotain yhdistettiin. */
+async function mergeFromFolder(handle: FileSystemDirectoryHandle, deviceId: string): Promise<MergeSummary | undefined> {
+  let summary: MergeSummary | undefined;
+  // 1) Yhteinen tiedosto: jos joku muu (puhelin) on tallentanut sen PC:n oman kirjoituksen jälkeen, yhdistetään.
+  const shared = await readFolderFile(handle, SYNC_FILE_NAME.shared);
+  const ownWrite = (await repo.getMeta<number>('syncFileWrittenAt')) ?? 0;
+  if (shared && shared.lastModified > ownWrite) {
+    const text = await shared.text();
+    const by = syncFileDevice(text);
+    if (by && by !== deviceId) summary = await mergeSyncFile(db, text, deviceId);
+  }
+  // 2) Vanha puhelimen tiedosto (ennen yhteistä nimeä), jos se on muuttunut edellisen lukukerran jälkeen.
+  const legacy = await readFolderFile(handle, SYNC_FILE_NAME.legacyPhone);
+  const readAt = (await repo.getMeta<number>('phoneFileReadAt')) ?? 0;
+  if (legacy && legacy.lastModified > readAt) {
+    summary = combine(summary, await mergeSyncFile(db, await legacy.text(), deviceId));
+    await repo.setMeta('phoneFileReadAt', legacy.lastModified);
+  }
+  return summary;
+}
+
+/** Kirjoittaa yhdistetyn tilannekuvan yhteiseen tiedostoon ja muistaa oman kirjoitusajan. */
+async function writeToFolder(handle: FileSystemDirectoryHandle, deviceId: string) {
+  await ensurePlannedAll();
+  await writeFolderFile(handle, SYNC_FILE_NAME.shared, toJson(await buildSyncFile(db, deviceId, 'pc')));
+  await repo.setMeta('syncFileWrittenAt', (await readFolderFile(handle, SYNC_FILE_NAME.shared))?.lastModified ?? Date.now());
+  await repo.setMeta('lastSyncRunAt', new Date().toISOString());
+}
+
+/**
+ * PC:n automaattinen synkronointi (työpöytätila): ei kysy kansiota eikä lupaa (vain jo annettu lupa),
+ * ja kirjoittaa tiedoston vain, jos puhelimelta tuli uutta tai PC:llä on muutoksia edellisen kerran jälkeen.
+ * Palauttaa null, jos synkronointi ei ole mahdollista tai mitään ei tarvinnut tehdä.
+ */
+export async function pcAutoSync(): Promise<SyncOutcome | null> {
+  if (!supportsFolder() || (await repo.getDeviceRole()) !== 'pc') return null;
+  const handle = await repo.getMeta<FileSystemDirectoryHandle>('syncFolderHandle');
+  if (!handle || !(await folderPermission(handle, false))) return null;
+  const deviceId = await repo.deviceId();
+  const summary = await mergeFromFolder(handle, deviceId);
+  const since = await repo.getMeta<Timestamp>('lastSyncRunAt');
+  const localChanged = !since || (await changedSince(db, since)) > 0;
+  if (!summary && !localChanged) {
+    await repo.setMeta('lastSyncRunAt', new Date().toISOString()); // ajan tasalla: tarkistettu juuri nyt
+    return null;
+  }
+  await writeToFolder(handle, deviceId);
+  return { summary, wrote: true, message: summary ? summaryText(summary) : 'liikkuminen.json päivitetty' };
+}
+
+/** Onko automaattiselle synkronoinnille lupa (kansio valittu ja lupa voimassa ilman kysymistä). */
+export async function autoSyncReady(): Promise<'ok' | 'no-folder' | 'no-permission' | 'unsupported'> {
+  if (!supportsFolder()) return 'unsupported';
+  const handle = await repo.getMeta<FileSystemDirectoryHandle>('syncFolderHandle');
+  if (!handle) return 'no-folder';
+  return (await folderPermission(handle, false)) ? 'ok' : 'no-permission';
+}
+
 export function useSyncActions() {
   /** PC: "Synkronoi" – lue puhelimen tiedosto (jos muuttunut), yhdistä, ensurePlanned, kirjoita PC:n tiedosto. */
   const pcSync = useCallback(async (): Promise<SyncOutcome> => {
@@ -72,28 +130,8 @@ export function useSyncActions() {
       await repo.setMeta('syncFolderHandle', handle);
     }
     if (!(await folderPermission(handle, true))) throw new Error('Kansion käyttöoikeus puuttuu.');
-
-    let summary: MergeSummary | undefined;
-    // 1) Yhteinen tiedosto: jos joku muu (puhelin) on tallentanut sen PC:n oman kirjoituksen jälkeen, yhdistetään.
-    const shared = await readFolderFile(handle, SYNC_FILE_NAME.shared);
-    const ownWrite = (await repo.getMeta<number>('syncFileWrittenAt')) ?? 0;
-    if (shared && shared.lastModified > ownWrite) {
-      const text = await shared.text();
-      const by = syncFileDevice(text);
-      if (by && by !== deviceId) summary = await mergeSyncFile(db, text, deviceId);
-    }
-    // 2) Vanha puhelimen tiedosto (ennen yhteistä nimeä), jos se on muuttunut edellisen lukukerran jälkeen.
-    const legacy = await readFolderFile(handle, SYNC_FILE_NAME.legacyPhone);
-    const readAt = (await repo.getMeta<number>('phoneFileReadAt')) ?? 0;
-    if (legacy && legacy.lastModified > readAt) {
-      summary = combine(summary, await mergeSyncFile(db, await legacy.text(), deviceId));
-      await repo.setMeta('phoneFileReadAt', legacy.lastModified);
-    }
-    await ensurePlannedAll();
-    // 3) Kirjoitetaan yhdistetty tilannekuva yhteiseen tiedostoon ja muistetaan oma kirjoitusaika.
-    await writeFolderFile(handle, SYNC_FILE_NAME.shared, toJson(await buildSyncFile(db, deviceId, 'pc')));
-    await repo.setMeta('syncFileWrittenAt', (await readFolderFile(handle, SYNC_FILE_NAME.shared))?.lastModified ?? Date.now());
-    await repo.setMeta('lastSyncRunAt', new Date().toISOString());
+    const summary = await mergeFromFolder(handle, deviceId);
+    await writeToFolder(handle, deviceId);
     return { summary, wrote: true, message: summary ? summaryText(summary) : 'Tiedosto liikkuminen.json päivitetty; puhelimelta ei uutta' };
   }, []);
 

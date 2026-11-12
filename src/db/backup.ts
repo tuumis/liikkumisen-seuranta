@@ -249,6 +249,13 @@ export async function pendingCount(db: AppDB, thisDevice: DeviceId): Promise<num
   return n;
 }
 
+/** Muuttuneet tietueet (mikä tahansa laite) annetun ajan jälkeen; automaattisen synkronoinnin tarve. */
+export async function changedSince(db: AppDB, since: Timestamp): Promise<number> {
+  let n = 0;
+  for (const t of SYNCED_TABLES) n += await db.table(t).where('updatedAt').above(since).count();
+  return n;
+}
+
 export async function markSent(db: AppDB): Promise<void> {
   await db.meta.put({ key: 'lastSentAt', value: nowTimestamp() });
 }

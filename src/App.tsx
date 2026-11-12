@@ -10,6 +10,7 @@ import { Onboarding } from './features/onboarding/Onboarding';
 import { HelpSheet } from './features/help/HelpSheet';
 import type { SettingsSectionId } from './features/settings/SettingsView';
 import { GamesTab } from './features/games/GamesTab';
+import { DesktopAgent } from './features/desktop/DesktopAgent';
 import { Avatar } from './ui/Avatar';
 import { formatDate } from './ui/format';
 import { IconBall, IconChart, IconHelp, IconLeaf, IconSettings, IconWeek } from './ui/icons';
@@ -281,6 +282,15 @@ export default function App() {
           )}
         </div>
       </main>
+
+      {ready && profiles && profiles.length > 0 && (
+        <DesktopAgent
+          onOpen={(id) => {
+            select(id);
+            setTab('week');
+          }}
+        />
+      )}
 
       {/* Puhelin: kelluva alanavigaatio, aktiivinen kohta liukuu paikalleen. */}
       <nav className="bottom-nav fixed inset-x-0 bottom-0 z-20 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden" aria-label="Päävalikko">
