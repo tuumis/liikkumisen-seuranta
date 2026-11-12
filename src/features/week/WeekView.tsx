@@ -22,7 +22,11 @@ import { WeekDetails, WeekHero } from './WeekSummary';
 import { DailyChart, RecentCard, RhythmCard, UpcomingCard } from './Dashboard';
 import { useScrolling } from '../../ui/motion';
 import { useViewMode } from '../../ui/theme';
-import { IconCalendarClock, IconChevronLeft, IconChevronRight, IconPlus } from '../../ui/icons';
+import { IconCalendarClock, IconChevronLeft, IconChevronRight, IconPlus, IconSettings } from '../../ui/icons';
+import { useMediaQuery } from '../../ui/cardLayout';
+import { EditLayoutSheet } from '../../ui/EditLayoutSheet';
+import { isEstimateConfirmation } from '../../domain/hours';
+import { useWeekLayout, type WeekCardId } from './layout';
 import { HoursGauge } from './HoursGauge';
 import { HoursCard } from './HoursCard';
 import { GettingStarted } from './GettingStarted';
@@ -133,9 +137,19 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
   const scrolling = useScrolling();
   // Liikuntamäärän luokat (7 h = 60 min/pv) koskevat kouluikäisiä.
   const showGauge = report?.group.group === 'school_age';
+  // Muokattava näkymä (Kattava); yksinkertaisessa vain tilanne ja päivät.
+  const layoutApi = useWeekLayout();
+  const [editingLayout, setEditingLayout] = useState(false);
+  const isLg = useMediaQuery('(min-width: 1024px)');
+  const cardIds: WeekCardId[] = simple ? ['hero', 'days'] : layoutApi.visible;
+  const sideIds: WeekCardId[] = isLg && !simple ? cardIds.filter((id) => layoutApi.layout.side.includes(id)) : [];
+  // Päivät kahdessa sarakkeessa, kun pääpalsta on PC:llä koko levyinen.
+  const wideDays = sideIds.length === 0;
+  // Kerrat ilman arkiliikunnan vahvistuksia (ne näkyvät päivän arkiliikuntarivillä).
+  const realSessions = (sessions ?? []).filter((s) => !isEstimateConfirmation(s));
   const week = {
-    count: (sessions ?? []).length,
-    duration: (sessions ?? []).reduce((a, s) => a + s.durationMin, 0),
+    count: realSessions.length,
+    duration: realSessions.reduce((a, s) => a + s.durationMin, 0),
   };
   const info = report?.group;
   const go = (weeks: number) => setWeekStart((w) => addDays(w, weeks * 7));
@@ -191,8 +205,14 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
           Tämä viikko
         </Button>
       )}
+      {profile && !simple && (
+        <Button variant="secondary" onClick={() => setEditingLayout(true)} aria-label="Muokkaa näkymää" className="shrink-0 lg:ml-auto">
+          <IconSettings size="1.1rem" />
+          <span className="hidden sm:inline">Muokkaa näkymää</span>
+        </Button>
+      )}
       {profile && (
-        <span className="ml-auto hidden lg:block">
+        <span className={`hidden lg:block ${simple ? 'ml-auto' : ''}`}>
           <Button onClick={() => setQuickAdd({})}>
             <IconPlus size="1.1rem" /> Lisää kerta
           </Button>
@@ -212,7 +232,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
           {adherence.planned > 0 && ` · suunniteltu ${adherence.planned}, tehty ${adherence.done}`}
         </span>
       </div>
-      <ol className={`space-y-2.5 2xl:grid 2xl:grid-cols-2 2xl:gap-3 2xl:space-y-0 ${simple ? 'lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0' : ''}`} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} aria-label="Viikon päivät">
+      <ol className={`space-y-2.5 2xl:grid 2xl:grid-cols-2 2xl:gap-3 2xl:space-y-0 ${wideDays ? 'lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0' : ''}`} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} aria-label="Viikon päivät">
         {dates.map((d, i) => (
           <DayRow
             key={d}
@@ -259,57 +279,74 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
 
       {profile && hasAnySessions === false && <GettingStarted onAdd={() => setQuickAdd({})} onOpenSettings={onOpenSettings} />}
 
-      {profile && report && (
-        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12 lg:gap-6">
-          {/* Pääpalsta: tilanne, päivittäinen jakauma ja päivät. */}
-          <div className={`min-w-0 space-y-5 ${simple ? 'lg:col-span-12' : 'lg:col-span-7 xl:col-span-8'}`}>
-            <WeekHero report={report} profile={profile} isCurrentWeek={isCurrent} onAdd={() => setQuickAdd({})} />
-            {reviewButton}
-            {!simple && (
-            <div className="grid grid-cols-1 gap-5 2xl:grid-cols-5">
-              <div className="2xl:col-span-3">
-                <DailyChart report={report} today={today} target={DAY_BAR_TARGET[info?.group ?? 'school_age']} title={chartTitle} />
-              </div>
-              <div className="2xl:col-span-2">
-                <RhythmCard report={report} today={today} />
-              </div>
+      {profile && report && (() => {
+        // Käyttäjän valitsemat kortit järjestyksessään; PC:llä pää- ja sivupalstaan valinnan mukaan.
+        const mainIds = cardIds.filter((id) => !sideIds.includes(id));
+        const card = (id: WeekCardId) => {
+          switch (id) {
+            case 'hero':
+              return <WeekHero report={report} profile={profile} isCurrentWeek={isCurrent} onAdd={() => setQuickAdd({})} />;
+            case 'daily':
+              return <DailyChart report={report} today={today} target={DAY_BAR_TARGET[info?.group ?? 'school_age']} title={chartTitle} />;
+            case 'rhythm':
+              return <RhythmCard report={report} today={today} />;
+            case 'gauge':
+              return showGauge ? <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} /> : null;
+            case 'hours':
+              return <HoursCard report={report} isCurrentWeek={isCurrent} />;
+            case 'upcoming':
+              return <UpcomingCard profile={profile} today={today} types={typeMap} onOpen={setPlanOpen} />;
+            case 'days':
+              return dayList;
+            case 'recent':
+              return <RecentCard profile={profile} today={today} types={typeMap} onOpen={setEditing} />;
+            case 'details':
+              return <WeekDetails report={report} isCurrentWeek={isCurrent} />;
+          }
+        };
+        const render = (list: WeekCardId[], withReview: boolean) => {
+          const out = [];
+          if (withReview && !list.includes('hero') && reviewButton) out.push(<div key="review">{reviewButton}</div>);
+          for (let k = 0; k < list.length; k++) {
+            const id = list[k];
+            // Kaavio ja rytmi rinnakkain hyvin leveällä näytöllä, kun ne ovat peräkkäin.
+            if (id === 'daily' && list[k + 1] === 'rhythm') {
+              out.push(
+                <div key="daily-rhythm" className="grid grid-cols-1 gap-5 2xl:grid-cols-5">
+                  <div className="2xl:col-span-3">{card('daily')}</div>
+                  <div className="2xl:col-span-2">{card('rhythm')}</div>
+                </div>,
+              );
+              k++;
+              continue;
+            }
+            out.push(
+              <div key={id} className="min-w-0 empty:hidden">
+                {card(id)}
+              </div>,
+            );
+            if (id === 'hero' && reviewButton) out.push(<div key="review">{reviewButton}</div>);
+          }
+          return out;
+        };
+        return (
+          <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12 lg:gap-6">
+            <div className={`min-w-0 space-y-5 ${sideIds.length ? 'lg:col-span-7 xl:col-span-8' : 'lg:col-span-12'}`}>
+              {render(mainIds, true)}
+              {simple && (
+                <p className="text-center text-xs text-slate-500">
+                  Yksinkertainen näkymä. Kaaviot ja tarkemmat luvut saat näkyviin kohdasta Asetukset → Ulkoasu → Näkymä.
+                </p>
+              )}
             </div>
-            )}
-            {!simple && (
-            <div className="space-y-5 lg:hidden">
-              {showGauge && <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} />}
-              <HoursCard report={report} isCurrentWeek={isCurrent} />
-            </div>
-            )}
-            {!simple && (
-            <div className="lg:hidden">
-              <UpcomingCard profile={profile} today={today} types={typeMap} onOpen={setPlanOpen} />
-            </div>
-            )}
-            {dayList}
-            {!simple && (
-            <div className="space-y-5 lg:hidden">
-              <RecentCard profile={profile} today={today} types={typeMap} onOpen={setEditing} />
-              <WeekDetails report={report} isCurrentWeek={isCurrent} />
-            </div>
-            )}
-            {simple && (
-              <p className="text-center text-xs text-slate-500">
-                Yksinkertainen näkymä. Kaaviot ja tarkemmat luvut saat näkyviin kohdasta Asetukset → Ulkoasu → Näkymä.
-              </p>
+            {sideIds.length > 0 && (
+              <aside className="min-w-0 space-y-5 lg:col-span-5 xl:col-span-4" aria-label="Viikon yhteenveto">
+                {render(sideIds, false)}
+              </aside>
             )}
           </div>
-
-          {/* Sivupalsta (PC): määrä, tulevat ja viimeisimmät, tarkemmat luvut. */}
-          <aside className={`hidden min-w-0 space-y-5 lg:col-span-5 xl:col-span-4 ${simple ? '' : 'lg:block'}`} aria-label="Viikon yhteenveto">
-            {showGauge && <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} />}
-            <HoursCard report={report} isCurrentWeek={isCurrent} />
-            <UpcomingCard profile={profile} today={today} types={typeMap} onOpen={setPlanOpen} />
-            <RecentCard profile={profile} today={today} types={typeMap} onOpen={setEditing} />
-            <WeekDetails report={report} isCurrentWeek={isCurrent} />
-          </aside>
-        </div>
-      )}
+        );
+      })()}
 
       {profile && (
         <>
@@ -325,6 +362,14 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             <IconPlus size="1.75rem" strokeWidth={2.2} />
           </button>
 
+          <EditLayoutSheet
+            open={editingLayout}
+            onClose={() => setEditingLayout(false)}
+            title="Muokkaa Viikko-näkymää"
+            intro="Valitse näytettävät kortit ja niiden järjestys. PC:llä voit lisäksi valita, onko kortti pää- vai sivupalstassa. Päivät ovat aina näkyvissä."
+            api={layoutApi}
+            columns
+          />
           <QuickAdd open={!!quickAdd} onClose={() => setQuickAdd(null)} profile={profile} initialDate={quickAdd?.date} onSaved={openFootballIfAny} />
           <PlanSheet
             plan={planOpen}

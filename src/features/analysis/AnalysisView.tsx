@@ -20,8 +20,8 @@ import { FootballSection } from '../football/FootballSection';
 import { GamesView } from '../football/GamesView';
 import { HighlightsCard } from './HighlightsCard';
 import { IconChevronLeft, IconChevronRight, IconSettings } from '../../ui/icons';
-import { Sheet } from '../../ui/Sheet';
-import { ANALYSIS_CARDS, useAnalysisLayout } from './layout';
+import { EditLayoutSheet } from '../../ui/EditLayoutSheet';
+import { useAnalysisLayout } from './layout';
 
 export function AnalysisView({ profile }: { profile?: Profile }) {
   const today = todayFn();
@@ -33,7 +33,7 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
   const [games, setGames] = useState(false);
   const [editing, setEditing] = useState(false);
   const layoutApi = useAnalysisLayout();
-  const visible = layoutApi.layout.order.filter((id) => !layoutApi.layout.hidden.includes(id));
+  const visible = layoutApi.visible;
 
   if (games && profile) return <GamesView profile={profile} onBack={() => setGames(false)} />;
 
@@ -131,7 +131,13 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
               <p className="text-sm text-slate-600">Kaikki kortit on piilotettu. Valitse näytettävät kortit painikkeesta "Muokkaa näkymää".</p>
             </Card>
           )}
-          <EditLayoutSheet open={editing} onClose={() => setEditing(false)} api={layoutApi} />
+          <EditLayoutSheet
+            open={editing}
+            onClose={() => setEditing(false)}
+            title="Muokkaa Analyysi-näkymää"
+            intro="Valitse näytettävät kortit ja niiden järjestys. PC:llä kortit asettuvat palstoihin ylhäältä alas tässä järjestyksessä."
+            api={layoutApi}
+          />
         </>
       )}
 
@@ -302,52 +308,5 @@ function Rationale() {
         </>
       )}
     </Card>
-  );
-}
-
-/** Näkymän muokkaus: korttien näkyvyys ja järjestys. */
-function EditLayoutSheet({ open, onClose, api }: { open: boolean; onClose: () => void; api: ReturnType<typeof useAnalysisLayout> }) {
-  const { layout, toggle, move, reset } = api;
-  return (
-    <Sheet open={open} onClose={onClose} title="Muokkaa Analyysi-näkymää">
-      <p className="mb-3 text-sm text-slate-600">Valitse näytettävät kortit ja niiden järjestys. PC:llä kortit asettuvat palstoihin ylhäältä alas tässä järjestyksessä.</p>
-      <ul className="space-y-2">
-        {layout.order.map((id, i) => {
-          const c = ANALYSIS_CARDS.find((x) => x.id === id)!;
-          const on = !layout.hidden.includes(id);
-          return (
-            <li key={id} className={`flex items-center gap-2 rounded-2xl p-2 pl-3 ${on ? 'card' : 'card-sunk opacity-70'}`}>
-              <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
-                <input type="checkbox" className="size-5 shrink-0 accent-green-700" checked={on} onChange={() => toggle(id)} />
-                <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-slate-900">{c.title}</span>
-                  <span className="block text-xs leading-snug text-slate-500">{c.text}</span>
-                </span>
-              </label>
-              <div className="flex shrink-0 gap-1">
-                <button type="button" disabled={i === 0} onClick={() => move(id, -1)} className="press flex size-9 items-center justify-center rounded-xl bg-[var(--surface-sunk)] text-slate-600 disabled:opacity-30" aria-label={`Siirrä ylös: ${c.title}`}>
-                  <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden>
-                    <path d="m6 15 6-6 6 6" />
-                  </svg>
-                </button>
-                <button type="button" disabled={i === layout.order.length - 1} onClick={() => move(id, 1)} className="press flex size-9 items-center justify-center rounded-xl bg-[var(--surface-sunk)] text-slate-600 disabled:opacity-30" aria-label={`Siirrä alas: ${c.title}`}>
-                  <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden>
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
-                </button>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-      <div className="mt-4 flex gap-2">
-        <Button className="flex-1" onClick={onClose}>
-          Valmis
-        </Button>
-        <Button variant="secondary" onClick={reset}>
-          Palauta oletus
-        </Button>
-      </div>
-    </Sheet>
   );
 }
