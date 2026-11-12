@@ -2,7 +2,7 @@
 // listassa kommentteineen. Haku, suodatus ja nopea kommentin lisäys suoraan listasta.
 
 import { useMemo, useState } from 'react';
-import { footballKindOf, LEVEL_LABEL, OUTCOME_LABEL, outcomeOf } from '../../domain/football';
+import { footballKindOf, LEVEL_LABEL, OUTCOME_LABEL, outcomeOf, POSITION_LABEL } from '../../domain/football';
 import type { ActivityType, FootballDetails, Profile, Session } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { Button, Card, inputClass } from '../../ui/components';
@@ -83,7 +83,7 @@ export function DiaryView({ profile }: { profile: Profile }) {
             <h3 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
               {formatDate(`${month}-01`, 'LLLL yyyy')} · {list.length}
             </h3>
-            <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
+            <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 2xl:grid-cols-3">
               {list.map((e) => (
                 <DiaryEntry key={e.s.id} s={e.s} t={e.t} d={e.d} onDetails={() => setPanel(e.s)} />
               ))}
@@ -134,6 +134,9 @@ function DiaryEntry({ s, t, d, onDetails }: { s: Session; t?: ActivityType; d?: 
             )}
             {d?.eventName && <span>🏆 {d.eventName}</span>}
             {d?.level && <span>{LEVEL_LABEL[d.level]}</span>}
+            {d?.format && <span>{d.format}</span>}
+            {d?.positions?.length ? <span>{d.positions.map((p) => POSITION_LABEL[p].toLowerCase()).join(', ')}</span> : null}
+            {d?.playerGoals ? <span className="font-medium text-slate-800">⚽ {d.playerGoals}</span> : null}
             {d?.attendance === 'partial' && <span>osittain</span>}
             {d?.enjoyment && <span>{['', '🙁', '🙂', '😄'][d.enjoyment]} {ENJOYMENT_LABEL[d.enjoyment].toLowerCase()}</span>}
             {d?.parentRating && <span className="text-amber-600">{'★'.repeat(d.parentRating)}</span>}

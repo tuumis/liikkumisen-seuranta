@@ -33,6 +33,8 @@ import type {
   SettingsRow,
   SkipReason,
   SyncFields,
+  FieldPosition,
+  GameFormat,
   ScheduledGame,
   Team,
   TemplateItem,
@@ -40,7 +42,7 @@ import type {
   UUID,
   Weekday,
 } from '../domain/types';
-import { LEVEL_EFFORT } from '../domain/football';
+import { isGameFormat, LEVEL_EFFORT, POSITIONS } from '../domain/football';
 import { BUILT_IN_ACTIVITY_TYPES } from '../seed/activityTypes';
 import { nowTimestamp } from './clock';
 import { createPlanner } from './ensurePlanned';
@@ -90,6 +92,10 @@ export interface FootballDetailsInput {
   /** Oma joukkue (linkki) ja taso; taso säätää ponnistelun (Elite kovempi, Haaste kevyempi). */
   teamId?: UUID;
   level?: GameLevel;
+  /** Oman lapsen maalit (peli; turnaus ilman pelirivejä). Pelirivien omat maalit summataan. */
+  playerGoals?: number;
+  format?: GameFormat;
+  positions?: FieldPosition[];
 }
 
 /** Tulevan pelin tai turnauksen tiedot (pelikalenteri). */
@@ -106,6 +112,7 @@ export interface FixtureInput {
   gamesCount?: number;
   /** Turnauksen otteluohjelma. */
   games?: ScheduledGame[];
+  format?: GameFormat;
   note?: string;
 }
 
@@ -596,6 +603,8 @@ export function createRepositories(db: AppDB = defaultDb) {
             fd.team = fixtureTeam.name;
           }
           if (fixtureLevel) fd.level = fixtureLevel;
+          const format = fixture.format ?? (fixtureTeam && !fixtureTeam.deletedAt ? fixtureTeam.format : undefined);
+          if (format) fd.format = format;
           if (fixture.opponent) fd.opponent = fixture.opponent;
           if (fixture.eventName) fd.eventName = fixture.eventName;
           if (fixture.gamesCount) fd.gamesCount = fixture.gamesCount;
@@ -706,7 +715,12 @@ export function createRepositories(db: AppDB = defaultDb) {
           d.team = team.name;
         }
       }
-      if (type.footballKind !== 'training') set('level', input.level);
+      if (type.footballKind !== 'training') {
+        set('level', input.level);
+        if (isGameFormat(input.format)) d.format = input.format;
+        const positions = POSITIONS.filter((p) => input.positions?.includes(p));
+        if (positions.length) d.positions = positions;
+      }
       set('parentRating', input.parentRating);
       set('enjoyment', input.enjoyment);
       set('ratingNote', input.ratingNote?.trim().slice(0, 1000) || undefined); // rivinvaihdot säilyvät (päiväkirja)
@@ -715,6 +729,7 @@ export function createRepositories(db: AppDB = defaultDb) {
         set('opponent', clean(input.opponent));
         set('goalsFor', num(input.goalsFor));
         set('goalsAgainst', num(input.goalsAgainst));
+        set('playerGoals', num(input.playerGoals));
       }
       if (type.footballKind === 'tournament') {
         set('eventName', clean(input.eventName));
@@ -724,6 +739,7 @@ export function createRepositories(db: AppDB = defaultDb) {
           if (num(g.goalsFor) !== undefined) r.goalsFor = g.goalsFor;
           if (num(g.goalsAgainst) !== undefined) r.goalsAgainst = g.goalsAgainst;
           if (num(g.playedMin) !== undefined) r.playedMin = g.playedMin;
+          if (num(g.playerGoals) !== undefined) r.playerGoals = g.playerGoals;
           if (g.time) r.time = g.time;
           if (clean(g.location)) r.location = clean(g.location);
           if (g.note?.trim()) r.note = g.note.trim().slice(0, 500);
@@ -734,8 +750,11 @@ export function createRepositories(db: AppDB = defaultDb) {
           d.gamesCount = games.length; // SPEC 8: kun pelirivejä on, gamesCount = rivien määrä
           const withPlayed = games.filter((g) => g.playedMin !== undefined);
           if (withPlayed.length) playedMin = withPlayed.reduce((a, g) => a + g.playedMin!, 0);
+          const withGoals = games.filter((g) => g.playerGoals !== undefined);
+          if (withGoals.length) d.playerGoals = withGoals.reduce((a, g) => a + g.playerGoals!, 0);
         } else {
           set('gamesCount', num(input.gamesCount));
+          set('playerGoals', num(input.playerGoals));
         }
       }
       await db.footballDetails.put(d); // put tyhjentää mahdollisen poistomerkinnän
@@ -812,7 +831,7 @@ export function createRepositories(db: AppDB = defaultDb) {
   }
 
   /** `photo`: undefined poistaa kuvan, kenttä puuttuu = kuva ennallaan. */
-  async function saveTeam(profileId: UUID, input: { name: string; level: GameLevel; photo?: string }, id?: UUID): Promise<Team> {
+  async function saveTeam(profileId: UUID, input: { name: string; level: GameLevel; photo?: string; format?: GameFormat }, id?: UUID): Promise<Team> {
     const name = input.name.trim().replace(/\s+/g, ' ');
     if (!name) throw new Error('Anna joukkueen nimi');
     if (id) {
@@ -823,12 +842,17 @@ export function createRepositories(db: AppDB = defaultDb) {
         if (input.photo) next.photo = input.photo;
         else delete next.photo;
       }
+      if ('format' in input) {
+        if (isGameFormat(input.format)) next.format = input.format;
+        else delete next.format;
+      }
       await db.teams.put(next);
       return next;
     }
     const ts = nowTimestamp();
     const team: Team = { id: newId(), profileId, name, level: input.level, archived: false, createdAt: ts, updatedAt: ts, updatedBy: await deviceId() };
     if (input.photo) team.photo = input.photo;
+    if (isGameFormat(input.format)) team.format = input.format;
     await db.teams.add(team);
     return team;
   }
@@ -862,6 +886,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     if (clean(input.location)) f.location = clean(input.location);
     if (input.level) f.level = input.level;
     if (input.gamesCount) f.gamesCount = input.gamesCount;
+    if (isGameFormat(input.format)) f.format = input.format;
     const games = (input.games ?? [])
       .map((g) => {
         const r: ScheduledGame = {};

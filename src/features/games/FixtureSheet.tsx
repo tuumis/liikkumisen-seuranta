@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { isISODate } from '../../domain/dates';
-import { LEVEL_LABEL } from '../../domain/football';
-import type { GameLevel, Profile } from '../../domain/types';
+import { GAME_FORMATS, LEVEL_LABEL } from '../../domain/football';
+import type { GameFormat, GameLevel, Profile } from '../../domain/types';
 import { repo, type FixtureEntry, type FixtureInput } from '../../db/repositories';
 import { Button, Field, inputClass } from '../../ui/components';
 import { Segmented, ToggleChip } from '../../ui/controls';
@@ -35,6 +35,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
   const [eventName, setEventName] = useState('');
   const [gamesCount, setGamesCount] = useState('');
   const [level, setLevel] = useState<GameLevel | ''>('');
+  const [format, setFormat] = useState<GameFormat | ''>('');
   const [location, setLocation] = useState('');
   const [note, setNote] = useState('');
   const [schedule, setSchedule] = useState<ScheduleRow[]>([]);
@@ -54,6 +55,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
     setEventName(f?.eventName ?? '');
     setGamesCount(f?.gamesCount ? String(f.gamesCount) : '');
     setLevel(f?.level ?? '');
+    setFormat(f?.format ?? '');
     setLocation(f?.location ?? '');
     setNote(f?.note ?? '');
     setSchedule(
@@ -101,6 +103,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
             }))
           : undefined,
       level: level || undefined,
+      format: format || undefined,
       location,
       note,
     };
@@ -283,6 +286,20 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
             ))}
           </div>
           <p className="mt-1 text-xs text-slate-500">Taso säätää tehoarviota: Elite = kovempi, Kilpa = tavallinen, Haaste = kevyempi.</p>
+        </div>
+
+        <div>
+          <div className="mb-1 text-sm font-medium text-slate-700">Pelimuoto</div>
+          <div className="flex flex-wrap gap-2">
+            <ToggleChip on={format === ''} onChange={() => setFormat('')}>
+              {team?.format ? `Joukkueen (${team.format})` : 'Ei valittu'}
+            </ToggleChip>
+            {GAME_FORMATS.map((f) => (
+              <ToggleChip key={f} on={format === f} onChange={() => setFormat(f)}>
+                {f}
+              </ToggleChip>
+            ))}
+          </div>
         </div>
 
         <Field label="Paikka (valinnainen)">

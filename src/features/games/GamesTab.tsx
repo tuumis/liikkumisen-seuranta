@@ -3,8 +3,8 @@
 
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { LEVEL_LABEL } from '../../domain/football';
-import type { ActivityType, GameLevel, Profile, Session, Team } from '../../domain/types';
+import { GAME_FORMATS, LEVEL_LABEL } from '../../domain/football';
+import type { ActivityType, GameFormat, GameLevel, Profile, Session, Team } from '../../domain/types';
 import { repo, type FixtureEntry } from '../../db/repositories';
 import { Avatar, PhotoPicker } from '../../ui/Avatar';
 import { Button, Card, inputClass } from '../../ui/components';
@@ -199,6 +199,7 @@ function FixtureSummary({ e, team }: { e: FixtureEntry; team?: Team }) {
         {e.plan.startTime && ` klo ${e.plan.startTime}`} · {e.plan.durationMin} min
         {tournament && team && ` · ${team.name}`}
         {tournament && f?.gamesCount && ` · ${f.gamesCount} peliä`}
+        {(f?.format ?? team?.format) && ` · ${f?.format ?? team?.format}`}
         {f?.location && ` · ${f.location}`}
       </div>
       {tournament && f?.games && f.games.length > 0 && (
@@ -242,17 +243,19 @@ function TeamsView({ profile }: { profile: Profile }) {
   const [name, setName] = useState('');
   const [level, setLevel] = useState<GameLevel>('kilpa');
   const [photo, setPhoto] = useState<string | undefined>();
+  const [format, setFormat] = useState<GameFormat | ''>('');
 
   const open = (t: Team | 'new') => {
     setEditing(t);
     setName(t === 'new' ? '' : t.name);
     setLevel(t === 'new' ? 'kilpa' : t.level);
     setPhoto(t === 'new' ? undefined : t.photo);
+    setFormat(t === 'new' ? '' : (t.format ?? ''));
   };
 
   async function save() {
     try {
-      await repo.saveTeam(profile.id, { name, level, photo }, editing && editing !== 'new' ? editing.id : undefined);
+      await repo.saveTeam(profile.id, { name, level, photo, format: format || undefined }, editing && editing !== 'new' ? editing.id : undefined);
       toast('Joukkue tallennettu');
       setEditing(null);
     } catch (e) {
@@ -289,6 +292,16 @@ function TeamsView({ profile }: { profile: Profile }) {
             </div>
             <p className="mt-1 text-xs text-slate-500">Elite = kovatempoinen (kovempi), Kilpa = reipas (tavallinen), Haaste = kevyempi. Tason voi vaihtaa yksittäiselle pelille tai turnaukselle.</p>
           </div>
+          <div>
+            <div className="mb-1 text-sm font-medium text-slate-700">Pelimuoto (oletus peleille)</div>
+            <div className="flex flex-wrap gap-2">
+              {GAME_FORMATS.map((f) => (
+                <ToggleChip key={f} on={format === f} onChange={() => setFormat(format === f ? '' : f)}>
+                  {f}
+                </ToggleChip>
+              ))}
+            </div>
+          </div>
           <PhotoPicker label="Joukkuekuva" name={name} value={photo} fallback="👕" onChange={setPhoto} />
           <div className="flex gap-2">
             <Button type="submit" className="flex-1">
@@ -308,8 +321,9 @@ function TeamsView({ profile }: { profile: Profile }) {
               <Avatar name={t.name} photo={t.photo} fallback="👕" size="md" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-medium text-slate-900">{t.name}</span>
-                <span className="mt-0.5 inline-block">
+                <span className="mt-0.5 flex items-center gap-1.5">
                   <LevelBadge level={t.level} />
+                  {t.format && <span className="text-xs text-slate-500">{t.format}</span>}
                 </span>
               </span>
               <span className="text-slate-400" aria-hidden>

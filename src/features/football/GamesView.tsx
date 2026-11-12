@@ -2,7 +2,21 @@
 // Ei sarjataulukoita eikä lapsen henkilökohtaisia pisteitä.
 
 import { useMemo, useState } from 'react';
-import { gameRows, gamesCsv, LEVEL_LABEL, normalizeName, OUTCOME_LABEL, preferredName, seasonKey, summarizeBy, summarizeGames, type GameRow, type GroupedSummary } from '../../domain/football';
+import {
+  gameRows,
+  gamesCsv,
+  LEVEL_LABEL,
+  normalizeName,
+  OUTCOME_LABEL,
+  POSITION_LABEL,
+  preferredName,
+  seasonKey,
+  summarizeBy,
+  summarizeByPosition,
+  summarizeGames,
+  type GameRow,
+  type GroupedSummary,
+} from '../../domain/football';
 import type { Profile } from '../../domain/types';
 import { Button, Card, inputClass } from '../../ui/components';
 import { dayLabel } from '../../ui/format';
@@ -51,6 +65,8 @@ export function GamesView({ profile, onBack }: { profile: Profile; onBack?: () =
   const bySeason = summarizeBy(rows, (r) => seasonKey(r.date));
   const byLevel = summarizeBy(rows, (r) => (r.level ? LEVEL_LABEL[r.level] : undefined));
   const byYear = summarizeBy(rows, (r) => r.date.slice(0, 4));
+  const byFormat = summarizeBy(rows, (r) => r.format).sort((a, b) => parseInt(a.label) - parseInt(b.label));
+  const byPosition = summarizeByPosition(rows);
 
   function exportCsv() {
     const blob = new Blob([gamesCsv(rows)], { type: 'text/csv;charset=utf-8' });
@@ -97,8 +113,9 @@ export function GamesView({ profile, onBack }: { profile: Profile; onBack?: () =
         </div>
       )}
 
-      <Card>
-        <div className="grid grid-cols-2 gap-2">
+      <div className="space-y-4 lg:grid lg:grid-cols-12 lg:items-start lg:gap-6 lg:space-y-0">
+      <Card className="lg:col-span-12">
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
           {select('Kausi', season, setSeason, options.seasons.map((s) => [s, s]))}
           {select('Vuosi', year, setYear, options.years.map((y) => [y, y]))}
           {select('Oma joukkue', team, setTeam, options.teams)}
@@ -106,10 +123,16 @@ export function GamesView({ profile, onBack }: { profile: Profile; onBack?: () =
         </div>
       </Card>
 
+      <div className="space-y-4 lg:col-span-5 xl:col-span-4">
       <Card title="Kokonaisuus">
         <SummaryBlock s={total} />
       </Card>
+      {byLevel.length > 0 && <GroupCard title="Taso (Elite · Kilpa · Haaste)" groups={byLevel} />}
+      {byFormat.length > 0 && <GroupCard title="Pelimuoto" groups={byFormat} />}
+      {byPosition.length > 0 && <GroupCard title="Pelipaikka" groups={byPosition} />}
+      </div>
 
+      <div className="space-y-4 lg:col-span-7 xl:col-span-8">
       <Card title={`Pelit (${total.games})`} action={rows.length > 0 ? <Button variant="ghost" onClick={exportCsv}>Vie CSV</Button> : undefined}>
         {groups.length === 0 && <p className="text-sm text-slate-500">Ei pelejä valinnoilla.</p>}
         <ul className="space-y-2">
@@ -127,7 +150,7 @@ export function GamesView({ profile, onBack }: { profile: Profile; onBack?: () =
         {rows.length > 0 && <p className="mt-2 text-xs text-slate-500">CSV: yksi rivi per peli, puolipiste-erotin; avautuu suomenkielisessä Excelissä. Tiedosto sisältää lapsen tietoja.</p>}
       </Card>
 
-      {byLevel.length > 0 && <GroupCard title="Taso (Elite · Kilpa · Haaste)" groups={byLevel} />}
+      <div className="space-y-4 xl:grid xl:grid-cols-2 xl:items-start xl:gap-4 xl:space-y-0">
       {byTeam.length > 1 && <GroupCard title="Oma joukkue" groups={byTeam} />}
       {byOpponent.length > 0 && <GroupCard title="Vastustajat" groups={byOpponent} />}
       {byEvent.length > 0 && <GroupCard title="Turnaukset" groups={byEvent} />}
@@ -139,6 +162,9 @@ export function GamesView({ profile, onBack }: { profile: Profile; onBack?: () =
           </div>
         </Card>
       )}
+      </div>
+      </div>
+      </div>
       <p className="text-center text-xs text-slate-500">Tulokset ovat joukkueen tuloksia eivätkä vaikuta lapsen arvioihin tai muihin mittareihin.</p>
     </div>
   );
@@ -153,9 +179,17 @@ function GameLine({ r, showDate }: { r: GameRow; showDate: boolean }) {
         <span className="block truncate text-sm text-slate-900">
           {r.team ?? 'Oma joukkue'} – {r.opponent ?? 'vastustaja ?'}
         </span>
-        {(r.playedMin !== undefined || r.time) && (
+        {(r.playedMin !== undefined || r.time || r.format || r.positions || r.playerGoals) && (
           <span className="block text-xs text-slate-500">
-            {[r.time && `klo ${r.time}`, r.playedMin !== undefined && `pelattu ${r.playedMin} min`].filter(Boolean).join(' · ')}
+            {[
+              r.time && `klo ${r.time}`,
+              r.format,
+              r.positions?.map((p) => POSITION_LABEL[p].toLowerCase()).join(', '),
+              r.playedMin !== undefined && `pelattu ${r.playedMin} min`,
+              r.playerGoals ? `⚽ ${r.playerGoals} ${r.playerGoals === 1 ? 'oma maali' : 'omaa maalia'}` : undefined,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           </span>
         )}
         {r.note && <span className="block text-xs italic text-slate-600">“{r.note}”</span>}
@@ -184,6 +218,15 @@ function SummaryBlock({ s }: { s: ReturnType<typeof summarizeGames> }) {
         <>
           <dt className="text-slate-600">Ei tulosta</dt>
           <dd className="text-right tabular-nums">{s.noResult}</dd>
+        </>
+      )}
+      {s.playerGoalsGames > 0 && (
+        <>
+          <dt className="text-slate-600">Omat maalit ⚽</dt>
+          <dd className="text-right tabular-nums">
+            {s.playerGoals}
+            <span className="text-slate-500"> ({s.playerGoalsGames} pelissä)</span>
+          </dd>
         </>
       )}
       <dt className="text-slate-600">Peliaika</dt>

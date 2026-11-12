@@ -19,6 +19,9 @@ import { BackupReminder, SyncBar } from '../sync/SyncBar';
 import { FootballPanel } from '../football/FootballPanel';
 import { DayRow } from './DayRow';
 import { WeekSummary } from './WeekSummary';
+import { HoursGauge } from './HoursGauge';
+import { HoursCard } from './HoursCard';
+import { GoalCard } from '../analysis/GoalCard';
 import { GettingStarted } from './GettingStarted';
 import type { SettingsSectionId } from '../settings/SettingsView';
 import { DaySheet } from './DaySheet';
@@ -119,6 +122,8 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
 
   // Päiväkoosteet korvausperiaatteella (kirjaukset + perusarviot) ja suositusvertailu.
   const report = useReport(profile, period);
+  // Liikuntamäärän luokat (7 h = 60 min/pv) koskevat kouluikäisiä.
+  const showGauge = report?.group.group === 'school_age';
   const week = {
     count: (sessions ?? []).length,
     duration: (sessions ?? []).reduce((a, s) => a + s.durationMin, 0),
@@ -160,7 +165,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
         <BackupReminder onOpenSettings={() => onOpenSettings('devices')} />
       </div>
 
-      <div className="space-y-4 lg:col-span-7 xl:col-span-8">
+      <div className="space-y-4 lg:col-span-7 2xl:col-span-6">
       <Card>
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => go(-1)} className="min-h-11 min-w-11 rounded-full text-xl text-slate-700 hover:bg-slate-100 active:bg-slate-100" aria-label="Edellinen viikko">
@@ -202,8 +207,9 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
       )}
 
       {profile && report && hasAnySessions && (
-        <div className="lg:hidden">
+        <div className="space-y-4 lg:hidden">
           <WeekSummary report={report} profile={profile} isCurrentWeek={isCurrent} />
+          {showGauge && <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} />}
         </div>
       )}
 
@@ -255,9 +261,22 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
       </div>
 
       {profile && report && (
-        <div className="hidden space-y-4 lg:sticky lg:top-8 lg:col-span-5 lg:block xl:col-span-4">
+        <div className="hidden space-y-4 lg:col-span-5 lg:block 2xl:col-span-6 2xl:grid 2xl:grid-cols-2 2xl:items-start 2xl:gap-6 2xl:space-y-0">
           {hasAnySessions ? (
-            <WeekSummary report={report} profile={profile} isCurrentWeek={isCurrent} />
+            <>
+              <div className="space-y-4">
+                <WeekSummary report={report} profile={profile} isCurrentWeek={isCurrent} wide />
+                <div className="hidden rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 2xl:block">
+                  <GoalCard report={report} variant="compact" />
+                </div>
+              </div>
+              <div className="space-y-4">
+                {showGauge && <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} />}
+                <div className="hidden 2xl:block">
+                  <HoursCard report={report} isCurrentWeek={isCurrent} />
+                </div>
+              </div>
+            </>
           ) : (
             <section className="rounded-2xl bg-white p-5 text-sm text-slate-600 shadow-sm ring-1 ring-slate-200">Viikon tilanne näkyy tässä ensimmäisen kirjauksen jälkeen.</section>
           )}

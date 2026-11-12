@@ -182,12 +182,19 @@ export type FocusTag =
   | 'coordination'
   | 'other';
 
+/** Pelimuoto (pelaajia per joukkue kentällä). */
+export type GameFormat = '3v3' | '5v5' | '7v7' | '8v8' | '9v9' | '11v11';
+/** Pelipaikka: maalivahti, puolustus, keskikenttä, hyökkäys. */
+export type FieldPosition = 'gk' | 'def' | 'mid' | 'fwd';
+
 export interface GameResult {
   // yksi turnauksen peli
   opponent?: string;
   goalsFor?: number;
   goalsAgainst?: number;
   playedMin?: number;
+  /** Oman lapsen tekemät maalit tässä pelissä. */
+  playerGoals?: number;
   /** Otteluohjelmasta: alkamisaika ja kenttä. */
   time?: HHmm;
   location?: string;
@@ -216,6 +223,12 @@ export interface FootballDetails extends SyncFields {
   opponent?: string;
   goalsFor?: number;
   goalsAgainst?: number;
+  /** Oman lapsen tekemät maalit (peli); turnauksessa pelirivien summa. */
+  playerGoals?: number;
+  /** Pelimuoto (peli ja turnaus), esim. 8v8. */
+  format?: GameFormat;
+  /** Pelipaikat, joilla lapsi pelasi (voi olla useita). */
+  positions?: FieldPosition[];
   gamesCount?: number; // turnaus
   eventName?: string; // turnaus
 }
@@ -230,6 +243,8 @@ export interface Team extends SyncFields {
   level: GameLevel;
   /** Joukkuekuva pienennettynä (JPEG data URL), valinnainen. */
   photo?: string;
+  /** Joukkueen tavallinen pelimuoto (oletus peleille), esim. 8v8. */
+  format?: GameFormat;
   archived: boolean;
   createdAt: Timestamp;
 }
@@ -247,6 +262,8 @@ export interface Fixture extends SyncFields {
   location?: string;
   level?: GameLevel;
   gamesCount?: number; // turnaus
+  /** Pelimuoto; puuttuessa käytetään joukkueen pelimuotoa. */
+  format?: GameFormat;
   /** Turnauksen otteluohjelma; kuittaus luo näistä pelirivit tulosten kirjaamista varten. */
   games?: ScheduledGame[];
   note?: string;

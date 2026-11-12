@@ -42,6 +42,10 @@ export function SettingsView({
   onSection: (s?: SettingsSectionId) => void;
 }) {
   const current = SECTIONS.find((x) => x.id === section);
+  // PC:llä (valikko ja sisältö rinnakkain) avataan suoraan ensimmäinen ryhmä tyhjän tilan sijaan.
+  useEffect(() => {
+    if (!section && window.matchMedia?.('(min-width: 1024px)').matches) onSection('profiles');
+  }, [section, onSection]);
   const menu = (
     <nav aria-label="Asetukset" className="space-y-2">
       {SECTIONS.map((x) => (
@@ -87,8 +91,8 @@ export function SettingsView({
 
   return (
     <div className="lg:grid lg:grid-cols-12 lg:items-start lg:gap-6">
-      <div className={`lg:col-span-4 lg:block ${current ? 'hidden' : ''}`}>{menu}</div>
-      <div className="lg:col-span-8">
+      <div className={`lg:col-span-4 lg:block 2xl:col-span-3 ${current ? 'hidden' : ''}`}>{menu}</div>
+      <div className="lg:col-span-8 2xl:col-span-9">
         {content ?? (
           <p className="hidden rounded-2xl bg-white p-6 text-sm text-slate-600 ring-1 ring-slate-200 lg:block">Valitse asetusryhmä vasemmalta.</p>
         )}

@@ -32,6 +32,13 @@ body {
   --viz-track-line: #94a3b8;
   --viz-track-fill: #f8fafc;
   --surface: #ffffff;
+  /* Viikon liikuntamäärän luokat: yksi sävy (sininen), vaaleasta tummaan = vähemmästä enempään. */
+  --band-1: #dbe7f7;
+  --band-2: #b5cff0;
+  --band-3: #86b6ef;
+  --band-4: #5598e4;
+  --band-5: #2a78d6;
+  --band-6: #1b55a3;
 }
 
 /*
@@ -59,6 +66,13 @@ body {
   --viz-track-line: #64748b;
   --viz-track-fill: #0f1726;
   --surface: #121a2a;
+  /* Tummalla pinnalla järjestys kääntyy: enemmän = kirkkaampi. */
+  --band-1: #1c2b44;
+  --band-2: #22406b;
+  --band-3: #2a5793;
+  --band-4: #3571bd;
+  --band-5: #4f8fe0;
+  --band-6: #86b6ef;
 }
 
 /* Elementit, joilla on oma dark:bg-*-luokka, jätetään ohituksen ulkopuolelle. */

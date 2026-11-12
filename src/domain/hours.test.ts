@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatHours, weeklyHours } from './hours';
+import { formatHours, hoursBand, HOURS_BANDS, weeklyHours } from './hours';
 import { weekPeriod } from './dates';
 import { activityTypeId } from './ids';
 import { estimate, planned, session, typesMap } from './test-helpers';
@@ -71,5 +71,21 @@ describe('viikon liikuntatunnit', () => {
     expect(h.expectedMin).toBe(0);
     expect(h.actualMin).toBe(0);
     expect(h.byCategory).toEqual([]);
+  });
+});
+
+describe('viikon liikuntamäärän luokat', () => {
+  it('rajat kuuluvat ylempään luokkaan; 20 h ja yli on ylin', () => {
+    const at = (h: number) => hoursBand(h * 60).label;
+    expect(at(0)).toBe('Alle suosituksen');
+    expect(at(6.99)).toBe('Alle suosituksen');
+    expect(at(7)).toBe('Suosituksen mukainen');
+    expect(at(10)).toBe('Aktiivinen');
+    expect(at(11.9)).toBe('Aktiivinen');
+    expect(at(12)).toBe('Erittäin aktiivinen');
+    expect(at(15)).toBe('Paljon liikuntaa');
+    expect(at(20)).toBe('Erittäin suuri liikuntamäärä');
+    expect(at(40)).toBe('Erittäin suuri liikuntamäärä');
+    expect(HOURS_BANDS).toHaveLength(6);
   });
 });

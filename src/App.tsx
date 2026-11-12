@@ -211,7 +211,7 @@ export default function App() {
         )}
       </header>
 
-      <main className="mx-auto max-w-xl px-4 py-4 pb-24 lg:max-w-[1440px] lg:px-10 lg:py-8 lg:pb-10">
+      <main className="mx-auto max-w-xl px-4 py-4 pb-24 lg:max-w-none lg:px-8 lg:py-8 lg:pb-10 2xl:px-12">
         <div className="mb-6 hidden items-baseline justify-between lg:flex">
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{TAB_TITLE[tab]}</h1>
           {selected && (

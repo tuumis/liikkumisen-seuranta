@@ -141,3 +141,37 @@ export function weeklyHours(input: {
 export function formatHours(min: number): string {
   return `${(Math.round((min / 60) * 10) / 10).toFixed(1).replace('.', ',')} h`;
 }
+
+// ---------- viikon liikuntamäärän luokat (käyttäjän määrittelemä taulukko, lisäys 16) ----------
+
+export type HoursBandKey = 'below' | 'meets' | 'active' | 'very_active' | 'lots' | 'very_lots';
+
+export interface HoursBand {
+  key: HoursBandKey;
+  /** Alaraja tunteina (mukaan lukien). */
+  fromH: number;
+  /** Yläraja tunteina (ei mukaan); viimeisellä ei ylärajaa. */
+  toH?: number;
+  label: string;
+  range: string;
+}
+
+/**
+ * Kokonaisliikunnan kesto viikossa (kirjatut + perusarvio, kellotunnit). Kouluikäisten
+ * suositus 60 min/pv = 7 h/vk on "Suosituksen mukainen" -luokan alaraja. Luokat kuvaavat
+ * määrää, eivät ole palkinto eikä tavoite ylittää ylintä luokkaa.
+ */
+export const HOURS_BANDS: readonly HoursBand[] = Object.freeze([
+  { key: 'below', fromH: 0, toH: 7, label: 'Alle suosituksen', range: 'alle 7 h' },
+  { key: 'meets', fromH: 7, toH: 10, label: 'Suosituksen mukainen', range: '7–10 h' },
+  { key: 'active', fromH: 10, toH: 12, label: 'Aktiivinen', range: '10–12 h' },
+  { key: 'very_active', fromH: 12, toH: 15, label: 'Erittäin aktiivinen', range: '12–15 h' },
+  { key: 'lots', fromH: 15, toH: 20, label: 'Paljon liikuntaa', range: '15–20 h' },
+  { key: 'very_lots', fromH: 20, label: 'Erittäin suuri liikuntamäärä', range: '20+ h' },
+]);
+
+/** Minuuttimäärän luokka; raja kuuluu ylempään luokkaan (7 h = Suosituksen mukainen). */
+export function hoursBand(min: number): HoursBand {
+  const h = Math.max(0, min) / 60;
+  return HOURS_BANDS.find((b) => b.toH === undefined || h < b.toH)!;
+}

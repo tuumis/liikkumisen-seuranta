@@ -123,7 +123,7 @@ describe('A17 pelit ja tulokset', () => {
     expect(csv.startsWith('﻿Päivä;Tapahtuma;')).toBe(true);
     const lines = csv.trim().split('\r\n');
     expect(lines).toHaveLength(7);
-    expect(lines[1]).toBe('5.9.2026;Peli;;P2018 Valkoinen;FC Kasi;3;1;V;30;1');
+    expect(lines[1]).toBe('5.9.2026;Peli;;P2018 Valkoinen;FC Kasi;3;1;V;30;1;;;');
     expect(lines.at(-1)).toContain('ei tulosta');
     expect(gamesCsv([{ ...gameRows(s, d, types)[0], opponent: 'A;"B"' }])).toContain('"A;""B"""');
   });

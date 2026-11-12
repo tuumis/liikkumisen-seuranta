@@ -3,8 +3,8 @@
 
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import type { ActivityType, FocusTag, GameLevel, GameResult, Session } from '../../domain/types';
-import { LEVEL_LABEL } from '../../domain/football';
+import type { ActivityType, FieldPosition, FocusTag, GameFormat, GameLevel, GameResult, Session } from '../../domain/types';
+import { GAME_FORMATS, LEVEL_LABEL, POSITION_LABEL, POSITIONS } from '../../domain/football';
 import { repo, type FootballDetailsInput } from '../../db/repositories';
 import { Button, Field, inputClass } from '../../ui/components';
 import { Segmented, ToggleChip } from '../../ui/controls';
@@ -15,7 +15,26 @@ import { useToast } from '../../ui/Toast';
 
 const PLAYED_PICKS = [10, 15, 20, 30, 40, 50, 60];
 
-type GameDraft = { opponent: string; goalsFor: string; goalsAgainst: string; playedMin: string; time?: string; location?: string; note: string };
+type GameDraft = { opponent: string; goalsFor: string; goalsAgainst: string; playedMin: string; playerGoals: string; time?: string; location?: string; note: string };
+
+/** Oman lapsen maalit: nopea − / + -valitsin (tyhjä = ei kirjattu). */
+function GoalStepper({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
+  const n = value === '' ? undefined : Number(value);
+  const btn = 'flex size-11 items-center justify-center rounded-xl bg-white text-xl font-semibold text-slate-800 ring-1 ring-slate-300 active:bg-slate-100 disabled:opacity-40';
+  return (
+    <div className="flex items-center gap-2" role="group" aria-label={label}>
+      <button type="button" className={btn} aria-label="Vähemmän" disabled={n === undefined} onClick={() => onChange(n === undefined || n <= 0 ? '' : String(n - 1))}>
+        −
+      </button>
+      <span className="min-w-12 text-center text-2xl font-semibold tabular-nums text-slate-900" aria-live="polite">
+        {n === undefined ? <span className="text-base font-normal text-slate-400">–</span> : n}
+      </span>
+      <button type="button" className={btn} aria-label="Enemmän" onClick={() => onChange(String((n ?? -1) + 1))}>
+        +
+      </button>
+    </div>
+  );
+}
 const toNum = (s: string) => (s.trim() === '' ? undefined : Number.isInteger(Number(s)) && Number(s) >= 0 ? Number(s) : NaN);
 const str = (n?: number) => (n === undefined ? '' : String(n));
 
@@ -40,6 +59,9 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
   const [eventName, setEventName] = useState('');
   const [gamesCount, setGamesCount] = useState('');
   const [games, setGames] = useState<GameDraft[]>([]);
+  const [playerGoals, setPlayerGoals] = useState('');
+  const [format, setFormat] = useState<GameFormat | ''>('');
+  const [positions, setPositions] = useState<FieldPosition[]>([]);
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
 
@@ -68,11 +90,15 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
         goalsFor: str(g.goalsFor),
         goalsAgainst: str(g.goalsAgainst),
         playedMin: str(g.playedMin),
+        playerGoals: str(g.playerGoals),
         time: g.time,
         location: g.location,
         note: g.note ?? '',
       })),
     );
+    setPlayerGoals(str(d?.games?.length ? undefined : d?.playerGoals));
+    setFormat(d?.format ?? '');
+    setPositions(d?.positions ?? []);
     setError(undefined);
   }, [session, existing]);
 
@@ -83,23 +109,25 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
     if (existing === null && teams?.length === 1 && kind !== 'training') {
       setTeamId((t) => t || teams[0].id);
       setLevel((l) => l || teams[0].level);
+      setFormat((f) => f || teams[0].format || '');
     }
   }, [existing, names, kind, teams]);
 
   if (!session || !type) return null;
 
   async function save() {
-    const nums = { gf: toNum(gf), ga: toNum(ga), played: toNum(played), count: toNum(gamesCount) };
+    const nums = { gf: toNum(gf), ga: toNum(ga), played: toNum(played), count: toNum(gamesCount), own: toNum(playerGoals) };
     const rows: GameResult[] = games.map((g) => ({
       opponent: g.opponent,
       goalsFor: toNum(g.goalsFor),
       goalsAgainst: toNum(g.goalsAgainst),
       playedMin: toNum(g.playedMin),
+      playerGoals: toNum(g.playerGoals),
       time: g.time,
       location: g.location,
       note: g.note,
     }));
-    const bad = [...Object.values(nums), ...rows.flatMap((r) => [r.goalsFor, r.goalsAgainst, r.playedMin])].some((n) => Number.isNaN(n));
+    const bad = [...Object.values(nums), ...rows.flatMap((r) => [r.goalsFor, r.goalsAgainst, r.playedMin, r.playerGoals])].some((n) => Number.isNaN(n));
     if (bad) return setError('Anna luvut kokonaislukuina');
     if (nums.played !== undefined && nums.played > session!.durationMin) return setError('Pelatut minuutit eivät voi ylittää kestoa');
     const input: FootballDetailsInput = {
@@ -118,6 +146,9 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
       eventName,
       gamesCount: nums.count,
       games: rows,
+      playerGoals: nums.own,
+      format: format || undefined,
+      positions,
     };
     setSaving(true);
     try {
@@ -221,6 +252,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
                     if (t) {
                       setTeam(t.name);
                       setLevel(t.level);
+                      if (t.format) setFormat(t.format);
                     }
                   }}
                 >
@@ -249,6 +281,27 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
                 ))}
               </div>
               <p className="mt-1 text-xs text-slate-500">Taso säätää tehoarviota: Elite = kovempi, Kilpa = tavallinen, Haaste = kevyempi.</p>
+            </div>
+            <div>
+              <div className="mb-1 text-sm font-medium text-slate-700">Pelimuoto</div>
+              <div className="flex flex-wrap gap-2">
+                {GAME_FORMATS.map((f) => (
+                  <ToggleChip key={f} on={format === f} onChange={() => setFormat(format === f ? '' : f)}>
+                    {f}
+                  </ToggleChip>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="mb-1 text-sm font-medium text-slate-700">Pelipaikka</div>
+              <div className="flex flex-wrap gap-2">
+                {POSITIONS.map((p) => (
+                  <ToggleChip key={p} on={positions.includes(p)} onChange={(on) => setPositions((cur) => (on ? [...cur, p] : cur.filter((x) => x !== p)))}>
+                    {POSITION_LABEL[p]}
+                  </ToggleChip>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-slate-500">Valitse kaikki paikat, joilla pelasi.</p>
             </div>
           </>
         )}
@@ -279,6 +332,10 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
                 <input className={`${inputClass} w-20 text-center`} inputMode="numeric" value={ga} onChange={(e) => setGa(e.target.value)} aria-label="Päästetyt maalit" />
               </div>
             </div>
+            <div>
+              <div className="mb-1 text-sm font-medium text-slate-700">Omat maalit ⚽</div>
+              <GoalStepper value={playerGoals} onChange={setPlayerGoals} label="Omat maalit" />
+            </div>
           </>
         )}
 
@@ -296,6 +353,10 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
                 <Field label="Pelatut min yhteensä">
                   <input className={inputClass} inputMode="numeric" value={played} onChange={(e) => setPlayed(e.target.value)} />
                 </Field>
+                <div className="col-span-2">
+                  <div className="mb-1 text-sm font-medium text-slate-700">Omat maalit yhteensä ⚽</div>
+                  <GoalStepper value={playerGoals} onChange={setPlayerGoals} label="Omat maalit yhteensä" />
+                </div>
               </div>
             )}
             {list('fb-opponents', names?.opponents)}
@@ -324,7 +385,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
                     <span key={k} className="contents">
                       {idx === 1 && <span className="text-slate-500">–</span>}
                       <input
-                        className={`${inputClass} w-16 text-center`}
+                        className={`${inputClass} w-14 px-1 text-center`}
                         inputMode="numeric"
                         value={g[k]}
                         aria-label={`Peli ${i + 1}: ${k === 'goalsFor' ? 'tehdyt' : 'päästetyt'}`}
@@ -333,7 +394,15 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
                     </span>
                   ))}
                   <input
-                    className={`${inputClass} ml-auto w-24`}
+                    className={`${inputClass} ml-auto w-16 px-1 text-center`}
+                    inputMode="numeric"
+                    value={g.playerGoals}
+                    placeholder="⚽ omat"
+                    aria-label={`Peli ${i + 1}: omat maalit`}
+                    onChange={(e) => setGames((cur) => cur.map((x, j) => (j === i ? { ...x, playerGoals: e.target.value } : x)))}
+                  />
+                  <input
+                    className={`${inputClass} w-20 px-2`}
                     inputMode="numeric"
                     value={g.playedMin}
                     placeholder="pelattu"
@@ -351,7 +420,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
                 />
               </div>
             ))}
-            <Button variant="secondary" className="w-full" onClick={() => setGames((cur) => [...cur, { opponent: '', goalsFor: '', goalsAgainst: '', playedMin: '', note: '' }])}>
+            <Button variant="secondary" className="w-full" onClick={() => setGames((cur) => [...cur, { opponent: '', goalsFor: '', goalsAgainst: '', playedMin: '', playerGoals: '', note: '' }])}>
               + peli
             </Button>
             {games.length > 0 && <p className="text-xs text-slate-500">Pelien määrä = rivien määrä. Pelattujen minuuttien summa on arvion laskentapohja.</p>}

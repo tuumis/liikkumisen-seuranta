@@ -8,7 +8,9 @@ import type {
   ActivityType,
   AdherenceSummary,
   Effort,
+  FieldPosition,
   FocusTag,
+  GameFormat,
   GameLevel,
   FootballDetails,
   FootballKind,
@@ -27,6 +29,10 @@ export type GameOutcome = 'W' | 'D' | 'L';
  */
 export const LEVEL_EFFORT: Readonly<Record<GameLevel, Effort>> = Object.freeze({ elite: 1, kilpa: 0, haaste: -1 });
 export const LEVEL_LABEL: Readonly<Record<GameLevel, string>> = Object.freeze({ elite: 'Elite', kilpa: 'Kilpa', haaste: 'Haaste' });
+export const GAME_FORMATS: readonly GameFormat[] = Object.freeze(['3v3', '5v5', '7v7', '8v8', '9v9', '11v11']);
+export const POSITION_LABEL: Readonly<Record<FieldPosition, string>> = Object.freeze({ gk: 'Maalivahti', def: 'Puolustus', mid: 'Keskikenttä', fwd: 'Hyökkäys' });
+export const POSITIONS: readonly FieldPosition[] = Object.freeze(['gk', 'def', 'mid', 'fwd']);
+export const isGameFormat = (s: unknown): s is GameFormat => typeof s === 'string' && (GAME_FORMATS as readonly string[]).includes(s);
 
 /** Yksi pelilistan rivi (SPEC 8 "Pelilista"). */
 export interface GameRow {
@@ -51,6 +57,10 @@ export interface GameRow {
   /** Turnauksen pelin kellonaika ja kommentti. */
   time?: string;
   note?: string;
+  /** Oman lapsen maalit (rivin peleissä yhteensä). */
+  playerGoals?: number;
+  format?: GameFormat;
+  positions?: FieldPosition[];
 }
 
 export interface GameSummary {
@@ -66,6 +76,9 @@ export interface GameSummary {
   playedMinTotal: number;
   /** Pelatut minuutit per peli niistä peleistä, joille peliaika on kirjattu; null, jos ei yhtään. */
   playedMinAvg: number | null;
+  /** Oman lapsen maalit yhteensä ja montako peliä ne kattavat (pelit, joille omat maalit on kirjattu). */
+  playerGoals: number;
+  playerGoalsGames: number;
 }
 
 /** Nimien vertailu: kirjainkoko ja ylimääräiset välilyönnit eivät vaikuta. */
@@ -101,7 +114,12 @@ export function gameRows(sessions: Session[], details: Map<UUID, FootballDetails
     const d = details.get(s.id);
     const fd = d && !d.deletedAt ? d : undefined;
     const team = cleanName(fd?.team);
-    const extra = { ...(fd?.level ? { level: fd.level } : {}), ...(fd?.teamId ? { teamId: fd.teamId } : {}) };
+    const extra = {
+      ...(fd?.level ? { level: fd.level } : {}),
+      ...(fd?.teamId ? { teamId: fd.teamId } : {}),
+      ...(fd?.format ? { format: fd.format } : {}),
+      ...(fd?.positions?.length ? { positions: fd.positions } : {}),
+    };
     if (kind === 'game') {
       rows.push({
         ...extra,
@@ -115,6 +133,7 @@ export function gameRows(sessions: Session[], details: Map<UUID, FootballDetails
         outcome: outcomeOf(fd?.goalsFor, fd?.goalsAgainst),
         playedMin: s.playedMin,
         games: 1,
+        ...(fd?.playerGoals !== undefined ? { playerGoals: fd.playerGoals } : {}),
       });
     } else if (fd?.games && fd.games.length > 0) {
       fd.games.forEach((g, i) =>
@@ -134,6 +153,7 @@ export function gameRows(sessions: Session[], details: Map<UUID, FootballDetails
           games: 1,
           ...(g.time ? { time: g.time } : {}),
           ...(g.note ? { note: g.note } : {}),
+          ...(g.playerGoals !== undefined ? { playerGoals: g.playerGoals } : {}),
         }),
       );
     } else {
@@ -146,6 +166,7 @@ export function gameRows(sessions: Session[], details: Map<UUID, FootballDetails
         team,
         playedMin: s.playedMin,
         games: Math.max(1, fd?.gamesCount ?? 1),
+        ...(fd?.playerGoals !== undefined ? { playerGoals: fd.playerGoals } : {}),
       });
     }
   }
@@ -163,8 +184,14 @@ export function summarizeGames(rows: GameRow[]): GameSummary {
   let noResult = 0;
   let played = 0;
   let gamesWithPlayed = 0;
+  let pg = 0;
+  let pgGames = 0;
   for (const r of rows) {
     games += r.games;
+    if (r.playerGoals !== undefined && r.playerGoals !== null) {
+      pg += r.playerGoals;
+      pgGames += r.games;
+    }
     if (r.outcome) {
       gf += r.goalsFor!;
       ga += r.goalsAgainst!;
@@ -188,6 +215,8 @@ export function summarizeGames(rows: GameRow[]): GameSummary {
     noResult,
     playedMinTotal: played,
     playedMinAvg: gamesWithPlayed > 0 ? played / gamesWithPlayed : null,
+    playerGoals: pg,
+    playerGoalsGames: pgGames,
   };
 }
 
@@ -225,6 +254,13 @@ export function summarizeBy(rows: GameRow[], label: (r: GameRow) => string | und
   return [...groups.entries()]
     .map(([key, g]) => ({ key, label: preferredName(g.labels), summary: summarizeGames(g.rows) }))
     .sort((a, b) => b.summary.games - a.summary.games || a.label.localeCompare(b.label, 'fi'));
+}
+
+/** Pelipaikoittain: peli lasketaan jokaiselle paikalle, jolla lapsi pelasi. */
+export function summarizeByPosition(rows: GameRow[]): GroupedSummary[] {
+  return POSITIONS.map((p) => ({ key: p, label: POSITION_LABEL[p], summary: summarizeGames(rows.filter((r) => r.positions?.includes(p))) })).filter(
+    (g) => g.summary.games > 0,
+  );
 }
 
 /** Kausi ja vuosi pelilistan suodatukseen ja rinnakkaisvertailuun. */
@@ -360,7 +396,7 @@ export function gamesCsv(rows: GameRow[]): string {
     const s = v === undefined || v === null ? '' : String(v);
     return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  const header = ['Päivä', 'Tapahtuma', 'Peli nro', 'Oma joukkue', 'Vastustaja', 'Tehdyt', 'Päästetyt', 'Tulos', 'Pelatut min', 'Pelejä'];
+  const header = ['Päivä', 'Tapahtuma', 'Peli nro', 'Oma joukkue', 'Vastustaja', 'Tehdyt', 'Päästetyt', 'Tulos', 'Pelatut min', 'Pelejä', 'Omat maalit', 'Pelimuoto', 'Pelipaikka'];
   const lines = rows.map((r) => {
     const [y, m, d] = r.date.split('-');
     return [
@@ -374,6 +410,9 @@ export function gamesCsv(rows: GameRow[]): string {
       r.outcome ? OUTCOME_LABEL[r.outcome] : 'ei tulosta',
       r.playedMin,
       r.games,
+      r.playerGoals,
+      r.format,
+      r.positions?.map((p) => POSITION_LABEL[p]).join(', '),
     ]
       .map(esc)
       .join(';');

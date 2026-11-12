@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { AppDB } from './schema';
 import { createRepositories, type Repositories } from './repositories';
 import { buildSyncFile, mergeSyncFile, purgeProfile, toJson } from './backup';
-import { gameRows, summarizeBy, LEVEL_LABEL } from '../domain/football';
+import { gameRows, summarizeBy, summarizeByPosition, summarizeGames, LEVEL_LABEL } from '../domain/football';
 import { BUILT_IN_ACTIVITY_TYPES } from '../seed/activityTypes';
 
 let n = 0;
@@ -128,6 +128,39 @@ describe('pelikalenteri', () => {
       ['HJK', 'W', '09:00', 'Hyvä alku'],
       ['PK-35', 'D', '11:30', undefined],
     ]);
+  });
+
+  it('omat maalit, pelipaikka ja pelimuoto (joukkueen oletus, tapahtuma voi ohittaa)', async () => {
+    const { repo, db } = await device('format');
+    const team = await repo.saveTeam('p1', { name: 'P2018', level: 'kilpa', format: '8v8' });
+    const g = await repo.createFixture('p1', { kind: 'game', date: '2026-11-10', durationMin: 60, teamId: team.id, opponent: 'HJK' });
+    const t = await repo.createFixture('p1', { kind: 'tournament', date: '2026-11-11', durationMin: 240, teamId: team.id, format: '5v5', games: [{ opponent: 'A' }, { opponent: 'B' }] });
+    const rg = await repo.confirmPlanned(g.plan.id, TODAY);
+    const rt = await repo.confirmPlanned(t.plan.id, TODAY);
+    expect((await repo.getFootballDetails(rg.session.id))?.format).toBe('8v8');
+    expect((await repo.getFootballDetails(rt.session.id))?.format).toBe('5v5');
+
+    await repo.saveFootballDetails(rg.session.id, { attendance: 'full', focusTags: [], teamId: team.id, goalsFor: 3, goalsAgainst: 1, playerGoals: 2, format: '8v8', positions: ['fwd', 'mid', 'fwd'] });
+    const dt = await repo.getFootballDetails(rt.session.id);
+    await repo.saveFootballDetails(rt.session.id, {
+      attendance: 'full',
+      focusTags: [],
+      format: '5v5',
+      positions: ['def'],
+      games: [
+        { ...dt!.games![0], goalsFor: 1, goalsAgainst: 0, playerGoals: 1 },
+        { ...dt!.games![1], goalsFor: 0, goalsAgainst: 0 },
+      ],
+    });
+    expect(await repo.getFootballDetails(rg.session.id)).toMatchObject({ playerGoals: 2, positions: ['mid', 'fwd'] });
+    expect((await repo.getFootballDetails(rt.session.id))?.playerGoals).toBe(1);
+
+    const sessions = await db.sessions.toArray();
+    const rows = gameRows(sessions, await repo.footballDetailsFor(sessions.map((s) => s.id)), new Map(BUILT_IN_ACTIVITY_TYPES.map((x) => [x.id, x])));
+    const total = summarizeGames(rows);
+    expect([total.games, total.playerGoals, total.playerGoalsGames]).toEqual([3, 3, 2]);
+    expect(summarizeBy(rows, (r) => r.format).map((x) => [x.label, x.summary.games])).toEqual([['5v5', 2], ['8v8', 1]]);
+    expect(summarizeByPosition(rows).map((x) => [x.key, x.summary.games])).toEqual([['def', 2], ['mid', 1], ['fwd', 1]]);
   });
 
   it('pelattua peliä ei voi muokata eikä poistaa kalenterista', async () => {

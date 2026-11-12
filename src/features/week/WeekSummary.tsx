@@ -39,7 +39,8 @@ function Tile({ label, value, sub }: { label: string; value: string; sub?: strin
   );
 }
 
-export function WeekSummary({ report, profile, isCurrentWeek }: { report: PeriodReport; profile: Profile; isCurrentWeek: boolean }) {
+/** `wide`: erittäin leveällä näytöllä tarkemmat luvut näkyvät omina kortteinaan, joten avaus piilotetaan. */
+export function WeekSummary({ report, profile, isCurrentWeek, wide = false }: { report: PeriodReport; profile: Profile; isCurrentWeek: boolean; wide?: boolean }) {
   const settings = useLiveQuery(() => repo.getSettings(), []) ?? DEFAULT_SETTINGS;
   const [open, setOpen] = useState(readOpen);
   const toggle = () => {
@@ -131,7 +132,7 @@ export function WeekSummary({ report, profile, isCurrentWeek }: { report: Period
         </>
       )}
 
-      <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
+      <div className={`mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-2 ${wide ? '2xl:hidden' : ''}`}>
         <span className="text-[11px] text-slate-500">≈ = arvio lajin tyypillisestä tehosta</span>
         <button type="button" onClick={toggle} className="min-h-9 rounded-lg px-2 text-sm font-medium text-green-800 hover:bg-green-50" aria-expanded={open}>
           {open ? 'Piilota tarkemmat' : 'Näytä tarkemmin'}
@@ -139,7 +140,7 @@ export function WeekSummary({ report, profile, isCurrentWeek }: { report: Period
       </div>
 
       {open && (
-        <div className="mt-3 space-y-4">
+        <div className={`mt-3 space-y-4 ${wide ? '2xl:hidden' : ''}`}>
           <div className="rounded-xl bg-slate-50 p-3 text-sm ring-1 ring-slate-200">
             <GoalCard report={report} variant="compact" />
           </div>

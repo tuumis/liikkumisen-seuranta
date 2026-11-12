@@ -14,6 +14,7 @@ import { DAY_BAR_TARGET } from '../week/WeekView';
 import { DailyMvpaChart, SERIES } from './DailyMvpaChart';
 import { GoalCard } from './GoalCard';
 import { HoursCard } from '../week/HoursCard';
+import { HoursGauge } from '../week/HoursGauge';
 import { useReport } from './useReport';
 import { FootballSection } from '../football/FootballSection';
 import { GamesView } from '../football/GamesView';
@@ -30,8 +31,8 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
   if (games && profile) return <GamesView profile={profile} onBack={() => setGames(false)} />;
 
   return (
-    <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
-      <Card className="lg:col-span-2">
+    <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0 2xl:grid-cols-3">
+      <Card className="lg:col-span-2 2xl:col-span-3">
         <div className="mb-2 grid grid-cols-4 gap-1 rounded-xl bg-slate-100 p-1 text-sm" role="radiogroup" aria-label="Jakso">
           <span role="radio" aria-checked className="rounded-lg bg-white py-2 text-center font-medium text-slate-900 shadow-sm">
             Viikko
@@ -73,6 +74,7 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
             <GoalCard report={report} variant="full" />
           </Card>
 
+          {report.group.group === 'school_age' && <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} />}
           <HoursCard report={report} isCurrentWeek={isCurrent} />
 
           <Card title={report.group.group === 'early_years' ? 'Vauhdikas liikkuminen päivittäin' : 'Reipas ja rasittava päivittäin'}>
@@ -218,7 +220,7 @@ function Rationale() {
   const r = RECOMMENDATIONS;
   return (
     <Card
-      className="lg:col-span-2"
+      className="lg:col-span-2 2xl:col-span-3"
       title="Mihin luvut perustuvat"
       action={
         <Button variant="ghost" onClick={() => setOpen(!open)} aria-expanded={open}>
