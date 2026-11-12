@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { isISODate } from '../../domain/dates';
 import { GAME_FORMATS, LEVEL_LABEL } from '../../domain/football';
+import { DEFAULT_COOLDOWN_MIN, DEFAULT_WARMUP_MIN, defaultGameLength, tournamentDuration, tournamentEndMin, tournamentStart } from '../../domain/tournamentTime';
 import type { GameFormat, GameLevel, Profile } from '../../domain/types';
 import { repo, type FixtureEntry, type FixtureInput } from '../../db/repositories';
 import { Button, Field, inputClass } from '../../ui/components';
@@ -40,6 +41,11 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
   const [location, setLocation] = useState('');
   const [note, setNote] = useState('');
   const [schedule, setSchedule] = useState<ScheduleRow[]>([]);
+  // Turnauksen kesto otteluohjelmasta (aktiivinen aika): pelit × (lämmittely + pelin pituus) + loppuverryttely.
+  const [auto, setAuto] = useState(true);
+  const [gameLen, setGameLen] = useState(''); // tyhjä = pelimuodon oletus
+  const [warmup, setWarmup] = useState(String(DEFAULT_WARMUP_MIN));
+  const [cooldown, setCooldown] = useState(String(DEFAULT_COOLDOWN_MIN));
   const [error, setError] = useState<string>();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -66,6 +72,10 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
         location: g.location ?? '',
       })),
     );
+    setAuto(!f?.durationManual);
+    setGameLen(f?.gameLengthMin !== undefined ? String(f.gameLengthMin) : '');
+    setWarmup(String(f?.warmupMin ?? DEFAULT_WARMUP_MIN));
+    setCooldown(String(f?.cooldownMin ?? DEFAULT_COOLDOWN_MIN));
     setError(undefined);
     setConfirmDelete(false);
   }, [draft]);
@@ -79,8 +89,24 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
   const team = teams?.find((t) => t.id === teamId);
   const editing = !!draft.entry;
 
+  const rowsNow = schedule.filter((g) => g.time || g.opponent.trim() || g.location.trim());
+  const gamesN = rowsNow.length || (/^\d+$/.test(gamesCount.trim()) ? Number(gamesCount) : 0);
+  const num = (s: string, d: number) => (/^\d{1,3}$/.test(s.trim()) ? Number(s) : d);
+  const effFormat = format || team?.format || undefined;
+  const timing = {
+    games: gamesN,
+    gameLengthMin: num(gameLen, defaultGameLength(effFormat)),
+    warmupMin: num(warmup, DEFAULT_WARMUP_MIN),
+    cooldownMin: num(cooldown, DEFAULT_COOLDOWN_MIN),
+  };
+  const autoOn = kind === 'tournament' && auto && gamesN > 0;
+  const autoDuration = tournamentDuration(timing);
+  const autoStart = autoOn ? tournamentStart(rowsNow, timing.warmupMin) : undefined;
+  const autoEnd = autoOn ? tournamentEndMin(rowsNow, timing.gameLengthMin, timing.cooldownMin) : undefined;
+  const hhmm = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+
   async function save() {
-    const dur = Number(duration);
+    const dur = autoOn ? autoDuration : Number(duration);
     if (!isISODate(date)) return setError('Valitse päivä');
     if (!Number.isInteger(dur) || dur < 1 || dur > 1440) return setError('Tarkista kesto (min)');
     const rows = schedule.filter((g) => g.time || g.opponent.trim() || g.location.trim());
@@ -89,8 +115,12 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
     const input: FixtureInput = {
       kind,
       date,
-      startTime: time || undefined,
+      startTime: autoStart ?? (time || undefined),
       durationMin: dur,
+      gameLengthMin: gameLen.trim() === '' ? undefined : timing.gameLengthMin,
+      warmupMin: timing.warmupMin,
+      cooldownMin: timing.cooldownMin,
+      durationManual: kind === 'tournament' && !auto ? true : undefined,
       teamId: teamId || undefined,
       opponent: kind === 'game' ? opponent : undefined,
       eventName: kind === 'tournament' ? eventName : undefined,
@@ -156,11 +186,23 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
           <Field label="Päivä">
             <input type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
-          <Field label="Kello">
-            <TimeField label="Kello" value={time} onChange={setTime} />
+          <Field label={autoStart ? 'Saapuminen' : 'Kello'}>
+            {autoStart ? (
+              <div className="field-shell flex min-h-11 items-center justify-center text-base tabular-nums text-slate-700" title="1. peli − lämmittely">
+                {autoStart}
+              </div>
+            ) : (
+              <TimeField label="Kello" value={time} onChange={setTime} />
+            )}
           </Field>
           <Field label="Kesto (min)">
-            <input className={inputClass} inputMode="numeric" value={duration} onChange={(e) => setDuration(e.target.value)} />
+            {autoOn ? (
+              <div className="field-shell flex min-h-11 items-center justify-center text-base tabular-nums text-slate-700" title="Laskettu otteluohjelmasta">
+                {autoDuration}
+              </div>
+            ) : (
+              <input className={inputClass} inputMode="numeric" value={duration} onChange={(e) => setDuration(e.target.value)} />
+            )}
           </Field>
         </div>
 
@@ -269,6 +311,50 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
                 <option key={o} value={o} />
               ))}
             </datalist>
+          </div>
+        )}
+
+        {kind === 'tournament' && (
+          <div className="card-sunk p-3">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-800">
+              <input type="checkbox" className="size-4 accent-green-700" checked={auto} onChange={(e) => setAuto(e.target.checked)} />
+              Laske kesto otteluohjelmasta
+            </label>
+            {auto && (
+              <>
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  <Field label="Peli (min)">
+                    <input
+                      className={inputClass}
+                      inputMode="numeric"
+                      value={gameLen}
+                      placeholder={String(defaultGameLength(effFormat))}
+                      onChange={(e) => setGameLen(e.target.value)}
+                      aria-describedby="fx-timing"
+                    />
+                  </Field>
+                  <Field label="Lämmittely">
+                    <input className={inputClass} inputMode="numeric" value={warmup} onChange={(e) => setWarmup(e.target.value)} aria-describedby="fx-timing" />
+                  </Field>
+                  <Field label="Verryttely">
+                    <input className={inputClass} inputMode="numeric" value={cooldown} onChange={(e) => setCooldown(e.target.value)} aria-describedby="fx-timing" />
+                  </Field>
+                </div>
+                <p id="fx-timing" className="mt-2 text-xs leading-snug text-slate-600">
+                  {gamesN > 0 ? (
+                    <>
+                      <strong className="tabular-nums text-slate-800">
+                        {gamesN} × ({timing.warmupMin} + {timing.gameLengthMin}){timing.cooldownMin ? ` + ${timing.cooldownMin}` : ''} = {autoDuration} min
+                      </strong>{' '}
+                      aktiivista aikaa (lämmittely ennen jokaista peliä, verryttely lopuksi){autoStart && autoEnd !== undefined ? ` · paikalla ${autoStart}–${hhmm(autoEnd)}` : ''}. Pelien väliset odotukset eivät kasvata kestoa (eivätkä tehoarviota).
+                      {gameLen.trim() === '' && (effFormat ? ` Pelin pituus on pelimuodon ${effFormat} oletus.` : ' Pelin pituus on oletus; valitse pelimuoto tai anna pituus.')}
+                    </>
+                  ) : (
+                    'Lisää otteluohjelma tai pelien määrä, niin kesto lasketaan.'
+                  )}
+                </p>
+              </>
+            )}
           </div>
         )}
 

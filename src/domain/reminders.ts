@@ -16,24 +16,27 @@ export function planEndMin(p: Pick<PlannedSession, 'startTime' | 'durationMin'>)
 
 const isOpen = (p: PlannedSession) => !p.deletedAt && p.status === 'open';
 
+/** Päättymisaika; turnauksella otteluohjelman mukaan (ks. tournamentTime). */
+export type EndOf = (p: PlannedSession) => number | undefined;
+
 /**
  * Kuittaamattomat kerrat nyt: avoimet menneiltä päiviltä sekä tämän päivän kerrat, joiden
  * päättymisaika on ohi. Tämän päivän kerta ilman kellonaikaa lasketaan vasta seuraavana päivänä.
  */
-export function unconfirmedNow(planned: PlannedSession[], today: ISODate, nowMin: number): PlannedSession[] {
+export function unconfirmedNow(planned: PlannedSession[], today: ISODate, nowMin: number, endOf: EndOf = planEndMin): PlannedSession[] {
   return planned.filter((p) => {
     if (!isOpen(p) || p.date > today) return false;
     if (p.date < today) return true;
-    const end = planEndMin(p);
+    const end = endOf(p);
     return end !== undefined && end <= nowMin;
   });
 }
 
 /** Tänään välillä (fromMin, toMin] päättyneet avoimet kerrat (ilmoitus "kerta päättyi"). */
-export function endedBetween(planned: PlannedSession[], today: ISODate, fromMin: number, toMin: number): PlannedSession[] {
+export function endedBetween(planned: PlannedSession[], today: ISODate, fromMin: number, toMin: number, endOf: EndOf = planEndMin): PlannedSession[] {
   return planned.filter((p) => {
     if (!isOpen(p) || p.date !== today) return false;
-    const end = planEndMin(p);
+    const end = endOf(p);
     return end !== undefined && end > fromMin && end <= toMin;
   });
 }

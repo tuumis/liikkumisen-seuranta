@@ -89,6 +89,26 @@ describe('pelikalenteri', () => {
     expect(await repo.getFootballDetails(r.session.id)).toMatchObject({ level: 'haaste', eventName: 'Cup' });
   });
 
+  it('turnauksen kesto otteluohjelmasta: pelin pituus, lämmittely ja verryttely tallentuvat; käsin annettu merkitään', async () => {
+    const { repo, db } = await device('timing');
+    const e = await repo.createFixture('p1', {
+      kind: 'tournament',
+      date: '2026-11-21',
+      startTime: '13:45',
+      durationMin: 115,
+      eventName: 'Winterliiga',
+      games: [{ time: '14:00' }, { time: '15:00' }, { time: '15:30' }],
+      gameLengthMin: 20,
+      warmupMin: 15,
+      cooldownMin: 10,
+    });
+    expect(await db.fixtures.get(e.plan.id)).toMatchObject({ gameLengthMin: 20, warmupMin: 15, cooldownMin: 10, gamesCount: 3 });
+    expect((await db.fixtures.get(e.plan.id))!.durationManual).toBeUndefined();
+    await repo.updateFixture(e.plan.id, { kind: 'tournament', date: '2026-11-21', durationMin: 300, eventName: 'Winterliiga', durationManual: true });
+    expect(await db.fixtures.get(e.plan.id)).toMatchObject({ durationManual: true });
+    expect((await db.plannedSessions.get(e.plan.id))!.durationMin).toBe(300);
+  });
+
   it('turnauksen otteluohjelma: kuittaus luo pelirivit, tulokset ja pelikohtaiset kommentit säilyvät', async () => {
     const { repo, db } = await device('schedule');
     const e = await repo.createFixture('p1', {

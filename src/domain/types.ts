@@ -274,6 +274,14 @@ export interface Fixture extends SyncFields {
   format?: GameFormat;
   /** Turnauksen otteluohjelma; kuittaus luo näistä pelirivit tulosten kirjaamista varten. */
   games?: ScheduledGame[];
+  /** Turnauksen kesto otteluohjelmasta: yhden pelin pituus (min); puuttuessa pelimuodon oletus. */
+  gameLengthMin?: number;
+  /** Lämmittely ennen jokaista peliä (min); puuttuessa 15. */
+  warmupMin?: number;
+  /** Loppuverryttely viimeisen pelin jälkeen (min); puuttuessa 0. */
+  cooldownMin?: number;
+  /** Kesto annettu käsin (ei lasketa otteluohjelmasta). */
+  durationManual?: boolean;
   note?: string;
 }
 

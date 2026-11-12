@@ -117,6 +117,14 @@ export interface FixtureInput {
   /** Turnauksen otteluohjelma. */
   games?: ScheduledGame[];
   format?: GameFormat;
+  /** Turnauksen kesto otteluohjelmasta: yhden pelin pituus (min); puuttuessa pelimuodon oletus. */
+  gameLengthMin?: number;
+  /** Lämmittely ennen jokaista peliä (min); puuttuessa 15. */
+  warmupMin?: number;
+  /** Loppuverryttely viimeisen pelin jälkeen (min); puuttuessa 0. */
+  cooldownMin?: number;
+  /** Kesto annettu käsin (ei lasketa otteluohjelmasta). */
+  durationManual?: boolean;
   note?: string;
 }
 
@@ -938,6 +946,13 @@ export function createRepositories(db: AppDB = defaultDb) {
     if (input.kind === 'tournament' && games.length) {
       f.games = games;
       f.gamesCount = games.length;
+    }
+    if (input.kind === 'tournament') {
+      const n = (v?: number) => (v !== undefined && Number.isInteger(v) && v >= 0 && v <= 240 ? v : undefined);
+      if (n(input.gameLengthMin) !== undefined) f.gameLengthMin = input.gameLengthMin;
+      if (n(input.warmupMin) !== undefined) f.warmupMin = input.warmupMin;
+      if (n(input.cooldownMin) !== undefined) f.cooldownMin = input.cooldownMin;
+      if (input.durationManual) f.durationManual = true;
     }
     if (clean(input.note)) f.note = clean(input.note);
     return f;

@@ -5,7 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { addDays } from '../../domain/dates';
 import { weeklyHours } from '../../domain/hours';
-import { endedBetween, hhmmToMin, planEndMin, reminderText, unconfirmedNow } from '../../domain/reminders';
+import { endedBetween, hhmmToMin, reminderText, unconfirmedNow } from '../../domain/reminders';
+import { endOfFor } from '../review/unconfirmed';
 import type { MergeSummary } from '../../db/backup';
 import { repo } from '../../db/repositories';
 import { useToast } from '../../ui/Toast';
@@ -54,13 +55,13 @@ export function DesktopAgent({ onOpen }: { onOpen: (profileId: string) => void }
           repo.dayFlagsInRange(profile.id, t, t),
         ]);
         const day = weeklyHours({ period: { kind: 'week', start: t, end: t }, sessions, planned: todayPlans, estimates, flags, types, today: t }).days[0];
-        return { profile, plans, arkiPending: !!day && !day.flagged && day.estimateMin > 0 };
+        return { profile, plans, endOf: await endOfFor(plans, t), arkiPending: !!day && !day.flagged && day.estimateMin > 0 };
       }),
     );
     return { types, rows };
   }, [t]);
 
-  const pending = (data?.rows ?? []).flatMap((r) => unconfirmedNow(r.plans, t, nowMin).map((p) => ({ p, profile: r.profile })));
+  const pending = (data?.rows ?? []).flatMap((r) => unconfirmedNow(r.plans, t, nowMin, r.endOf).map((p) => ({ p, profile: r.profile })));
   const count = pending.length;
 
   // Merkki sovelluskuvakkeeseen (asennettu sovellus) ja määrä välilehden otsikkoon.
@@ -85,10 +86,10 @@ export function DesktopAgent({ onOpen }: { onOpen: (profileId: string) => void }
     if (!settings.notify) return;
     if (settings.planEnd && prev && prev.date === t && nowMin > prev.min) {
       for (const r of data.rows) {
-        for (const p of endedBetween(r.plans, t, prev.min, nowMin)) {
+        for (const p of endedBetween(r.plans, t, prev.min, nowMin, r.endOf)) {
           const name = p.label ?? data.types.get(p.activityTypeId)?.name ?? 'Kerta';
           const start = p.startTime ?? '';
-          const end = planEndMin(p);
+          const end = r.endOf(p);
           void showNotification(
             `${name} päättyi`,
             `${r.profile.name} · ${start}${end !== undefined ? `–${hhmm(end)}` : ''} · Kuittaa tehdyksi tai merkitse "Ei tehty"`,
