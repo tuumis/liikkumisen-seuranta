@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Rectangle, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis, type BarShapeProps } from 'recharts';
 import type { DayTotals } from '../../domain/types';
 import { dayLabel } from '../../ui/format';
-import { today as todayFn } from '../../ui/today';
 import { cssVar, useIsDark, useThemeVersion } from '../../ui/theme';
 
 /** Div-elementeille (CSS-muuttujat vaihtuvat teeman mukana). */
@@ -104,13 +103,12 @@ export function DailyMvpaChart({
   useThemeVersion();
   P = palette();
   const valid = new Set(validDates);
-  const today = todayFn();
   const rows: Row[] = days.map((d) => ({
     label: dayLabel(d.date),
     date: d.date,
     logged: d.mvpa - d.confirmedMvpa,
     arki: d.confirmedMvpa,
-    estimate: d.date > today ? 0 : d.mvpaCombined - d.mvpa, // tulevalle päivälle ei näytetä perusarviota
+    estimate: d.mvpaCombined - d.mvpa, // myös tuleville päiville: arkiliikunnan arvio (vinoviivoitus)
     valid: valid.has(d.date),
   }));
   const max = Math.max(target, ...rows.map((r) => r.logged + r.arki + r.estimate));

@@ -46,13 +46,22 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
   const [mode, setMode] = useState<'mvpa' | 'total'>('mvpa');
   const hours = report.hours.days;
   // Osat: kerrat, vahvistettu arkiliikunta ja arkiliikunnan arvio (vahvistettu kuuluu arkiliikuntaan, ei kertoihin).
+  // Tulevat päivät: arkiliikunnan arvio (vinoviivoitus) ja Kaikki liikunta -näkymässä suunnitellut kerrat katkoviivalla.
   const days = report.allDays.map((d, i) => {
     const hd = hours[i];
+    const future = d.date > today;
+    if (future) {
+      const est = hd && !hd.flagged && hd.estimateMin > 0 ? (mode === 'mvpa' ? d.mvpaCombined - d.mvpa : hd.estimateMin) : 0;
+      const logged = mode === 'mvpa' ? d.mvpa : (hd?.actualLoggedMin ?? 0);
+      const plan = mode === 'mvpa' || !hd ? 0 : Math.max(0, hd.forecastMin - hd.estimateMin);
+      return { date: d.date, total: logged + est + plan, logged, arkiConf: 0, arkiEst: est, plan, future };
+    }
     const total = mode === 'mvpa' ? d.mvpaCombined : (hd?.actualMin ?? 0);
     const arkiEst = mode === 'mvpa' ? d.mvpaCombined - d.mvpa : (hd ? hd.actualMin - hd.actualLoggedMin : 0);
     const arkiConf = mode === 'mvpa' ? d.confirmedMvpa : (hd?.confirmedMin ?? 0);
-    return { date: d.date, total, logged: Math.max(0, total - arkiEst - arkiConf), arkiConf, arkiEst };
+    return { date: d.date, total, logged: Math.max(0, total - arkiEst - arkiConf), arkiConf, arkiEst, plan: 0, future };
   });
+  const anyPlan = days.some((d) => d.plan > 0);
   const showTarget = mode === 'mvpa';
   const peak = Math.max(...days.map((d) => d.total));
   // Asteikko enintään 2,5 × tavoite, jottei yksi pitkä turnauspäivä litistä muita; ylittävä palkki saa arvon yläpuolelleen.
@@ -98,7 +107,9 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
             </div>
             <div className="text-[11px] text-slate-500">
               {dayLabel(ad.date)}
-              {ad.arkiConf + ad.arkiEst > 0 && ` · arkiliikuntaa ${ad.arkiConf + ad.arkiEst}${ad.arkiEst ? ` (arvio ${ad.arkiEst})` : ''}`}
+              {ad.future
+                ? [ad.arkiEst > 0 && `arkiliikuntaa arviolta ${ad.arkiEst}`, ad.plan > 0 && `suunniteltu ${ad.plan}`].filter(Boolean).map((t) => ` · ${t}`).join('')
+                : ad.arkiConf + ad.arkiEst > 0 && ` · arkiliikuntaa ${ad.arkiConf + ad.arkiEst}${ad.arkiEst ? ` (arvio ${ad.arkiEst})` : ''}`}
             </div>
           </div>
         )}
@@ -120,6 +131,7 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
               { v: d.logged, c: 'var(--viz-logged)' },
               { v: d.arkiConf, c: 'var(--viz-estimate)' },
               { v: d.arkiEst, c: 'var(--viz-estimate-soft)' },
+              { v: d.plan, c: 'var(--viz-track-fill)', dashed: true },
             ].filter((p) => p.v > 0);
             return (
               <button
@@ -134,9 +146,7 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
                 style={{ height: h + 28 }}
               >
                 <div key={mode} className="relative flex w-full max-w-9 flex-col-reverse items-stretch" style={{ height: h }}>
-                  {future ? (
-                    <div className="mt-auto h-1.5 rounded-full bg-[var(--viz-track)]" />
-                  ) : d.total === 0 ? (
+                  {d.total === 0 ? (
                     <div className="mt-auto h-1.5 rounded-full bg-[var(--viz-track)]" />
                   ) : (
                     <div
@@ -146,7 +156,7 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
                       {parts.map((p, k) => (
                         <div
                           key={k}
-                          className={`${k === 0 ? 'rounded-b-[4px]' : ''} ${k === parts.length - 1 ? 'rounded-t-[6px]' : ''} transition-opacity ${active === i ? '' : 'opacity-85'}`}
+                          className={`${k === 0 ? 'rounded-b-[4px]' : ''} ${k === parts.length - 1 ? 'rounded-t-[6px]' : ''} ${'dashed' in p ? 'border-2 border-dashed border-[var(--viz-track-line)]' : ''} transition-opacity ${active === i ? '' : future ? 'opacity-60' : 'opacity-85'}`}
                           style={{ height: `${(p.v / d.total) * 100}%`, background: p.c }}
                         />
                       ))}
@@ -177,6 +187,11 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
         {anyEstimate && (
           <span className="flex items-center gap-1.5">
             <span className="size-2.5 rounded-[3px]" style={{ background: 'var(--viz-estimate-soft)' }} /> Arkiliikunta (arvio)
+          </span>
+        )}
+        {anyPlan && (
+          <span className="flex items-center gap-1.5">
+            <span className="size-2.5 rounded-[3px] border border-dashed border-[var(--viz-track-line)] bg-[var(--viz-track-fill)]" /> Suunniteltu
           </span>
         )}
         {showTarget ? (
