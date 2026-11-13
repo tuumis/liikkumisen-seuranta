@@ -3,7 +3,7 @@
 
 import type { ReactNode } from 'react';
 
-export type IllustrationName = 'calendar' | 'ball' | 'notebook' | 'chart' | 'shirt' | 'people' | 'search' | 'sprout';
+export type IllustrationName = 'calendar' | 'ball' | 'notebook' | 'chart' | 'shirt' | 'people' | 'search' | 'sprout' | 'scoreboard' | 'repeat';
 
 const L = { fill: 'none', stroke: 'currentColor', strokeWidth: 2.4, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
 const SURF = 'var(--surface)';
@@ -85,6 +85,30 @@ const ART: Record<IllustrationName, ReactNode> = {
       <path d="m92 76 20 20" {...L} strokeWidth={5} />
       <path d="M64 54c2-6 7-10 14-10" {...L} opacity="0.45" />
       <path d="M66 66h16" {...L} opacity="0.3" />
+    </Frame>
+  ),
+  scoreboard: (
+    <Frame>
+      <rect x="42" y="34" width="76" height="46" rx="10" {...L} fill={SURF} />
+      <path d="M80 42v30" {...L} opacity="0.35" />
+      <text x="61" y="67" textAnchor="middle" fontSize="20" fontWeight="700" fill="currentColor" fontFamily="var(--font-display)">
+        3
+      </text>
+      <text x="99" y="67" textAnchor="middle" fontSize="20" fontWeight="700" fill="currentColor" fontFamily="var(--font-display)">
+        1
+      </text>
+      <path d="M58 80v12M102 80v12M50 92h60" {...L} />
+      <circle cx="116" cy="36" r="10" fill={ACC} />
+      <path d="m111.5 36 3 3 5.5-6" {...L} stroke="#1c2b24" strokeWidth={2.2} />
+    </Frame>
+  ),
+  repeat: (
+    <Frame>
+      <rect x="46" y="32" width="68" height="58" rx="10" {...L} fill={SURF} />
+      <path d="M46 46h68" {...L} />
+      <path d="M60 58h40M60 70h28" {...L} opacity="0.4" />
+      <path d="M98 66a14 14 0 1 1-4-10" {...L} stroke={ACC} strokeWidth={3.4} />
+      <path d="m95 50 0 7 7-1" {...L} stroke={ACC} strokeWidth={3.4} />
     </Frame>
   ),
   sprout: (

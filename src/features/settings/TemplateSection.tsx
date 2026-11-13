@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { isISODate } from '../../domain/dates';
 import type { Profile, TemplateItem, Weekday } from '../../domain/types';
 import { repo } from '../../db/repositories';
-import { Button, Card, Field, inputClass } from '../../ui/components';
+import { Button, Card, EmptyState, Field, inputClass } from '../../ui/components';
 import { TimeField } from '../../ui/TimeField';
 import { formatDate } from '../../ui/format';
 import { useToast } from '../../ui/Toast';
@@ -66,7 +66,11 @@ export function TemplateSection({ profile }: { profile: Profile }) {
       <p className="text-sm text-slate-600">
         Toistuvat harrastukset ja koululiikunta. Niistä syntyy suunniteltuja kertoja, jotka kuitataan Viikko-näkymässä. Suunnitelmat eivät näy liikuntamäärissä ennen kuittausta.
       </p>
-      {items?.length === 0 && <p className="mt-3 text-sm text-slate-500">Ei rivejä.</p>}
+      {items?.length === 0 && (
+        <EmptyState art="repeat" title="Viikkorytmi on tyhjä" compact>
+          Lisää esimerkiksi treenit tai koulun liikuntatunnit, niin ne tulevat viikolle valmiiksi kuitattaviksi.
+        </EmptyState>
+      )}
       <ul className="mt-2 divide-y divide-slate-100">
         {items?.map((i) => (
           <li key={i.id}>

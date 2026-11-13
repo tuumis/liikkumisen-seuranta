@@ -5,7 +5,7 @@ import { addDays, isoWeek, startOfIsoWeek, weekPeriod } from '../../domain/dates
 import { APP_INTERPRETATIONS, RECOMMENDATIONS, RECOMMENDATIONS_VERSION, VIGOROUS_DAY_BY_AGE_DEFAULT, type Rule } from '../../domain/recommendations';
 import type { PeriodReport } from '../../domain/report';
 import type { ISODate, Profile, SkipReason } from '../../domain/types';
-import { Button, Card } from '../../ui/components';
+import { Button, Card, EmptyState } from '../../ui/components';
 import { formatDate } from '../../ui/format';
 import { CATEGORY_LABEL, SKIP_REASON_LABEL } from '../../ui/labels';
 import { percent } from '../../ui/statusText';
@@ -154,7 +154,9 @@ function CategoryCard({ report }: { report: PeriodReport }) {
   return (
     <Card title="Jakauma kategorioittain">
       {rows.length === 0 ? (
-        <p className="text-sm text-slate-500">Ei liikkumista vertailtavilla päivillä.</p>
+        <EmptyState art="chart" title="Ei liikkumista vertailtavilla päivillä" compact>
+          Jakauma näkyy, kun jaksolle on kirjattu liikuntaa.
+        </EmptyState>
       ) : (
         <>
           <p className="mb-2 text-xs text-slate-600">Reipas ja rasittava arviolta, min (kokonaisliikunta suluissa). Vertailtavilta päiviltä.</p>

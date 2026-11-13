@@ -12,7 +12,7 @@ import {
   type Trend,
 } from '../../domain/football';
 import type { FocusTag, Period, SkipReason } from '../../domain/types';
-import { Button, Card } from '../../ui/components';
+import { Button, Card, EmptyState } from '../../ui/components';
 import { Segmented } from '../../ui/controls';
 import { formatDate } from '../../ui/format';
 import { ENJOYMENT_LABEL, FOCUS_TAG_LABEL, RATING_LABEL, SKIP_REASON_LABEL } from '../../ui/labels';
@@ -150,7 +150,12 @@ function TrendLine({ trend, format, scale, declineText, season }: { trend: Trend
 }
 
 function TagBars({ tagged, counts }: { tagged: number; counts: Partial<Record<FocusTag, number>> }) {
-  if (!tagged) return <p className="text-sm text-slate-500">Ei tagitettuja treenejä.</p>;
+  if (!tagged)
+    return (
+      <EmptyState art="notebook" title="Ei merkittyjä harjoiteltuja asioita" compact>
+        Valitse treenin lisätiedoista, mitä harjoiteltiin (esim. syötöt), niin jakauma näkyy tässä.
+      </EmptyState>
+    );
   const rows = (Object.keys(FOCUS_TAG_LABEL) as FocusTag[]).filter((t) => counts[t]).sort((a, b) => counts[b]! - counts[a]!);
   return (
     <>

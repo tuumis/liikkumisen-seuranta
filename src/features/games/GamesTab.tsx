@@ -158,7 +158,9 @@ function CalendarView({ profile, onEdit }: { profile: Profile; onEdit: (e: Fixtu
       <div className="space-y-4">
         <Card title={`Odottaa tulosta (${pending.length})`}>
           {pending.length === 0 ? (
-            <p className="text-sm text-slate-600">Ei kirjaamattomia pelejä.</p>
+            <EmptyState art="scoreboard" title="Kaikki tulokset kirjattu" compact>
+              Pelatut pelit, joilta tulos puuttuu, tulevat tähän pelipäivän jälkeen.
+            </EmptyState>
           ) : (
             <ul className="space-y-2">
               {pending.map((e) => (

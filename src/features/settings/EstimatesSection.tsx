@@ -10,7 +10,7 @@ import { minutesFromShares, mvpaOf } from '../../domain/intensity';
 import type { Category, Estimate, Profile } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { ESTIMATE_DEFAULT_TYPE_KEY, ESTIMATE_SUGGESTIONS } from '../../seed/activityTypes';
-import { Button, Card, EstimateBadge, Field, inputClass } from '../../ui/components';
+import { Button, Card, EmptyState, EstimateBadge, Field, inputClass } from '../../ui/components';
 import { Segmented } from '../../ui/controls';
 import { formatDate } from '../../ui/format';
 import { CATEGORY_LABEL, pct } from '../../ui/labels';
@@ -75,7 +75,11 @@ export function EstimatesSection({ profile }: { profile: Profile }) {
           );
         })}
       </ul>
-      {active?.length === 0 && <p className="mt-2 text-sm text-slate-500">Ei perusarvioita.</p>}
+      {active?.length === 0 && (
+        <EmptyState art="sprout" title="Ei arkiliikunnan arvioita" compact>
+          Lisää arvio esimerkiksi välitunneista tai koulumatkoista, niin arki näkyy viikon liikunnassa.
+        </EmptyState>
+      )}
       <div className="mt-3 flex flex-wrap gap-2">
         {suggestions.map((s) => (
           <Button key={s.category} variant="secondary" onClick={() => setDraft({ category: s.category, label: s.label })}>
