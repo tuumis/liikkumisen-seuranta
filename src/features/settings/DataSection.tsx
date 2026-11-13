@@ -151,7 +151,7 @@ export function SyncSettingsSection() {
           </>
         ) : (
           <p className="text-slate-600">
-            "Päivitä PC:ltä" lukee tiedoston <code>liikkuminen.json</code>. "Lähetä PC:lle" jakaa saman nimisen tiedoston: tallenna se pilvikansioon ja valitse "Korvaa" (tavallinen tapa) tai "Säilytä molemmat", jos haluat erillisen kopion. PC:n omat muutokset eivät katoa korvattaessa, vaan palaavat tiedostoon PC:n seuraavassa synkronoinnissa.
+            "Päivitä PC:ltä" lukee tiedoston <code>liikkuminen.json</code>. "Lähetä PC:lle" jakaa saman nimisen tiedoston: tallenna se pilvikansioon. iPhone ei korvaa olemassa olevaa tiedostoa vaan tallentaa kopion (esim. <code>liikkuminen 2.json</code>); PC lukee myös kopiot, yhdistää ne ja poistaa ne, joten kopioita ei kerry. PC:n omat muutokset eivät katoa, vaan palaavat tiedostoon PC:n seuraavassa synkronoinnissa.
           </p>
         )}
         <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-xs">

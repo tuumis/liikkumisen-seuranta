@@ -91,6 +91,24 @@ export async function readFolderFile(handle: FileSystemDirectoryHandle, name: st
   }
 }
 
+/** Kansion tiedostot (ei alikansioita). */
+export async function listFolderFiles(handle: FileSystemDirectoryHandle): Promise<File[]> {
+  const out: File[] = [];
+  const entries = (handle as unknown as { values(): AsyncIterable<FileSystemHandle> }).values();
+  for await (const e of entries) if (e.kind === 'file') out.push(await (e as FileSystemFileHandle).getFile());
+  return out;
+}
+
+/** Poistaa tiedoston kansiosta; puuttuva tiedosto ei ole virhe. */
+export async function removeFolderFile(handle: FileSystemDirectoryHandle, name: string): Promise<void> {
+  try {
+    await handle.removeEntry(name);
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'NotFoundError') return;
+    throw e;
+  }
+}
+
 export async function writeFolderFile(handle: FileSystemDirectoryHandle, name: string, text: string): Promise<void> {
   const fh = await handle.getFileHandle(name, { create: true });
   const w = await fh.createWritable();

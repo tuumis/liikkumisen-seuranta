@@ -10,3 +10,9 @@ export const SYNC_FORMAT = 'liikkumisseuranta-sync';
  * Aiemmat kahden tiedoston nimet luetaan edelleen (siirtymä).
  */
 export const SYNC_FILE_NAME = { shared: 'liikkuminen.json', legacyPc: 'liikkuminen-pc.json', legacyPhone: 'liikkuminen-puhelin.json' } as const;
+
+/**
+ * Tiedostojärjestelmän tekemä kopio yhteisestä tiedostosta: iPhonen Tiedostot ei korvaa olemassa olevaa
+ * tiedostoa vaan tallentaa nimellä "liikkuminen 2.json" (Windows/selain: "liikkuminen (1).json").
+ */
+export const isSyncCopyName = (name: string): boolean => /^liikkuminen[ _-]?(?:\(\d+\)|\d+)\.json$/i.test(name.trim());

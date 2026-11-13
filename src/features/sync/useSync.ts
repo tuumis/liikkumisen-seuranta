@@ -3,14 +3,14 @@
 import { useCallback } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { defaultPlanningThrough } from '../../domain/planning';
-import { SYNC_FILE_NAME } from '../../domain/version';
+import { isSyncCopyName, SYNC_FILE_NAME } from '../../domain/version';
 import type { Timestamp } from '../../domain/types';
 import { buildSyncFile, changedSince, markSent, mergeAnyFile, mergeSyncFile, pendingCount, toJson, type MergeSummary } from '../../db/backup';
 import { repo } from '../../db/repositories';
 import { db } from '../../db/schema';
 import { today } from '../../ui/today';
 import { runAutoBackup } from './autoBackup';
-import { folderPermission, pickFolder, pickTextFile, readFolderFile, shareOrDownload, supportsFolder, writeFolderFile, downloadText } from './fileIO';
+import { folderPermission, listFolderFiles, pickFolder, pickTextFile, readFolderFile, removeFolderFile, shareOrDownload, supportsFolder, writeFolderFile, downloadText } from './fileIO';
 
 export interface SyncState {
   role?: 'pc' | 'phone';
@@ -73,7 +73,7 @@ export function useSyncState(): SyncState | undefined {
 export type SyncOutcome = { summary?: MergeSummary; wrote?: boolean; message: string };
 
 /** Kansion tiedostojen luku ja yhdistäminen (PC); palauttaa yhteenvedon, jos jotain yhdistettiin. */
-async function mergeFromFolder(handle: FileSystemDirectoryHandle, deviceId: string): Promise<MergeSummary | undefined> {
+export async function mergeFromFolder(handle: FileSystemDirectoryHandle, deviceId: string): Promise<MergeSummary | undefined> {
   let summary: MergeSummary | undefined;
   // 1) Yhteinen tiedosto: jos joku muu (puhelin) on tallentanut sen PC:n oman kirjoituksen jälkeen, yhdistetään.
   const shared = await readFolderFile(handle, SYNC_FILE_NAME.shared);
@@ -89,6 +89,22 @@ async function mergeFromFolder(handle: FileSystemDirectoryHandle, deviceId: stri
   if (legacy && legacy.lastModified > readAt) {
     summary = combine(summary, await mergeSyncFile(db, await legacy.text(), deviceId));
     await repo.setMeta('phoneFileReadAt', legacy.lastModified);
+  }
+  // 3) Kopiot ("liikkuminen 2.json"): iPhone ei korvaa tiedostoa vaan tallentaa uudella nimellä.
+  //    Toisen laitteen kopio yhdistetään ja poistetaan, ettei kopioita kerry (tiedot ovat jo PC:llä
+  //    ja palaavat yhteiseen tiedostoon). Oma vanha kopio poistetaan; muihin tiedostoihin ei kosketa.
+  let files: File[] = [];
+  try {
+    files = await listFolderFiles(handle);
+  } catch {
+    /* kansion luettelointi ei onnistu: yhteinen tiedosto riittää */
+  }
+  for (const f of files.filter((x) => isSyncCopyName(x.name)).sort((a, b) => a.lastModified - b.lastModified)) {
+    const text = await f.text();
+    const by = syncFileDevice(text);
+    if (!by) continue;
+    if (by !== deviceId) summary = combine(summary, await mergeSyncFile(db, text, deviceId));
+    await removeFolderFile(handle, f.name).catch(() => undefined);
   }
   return summary;
 }
@@ -188,7 +204,7 @@ export function useSyncActions() {
     if (r === 'cancelled') return 'Lähetys peruttiin';
     await markSent(db);
     return r === 'shared'
-      ? 'Tiedosto jaettu – tallenna pilvikansioon nimellä liikkuminen.json ("Korvaa" tai "Säilytä molemmat")'
+      ? 'Tiedosto jaettu – tallenna se pilvikansioon. Jos iPhone tallentaa sen nimellä "liikkuminen 2", PC yhdistää ja poistaa kopion itse.'
       : 'Tiedosto ladattu – siirrä se pilvikansioon nimellä liikkuminen.json';
   }, []);
 
