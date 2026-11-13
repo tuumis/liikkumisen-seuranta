@@ -59,7 +59,7 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
 
   const current = STEPS[step - 1];
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-6 lg:px-10 lg:py-10">
+    <div className="mx-auto w-full max-w-[1400px] px-4 py-6 lg:px-10 lg:py-6">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-xl font-semibold text-slate-900 lg:text-2xl">Liikkumisen seuranta</h1>
@@ -78,7 +78,7 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
         ))}
       </div>
 
-      <div className="mt-5 lg:mt-8 lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start lg:gap-10">
+      <div className="mt-5 lg:mt-5 lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start lg:gap-8">
         <aside className="hidden lg:block">
           <ol className="space-y-1" aria-label="Aloituksen vaiheet">
             {STEPS.map((x) => {
@@ -106,6 +106,7 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
       {step === 1 && (
         <Card title="Kenen liikkumista seurataan?">
           <ProfileForm
+            wide
             onSubmit={async (v) => {
               const p = await repo.createProfile(v);
               void requestPersistentStorage();
@@ -148,10 +149,10 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
   );
 }
 
-/** Tervetulosivu: mitä sovellus tekee, missä tiedot ovat ja miten ne varmuuskopioidaan. */
+/** Tervetulosivu: mitä sovellus tekee, missä tiedot ovat ja miten ne varmuuskopioidaan. PC:llä yhdellä näytöllä. */
 function Welcome({ onStart, onImport, onSkip, error }: { onStart: () => void; onImport: () => void; onSkip: () => void; error?: string }) {
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-7xl flex-col px-4 py-6 lg:px-10 lg:py-10">
+    <div className="mx-auto flex min-h-dvh w-full max-w-[1500px] flex-col px-4 py-5 lg:px-10 lg:py-6">
       <div className="flex items-center justify-between gap-3">
         <span className="font-display text-lg font-semibold text-slate-900">Liikkumisen seuranta</span>
         <Button variant="ghost" onClick={onSkip}>
@@ -159,18 +160,18 @@ function Welcome({ onStart, onImport, onSkip, error }: { onStart: () => void; on
         </Button>
       </div>
 
-      <div className="mt-5 grid flex-1 gap-5 lg:mt-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-8">
-        <section className="hero anim-rise flex flex-col justify-between p-7 lg:p-10" aria-labelledby="welcome-title">
+      <div className="mt-4 grid flex-1 gap-4 lg:mt-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,8fr)] lg:gap-6">
+        <section className="hero anim-rise flex flex-col justify-between p-7 lg:p-9" aria-labelledby="welcome-title">
           <div className="relative z-10">
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--hero-accent)]">Tervetuloa</p>
-            <h1 id="welcome-title" className="mt-3 font-display text-4xl font-semibold leading-[1.05] tracking-tight lg:text-6xl">
+            <h1 id="welcome-title" className="mt-3 font-display text-4xl font-semibold leading-[1.05] tracking-tight xl:text-5xl">
               Liikkumisen seuranta
             </h1>
-            <p className="mt-4 max-w-md text-base leading-relaxed text-[var(--hero-ink-soft)] lg:text-lg">
+            <p className="mt-4 max-w-md text-base leading-relaxed text-[var(--hero-ink-soft)]">
               Lapsen ja perheen liikunta yhdessä paikassa. Kirjaa kerrat muutamalla napautuksella ja näe, miten viikko vertautuu suomalaisiin liikkumissuosituksiin.
             </p>
           </div>
-          <div className="relative z-10 mt-10 space-y-4">
+          <div className="relative z-10 mt-8 space-y-3">
             <button
               type="button"
               onClick={onStart}
@@ -191,28 +192,29 @@ function Welcome({ onStart, onImport, onSkip, error }: { onStart: () => void; on
 
         <div className="grid content-start gap-4 sm:grid-cols-2">
           <Info icon="📝" title="Kirjaa ja kuittaa">
-            Lisää liikuntakerta +-painikkeella. Toistuvat harrastukset tulevat viikkorytmistä valmiiksi, ja kuittaat ne tehdyiksi yhdellä napautuksella.
+            Lisää kerta +-painikkeella. Viikkorytmin harrastukset tulevat valmiiksi, ja kuittaat ne tehdyiksi yhdellä napautuksella.
           </Info>
           <Info icon="📈" title="Vertaa suosituksiin">
-            Viikon tilanne suhteessa ikäryhmän liikkumissuositukseen: reipas ja rasittava liikunta sekä lihaksia ja luustoa vahvistavat päivät. Minuutit ovat lajin tyypilliseen tehoon perustuvia arvioita.
+            Viikko suhteessa ikäryhmän suositukseen: reipas ja rasittava liikunta sekä lihaksia ja luustoa vahvistavat päivät.
           </Info>
           <Info icon="⚽" title="Jalkapallo valinnaisena">
-            Jos lapsi pelaa, käytössä ovat pelikalenteri, tulokset, turnaukset ja päiväkirja. Muille lajeille tavallinen kirjaus riittää.
+            Pelikalenteri, tulokset, turnaukset ja päiväkirja, jos lapsi pelaa. Muille lajeille tavallinen kirjaus riittää.
           </Info>
-          <Info icon="🔒" title="Tiedot pysyvät sinulla">
-            Ei tiliä eikä palvelinta. Tiedot tallentuvat vain tämän laitteen selaimeen, eikä sovellus lähetä niitä minnekään.
+          <Info icon="🔄" title="PC ja puhelin">
+            PC on päälaite. Yhteisen pilvikansion kautta laitteet vaihtavat tiedot: puhelimella kirjaat ja painat "Lähetä PC:lle". Yksikin laite riittää.
           </Info>
           <div className="card anim-rise p-5 ring-1 ring-green-700/25 sm:col-span-2">
             <div className="flex items-start gap-3">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-green-50 text-xl" aria-hidden>
-                ☁️
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-green-50 text-lg" aria-hidden>
+                🔒
               </span>
-              <div className="min-w-0">
-                <h2 className="font-display text-lg font-semibold text-slate-900">Varmuuskopio pilveen</h2>
-                <p className="mt-1 text-sm leading-relaxed text-slate-600">
-                  Koska tiedot ovat vain tällä laitteella, ne katoavat, jos selaimen tiedot tyhjennetään tai laite vaihtuu. Siksi kannattaa tehdä varmuuskopio:
+              <div className="min-w-0 flex-1">
+                <h2 className="font-display text-lg font-semibold leading-tight text-slate-900">Tiedot pysyvät sinulla – varmuuskopioi ne pilveen</h2>
+                <p className="mt-1 text-sm leading-snug text-slate-600">
+                  Ei tiliä eikä palvelinta: tiedot ovat vain tämän laitteen selaimessa, eikä sovellus lähetä niitä minnekään. Ne katoavat, jos selaimen tiedot tyhjennetään tai laite
+                  vaihtuu, joten tee varmuuskopio:
                 </p>
-                <ol className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-3">
+                <ol className="mt-3 grid gap-2 text-sm leading-snug text-slate-700 sm:grid-cols-3">
                   <li className="rounded-xl bg-[var(--surface-sunk)] p-3">
                     <span className="block text-xs font-bold text-green-800">1</span>
                     Asetukset → Laitteet ja varmuuskopio → <strong>Vie varmuuskopio</strong>
@@ -223,34 +225,32 @@ function Welcome({ onStart, onImport, onSkip, error }: { onStart: () => void; on
                   </li>
                   <li className="rounded-xl bg-[var(--surface-sunk)] p-3">
                     <span className="block text-xs font-bold text-green-800">3</span>
-                    Palautus samasta kohdasta: <strong>Tuo varmuuskopio</strong>, myös uudelle laitteelle
+                    Palauta samasta kohdasta: <strong>Tuo varmuuskopio</strong>, myös uudelle laitteelle
                   </li>
                 </ol>
-                <p className="mt-3 text-xs leading-snug text-slate-500">
-                  Kun PC:lle valitaan synkronoinnin pilvikansio, varmuuskopio tehdään sinne myös automaattisesti kerran viikossa. Tiedosto sisältää lapsen tietoja: säilytä se vain omassa pilvessäsi.
+                <p className="mt-2.5 text-xs leading-snug text-slate-500">
+                  Kun PC:lle valitaan synkronoinnin pilvikansio, sinne tehdään myös automaattinen varmuuskopio kerran viikossa. Tiedosto sisältää lapsen tietoja: säilytä se omassa
+                  pilvessäsi.
                 </p>
               </div>
             </div>
           </div>
-          <Info icon="🔄" title="PC ja puhelin" wide>
-            PC on päälaite. Kun valitset pilvikansion, laitteet vaihtavat tiedot saman tiedoston kautta: puhelimella kirjaat ja painat "Lähetä PC:lle", ja PC yhdistää muutokset. Yhdelläkin laitteella pärjää hyvin.
-          </Info>
         </div>
       </div>
     </div>
   );
 }
 
-function Info({ icon, title, children, wide }: { icon: string; title: string; children: ReactNode; wide?: boolean }) {
+function Info({ icon, title, children }: { icon: string; title: string; children: ReactNode }) {
   return (
-    <div className={`card anim-rise p-5 ${wide ? 'sm:col-span-2' : ''}`}>
+    <div className="card anim-rise p-5">
       <div className="flex items-start gap-3">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface-sunk)] text-xl" aria-hidden>
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface-sunk)] text-lg" aria-hidden>
           {icon}
         </span>
         <div className="min-w-0">
-          <h2 className="font-display text-lg font-semibold text-slate-900">{title}</h2>
-          <p className="mt-1 text-sm leading-relaxed text-slate-600">{children}</p>
+          <h2 className="font-display text-lg font-semibold leading-tight text-slate-900">{title}</h2>
+          <p className="mt-1 text-sm leading-snug text-slate-600">{children}</p>
         </div>
       </div>
     </div>

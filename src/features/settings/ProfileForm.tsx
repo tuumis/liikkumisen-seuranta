@@ -46,10 +46,13 @@ export function ProfileForm({
   initial,
   onSubmit,
   onCancel,
+  wide,
 }: {
   initial?: Profile;
   onSubmit: (v: ProfileFormValues) => Promise<void>;
   onCancel: () => void;
+  /** Leveällä näytöllä kentät kahteen palstaan (aloitus). */
+  wide?: boolean;
 }) {
   const [raw, setRaw] = useState({
     name: initial?.name ?? '',
@@ -124,6 +127,8 @@ export function ProfileForm({
 
   return (
     <form onSubmit={submit} className="space-y-4" noValidate>
+      <div className={wide ? 'space-y-4 lg:grid lg:grid-cols-2 lg:gap-x-8 lg:space-y-0' : 'space-y-4'}>
+      <div className="space-y-4">
       <Field label="Nimi" hint="Lempinimi riittää.">
         <input className={inputClass} value={raw.name} onChange={set('name')} autoComplete="off" maxLength={40} />
         {errors.name && <span className="mt-1 block text-sm text-red-700">{errors.name}</span>}
@@ -206,6 +211,8 @@ export function ProfileForm({
         )}
       </Field>
 
+      </div>
+      <div className="space-y-4">
       <fieldset>
         <legend className="mb-1 text-sm font-medium text-slate-700">Pelaako {raw.name.trim() || 'hän'} jalkapalloa?</legend>
         <div className="grid grid-cols-2 gap-2">
@@ -252,6 +259,9 @@ export function ProfileForm({
           ))}
         </div>
       </fieldset>
+
+      </div>
+      </div>
 
       <div className="flex gap-2 pt-2">
         <Button type="submit" disabled={saving} className="flex-1">
