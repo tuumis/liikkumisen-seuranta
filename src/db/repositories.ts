@@ -276,6 +276,13 @@ export function createRepositories(db: AppDB = defaultDb) {
     return (await db.plannedSessions.where('profileId').equals(profileId).filter((p) => !p.deletedAt && ids.includes(p.activityTypeId)).count()) > 0;
   }
 
+  /** "Viime viikko lyhyesti" suljettu viikolta `week` (maanantai); vain uudempi viikko tallennetaan. */
+  async function markDigestSeen(profileId: UUID, week: ISODate): Promise<void> {
+    const current = await db.profiles.get(profileId);
+    if (!current || current.deletedAt || (current.digestSeenWeek && current.digestSeenWeek >= week)) return;
+    await db.profiles.put(await stamp({ ...current, digestSeenWeek: week }));
+  }
+
   async function setProfileArchived(id: string, archived: boolean): Promise<void> {
     const current = await db.profiles.get(id);
     if (!current) return;
@@ -1567,6 +1574,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     setProfileArchived,
     listActivityTypes,
     hasFootballData,
+    markDigestSeen,
     getActivityType,
     updateActivityType,
     restoreActivityTypeDefaults,

@@ -78,6 +78,8 @@ export interface Profile extends SyncFields {
    * Puuttuessa päätellään datasta (on jalkapallokirjauksia, joukkueita tai pelejä).
    */
   football?: boolean;
+  /** "Viime viikko lyhyesti" suljettu tämän viikon (maanantai) osalta; synkronoituu laitteiden välillä. */
+  digestSeenWeek?: ISODate;
   sortOrder: number;
   archived: boolean;
   createdAt: Timestamp;

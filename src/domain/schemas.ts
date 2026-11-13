@@ -31,6 +31,7 @@ export const profileSchema = either(
     photo: photo.optional(),
     trackingStart: iso.optional(),
     football: z.boolean().optional(),
+    digestSeenWeek: iso.optional(),
     sortOrder: z.number(),
     archived: z.boolean(),
     createdAt: ts,

@@ -29,6 +29,36 @@ export function confirmedBeatsDeletion(table: SyncedTable, local: Row | undefine
   return undefined;
 }
 
+/**
+ * Kentät, joiden ero ei ole käyttäjälle näytettävä ristiriita (esim. viikkokoosteen sulkeminen
+ * kummallakin laitteella): jos versiot eroavat vain näissä, voittaja valitaan tavalliseen tapaan
+ * ja suurempi arvo säilyy.
+ */
+const SOFT_FIELDS: Partial<Record<SyncedTable, string[]>> = { profiles: ['digestSeenWeek'] };
+const SYNC_META = new Set(['updatedAt', 'updatedBy']);
+
+function onlySoftDiff(table: SyncedTable, a: Row, b: Row): boolean {
+  const soft = SOFT_FIELDS[table];
+  if (!soft) return false;
+  for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    if (SYNC_META.has(k) || soft.includes(k)) continue;
+    if (JSON.stringify(a[k]) !== JSON.stringify(b[k])) return false;
+  }
+  return true;
+}
+
+/** Pehmeät kentät voittajaan: suurempi arvo kummastakin versiosta (ISO-päivät vertautuvat merkkijonoina). */
+function withSoftMax(table: SyncedTable, win: Row, other: Row | undefined): Row {
+  const soft = SOFT_FIELDS[table];
+  if (!soft || !other) return win;
+  let out = win;
+  for (const k of soft) {
+    const o = other[k] as string | undefined;
+    if (o !== undefined && (win[k] === undefined || o > (win[k] as string))) out = { ...out, [k]: o };
+  }
+  return out;
+}
+
 /** Taulun pääavain. */
 export const keyOf = (table: SyncedTable, row: Record<string, unknown>): string =>
   String(table === 'footballDetails' ? row.sessionId : table === 'fixtures' ? row.plannedSessionId : row.id);
@@ -81,13 +111,19 @@ export function mergeSnapshot(
         loc.updatedBy === ctx.thisDevice &&
         loc.updatedAt > ctx.lastSyncAt &&
         inc.updatedBy === ctx.incomingDevice &&
-        inc.updatedAt > ctx.lastSyncAt
+        inc.updatedAt > ctx.lastSyncAt &&
+        !onlySoftDiff(table, loc, inc)
       ) {
         res.conflicts.push({ table, key, winner: win ? 'incoming' : 'local', local: loc, incoming: inc });
       }
 
-      if (!win) continue;
-      writes.push(win as Row);
+      if (!win) {
+        // Paikallinen pysyy, mutta toisen laitteen pehmeä kenttä (esim. suljettu kooste) otetaan mukaan.
+        const kept = loc && withSoftMax(table, loc, inc);
+        if (kept && kept !== loc) writes.push(kept);
+        continue;
+      }
+      writes.push(withSoftMax(table, win as Row, loc));
       if (!loc) {
         if (!inc.deletedAt) res.added++;
       } else if (inc.deletedAt && !loc.deletedAt) res.deleted++;
