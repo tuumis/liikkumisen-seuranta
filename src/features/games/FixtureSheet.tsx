@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { isISODate } from '../../domain/dates';
 import { GAME_FORMATS, LEVEL_LABEL } from '../../domain/football';
-import { DEFAULT_COOLDOWN_MIN, DEFAULT_WARMUP_MIN, defaultGameLength, tournamentDuration, tournamentEndMin, tournamentStart } from '../../domain/tournamentTime';
-import type { GameFormat, GameLevel, Profile } from '../../domain/types';
+import { ARRIVAL_LEAD_MIN, DEFAULT_COOLDOWN_MIN, DEFAULT_WARMUP_MIN, defaultGameLength, firstGameMin, gameDaySchedule, tournamentDuration, tournamentEndMin, tournamentStart } from '../../domain/tournamentTime';
+import type { GameFormat, GameLevel, HHmm, Profile } from '../../domain/types';
 import { repo, type FixtureEntry, type FixtureInput } from '../../db/repositories';
 import { Button, Field, inputClass } from '../../ui/components';
 import { TimeField } from '../../ui/TimeField';
@@ -108,6 +108,10 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
   const autoStart = autoOn ? tournamentStart(rowsNow, timing.warmupMin) : undefined;
   const autoEnd = autoOn ? tournamentEndMin(rowsNow, timing.gameLengthMin, timing.cooldownMin) : undefined;
   const hhmm = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+  // Pelipäivän aikataulu: paikalla 30 min ja lämmittely 15 min ennen (ensimmäistä) peliä.
+  const firstMin = autoStart ? firstGameMin(rowsNow) : undefined;
+  const kickoff = kind === 'game' ? (/^\d{2}:\d{2}$/.test(time) ? (time as HHmm) : undefined) : firstMin !== undefined ? (hhmm(firstMin) as HHmm) : undefined;
+  const gameDay = kickoff ? gameDaySchedule(kickoff, timing.warmupMin) : undefined;
 
   async function save() {
     const dur = autoOn ? autoDuration : Number(duration);
@@ -193,9 +197,9 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
               <DateInput className={inputClass} value={date} onChange={setDate} aria-label="Päivä" />
             </Field>
           </div>
-          <Field label={autoStart ? 'Saapuminen' : 'Kello'}>
+          <Field label={autoStart ? 'Saapuminen' : kind === 'game' ? 'Pelin alku' : 'Kello'}>
             {autoStart ? (
-              <div className="field-shell flex min-h-11 items-center justify-center text-base tabular-nums text-slate-700" title="1. peli − lämmittely">
+              <div className="field-shell flex min-h-11 items-center justify-center text-base tabular-nums text-slate-700" title={`1. peli − ${ARRIVAL_LEAD_MIN} min`}>
                 {autoStart}
               </div>
             ) : (
@@ -212,6 +216,11 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
             )}
           </Field>
         </div>
+        {gameDay && kickoff && (
+          <p className="-mt-2 text-sm tabular-nums text-slate-600">
+            Paikalla <strong className="text-slate-800">{gameDay.arrival}</strong> · lämmittely alkaa {gameDay.warmup} · {kind === 'game' ? 'peli' : '1. peli'} {kickoff}
+          </p>
+        )}
 
         <Field label="Oma joukkue">
           <select className={inputClass} value={teamId} onChange={(e) => setTeamId(e.target.value)}>
@@ -352,7 +361,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
                       <strong className="tabular-nums text-slate-800">
                         {gamesN} × ({timing.warmupMin} + {timing.gameLengthMin}){timing.cooldownMin ? ` + ${timing.cooldownMin}` : ''} = {autoDuration} min
                       </strong>{' '}
-                      aktiivista aikaa (lämmittely ennen jokaista peliä, verryttely lopuksi){autoStart && autoEnd !== undefined ? ` · paikalla ${autoStart}–${hhmm(autoEnd)}` : ''}. Pelien väliset odotukset eivät kasvata kestoa (eivätkä tehoarviota).
+                      aktiivista aikaa (lämmittely {timing.warmupMin} min ennen jokaista peliä, verryttely lopuksi){autoStart && autoEnd !== undefined ? ` · paikalla ${autoStart}–${hhmm(autoEnd)} (${ARRIVAL_LEAD_MIN} min ennen 1. peliä)` : ''}. Pelien väliset odotukset eivät kasvata kestoa (eivätkä tehoarviota).
                       {gameLen.trim() === '' && (effFormat ? ` Pelin pituus on pelimuodon ${effFormat} oletus.` : ' Pelin pituus on oletus; valitse pelimuoto tai anna pituus.')}
                     </>
                   ) : (

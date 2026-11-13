@@ -78,6 +78,7 @@ export default function App() {
       // Välitunnit vain arkiliikunnassa: aiemmat erilliset välituntikerrat arvion vahvistuksiksi.
       .then(() => repo.foldEstimateOnlySessions(today()).catch(() => 0))
       .then(() => repo.applyHolidaySkips().catch(() => 0))
+      .then(() => repo.alignTournamentArrivals().catch(() => 0))
       .then(() => setReady(true))
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
   }, []);

@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { GAME_FORMATS, LEVEL_LABEL } from '../../domain/football';
 import type { ActivityType, GameFormat, GameLevel, Profile, Session, Team } from '../../domain/types';
+import { gameDaySchedule } from '../../domain/tournamentTime';
 import { repo, type FixtureEntry } from '../../db/repositories';
 import { clubKey, displayTeamName, parseTeamName } from '../../domain/opponent';
 import { opponentHistory } from '../../domain/opponentLibrary';
@@ -240,7 +241,13 @@ function FixtureSummary({ e, team, history }: { e: FixtureEntry; team?: Team; hi
       </div>
       <div className="mt-0.5 text-xs text-slate-600">
         {dayLabel(e.plan.date)}
-        {e.plan.startTime && ` klo ${e.plan.startTime}`} · {e.plan.durationMin} min
+        {e.plan.startTime &&
+          (tournament
+            ? f?.games?.some((g) => g.time) && !f.durationManual
+              ? ` · paikalla ${e.plan.startTime}`
+              : ` klo ${e.plan.startTime}`
+            : ` klo ${e.plan.startTime} (paikalla ${gameDaySchedule(e.plan.startTime, f?.warmupMin).arrival})`)}{' '}
+        · {e.plan.durationMin} min
         {tournament && team && ` · ${team.name}`}
         {tournament && f?.gamesCount && ` · ${f.gamesCount} peliä`}
         {(f?.format ?? team?.format) && ` · ${f?.format ?? team?.format}`}

@@ -116,6 +116,25 @@ describe('pelikalenteri', () => {
     expect((await db.plannedSessions.get(e.plan.id))!.durationMin).toBe(300);
   });
 
+  it('saapuminen 30 min ennen 1. peliä: vanhan säännön (1. peli − lämmittely) turnaukset päivitetään, käsin annettu säilyy', async () => {
+    const pc = await device('arr-pc');
+    const phone = await device('arr-phone');
+    const games = [{ time: '14:00' }, { time: '15:00' }, { time: '15:30' }] as const;
+    const old = await pc.repo.createFixture('p1', { kind: 'tournament', date: '2026-11-21', startTime: '13:45', durationMin: 105, eventName: 'Winterliiga', games: [...games], warmupMin: 15 });
+    const manual = await pc.repo.createFixture('p1', { kind: 'tournament', date: '2026-11-28', startTime: '13:45', durationMin: 300, eventName: 'Cup', games: [...games], durationManual: true });
+    const custom = await pc.repo.createFixture('p1', { kind: 'tournament', date: '2026-12-05', startTime: '12:00', durationMin: 105, eventName: 'Joulu', games: [...games] });
+    await mergeSyncFile(phone.db, toJson(await buildSyncFile(pc.db, pc.id, 'pc')), phone.id);
+    expect(await pc.repo.alignTournamentArrivals()).toBe(1);
+    expect(await phone.repo.alignTournamentArrivals()).toBe(1);
+    const a = (await pc.db.plannedSessions.get(old.plan.id))!;
+    expect(a.startTime).toBe('13:30');
+    // Molemmat laitteet tuottavat saman rivin (johdettu aikaleima), joten mikään ei jää odottamaan siirtoa.
+    expect(await phone.db.plannedSessions.get(old.plan.id)).toEqual(a);
+    expect((await pc.db.plannedSessions.get(manual.plan.id))!.startTime).toBe('13:45');
+    expect((await pc.db.plannedSessions.get(custom.plan.id))!.startTime).toBe('12:00');
+    expect(await pc.repo.alignTournamentArrivals()).toBe(0);
+  });
+
   it('peliaika: Ei / Osan / Koko pelin, joukkueen peliaika-arvio ja lämmittely ennen jokaista peliä', async () => {
     const { repo, db } = await device('played');
     const team = await repo.saveTeam('p1', { name: 'P2018', format: '5v5', playShare: 0.8 });

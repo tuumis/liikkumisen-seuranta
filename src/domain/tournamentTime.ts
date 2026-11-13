@@ -5,8 +5,10 @@
 import type { Fixture, GameFormat, HHmm, PlannedSession, ScheduledGame } from './types';
 import { hhmmToMin, planEndMin, type EndOf } from './reminders';
 
-/** Lämmittely ennen jokaista peliä (min). */
+/** Lämmittely ennen jokaista peliä (min): alkuverryttely alkaa 15 min ennen peliä. */
 export const DEFAULT_WARMUP_MIN = 15;
+/** Peleihin ja turnauksiin saavutaan aina 30 min ennen ensimmäistä peliä (käyttäjän tieto 13.11.2026). */
+export const ARRIVAL_LEAD_MIN = 30;
 /** Loppuverryttely viimeisen pelin jälkeen (min), valinnainen. */
 export const DEFAULT_COOLDOWN_MIN = 0;
 /**
@@ -49,10 +51,26 @@ const gameStarts = (games: ScheduledGame[]) =>
     .map(hhmmToMin)
     .sort((a, b) => a - b);
 
-/** Saapumisaika: ensimmäisen pelin alku − lämmittely; ilman kellonaikoja undefined. */
-export function tournamentStart(games: ScheduledGame[], warmupMin: number): HHmm | undefined {
-  const s = gameStarts(games);
-  return s.length ? fmt(s[0] - Math.max(0, warmupMin)) : undefined;
+/** Ensimmäisen pelin alku minuutteina; ilman kellonaikoja undefined. */
+export const firstGameMin = (games: ScheduledGame[]): number | undefined => gameStarts(games)[0];
+
+/** Saapumisaika: ensimmäisen pelin alku − 30 min (vähintään lämmittelyn verran); ilman kellonaikoja undefined. */
+export function tournamentStart(games: ScheduledGame[], warmupMin: number = DEFAULT_WARMUP_MIN): HHmm | undefined {
+  const first = firstGameMin(games);
+  return first === undefined ? undefined : fmt(first - Math.max(ARRIVAL_LEAD_MIN, warmupMin));
+}
+
+/** Aiempi sääntö (ensimmäinen peli − lämmittely): tunnistaa ennen 13.11.2026 tallennetut turnaukset. */
+export function legacyTournamentStart(games: ScheduledGame[], warmupMin: number): HHmm | undefined {
+  const first = firstGameMin(games);
+  return first === undefined ? undefined : fmt(first - Math.max(0, warmupMin));
+}
+
+/** Pelipäivän aikataulu pelin alusta: saapuminen 30 min ja lämmittely 15 min ennen (tai annettu lämmittely). */
+export function gameDaySchedule(kickoff: HHmm, warmupMin: number = DEFAULT_WARMUP_MIN): { arrival: HHmm; warmup: HHmm } {
+  const k = hhmmToMin(kickoff);
+  const w = Math.max(0, warmupMin);
+  return { arrival: fmt(k - Math.max(ARRIVAL_LEAD_MIN, w)), warmup: fmt(k - w) };
 }
 
 /** Päättymisaika minuutteina: viimeisen pelin alku + pelin pituus + loppuverryttely; ilman kellonaikoja undefined. */

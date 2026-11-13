@@ -6,7 +6,7 @@ import { Dexie, type Table } from 'dexie';
 import { CURRENT_SCHEMA_VERSION } from '../domain/migrations';
 import { activityTypeId, dayFlagId, newId, sessionIdFromPlanned, SETTINGS_ID } from '../domain/ids';
 import { computeSessionMinutes, DEFAULT_GAME_WARMUP_MIN, DEFAULT_PLAY_SHARE, INTENSITY_PRESETS, roundMinutes } from '../domain/intensity';
-import { defaultGameLength } from '../domain/tournamentTime';
+import { defaultGameLength, DEFAULT_WARMUP_MIN, legacyTournamentStart, tournamentStart } from '../domain/tournamentTime';
 import { DEFAULT_SETTINGS } from '../domain/recommendations';
 import { addDays, isISODate } from '../domain/dates';
 import { holidayOn } from '../domain/holidays';
@@ -1372,6 +1372,32 @@ export function createRepositories(db: AppDB = defaultDb) {
     return n;
   }
 
+  /**
+   * Turnauksen saapumisaika (SPEC 16, 13.11.2026): paikalle 30 min ennen ensimmäistä peliä. Aiemmin
+   * tallennettujen kuittaamattomien turnausten alku (1. peli − lämmittely) siirretään uuteen sääntöön.
+   * Aikaleima johdetaan riveistä (uudempi versio + 1 ms, tekijä suunnitelmasta), joten molemmat laitteet
+   * tuottavat saman tietueen. Käsin annettua alkua (kesto käsin) ei muuteta. Idempotentti.
+   */
+  async function alignTournamentArrivals(): Promise<number> {
+    const plans = live(await db.plannedSessions.toArray()).filter((p) => p.activityTypeId === FIXTURE_TYPE.tournament && p.status === 'open' && p.startTime);
+    let n = 0;
+    for (const p of plans) {
+      const f = await db.fixtures.get(p.id);
+      if (!f || f.deletedAt || f.durationManual || !f.games?.length) continue;
+      const warm = f.warmupMin ?? DEFAULT_WARMUP_MIN;
+      const next = tournamentStart(f.games, warm);
+      if (!next || next === p.startTime || p.startTime !== legacyTournamentStart(f.games, warm)) continue;
+      await db.plannedSessions.put({
+        ...p,
+        startTime: next,
+        updatedAt: new Date(Math.max(Date.parse(p.updatedAt), Date.parse(f.updatedAt)) + 1).toISOString(),
+        updatedBy: p.updatedBy,
+      });
+      n++;
+    }
+    return n;
+  }
+
   /** Tänään voimassa olevat perusarviot, yksi per kategoria. */
   async function activeEstimates(profileId: UUID, today: ISODate): Promise<Estimate[]> {
     const rows = (await listEstimates(profileId)).filter((e) => e.validFrom <= today && (!e.validTo || today <= e.validTo));
@@ -1521,6 +1547,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     deviceId,
     softDelete,
     initialize,
+    alignTournamentArrivals,
     listProfiles,
     createProfile,
     updateProfile,

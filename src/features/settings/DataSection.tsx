@@ -47,6 +47,7 @@ export function BackupSection() {
         const s = await mergeAnyFile(db, f.text, await repo.deviceId());
         await repo.foldEstimateOnlySessions(todayFn()).catch(() => 0);
         await repo.applyHolidaySkips().catch(() => 0);
+        await repo.alignTournamentArrivals().catch(() => 0);
         toast(`Tiedosto oli synkronointitiedosto, joten tiedot yhdistettiin. ${summaryText(s)}`);
         setConfirmImport(false);
         return;
