@@ -94,7 +94,8 @@ export function OpponentLibrary({ profile }: { profile: Profile }) {
           </li>
         ))}
       </ul>
-      <ClubSheet club={club} profile={profile} notes={notes} logo={club ? logos.get(club.key) : undefined} onClose={() => setOpen(null)} onRenamed={(name) => setOpen(clubKey(name))} />
+      {/* key: jokainen seura avautuu omalla tilallaan (keskeneräinen nimen muokkaus ei siirry toiselle seuralle). */}
+      <ClubSheet key={club?.key ?? 'none'} club={club} profile={profile} notes={notes} logo={club ? logos.get(club.key) : undefined} onClose={() => setOpen(null)} onRenamed={(name) => setOpen(clubKey(name))} />
     </Card>
   );
 }
