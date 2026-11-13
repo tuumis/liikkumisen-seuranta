@@ -5,7 +5,7 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { gameRows, OUTCOME_LABEL, type GameOutcome, type GameRow, type GameSummary } from '../../domain/football';
-import { clubKey, formatTeamName, parseTeamName, squadLabel } from '../../domain/opponent';
+import { clubKey, displayTeamName, formatTeamName, parseTeamName, squadLabel } from '../../domain/opponent';
 import { buildOpponentLibrary, type ClubEntry, type SquadEntry, type UpcomingGame } from '../../domain/opponentLibrary';
 import type { Profile } from '../../domain/types';
 import { repo } from '../../db/repositories';
@@ -292,7 +292,7 @@ function GameLine({ r, note, profile }: { r: GameRow; note?: string; profile: Pr
         <span className="w-20 shrink-0 text-sm tabular-nums text-slate-600">{formatDate(r.date, 'EEEEEE d.M.yy')}</span>
         <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
           {r.kind === 'tournament' ? `${r.eventName ?? 'Turnaus'}${r.index ? ` · peli ${r.index}` : ''}` : 'Peli'}
-          {r.team && <span className="text-slate-500"> · {r.team}</span>}
+          {r.team && <span className="text-slate-500"> · {displayTeamName(r.team)}</span>}
         </span>
         {r.playerGoals ? (
           <span className="shrink-0 text-xs font-semibold text-slate-700" title={`${profile.name}: maalit`}>

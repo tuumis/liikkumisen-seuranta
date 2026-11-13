@@ -102,7 +102,7 @@ export function TeamNameFields({
     <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1fr)]">
       {field('club', 'Seura', compact ? 'Seura, esim. FC Honka' : 'esim. FC Honka', 40, suggestions?.clubs, 'col-span-2 sm:col-span-1')}
       {field('group', 'Ryhmä', compact ? 'Ryhmä' : 'esim. Musta', 30, suggestions?.groups.get(k))}
-      {field('age', 'Ikäluokka', compact ? 'Ikäluokka' : 'esim. 2018', 12, suggestions?.ages.get(k))}
+      {field('age', 'Ikäluokka (syntymävuosi)', compact ? 'Syntymävuosi' : 'esim. 2018', 12, suggestions?.ages.get(k))}
     </div>
   );
 }

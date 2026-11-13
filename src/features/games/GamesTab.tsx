@@ -6,7 +6,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { GAME_FORMATS, LEVEL_LABEL } from '../../domain/football';
 import type { ActivityType, GameFormat, GameLevel, Profile, Session, Team } from '../../domain/types';
 import { repo, type FixtureEntry } from '../../db/repositories';
-import { clubKey, parseTeamName } from '../../domain/opponent';
+import { clubKey, displayTeamName, parseTeamName } from '../../domain/opponent';
 import { LogoPicker, TeamLogo, useClubLogos } from '../../ui/TeamLogo';
 import { Button, Card, EmptyState } from '../../ui/components';
 import { Segmented, ToggleChip } from '../../ui/controls';
@@ -401,7 +401,7 @@ function TeamsView({ profile }: { profile: Profile }) {
             <button type="button" className="flex min-w-0 flex-1 items-center gap-3 text-left" onClick={() => open(t)} aria-label={`Muokkaa: ${t.name}`}>
               <TeamLogo logo={logoFor(t.name) ?? t.photo} name={t.name} size="lg" />
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-medium text-slate-900">{t.name}</span>
+                <span className="block truncate font-medium text-slate-900">{displayTeamName(t.name)}</span>
                 <span className="mt-0.5 flex items-center gap-1.5">
                   <LevelBadge level={t.level} />
                   {t.format && <span className="text-xs text-slate-500">{t.format}</span>}

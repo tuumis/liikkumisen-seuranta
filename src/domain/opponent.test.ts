@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clubIdOf, formatTeamName, parseTeamName, squadKey } from './opponent';
+import { clubIdOf, displayTeamName, formatTeamName, parseTeamName, squadKey, squadLabel } from './opponent';
 
 describe('joukkueen nimi osina', () => {
   it('jäsentää vanhat muodot', () => {
@@ -18,6 +18,14 @@ describe('joukkueen nimi osina', () => {
     expect(formatTeamName(p)).toBe('FC Honka · Musta · T2017');
     expect(parseTeamName(formatTeamName(p))).toEqual(p);
     expect(formatTeamName({ club: 'HJK', group: ' ', age: '' })).toBe('HJK');
+  });
+
+  it('syntymävuosi näytetään muodossa "2018 syntyneet"', () => {
+    expect(squadLabel({ club: 'HJK', group: 'East Sininen', age: '2018' })).toBe('East Sininen · 2018 syntyneet');
+    expect(squadLabel({ club: 'HJK', age: 'P2016' })).toBe('P2016');
+    expect(squadLabel({ club: 'HJK' })).toBe('Ei ryhmää');
+    expect(displayTeamName('FC Lahti · Sininen · 2016')).toBe('FC Lahti · Sininen · 2016 syntyneet');
+    expect(displayTeamName('HJK P2016')).toBe('HJK P2016');
   });
 
   it('seuran tunniste ei riipu kirjainkoosta', () => {

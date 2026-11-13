@@ -4,6 +4,7 @@
 import { useMemo, useState } from 'react';
 import { footballKindOf, LEVEL_LABEL, OUTCOME_LABEL, outcomeOf, POSITION_LABEL } from '../../domain/football';
 import type { ActivityType, FootballDetails, PlayedState, Profile, Session } from '../../domain/types';
+import { displayTeamName } from '../../domain/opponent';
 import { repo } from '../../db/repositories';
 import { Button, Card, inputClass, EmptyState } from '../../ui/components';
 import { ToggleChip } from '../../ui/controls';
@@ -257,7 +258,7 @@ function DiaryTable({ entries, onOpen }: { entries: Entry[]; onOpen: (s: Session
                     </button>
                   </td>
                   <td className="max-w-[14rem] truncate px-3 py-2 text-slate-700" title={r.opponent}>
-                    {r.opponent ?? ''}
+                    {r.opponent ? displayTeamName(r.opponent) : ''}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">
                     {r.result && r.outcome && (

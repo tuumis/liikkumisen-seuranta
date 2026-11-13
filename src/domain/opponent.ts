@@ -56,7 +56,20 @@ export function squadKey(p: TeamParts): string {
   return `${clubKey(p.club)}|${clean(p.group).toLocaleLowerCase('fi')}|${clean(p.age).toLocaleLowerCase('fi')}`;
 }
 
-/** Ryhmän ja ikäluokan näyttönimi seuran alla, esim. "Musta · 2018"; tyhjänä "Ei ryhmää". */
+/** Ikäluokka näytettäväksi: pelkkä syntymävuosi saa perään "syntyneet" (2018 → "2018 syntyneet"). */
+export function ageLabel(age: string | undefined): string {
+  const a = clean(age);
+  return /^(?:19|20)\d{2}$/.test(a) ? `${a} syntyneet` : a;
+}
+
+/** Ryhmän ja ikäluokan näyttönimi seuran alla, esim. "Musta · 2018 syntyneet"; tyhjänä "Ei ryhmää". */
 export function squadLabel(p: TeamParts): string {
-  return [p.group, p.age].map(clean).filter(Boolean).join(PART_SEP) || 'Ei ryhmää';
+  return [clean(p.group), ageLabel(p.age)].filter(Boolean).join(PART_SEP) || 'Ei ryhmää';
+}
+
+/** Koko nimi näytettäväksi (tallennettu teksti ei muutu): "FC Honka · Musta · 2018 syntyneet". */
+export function displayTeamName(text: string | undefined): string {
+  const p = parseTeamName(text);
+  if (!p.age || !/^(?:19|20)\d{2}$/.test(p.age)) return clean(text);
+  return [p.club, clean(p.group), ageLabel(p.age)].filter(Boolean).join(PART_SEP);
 }
