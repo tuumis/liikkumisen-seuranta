@@ -11,6 +11,7 @@ import { ToggleChip } from '../../ui/controls';
 import { IntensityPicker, isPreset, type IntensityMode } from './IntensityPicker';
 import { Sheet } from '../../ui/Sheet';
 import { LabelField } from './LabelField';
+import { useHiddenCategories } from './useLoggableTypes';
 import { TermInfo } from '../../ui/glossary';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
@@ -30,6 +31,7 @@ export function SessionEditor({
   const today = todayFn();
   const toast = useToast();
   const types = useLiveQuery(() => repo.listActivityTypes({ includeArchived: true }), []);
+  const hidden = useHiddenCategories(session?.profileId, today);
 
   const [typeId, setTypeId] = useState('');
   const [date, setDate] = useState('');
@@ -157,7 +159,7 @@ export function SessionEditor({
           <Field label="Laji">
             <select className={inputClass} value={typeId} onChange={(e) => setTypeId(e.target.value)}>
               {types
-                ?.filter((t) => !t.archived || t.id === session.activityTypeId)
+                ?.filter((t) => (!t.archived && !hidden.has(t.category)) || t.id === session.activityTypeId)
                 .map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.icon} {t.name}

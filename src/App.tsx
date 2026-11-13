@@ -75,6 +75,8 @@ export default function App() {
   useEffect(() => {
     repo
       .initialize()
+      // Välitunnit vain arkiliikunnassa: aiemmat erilliset välituntikerrat arvion vahvistuksiksi.
+      .then(() => repo.foldEstimateOnlySessions().catch(() => 0))
       .then(() => setReady(true))
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
   }, []);

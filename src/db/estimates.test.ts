@@ -109,3 +109,30 @@ describe('seurannan alku', () => {
     expect(trackingStart(again)).toBe(trackingStart({ createdAt: p.createdAt }));
   });
 });
+
+describe('välitunnit vain arkiliikunnassa', () => {
+  it('erillinen välituntikerta muuttuu vahvistukseksi arviopäivinä; minuutit ja luvut säilyvät', async () => {
+    await repo.saveEstimate('p1', recess(), '2026-11-02');
+    const inside = await repo.createSession({ profileId: 'p1', activityTypeId: 't:school_recess', date: '2026-11-05', durationMin: 45, effort: 0, muscle: false, bone: true });
+    const before = await repo.createSession({ profileId: 'p1', activityTypeId: 't:school_recess', date: '2026-10-30', durationMin: 30, effort: 0, muscle: false, bone: false });
+    const other = await repo.createSession({ profileId: 'p1', activityTypeId: 't:commute_walk', date: '2026-11-05', durationMin: 20, effort: 0, muscle: false, bone: false });
+    const all = await repo.listEstimates('p1');
+    const totalsBefore = dayTotals('2026-11-05', await repo.sessionsInRange('p1', '2026-11-05', '2026-11-05'), all, types);
+
+    expect(await repo.foldEstimateOnlySessions()).toBe(1);
+    const s = (await db.sessions.get(inside.id))!;
+    expect(s.estimateConfirmed).toBe(true);
+    expect(s.label).toBe('Välitunnit ja pihaleikit');
+    expect(s.durationMin).toBe(45);
+    expect(s.bone).toBe(true);
+    expect((await db.sessions.get(before.id))!.estimateConfirmed).toBeUndefined(); // ennen arviota
+    expect((await db.sessions.get(other.id))!.estimateConfirmed).toBeUndefined(); // muu kategoria
+    // Päivän luvut eivät muutu; välituntien minuutit lasketaan nyt arkiliikunnan vahvistukseksi.
+    const after = dayTotals('2026-11-05', await repo.sessionsInRange('p1', '2026-11-05', '2026-11-05'), all, types);
+    expect({ ...after, confirmedMvpa: 0 }).toEqual(totalsBefore);
+    expect(after.confirmedMvpa).toBeGreaterThan(0);
+
+    // Idempotentti.
+    expect(await repo.foldEstimateOnlySessions()).toBe(0);
+  });
+});

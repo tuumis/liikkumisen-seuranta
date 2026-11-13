@@ -9,6 +9,7 @@ import { computeSessionMinutes, DEFAULT_GAME_WARMUP_MIN, DEFAULT_PLAY_SHARE, INT
 import { defaultGameLength } from '../domain/tournamentTime';
 import { DEFAULT_SETTINGS } from '../domain/recommendations';
 import { addDays, isISODate } from '../domain/dates';
+import { activeEstimate, ESTIMATE_ONLY_CATEGORIES, isEstimateConfirmation } from '../domain/aggregate';
 import type {
   ActivityType,
   Category,
@@ -1132,6 +1133,31 @@ export function createRepositories(db: AppDB = defaultDb) {
     return rows.sort((a, b) => a.category.localeCompare(b.category) || b.validFrom.localeCompare(a.validFrom));
   }
 
+  /**
+   * Välitunnit vain arkiliikunnassa (ESTIMATE_ONLY_CATEGORIES): erikseen kirjatut välituntikerrat
+   * muutetaan arkiliikunnan vahvistuksiksi niinä päivinä, joille kategorialla on arvio. Minuutit
+   * ja tehot säilyvät; kerta näkyy jatkossa päivän arkiliikuntarivillä eikä omana rivinään.
+   * Idempotentti (ajetaan käynnistyksessä). Palauttaa muutettujen kertojen määrän.
+   */
+  async function foldEstimateOnlySessions(): Promise<number> {
+    const types = new Map((await db.activityTypes.toArray()).map((t) => [t.id, t]));
+    const typeIds = [...types.values()].filter((t) => ESTIMATE_ONLY_CATEGORIES.includes(t.category)).map((t) => t.id);
+    if (!typeIds.length) return 0;
+    const candidates = live(await db.sessions.where('activityTypeId').anyOf(typeIds).toArray()).filter((s) => !isEstimateConfirmation(s));
+    if (!candidates.length) return 0;
+    const estimatesByProfile = new Map<UUID, Estimate[]>();
+    let n = 0;
+    for (const s of candidates) {
+      let estimates = estimatesByProfile.get(s.profileId);
+      if (!estimates) estimatesByProfile.set(s.profileId, (estimates = live(await db.estimates.where('profileId').equals(s.profileId).toArray())));
+      const e = activeEstimate(estimates, types.get(s.activityTypeId)!.category, s.date);
+      if (!e) continue;
+      await db.sessions.put(await stamp({ ...s, estimateConfirmed: true, label: s.label || e.label }));
+      n++;
+    }
+    return n;
+  }
+
   /** Tänään voimassa olevat perusarviot, yksi per kategoria. */
   async function activeEstimates(profileId: UUID, today: ISODate): Promise<Estimate[]> {
     const rows = (await listEstimates(profileId)).filter((e) => e.validFrom <= today && (!e.validTo || today <= e.validTo));
@@ -1327,6 +1353,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     setFootballNote,
     footballNameSuggestions,
     listEstimates,
+    foldEstimateOnlySessions,
     activeEstimates,
     saveEstimate,
     correctEstimate,

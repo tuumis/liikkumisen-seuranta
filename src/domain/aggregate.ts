@@ -69,6 +69,13 @@ export function estimateMinutes(e: Estimate, d: ISODate): IntensityMinutes {
  * perusarviota, ei molempia. Perusarvio ei koskaan tuota rasittavaa eikä
  * vahvistavaa päivää.
  */
+/**
+ * Kategoriat, joita ei kirjata omina kertoinaan, kun profiililla on niille arkiliikunnan arvio
+ * (käyttäjän päätös 13.11.2026: välitunnit vain arkiliikunnassa, ei kahdessa paikassa).
+ * Laji jää taustalle arvion vahvistusten lajiksi, mutta piilotetaan lajivalikoista.
+ */
+export const ESTIMATE_ONLY_CATEGORIES: readonly Category[] = Object.freeze(['school_recess']);
+
 /** Arkiliikunnan päiväkohtainen vahvistus (myös ennen merkintäkenttää tehdyt, tunnistetaan muistiinpanosta). */
 export function isEstimateConfirmation(s: Session): boolean {
   if (s.estimateConfirmed) return true;

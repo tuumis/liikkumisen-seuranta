@@ -11,6 +11,7 @@ import { requestPersistentStorage } from '../../db/storage';
 import { IconBall } from '../../ui/icons';
 import { TermInfo } from '../../ui/glossary';
 import { LabelField } from '../week/LabelField';
+import { useHiddenCategories, visibleTypes } from '../week/useLoggableTypes';
 import { Button, inputClass } from '../../ui/components';
 import { ToggleChip } from '../../ui/controls';
 import { IntensityPicker, isPreset, type IntensityMode, type ManualDraft } from '../week/IntensityPicker';
@@ -67,7 +68,9 @@ export function QuickAdd({
 }) {
   const today = todayFn();
   const toast = useToast();
-  const types = useLiveQuery(() => repo.listActivityTypes(), []);
+  const allTypes = useLiveQuery(() => repo.listActivityTypes(), []);
+  const hidden = useHiddenCategories(profile.id, today);
+  const types = useMemo(() => visibleTypes(allTypes, hidden), [allTypes, hidden]);
   const recentIds = useLiveQuery(() => repo.recentActivityTypeIds(profile.id, 6), [profile.id]);
 
   const [type, setType] = useState<ActivityType | null>(null);

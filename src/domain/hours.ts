@@ -64,7 +64,7 @@ export interface WeeklyHours {
 
 const CATEGORY_ORDER: Category[] = ['hobby', 'school_pe', 'school_recess', 'commute', 'self_directed', 'family', 'other'];
 
-export { isEstimateConfirmation } from './aggregate';
+export { ESTIMATE_ONLY_CATEGORIES, isEstimateConfirmation } from './aggregate';
 
 /** Perusarvion kesto päivälle (ei tehokerrointa): arki- tai viikonloppuminuutit. */
 const estimateDuration = (e: Estimate, d: ISODate) => (isWeekend(d) ? e.weekendMin : e.weekdayMin);
