@@ -89,12 +89,12 @@ export function DayRow({
   // vahvistetut. Tarkistus tehdään kyseisenä päivänä tai jälkikäteen; vahvistettu jää riville näkyviin.
   const confirmed = sessions.filter(isEstimateConfirmation);
   const listed = sessions.filter((s) => !isEstimateConfirmation(s));
-  const pendingMin = hours && !flag ? hours.estimateMin : 0;
+  const pendingMin = hours && !flag ? hours.pendingEstimateMin : 0;
   const estimateRow =
     pendingMin > 0 || confirmed.length > 0
       ? {
           pendingMin,
-          pendingCats: pendingMin > 0 ? hours!.estimateCategories : [],
+          pendingCats: pendingMin > 0 ? hours!.pendingEstimateCategories : [],
           confirmed: confirmed.map((s) => ({ id: s.id, name: CATEGORY_LABEL[types.get(s.activityTypeId)?.category ?? 'other'], min: s.durationMin })),
         }
       : null;

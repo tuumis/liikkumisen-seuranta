@@ -101,6 +101,25 @@ describe('arvio koko viikolle (ennuste)', () => {
     expect(h.days.find((d) => d.date === '2026-11-12')!.estimateCategories).toEqual(['school_recess']);
   });
 
+  it('tuleva päivä: saman kategorian suunniteltu kerta ei piilota arkiliikuntariviä (vain ennusteessa korvaa)', () => {
+    const play = estimate({ category: 'self_directed', weekdayMin: 30, weekendMin: 120, validFrom: '2026-01-01' });
+    // Uinti on omaehtoista: lauantaille suunniteltu uinti korvaa ennusteessa saman kategorian arvion.
+    const swim = planned({ date: '2026-11-14', activityTypeId: activityTypeId('swimming'), durationMin: 60 });
+    const h = weeklyHours({ ...base, today, planned: [swim], estimates: [play] });
+    const sat = h.days.find((d) => d.date === '2026-11-14')!;
+    const sun = h.days.find((d) => d.date === '2026-11-15')!;
+    expect(sat.estimateMin).toBe(0);
+    expect(sat.forecastMin).toBe(60);
+    expect(sat).toMatchObject({ pendingEstimateMin: 120, pendingEstimateCategories: ['self_directed'] });
+    expect(sun).toMatchObject({ pendingEstimateMin: 120, estimateMin: 120 });
+    // Tänään sama: rivi näyttää arvion, kunnes kerta kirjataan.
+    const h2 = weeklyHours({ ...base, today: '2026-11-14', planned: [swim], estimates: [play] });
+    expect(h2.days.find((d) => d.date === '2026-11-14')!.pendingEstimateMin).toBe(120);
+    const s = session({ date: '2026-11-14', activityTypeId: activityTypeId('swimming'), durationMin: 60, minutes: M });
+    const h3 = weeklyHours({ ...base, today: '2026-11-14', planned: [swim], sessions: [s], estimates: [play] });
+    expect(h3.days.find((d) => d.date === '2026-11-14')!.pendingEstimateMin).toBe(0);
+  });
+
   it('"Ei tehty" pudottaa kerran pois; kuittaamaton mennyt kerta on mukana, kunnes se merkitään', () => {
     const open = planned({ date: '2026-11-10', activityTypeId: TRAINING, durationMin: 90 });
     const h1 = weeklyHours({ ...base, today, planned: [open] });

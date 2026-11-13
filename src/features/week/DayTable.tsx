@@ -297,7 +297,7 @@ export function DayTable({
             {rows.map((r) => {
               const listed = r.sessions.filter((s) => !isEstimateConfirmation(s));
               const confirmed = r.sessions.filter(isEstimateConfirmation);
-              const pending = r.hours && !r.flag ? r.hours.estimateMin : 0;
+              const pending = r.hours && !r.flag ? r.hours.pendingEstimateMin : 0;
               const confirmedMin = confirmed.reduce((a, s) => a + s.durationMin, 0);
               const logged = r.totals?.mvpa ?? 0;
               const est = r.totals ? r.totals.mvpaCombined - r.totals.mvpa : 0;
@@ -395,7 +395,7 @@ export function DayTable({
                             {pending > 0 && <span className="tabular-nums text-amber-800">{pending} arvio</span>}
                           </button>
                           {pending > 0 && !r.isFuture && r.hours && (
-                            <button type="button" onClick={() => void quickEstimate(r.date, r.hours!.estimateCategories)} className={tick} aria-label={`Vahvista arkiliikunta ${pending} min`} title="Vahvista arvio sellaisenaan">
+                            <button type="button" onClick={() => void quickEstimate(r.date, r.hours!.pendingEstimateCategories)} className={tick} aria-label={`Vahvista arkiliikunta ${pending} min`} title="Vahvista arvio sellaisenaan">
                               <IconCheck size="0.85rem" />
                             </button>
                           )}

@@ -40,6 +40,13 @@ export interface DayHours {
   estimateMin: number;
   /** Kategoriat, joiden perusarvio on mukana estimateMin-luvussa. */
   estimateCategories: Category[];
+  /**
+   * Päivän arkiliikuntarivillä näytettävä arvio (min): kaikki kategoriat, joille ei ole kirjausta, myös
+   * tulevina päivinä samaan kategoriaan suunnitellusta kerrasta huolimatta (sama kuin kuluvana päivänä).
+   * Ennusteessa (forecastMin) avoin suunnitelma korvaa saman kategorian arvion, ettei sitä lasketa kahdesti.
+   */
+  pendingEstimateMin: number;
+  pendingEstimateCategories: Category[];
   /** Päiväkohtaisesti vahvistettu arkiliikunta (min), sisältyy actualLoggedMin-lukuun. */
   confirmedMin: number;
   /** Avoimien suunnitelmien (ennusteessa mukana olevien) reipas ja rasittava osuus lajin tehoprofiilista (min). */
@@ -196,8 +203,36 @@ export function weeklyHours(input: {
       fc.openPlans += m;
     }
 
+    // Arkiliikuntarivi: sama sääntö kaikille päiville (kirjaus korvaa arvion, suunnitelma ei).
+    let pendingEstimateMin = 0;
+    const pendingEstimateCategories: Category[] = [];
+    if (!isFlagged) {
+      for (const c of estCats) {
+        if (logByCat.has(c)) continue;
+        const m = estimateDuration(activeEstimate(estimates, c, d)!);
+        if (!m) continue;
+        pendingEstimateMin += m;
+        pendingEstimateCategories.push(c);
+      }
+    }
+
     if (!future) expectedToDateMin += expectedMin;
-    days.push({ date: d, expectedMin, actualMin, actualLoggedMin, forecastMin, estimateMin, estimateCategories, confirmedMin, openPlanMvpa, future, flagged: isFlagged, holiday });
+    days.push({
+      date: d,
+      expectedMin,
+      actualMin,
+      actualLoggedMin,
+      forecastMin,
+      estimateMin,
+      estimateCategories,
+      pendingEstimateMin,
+      pendingEstimateCategories,
+      confirmedMin,
+      openPlanMvpa,
+      future,
+      flagged: isFlagged,
+      holiday,
+    });
   }
 
   const byCategory = CATEGORY_ORDER.filter((c) => acc.has(c)).map((c) => acc.get(c)!);
