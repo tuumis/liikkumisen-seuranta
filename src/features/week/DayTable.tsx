@@ -102,6 +102,7 @@ export function DayTable({
   unit,
   onUnit,
   onAdd,
+  onPlan,
   onEdit,
   onPlanOpen,
   onPlanConfirm,
@@ -118,6 +119,8 @@ export function DayTable({
   unit: MinuteUnit;
   onUnit: (u: MinuteUnit) => void;
   onAdd: (date: ISODate) => void;
+  /** Tulevan päivän "+": suunniteltu kerta (kirjaus tehdään vasta päivänä). */
+  onPlan?: (date: ISODate) => void;
   onEdit: (s: Session) => void;
   onPlanOpen: (p: PlannedSession) => void;
   onPlanConfirm: (p: PlannedSession) => void;
@@ -400,10 +403,10 @@ export function DayTable({
                       )}
                       <button
                         type="button"
-                        onClick={() => onAdd(r.date)}
+                        onClick={() => (r.isFuture && onPlan ? onPlan(r.date) : onAdd(r.date))}
                         className="press flex size-6 shrink-0 items-center justify-center rounded-lg border border-dashed border-slate-300 text-slate-500 hover:bg-[var(--surface-sunk)] hover:text-slate-800"
-                        aria-label={`Lisää kerta: ${dayLabel(r.date)}`}
-                        title="Lisää kerta tälle päivälle"
+                        aria-label={r.isFuture && onPlan ? `Suunnittele kerta: ${dayLabel(r.date)}` : `Lisää kerta: ${dayLabel(r.date)}`}
+                        title={r.isFuture && onPlan ? 'Suunnittele kerta tälle päivälle (kuitataan päivänä)' : 'Lisää kerta tälle päivälle'}
                       >
                         <IconPlus size="0.85rem" />
                       </button>

@@ -26,12 +26,15 @@ export function DaySheet({
   profile,
   onClose,
   onAdd,
+  onPlan,
 }: {
   date: ISODate | null;
   flag?: DayFlag;
   profile: Profile;
   onClose: () => void;
   onAdd: (date: ISODate) => void;
+  /** Tulevalle päivälle: suunniteltu kerta. */
+  onPlan?: (date: ISODate) => void;
 }) {
   const toast = useToast();
   const today = todayFn();
@@ -62,6 +65,11 @@ export function DaySheet({
           {date <= today && (
             <Button className="w-full" onClick={() => onAdd(date)}>
               + Lisää kerta tälle päivälle
+            </Button>
+          )}
+          {date > today && onPlan && (
+            <Button className="w-full" onClick={() => onPlan(date)}>
+              + Suunnittele kerta tälle päivälle
             </Button>
           )}
           {(Object.keys(FLAG_ACTION) as DayFlagReason[])

@@ -1214,6 +1214,35 @@ export function createRepositories(db: AppDB = defaultDb) {
     return f;
   }
 
+  /**
+   * Yksittäinen suunniteltu kerta (SPEC 16): käsin lisätty suunnitelma ilman viikkorytmiä, esim. tiedossa
+   * oleva tapahtuma tulevalle päivälle. Kuitataan kyseisenä päivänä kuten muutkin suunnitelmat.
+   */
+  async function createPlannedOnce(
+    profileId: UUID,
+    input: { activityTypeId: UUID; date: ISODate; durationMin: number; startTime?: HHmm; label?: string },
+  ): Promise<PlannedSession> {
+    if (!isISODate(input.date)) throw new Error('Tarkista päivä');
+    if (!Number.isInteger(input.durationMin) || input.durationMin < 1 || input.durationMin > 1440) throw new Error('Tarkista kesto (min)');
+    const ts = nowTimestamp();
+    const plan: PlannedSession = {
+      id: newId(),
+      profileId,
+      activityTypeId: input.activityTypeId,
+      date: input.date,
+      durationMin: input.durationMin,
+      status: 'open',
+      createdAt: ts,
+      updatedAt: ts,
+      updatedBy: await deviceId(),
+    };
+    if (input.startTime) plan.startTime = input.startTime;
+    const label = input.label?.trim();
+    if (label) plan.label = label;
+    await db.plannedSessions.add(plan);
+    return plan;
+  }
+
   /** Uusi peli tai turnaus kalenteriin: käsin lisätty suunnitelma + lisätiedot. */
   async function createFixture(profileId: UUID, input: FixtureInput): Promise<FixtureEntry> {
     return db.transaction('rw', [db.plannedSessions, db.fixtures, db.meta], async () => {
@@ -1620,6 +1649,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     setTeamArchived,
     listFixtures,
     createFixture,
+    createPlannedOnce,
     updateFixture,
     deleteFixture,
     deletePlanned,

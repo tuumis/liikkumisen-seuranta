@@ -35,6 +35,7 @@ import { HoursGauge } from './HoursGauge';
 import { HoursCard, HoursDetailCard } from './HoursCard';
 import { GettingStarted } from './GettingStarted';
 import { LastWeekCard } from './LastWeekCard';
+import { PlanOnceSheet } from './PlanOnceSheet';
 import { useFootballEnabled } from '../football/useFootballEnabled';
 import { TournamentDayCard } from '../games/TournamentDay';
 import type { SettingsSectionId } from '../settings/SettingsView';
@@ -55,6 +56,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
   const [quickAdd, setQuickAdd] = useState<{ date?: ISODate } | null>(null);
   const [editing, setEditing] = useState<Session | null>(null);
   const [dayMenu, setDayMenu] = useState<ISODate | null>(null);
+  const [planOnce, setPlanOnce] = useState<ISODate | null>(null);
   const [estimateDay, setEstimateDay] = useState<ISODate | null>(null);
   const [planOpen, setPlanOpen] = useState<PlannedSession | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -328,6 +330,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             unit={unit}
             onUnit={setUnit}
             onAdd={(date) => setQuickAdd({ date })}
+            onPlan={setPlanOnce}
             onEdit={setEditing}
             onPlanOpen={setPlanOpen}
             onPlanConfirm={(p) => void planActions.confirm(p)}
@@ -359,6 +362,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             barTarget={DAY_BAR_TARGET[info?.group ?? 'school_age']}
             onOpenMenu={() => setDayMenu(d)}
             onAdd={() => setQuickAdd({ date: d })}
+            onPlan={() => setPlanOnce(d)}
             onEdit={setEditing}
             onEstimate={() => setEstimateDay(d)}
           />
@@ -512,7 +516,12 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
               setDayMenu(null);
               setQuickAdd({ date });
             }}
+            onPlan={(date) => {
+              setDayMenu(null);
+              setPlanOnce(date);
+            }}
           />
+          <PlanOnceSheet profile={profile} date={planOnce} onClose={() => setPlanOnce(null)} />
         </>
       )}
     </div>

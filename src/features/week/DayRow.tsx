@@ -40,6 +40,7 @@ export function DayRow({
   barTarget,
   onOpenMenu,
   onAdd,
+  onPlan,
   onEdit,
   onPlanOpen,
   onPlanConfirm,
@@ -67,8 +68,9 @@ export function DayRow({
   flag?: DayFlag;
   barTarget: number;
   onOpenMenu: () => void;
-  /** Uusi kerta tälle päivälle (ei tuleville päiville: kerta on toteutunut liikkuminen). */
+  /** Uusi kerta tälle päivälle; tulevalle päivälle "+" lisää suunnitellun kerran (`onPlan`). */
   onAdd?: () => void;
+  onPlan?: () => void;
   onEdit: (s: Session) => void;
   onPlanOpen: (p: PlannedSession) => void;
   onPlanConfirm: (p: PlannedSession) => void;
@@ -179,15 +181,15 @@ export function DayRow({
               </div>
             </div>
           )}
-          {onAdd && !isFuture && (
+          {(isFuture ? onPlan : onAdd) && (
             <button
               type="button"
-              onClick={onAdd}
-              className="press flex size-9 shrink-0 items-center justify-center rounded-full border border-dashed border-slate-300 text-slate-500 hover:border-slate-400 hover:bg-[var(--surface-sunk)] hover:text-slate-900"
-              aria-label={`Lisää kerta: ${dayLabel(date)}`}
-              title="Lisää kerta tälle päivälle"
+              onClick={isFuture ? onPlan : onAdd}
+              className="press relative flex size-7 shrink-0 items-center justify-center rounded-full border border-dashed border-slate-300 text-slate-500 before:absolute before:-inset-1.5 hover:border-slate-400 hover:bg-[var(--surface-sunk)] hover:text-slate-900"
+              aria-label={isFuture ? `Suunnittele kerta: ${dayLabel(date)}` : `Lisää kerta: ${dayLabel(date)}`}
+              title={isFuture ? 'Suunnittele kerta tälle päivälle (kuitataan päivänä)' : 'Lisää kerta tälle päivälle'}
             >
-              <IconPlus size="1rem" />
+              <IconPlus size="0.8rem" />
             </button>
           )}
           <button
