@@ -21,7 +21,7 @@ const PLAYED_PICKS = [10, 15, 20, 30, 40, 50, 60];
 type GameDraft = { opponent: string; goalsFor: string; goalsAgainst: string; playedMin: string; played: PlayedState | ''; playerGoals: string; time?: string; location?: string; note: string };
 
 /** Pelasiko: Ei / Osan / Koko pelin (uudelleen painallus poistaa valinnan). */
-function PlayedChips({ value, onChange, label, shareText }: { value: PlayedState | ''; onChange: (v: PlayedState | '') => void; label: string; shareText: string }) {
+export function PlayedChips({ value, onChange, label, shareText }: { value: PlayedState | ''; onChange: (v: PlayedState | '') => void; label: string; shareText: string }) {
   const opts: { v: PlayedState; l: string }[] = [
     { v: 'none', l: 'Ei pelannut' },
     { v: 'part', l: `Osan (${shareText})` },
@@ -39,7 +39,7 @@ function PlayedChips({ value, onChange, label, shareText }: { value: PlayedState
 }
 
 /** Oman lapsen maalit: nopea − / + -valitsin (tyhjä = ei kirjattu). */
-function GoalStepper({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
+export function GoalStepper({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
   const n = value === '' ? undefined : Number(value);
   const btn = 'press flex size-11 items-center justify-center rounded-xl bg-[var(--surface-raised)] text-xl font-semibold text-slate-800 shadow-xs ring-1 ring-slate-300 active:bg-slate-100 disabled:opacity-40';
   return (

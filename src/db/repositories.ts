@@ -734,6 +734,51 @@ export function createRepositories(db: AppDB = defaultDb) {
     });
   }
 
+  /**
+   * Turnauspäivän pikakirjaus (SPEC 16): yhden pelin tulos. Suunnitelmasta ensimmäinen tulos kuittaa
+   * turnauksen (pelirivit otteluohjelmasta), myöhemmät päivittävät saman kirjauksen pelirivin.
+   * Muut lisätiedot (arviot, kommentit, joukkue) säilyvät. Palauttaa kerran ja tiedon, luotiinko se.
+   */
+  async function recordTournamentGame(
+    target: { planId: UUID } | { sessionId: UUID },
+    index: number,
+    result: GameResult,
+    today: ISODate,
+  ): Promise<{ sessionId: UUID; created: boolean }> {
+    let sessionId: UUID;
+    let created = false;
+    if ('planId' in target) {
+      const r = await confirmPlanned(target.planId, today);
+      sessionId = r.session.id;
+      created = r.created;
+    } else sessionId = target.sessionId;
+    const fd = await getFootballDetails(sessionId);
+    const games: GameResult[] = (fd?.games ?? []).map((g) => ({ ...g }));
+    const n = Math.max(index + 1, fd?.gamesCount ?? 0);
+    while (games.length < n) games.push({});
+    const merged: GameResult = { ...games[index] };
+    for (const [k, v] of Object.entries(result) as [keyof GameResult, never][]) {
+      if (v === undefined) delete merged[k];
+      else merged[k] = v;
+    }
+    games[index] = merged;
+    await saveFootballDetails(sessionId, {
+      attendance: fd?.attendance ?? 'full',
+      focusTags: fd?.focusTags ?? [],
+      team: fd?.team,
+      teamId: fd?.teamId,
+      level: fd?.level,
+      format: fd?.format,
+      positions: fd?.positions,
+      parentRating: fd?.parentRating,
+      enjoyment: fd?.enjoyment,
+      ratingNote: fd?.ratingNote,
+      eventName: fd?.eventName,
+      games,
+    });
+    return { sessionId, created };
+  }
+
   /** "Merkitse loput tehdyiksi": kuittaa kaikki; palauttaa luodut kerrat kumoamista varten. */
   async function confirmMany(planIds: UUID[], today: ISODate): Promise<UUID[]> {
     const created: UUID[] = [];
@@ -1509,6 +1554,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     unconfirmedPlans,
     confirmPlanned,
     confirmMany,
+    recordTournamentGame,
     undoConfirm,
     skipPlanned,
     updatePlannedOccurrence,

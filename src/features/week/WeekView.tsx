@@ -35,6 +35,7 @@ import { HoursGauge } from './HoursGauge';
 import { HoursCard, HoursDetailCard } from './HoursCard';
 import { GettingStarted } from './GettingStarted';
 import { LastWeekCard } from './LastWeekCard';
+import { TournamentDayCard } from '../games/TournamentDay';
 import type { SettingsSectionId } from '../settings/SettingsView';
 import { DaySheet } from './DaySheet';
 import { EstimateDaySheet } from './EstimateDaySheet';
@@ -384,6 +385,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
       {!profile && <Card>Lisää profiili Asetukset-välilehdellä.</Card>}
 
       {profile && hasAnySessions === false && <GettingStarted onAdd={() => setQuickAdd({})} onOpenSettings={onOpenSettings} />}
+      {profile && isCurrent && <TournamentDayCard profile={profile} today={today} />}
       {profile && isCurrent && <LastWeekCard profile={profile} today={today} onOpenWeek={setWeekStart} />}
 
       {profile && report && (() => {
