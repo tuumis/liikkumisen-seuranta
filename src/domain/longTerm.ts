@@ -89,7 +89,7 @@ function bucketsOf(period: Period, days: DayTotals[], valid: Set<ISODate>): Tren
   }
   return [...groups.entries()].map(([key, all]) => {
     const v = all.filter((d) => valid.has(d.date));
-    const m = MONTHS[parseISODate(`${key}-01`).month - 1];
+    const m = MONTHS[parseISODate(all[0].date).month - 1];
     // Vuodessa 12 palkkia: kolmen kirjaimen lyhenne, ettei akseli mene päällekkäin.
     const label = period.kind === 'month' ? `vk ${isoWeek(key).week}` : period.kind === 'year' ? m.slice(0, 3) : m;
     return {
