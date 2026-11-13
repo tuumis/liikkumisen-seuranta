@@ -23,6 +23,9 @@ describe('kauden kooste', () => {
     expect(slides[3]).toMatchObject({ title: 'Viikko 46', big: '5,0' });
     expect(slides[4].stats![0]).toEqual({ label: 'Treenit', value: '2' });
     expect(slides[5].lines[0]).toMatch(/viihtyi/i);
+    // Jalkapallo pois käytöstä: ei jalkapallo- eikä harjoitellut asiat -korttia; lajit ja liikunta säilyvät.
+    const off = buildStory({ name: 'Aino', seasonLabel: 'Syksy 2026', report, sessions, types, footballDetails: details, football: false });
+    expect(off.map((s) => s.id)).toEqual(['cover', 'total', 'types', 'best', 'outro']);
   });
 
   it('ilman kirjauksia vain kansi ja lopetus', () => {

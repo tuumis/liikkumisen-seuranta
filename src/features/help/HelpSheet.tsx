@@ -45,6 +45,7 @@ const TOPICS: { q: string; a: string[] }[] = [
     q: 'Jalkapallo',
     a: [
       'Jalkapallo-välilehdellä ovat päiväkirja (kommentit treeneistä), pelikalenteri, tulokset ja joukkueet. Tulevat pelit näkyvät myös viikolla, ja pelin jälkeen kirjataan tulos.',
+      'Jalkapallo on valinnainen profiileittain: Asetukset → Profiilit → Muokkaa → "Pelaako … jalkapalloa?". Pois päältä välilehti, joukkueet, pelit ja jalkapallon lisätiedot piilotetaan; kirjatut kerrat säilyvät ja lasketaan liikuntaan.',
     ],
   },
   {

@@ -5,7 +5,7 @@ import { IconChevronRight, IconPlus, IconRepeat, IconSparkle, IconSun } from '..
 
 const STEPS: { Icon: typeof IconPlus; title: string; text: string; action: 'add' | SettingsSectionId }[] = [
   { Icon: IconPlus, title: 'Kirjaa liikuntakerta', text: 'Laji, kesto ja tallenna – vie alle 15 sekuntia.', action: 'add' },
-  { Icon: IconRepeat, title: 'Lisää toistuvat treenit', text: 'Esim. jalkapallo ti ja to klo 17.30. Ne näkyvät viikolla valmiina kuitattaviksi.', action: 'routine' },
+  { Icon: IconRepeat, title: 'Lisää toistuvat treenit', text: 'Esim. harrastus ti ja to klo 17.30. Ne näkyvät viikolla valmiina kuitattaviksi.', action: 'routine' },
   { Icon: IconSun, title: 'Arvioi tavallinen arkiliikunta', text: 'Välitunnit ja koulumatkat, joita ei kirjata joka päivä.', action: 'everyday' },
 ];
 

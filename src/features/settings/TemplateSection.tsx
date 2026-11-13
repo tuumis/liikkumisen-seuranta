@@ -1,6 +1,6 @@
 // Viikkopohjan hallinta (SPEC 12 Asetukset; SPEC 10 pohjan muokkaus koskee vain tulevia avoimia suunnitelmia).
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { z } from 'zod';
 import { isISODate } from '../../domain/dates';
@@ -14,6 +14,7 @@ import { today as todayFn } from '../../ui/today';
 import { durationSchema, issuesByField } from '../week/sessionForm';
 import { LabelField } from '../week/LabelField';
 import { useHiddenCategories, visibleTypes } from '../week/useLoggableTypes';
+import { useFootballStatus, withoutClubFootball } from '../football/useFootballEnabled';
 import { DateInput } from '../../ui/DateInput';
 
 const WEEKDAYS: { value: Weekday; label: string }[] = [
@@ -106,9 +107,12 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
   const today = todayFn();
   const toast = useToast();
   const hidden = useHiddenCategories(profile.id, today);
-  const types = visibleTypes(useLiveQuery(() => repo.listActivityTypes(), []), hidden, item?.activityTypeId);
+  const footballStatus = useFootballStatus(profile);
+  const footballOn = !!footballStatus;
+  const types = withoutClubFootball(visibleTypes(useLiveQuery(() => repo.listActivityTypes(), []), hidden, item?.activityTypeId), footballOn, item?.activityTypeId);
   const [v, setV] = useState({
-    activityTypeId: item?.activityTypeId ?? 't:football_training',
+    // Oletuslaji: jalkapallotreeni, jos jalkapallo on käytössä; muuten valitaan ensimmäinen laji (alla).
+    activityTypeId: item?.activityTypeId ?? (profile.football ? 't:football_training' : ''),
     weekdays: (item?.weekdays ?? []) as Weekday[],
     startTime: item?.startTime ?? '',
     durationMin: String(item?.durationMin ?? 60),
@@ -117,6 +121,12 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
     note: item?.note ?? '',
     label: item?.label ?? '',
   });
+  // Uuden rivin oletuslaji, kun jalkapallon päättely ja lajit ovat valmiina.
+  const firstId = types?.[0]?.id;
+  useEffect(() => {
+    if (item || footballStatus === undefined || !firstId) return;
+    setV((c) => (c.activityTypeId ? c : { ...c, activityTypeId: footballStatus ? 't:football_training' : firstId }));
+  }, [item, footballStatus, firstId]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   // Menneet kerrat kuitattaviksi, kun alkupäivä on menneisyydessä (oletus: kyllä).

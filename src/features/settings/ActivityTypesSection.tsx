@@ -15,6 +15,7 @@ import { Sheet } from '../../ui/Sheet';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { useHiddenCategoriesAnyProfile, visibleTypes } from '../week/useLoggableTypes';
+import { useFootballAnyProfile, withoutClubFootball } from '../football/useFootballEnabled';
 import { DateInput } from '../../ui/DateInput';
 
 const STRENGTH_OPTIONS: { value: StrengthDefault; label: string }[] = [
@@ -26,7 +27,8 @@ const STRENGTH_OPTIONS: { value: StrengthDefault; label: string }[] = [
 export function ActivityTypesSection() {
   // Välitunnit (arkiliikunnan arvio käytössä) eivät ole kirjattava laji: niiden teho asetetaan arviossa.
   const hidden = useHiddenCategoriesAnyProfile(todayFn());
-  const types = visibleTypes(useLiveQuery(() => repo.listActivityTypes(), []), hidden);
+  // Seurajalkapallon lajit vain, jos jalkapallo on käytössä jollakin profiililla.
+  const types = withoutClubFootball(visibleTypes(useLiveQuery(() => repo.listActivityTypes(), []), hidden), useFootballAnyProfile());
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ActivityType | null>(null);
   return (

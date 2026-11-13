@@ -18,8 +18,10 @@ import { HoursGauge } from '../week/HoursGauge';
 import { useReport } from './useReport';
 import { FootballSection } from '../football/FootballSection';
 import { GamesView } from '../football/GamesView';
+import { useFootballEnabled } from '../football/useFootballEnabled';
 import { HighlightsCard } from './HighlightsCard';
-import { IconChevronLeft, IconChevronRight, IconSettings } from '../../ui/icons';
+import { IconChevronLeft, IconChevronRight, IconSettings, IconSparkle } from '../../ui/icons';
+import { dispatchCommand } from '../desktop/commands';
 import { EditLayoutSheet } from '../../ui/EditLayoutSheet';
 import { useAnalysisLayout } from './layout';
 import { LongTermView } from './LongTermView';
@@ -60,14 +62,32 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
     }
   };
   const [editing, setEditing] = useState(false);
-  const layoutApi = useAnalysisLayout();
-  const visible = layoutApi.visible;
+  const fullLayout = useAnalysisLayout();
+  // Jalkapallo pois käytöstä: jalkapallo- ja kohokohtakortit (arviot, harjoitellut asiat) piiloon myös muokkauksesta.
+  const footballOn = useFootballEnabled(profile);
+  const fbCard = (id: string) => id === 'football' || id === 'highlights';
+  const layoutApi = footballOn
+    ? fullLayout
+    : { ...fullLayout, cards: fullLayout.cards.filter((c) => !fbCard(c.id)), layout: { ...fullLayout.layout, order: fullLayout.layout.order.filter((id) => !fbCard(id)) } };
+  const visible = fullLayout.visible.filter((id) => footballOn || !fbCard(id));
 
-  if (games && profile) return <GamesView profile={profile} onBack={() => setGames(false)} />;
+  if (games && profile && footballOn) return <GamesView profile={profile} onBack={() => setGames(false)} />;
 
+  // Kauden kooste avataan muuten Jalkapallo-välilehdeltä; ilman jalkapalloa painike on täällä.
   const modePicker = (
-    <div className="anim-fade max-w-md">
-      <Segmented<Mode> label="Jakso" value={mode} onChange={setMode} options={MODES} />
+    <div className="anim-fade flex flex-wrap items-end gap-3">
+      <div className="w-full max-w-md">
+        <Segmented<Mode> label="Jakso" value={mode} onChange={setMode} options={MODES} />
+      </div>
+      {!footballOn && (
+        <button
+          type="button"
+          onClick={() => dispatchCommand({ kind: 'story' })}
+          className="press inline-flex min-h-10 items-center gap-2 rounded-full bg-[var(--surface-raised)] px-3.5 text-sm font-semibold text-slate-800 shadow-xs ring-1 ring-slate-200 hover:bg-slate-100"
+        >
+          <IconSparkle size="0.95rem" /> Kauden kooste
+        </button>
+      )}
     </div>
   );
 

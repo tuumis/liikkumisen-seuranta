@@ -8,6 +8,7 @@ import { Button, Field, inputClass } from '../../ui/components';
 import { GROUP_LABEL, MONTHS, PROFILE_COLORS } from '../../ui/labels';
 import { today } from '../../ui/today';
 import { DateInput } from '../../ui/DateInput';
+import { useFootballStatus } from '../football/useFootballEnabled';
 
 const currentYear = Number(today().slice(0, 4));
 
@@ -38,6 +39,7 @@ export type ProfileFormValues = Pick<Profile, 'name' | 'kind' | 'birthYear' | 'b
   groupOverride: Profile['groupOverride'];
   trackingStart: Profile['trackingStart'];
   photo: Profile['photo'];
+  football: Profile['football'];
 };
 
 export function ProfileForm({
@@ -61,6 +63,10 @@ export function ProfileForm({
     trackingStart: initial?.trackingStart ?? (initial ? timestampToLocalDate(initial.createdAt) : today()),
   });
   const [photo, setPhoto] = useState<string | undefined>(initial?.photo);
+  // Jalkapallo: tallennettu valinta tai datasta päätelty (vanha profiili); uudella profiililla oletus "Ei".
+  const inferredFootball = useFootballStatus(initial);
+  const [footballChoice, setFootballChoice] = useState<boolean | undefined>(initial?.football);
+  const football = footballChoice ?? (initial ? !!inferredFootball : false);
   // Oletus = luontipäivä (uudella profiililla tänään); vain poikkeava päivä tallennetaan.
   const defaultStart = initial ? timestampToLocalDate(initial.createdAt) : today();
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -108,6 +114,8 @@ export function ProfileForm({
         groupOverride: v.groupOverride || undefined,
         trackingStart: v.trackingStart === defaultStart ? undefined : v.trackingStart,
         photo,
+        // Vanhan profiilin päättely kesken eikä valintaa tehty → ei muuteta (päätellään jatkossakin).
+        football: footballChoice ?? (initial ? inferredFootball : false),
       });
     } finally {
       setSaving(false);
@@ -197,6 +205,29 @@ export function ProfileForm({
           </span>
         )}
       </Field>
+
+      <fieldset>
+        <legend className="mb-1 text-sm font-medium text-slate-700">Pelaako {raw.name.trim() || 'hän'} jalkapalloa?</legend>
+        <div className="grid grid-cols-2 gap-2">
+          {[true, false].map((on) => (
+            <button
+              key={String(on)}
+              type="button"
+              onClick={() => setFootballChoice(on)}
+              className={`min-h-11 rounded-xl text-sm font-medium ring-1 ${football === on ? 'bg-green-700 text-white ring-green-700' : 'bg-[var(--surface-sunk)] text-slate-800 ring-slate-200'}`}
+              aria-pressed={football === on}
+            >
+              {on ? '⚽ Kyllä' : 'Ei'}
+            </button>
+          ))}
+        </div>
+        <span className="mt-1 block text-xs leading-relaxed text-slate-500">
+          {football
+            ? 'Mukana Jalkapallo-välilehti: päiväkirja, pelikalenteri, tulokset ja joukkueet sekä jalkapallon lisätiedot kerroille.'
+            : 'Jalkapalloon liittyvät osat piilotetaan. Voit ottaa ne käyttöön myöhemmin tästä.'}
+          {!football && initial && inferredFootball && ' Kirjatut jalkapallokerrat säilyvät ja lasketaan edelleen liikuntaan.'}
+        </span>
+      </fieldset>
 
       <Field label="Seuranta alkoi" hint="Analyysi laskee päivät tästä alkaen. Voit siirtää alkua aiemmaksi, jos kirjaat vanhoja kertoja.">
         <DateInput className={inputClass} value={raw.trackingStart} max={today()} onChange={(v) => set('trackingStart')({ target: { value: v } })} aria-label="Seurannan alku" />

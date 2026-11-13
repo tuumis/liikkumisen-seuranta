@@ -36,6 +36,8 @@ export interface StoryInput {
   sessions: Session[];
   types: Map<UUID, ActivityType>;
   footballDetails: Map<UUID, FootballDetails>;
+  /** Jalkapallo-ominaisuus profiilille (SPEC 16); false = ei jalkapallo- eikä harjoitellut asiat -korttia. */
+  football?: boolean;
 }
 
 const fi = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
@@ -100,7 +102,7 @@ export function buildStory(input: StoryInput): StorySlide[] {
   }
 
   // Jalkapallo: treenit, pelit ja pelaajan maalit.
-  const football = input.sessions.filter((s) => !s.deletedAt && types.get(s.activityTypeId)?.sport === 'football');
+  const football = input.football === false ? [] : input.sessions.filter((s) => !s.deletedAt && types.get(s.activityTypeId)?.sport === 'football');
   if (football.length) {
     const trainings = football.filter((s) => footballKindOf(s, types) === 'training').length;
     const g = summarizeGames(gameRows(football, input.footballDetails, types));

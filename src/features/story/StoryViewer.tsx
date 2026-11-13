@@ -9,6 +9,7 @@ import { seasonKey } from '../../domain/football';
 import { periodReport } from '../../domain/report';
 import type { ActivityType, Profile } from '../../domain/types';
 import { repo } from '../../db/repositories';
+import { useFootballEnabled } from '../football/useFootballEnabled';
 import { IconChevronLeft, IconChevronRight, IconClose } from '../../ui/icons';
 import { prefersReducedMotion } from '../../ui/motion';
 import { useToast } from '../../ui/Toast';
@@ -31,6 +32,7 @@ function useStory(profile: Profile): StorySlide[] | undefined {
   const today = todayFn();
   const season = seasonPeriod(today);
   const end = minDate(season.end, today);
+  const footballOn = useFootballEnabled(profile);
   return useLiveQuery(async () => {
     const [sessions, estimates, flags, planned, typesList, settings] = await Promise.all([
       repo.sessionsInRange(profile.id, season.start, end),
@@ -44,8 +46,8 @@ function useStory(profile: Profile): StorySlide[] | undefined {
     const footballIds = sessions.filter((s) => types.get(s.activityTypeId)?.sport === 'football').map((s) => s.id);
     const footballDetails = await repo.footballDetailsFor(footballIds);
     const report = periodReport({ profile, period: { ...season, end }, sessions, estimates, flags, planned, types, settings, today });
-    return buildStory({ name: profile.name, seasonLabel: seasonKey(today), report, sessions, types, footballDetails });
-  }, [profile, season.start, end, today]);
+    return buildStory({ name: profile.name, seasonLabel: seasonKey(today), report, sessions, types, footballDetails, football: footballOn });
+  }, [profile, season.start, end, today, footballOn]);
 }
 
 function StoryViewer({ profile, onClose }: { profile: Profile; onClose: () => void }) {

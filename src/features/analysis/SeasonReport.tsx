@@ -10,6 +10,7 @@ import { highlights } from '../../domain/highlights';
 import { periodName, type LongTermSummary } from '../../domain/longTerm';
 import type { ActivityType, Context, Period, Profile } from '../../domain/types';
 import { repo } from '../../db/repositories';
+import { useFootballEnabled } from '../football/useFootballEnabled';
 import { formatDate } from '../../ui/format';
 import { FOCUS_TAG_LABEL, MOVEMENT_GROUP_LABEL } from '../../ui/labels';
 import { today as todayFn } from '../../ui/today';
@@ -22,6 +23,8 @@ const CONTEXT_TEXT: Record<Context, string> = { organized: 'Ohjattu', self_direc
 
 function useExtras(profile: Profile, period: Period) {
   const today = todayFn();
+  // Jalkapallo pois käytöstä: ei jalkapallo-osiota eikä jalkapallon arvioita/kommentteja kohokohdissa.
+  const footballOn = useFootballEnabled(profile);
   return useLiveQuery(async () => {
     const [sessions, typesList, planned] = await Promise.all([
       repo.sessionsInRange(profile.id, period.start, period.end),
@@ -31,13 +34,13 @@ function useExtras(profile: Profile, period: Period) {
     const types = new Map<string, ActivityType>(typesList.map((t) => [t.id, t]));
     const live = sessions.filter((s) => !s.deletedAt);
     const footballIds = new Set(typesList.filter((t) => t.sport === 'football').map((t) => t.id));
-    const fbSessions = live.filter((s) => footballIds.has(s.activityTypeId));
+    const fbSessions = footballOn ? live.filter((s) => footballIds.has(s.activityTypeId)) : [];
     const details = await repo.footballDetailsFor(fbSessions.map((s) => s.id));
     const fb = fbSessions.length ? footballPeriodSummary({ sessions: fbSessions, details, types, planned, today }, period) : undefined;
     const play = fb ? playSummary(gameRows(fbSessions, details, types)) : undefined;
     const hl = highlights(live, details, period.start, period.end);
     return { fb, play, hl, types };
-  }, [profile.id, period.start, period.end, today]);
+  }, [profile.id, period.start, period.end, today, footballOn]);
 }
 
 export function SeasonReport({ profile, s, p, onClose }: { profile: Profile; s: LongTermSummary; p?: LongTermSummary; onClose: () => void }) {

@@ -13,6 +13,7 @@ import { repo } from '../../db/repositories';
 import { formatDate } from '../../ui/format';
 import { useReport } from '../analysis/useReport';
 import { useFootball } from '../football/useFootball';
+import { useFootballEnabled } from '../football/useFootballEnabled';
 import { weekModel } from './WeekSummary';
 
 const KEY = 'lastWeekSeen';
@@ -50,7 +51,8 @@ export function LastWeekCard({ profile, today, onOpenWeek }: { profile: Profile;
     const sessions = (await repo.sessionsInRange(profile.id, period.start, period.end)).filter((s) => !s.deletedAt);
     return { sessions };
   }, [profile.id, period.start, period.end]);
-  const football = useFootball(profile.id, period.start, period.end);
+  const footballOn = useFootballEnabled(profile);
+  const football = useFootball(footballOn ? profile.id : undefined, period.start, period.end);
 
   if (!report || !week) return null;
   const logged = week.sessions.filter((s) => !s.estimateConfirmed);
@@ -60,12 +62,15 @@ export function LastWeekCard({ profile, today, onOpenWeek }: { profile: Profile;
     writeSeen(profile.id, start);
     setDismissed(start);
   };
-  const { main } = weekModel(report, settings);
+  const { main, tiles: weekTiles } = weekModel(report, settings);
   const ev = report.evaluation;
   const fb = football && football.sessions.length ? footballPeriodSummary(football, period) : undefined;
   const g = fb?.games;
   // Selkeät, isot luvut: pääluku omana rivinään, muut ruutuina (kertoja ja kommentteja ei näytetä).
-  const tiles: { label: string; value: string; unit?: string }[] = [{ label: 'Liikuntaa yhteensä', value: formatHours(report.hours.actualMin) }];
+  // Ilman jalkapalloa: viikkonäkymän omat ruudut (esim. rasittavat päivät, lihas · luusto).
+  const tiles: { label: string; value: string; unit?: string }[] = footballOn
+    ? [{ label: 'Liikuntaa yhteensä', value: formatHours(report.hours.actualMin) }]
+    : weekTiles.map((t) => ({ label: t.label, value: t.value, unit: t.sub }));
   if (fb && fb.training.count) tiles.push({ label: 'Treenit', value: String(fb.training.count) });
   if (g && g.games) tiles.push({ label: 'Pelit V–T–H', value: `${g.wins}–${g.draws}–${g.losses}`, unit: g.noResult ? `+${g.noResult} ilman tulosta` : undefined });
   if (g && g.playerGoalsGames) tiles.push({ label: `${profile.name}: maalit`, value: `⚽ ${g.playerGoals}` });
@@ -99,7 +104,7 @@ export function LastWeekCard({ profile, today, onOpenWeek }: { profile: Profile;
           <div className="text-sm text-slate-500">{main.target}</div>
         </div>
       )}
-      <dl className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <dl className={`mt-2 grid grid-cols-2 gap-2 ${tiles.length === 3 ? 'sm:grid-cols-3 [&>*:last-child]:max-sm:col-span-2' : 'sm:grid-cols-4'}`}>
         {tiles.map((t) => (
           <div key={t.label} className="min-w-0 rounded-2xl bg-[var(--surface-sunk)] px-4 py-3">
             <dt className="text-sm font-semibold leading-tight text-slate-600">{t.label}</dt>

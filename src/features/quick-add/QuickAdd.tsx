@@ -12,6 +12,7 @@ import { IconBall } from '../../ui/icons';
 import { TermInfo } from '../../ui/glossary';
 import { LabelField } from '../week/LabelField';
 import { useHiddenCategories, visibleTypes } from '../week/useLoggableTypes';
+import { useFootballEnabled, withoutClubFootball } from '../football/useFootballEnabled';
 import { Button, inputClass } from '../../ui/components';
 import { ToggleChip } from '../../ui/controls';
 import { IntensityPicker, isPreset, type IntensityMode, type ManualDraft } from '../week/IntensityPicker';
@@ -71,7 +72,10 @@ export function QuickAdd({
   const toast = useToast();
   const allTypes = useLiveQuery(() => repo.listActivityTypes(), []);
   const hidden = useHiddenCategories(profile.id, today);
-  const types = useMemo(() => visibleTypes(allTypes, hidden), [allTypes, hidden]);
+  // Jalkapallo pois käytöstä: seurajalkapallon lajit piiloon, omatoiminen jalkapallo tavallisena lajina.
+  const footballOn = useFootballEnabled(profile);
+  const types = useMemo(() => withoutClubFootball(visibleTypes(allTypes, hidden), footballOn), [allTypes, hidden, footballOn]);
+  const inFootballGroup = (t: ActivityType) => footballOn && isFootball(t);
   const recentIds = useLiveQuery(() => repo.recentActivityTypeIds(profile.id, 6), [profile.id]);
 
   const [type, setType] = useState<ActivityType | null>(null);
@@ -111,19 +115,21 @@ export function QuickAdd({
   const recent = useMemo(() => {
     if (!types) return [];
     const byId = new Map(types.map((t) => [t.id, t]));
-    const list = (recentIds ?? []).map((id) => byId.get(id)).filter((t): t is ActivityType => !!t && !isFootball(t));
+    const list = (recentIds ?? []).map((id) => byId.get(id)).filter((t): t is ActivityType => !!t && !inFootballGroup(t));
     // Täydennetään oletusjärjestyksellä, kunnes kuusi painiketta on täynnä (jalkapallo on omana ryhmänään).
-    for (const t of types.filter((x) => !isFootball(x))) {
+    for (const t of types.filter((x) => !inFootballGroup(x))) {
       if (list.length >= 6) break;
       if (!list.includes(t)) list.push(t);
     }
     return list.slice(0, 6);
-  }, [types, recentIds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [types, recentIds, footballOn]);
   // Järjestys: treeni, omatoiminen, peli, turnaus.
   const football = useMemo(() => {
     const rank = (t: ActivityType) => (t.footballKind === 'training' ? (t.category === 'hobby' ? 0 : 1) : t.footballKind === 'game' ? 2 : t.footballKind === 'tournament' ? 3 : 4);
-    return (types ?? []).filter(isFootball).sort((a, b) => rank(a) - rank(b));
-  }, [types]);
+    return (types ?? []).filter(inFootballGroup).sort((a, b) => rank(a) - rank(b));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [types, footballOn]);
 
   const sameDay = useLiveQuery(
     async () => (type ? (await repo.sessionsInRange(profile.id, date, date)).filter((s) => s.activityTypeId === type.id).length : 0),
@@ -238,7 +244,7 @@ export function QuickAdd({
           </Button>
           {showAll &&
             CATEGORY_ORDER.map((c) => {
-              const inCat = (types ?? []).filter((t) => t.category === c && !isFootball(t));
+              const inCat = (types ?? []).filter((t) => t.category === c && !inFootballGroup(t));
               if (!inCat.length) return null;
               return (
                 <div key={c}>

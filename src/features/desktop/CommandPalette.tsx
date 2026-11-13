@@ -20,6 +20,8 @@ export interface PaletteContext {
   selected?: Profile;
   tab: PaletteTab;
   setTab: (t: PaletteTab) => void;
+  /** Jalkapallo käytössä valitulle profiilille (muuten välilehti ja tulevat pelit piilossa). */
+  football: boolean;
   selectProfile: (id: string) => void;
   openSettings: (s?: SettingsSectionId) => void;
   openHelp: () => void;
@@ -81,7 +83,7 @@ export function CommandPalette(ctx: PaletteContext) {
       else if (c.tab === 'week' && k === 'ArrowLeft') act(() => c.run({ kind: 'week', delta: -1 }));
       else if (c.tab === 'week' && k === 'ArrowRight') act(() => c.run({ kind: 'week', delta: 1 }));
       else {
-        const t = TAB_ITEMS.find((x) => x.key === k);
+        const t = TAB_ITEMS.find((x) => x.key === k && (x.id !== 'games' || c.football));
         if (t) act(() => c.setTab(t.id));
       }
     };
@@ -119,7 +121,7 @@ function Palette({ ctx, onClose }: { ctx: PaletteContext; onClose: () => void })
       { id: 'thisweek', group: 'Toiminnot', label: 'Tämä viikko', keys: 'T', words: 'tänään nykyinen', run: go(() => ctx.run({ kind: 'week', delta: 0 })) },
       { id: 'prev', group: 'Toiminnot', label: 'Edellinen viikko', keys: '←', run: go(() => ctx.run({ kind: 'week', delta: -1 })) },
       { id: 'next', group: 'Toiminnot', label: 'Seuraava viikko', keys: '→', run: go(() => ctx.run({ kind: 'week', delta: 1 })) },
-      ...TAB_ITEMS.map((t) => ({ id: `tab-${t.id}`, group: 'Siirry', label: t.label, keys: t.key, words: 'näkymä välilehti', run: go(() => ctx.setTab(t.id)) })),
+      ...TAB_ITEMS.filter((t) => t.id !== 'games' || ctx.football).map((t) => ({ id: `tab-${t.id}`, group: 'Siirry', label: t.label, keys: t.key, words: 'näkymä välilehti', run: go(() => ctx.setTab(t.id)) })),
       ...ctx.profiles
         .filter((p) => p.id !== ctx.selected?.id)
         .map((p) => ({ id: `p-${p.id}`, group: 'Profiilit', label: `Vaihda profiiliin ${p.name}`, words: 'profiili lapsi', run: go(() => ctx.selectProfile(p.id)) })),
@@ -127,7 +129,7 @@ function Palette({ ctx, onClose }: { ctx: PaletteContext; onClose: () => void })
       { id: 'theme', group: 'Ulkoasu', label: dark ? 'Vaihda vaaleaan teemaan' : 'Vaihda tummaan teemaan', words: 'tumma vaalea teema yö', run: go(() => setThemeChoice(dark ? 'light' : 'dark')) },
       { id: 'help', group: 'Ohje', label: 'Ohje', keys: '?', words: 'apua käyttöohje', run: go(ctx.openHelp) },
     ];
-    for (const e of fixtures ?? []) {
+    for (const e of ctx.football ? (fixtures ?? []) : []) {
       const f = e.fixture;
       const name = f?.eventName || (f?.opponent ? `vs. ${f.opponent}` : undefined);
       if (!name) continue;

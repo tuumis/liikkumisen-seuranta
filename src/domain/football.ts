@@ -26,6 +26,15 @@ import { DEFAULT_GAME_WARMUP_MIN } from './intensity';
 export type GameOutcome = 'W' | 'D' | 'L';
 
 /**
+ * Seurajalkapallon lajit (treeni, peli, turnaus), jotka piilotetaan, kun jalkapallo-ominaisuus on pois.
+ * "Jalkapallo – omatoiminen" on tavallinen omaehtoinen laji ja näkyy aina.
+ */
+export const isClubFootball = (t: Pick<ActivityType, 'sport' | 'category'> | undefined): boolean => t?.sport === 'football' && t.category !== 'self_directed';
+
+/** Jalkapallo-ominaisuus profiilille: tallennettu valinta, muuten päätelty datasta. */
+export const footballEnabled = (profile: { football?: boolean } | undefined, hasData: boolean): boolean => profile?.football ?? hasData;
+
+/**
  * Taso ponnisteluna pelin tehoprofiiliin (käyttäjän vahvistama): Elite = kovempi,
  * Kilpa = tavallinen, Haaste = kevyempi. Tehoprofiili itse säilyy (peli 20/45/30 %).
  */

@@ -16,6 +16,7 @@ import { SidebarUpdate } from './features/update/appUpdate';
 import { consumeLaunchAction, dispatchCommand, type AppCommand } from './features/desktop/commands';
 import { CommandPalette } from './features/desktop/CommandPalette';
 import { StoryHost } from './features/story/StoryViewer';
+import { useFootballStatus } from './features/football/useFootballEnabled';
 import { Avatar } from './ui/Avatar';
 import { formatDate } from './ui/format';
 import { IconBall, IconChart, IconHelp, IconLeaf, IconSearch, IconSettings, IconWeek } from './ui/icons';
@@ -54,11 +55,11 @@ const store = {
 export default function App() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string>();
-  const [tab, setTabState] = useState<Tab>(() => (store.get('tab') as Tab) ?? 'week');
+  const [rawTab, setTabState] = useState<Tab>(() => (store.get('tab') as Tab) ?? 'week');
   const [settingsSection, setSettingsSection] = useState<SettingsSectionId | undefined>();
   // Kerran avatut välilehdet (pysyvät muistissa, ei uutta latausta palatessa).
   const [visited, setVisited] = useState<Set<Tab>>(() => new Set());
-  useEffect(() => setVisited((v) => (v.has(tab) ? v : new Set(v).add(tab))), [tab]);
+  useEffect(() => setVisited((v) => (v.has(rawTab) ? v : new Set(v).add(rawTab))), [rawTab]);
   const [helpOpen, setHelpOpen] = useState(false);
   const openSettings = (section?: SettingsSectionId) => {
     setSettingsSection(section);
@@ -86,6 +87,10 @@ export default function App() {
   // null = ei vielä ladattu (erotetaan tyhjästä listasta, ettei ensikäynnistyksen ohjaus laukea turhaan).
   const profiles = useLiveQuery(() => (ready ? repo.listProfiles() : null), [ready]) ?? null;
   const selected = profiles?.find((p) => p.id === selectedId) ?? profiles?.[0];
+  // Jalkapallo-välilehti vain, kun jalkapallo on profiilille käytössä (päättelyn aikana näkyy, ei välähdä pois).
+  const football = useFootballStatus(selected) !== false;
+  const tabs = football ? TABS : TABS.filter((t) => t.id !== 'games');
+  const tab: Tab = !football && rawTab === 'games' ? 'week' : rawTab;
   const onboarded = useLiveQuery(() => (ready ? repo.getMeta<boolean>('onboarded').then((v) => v ?? false) : null), [ready]) ?? null;
 
   const setTab = (t: Tab) => {
@@ -163,7 +168,7 @@ export default function App() {
   }
 
   const TAB_TITLE: Record<Tab, string> = { week: 'Viikko', games: 'Jalkapallo', analysis: 'Analyysi', settings: 'Asetukset' };
-  const tabIndex = TABS.findIndex((t) => t.id === tab);
+  const tabIndex = tabs.findIndex((t) => t.id === tab);
   const mounted = new Set<Tab>([...visited, tab]);
   const dateLine = formatDate(today(), 'EEEE d. MMMM');
 
@@ -181,7 +186,7 @@ export default function App() {
           </div>
         </div>
         <nav className="space-y-1 px-4" aria-label="Päävalikko">
-          {TABS.map((t) => {
+          {tabs.map((t) => {
             const active = tab === t.id;
             return (
               <button
@@ -301,7 +306,7 @@ export default function App() {
           {!ready ? (
             <LoadingSkeleton />
           ) : (
-            TABS.filter((t) => mounted.has(t.id)).map((t) => (
+            tabs.filter((t) => mounted.has(t.id)).map((t) => (
               <div key={t.id} hidden={t.id !== tab}>
                 {t.id === 'week' ? (
                   <WeekView profile={selected} onOpenSettings={openSettings} />
@@ -331,13 +336,13 @@ export default function App() {
 
       {/* Puhelin: kelluva alanavigaatio, aktiivinen kohta liukuu paikalleen. */}
       <nav className="bottom-nav fixed inset-x-0 bottom-0 z-20 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden" aria-label="Päävalikko">
-        <div className="relative mx-auto grid max-w-md grid-cols-4 rounded-[1.75rem] bg-[color-mix(in_oklab,var(--surface)_88%,transparent)] p-1.5 shadow-xl ring-1 ring-slate-200/70 backdrop-blur-xl">
+        <div className="relative mx-auto grid max-w-md rounded-[1.75rem] bg-[color-mix(in_oklab,var(--surface)_88%,transparent)] p-1.5 shadow-xl ring-1 ring-slate-200/70 backdrop-blur-xl" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
           <span
             className="absolute inset-y-1.5 left-1.5 rounded-[1.35rem] bg-green-700 shadow-[0_8px_20px_-8px_rgb(var(--accent-rgb)/0.7)] transition-transform duration-500 [transition-timing-function:var(--ease-out)]"
-            style={{ width: 'calc((100% - 0.75rem) / 4)', transform: `translateX(${tabIndex * 100}%)` }}
+            style={{ width: `calc((100% - 0.75rem) / ${tabs.length})`, transform: `translateX(${tabIndex * 100}%)` }}
             aria-hidden
           />
-          {TABS.map((t) => {
+          {tabs.map((t) => {
             const active = tab === t.id;
             return (
               <button
@@ -362,6 +367,7 @@ export default function App() {
           selected={selected}
           tab={tab}
           setTab={setTab}
+          football={football}
           selectProfile={select}
           openSettings={openSettings}
           openHelp={() => setHelpOpen(true)}

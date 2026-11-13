@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { AppDB } from './schema';
 import { createRepositories, type Repositories } from './repositories';
 import { buildSyncFile, mergeSyncFile, purgeProfile, toJson } from './backup';
-import { gameRows, summarizeBy, summarizeByPosition, summarizeGames, LEVEL_LABEL } from '../domain/football';
+import { footballEnabled, gameRows, isClubFootball, summarizeBy, summarizeByPosition, summarizeGames, LEVEL_LABEL } from '../domain/football';
 import { BUILT_IN_ACTIVITY_TYPES } from '../seed/activityTypes';
 
 let n = 0;
@@ -36,6 +36,42 @@ describe('joukkueet', () => {
     expect(await repo.listTeams('p1')).toHaveLength(1);
     expect(await repo.listTeams('p2')).toEqual([]);
     await expect(repo.saveTeam('p1', { name: '   ' })).rejects.toThrow();
+  });
+});
+
+describe('jalkapallo-ominaisuus profiileittain', () => {
+  it('päätellään datasta (seurajalkapallon kerta, suunnitelma tai joukkue), tallennettu valinta voittaa', async () => {
+    const { repo } = await device('fbflag');
+    const p = await repo.createProfile({ name: 'Aino', kind: 'child', birthYear: 2016, birthMonth: 5, color: '#0891b2' });
+    const q = await repo.createProfile({ name: 'Eino', kind: 'child', birthYear: 2018, birthMonth: 3, color: '#0891b2' });
+    const r = await repo.createProfile({ name: 'Ilona', kind: 'child', birthYear: 2019, birthMonth: 1, color: '#0891b2' });
+    expect(await repo.hasFootballData(p.id)).toBe(false);
+    // Omatoiminen jalkapallo on tavallinen laji eikä ota jalkapallo-ominaisuutta käyttöön.
+    await repo.createSession({ profileId: p.id, activityTypeId: 't:football_self', date: TODAY, durationMin: 30, effort: 0, muscle: false, bone: false });
+    expect(await repo.hasFootballData(p.id)).toBe(false);
+    const s = await repo.createSession({ profileId: p.id, activityTypeId: 't:football_training', date: TODAY, durationMin: 60, effort: 0, muscle: false, bone: true });
+    expect(await repo.hasFootballData(p.id)).toBe(true);
+    await repo.deleteSession(s.id);
+    expect(await repo.hasFootballData(p.id)).toBe(false);
+    await repo.saveTeam(q.id, { name: 'P2018' });
+    expect(await repo.hasFootballData(q.id)).toBe(true);
+    await repo.createFixture(r.id, { kind: 'game', date: '2026-11-20', durationMin: 60 });
+    expect(await repo.hasFootballData(r.id)).toBe(true);
+    expect(footballEnabled(q, true)).toBe(true);
+    await repo.updateProfile(q.id, { football: false });
+    const q2 = (await repo.listProfiles()).find((x) => x.id === q.id)!;
+    expect(q2.football).toBe(false);
+    expect(footballEnabled(q2, true)).toBe(false);
+    // Valinnan tyhjennys palauttaa päättelyn.
+    await repo.updateProfile(q.id, { football: undefined });
+    expect((await repo.listProfiles()).find((x) => x.id === q.id)!.football).toBeUndefined();
+  });
+
+  it('seurajalkapallon lajit: treeni, peli ja turnaus; omatoiminen ei', () => {
+    const byKey = new Map(BUILT_IN_ACTIVITY_TYPES.map((t) => [t.key, t]));
+    expect(['football_training', 'football_game', 'football_tournament'].every((k) => isClubFootball(byKey.get(k)))).toBe(true);
+    expect(isClubFootball(byKey.get('football_self'))).toBe(false);
+    expect(isClubFootball(byKey.get('cycling') ?? byKey.get('commute_walk'))).toBe(false);
   });
 });
 

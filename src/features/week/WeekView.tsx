@@ -35,6 +35,7 @@ import { HoursGauge } from './HoursGauge';
 import { HoursCard, HoursDetailCard } from './HoursCard';
 import { GettingStarted } from './GettingStarted';
 import { LastWeekCard } from './LastWeekCard';
+import { useFootballEnabled } from '../football/useFootballEnabled';
 import { TournamentDayCard } from '../games/TournamentDay';
 import type { SettingsSectionId } from '../settings/SettingsView';
 import { DaySheet } from './DaySheet';
@@ -58,9 +59,11 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
   const [planOpen, setPlanOpen] = useState<PlannedSession | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [football, setFootball] = useState<Session | null>(null);
+  // Jalkapallo pois käytöstä (SPEC 16): ei lisätietopaneelia, "Lisää tiedot" -painiketta eikä jalkapallosaraketta.
+  const footballOn = useFootballEnabled(profile);
   // Jalkapallon lisätietopaneeli yksittäisen kirjauksen tai kuittauksen jälkeen (vahvistettu tulkinta).
   const openFootballIfAny = (s: Session) => {
-    if (typeMap.get(s.activityTypeId)?.sport === 'football') setFootball(s);
+    if (footballOn && typeMap.get(s.activityTypeId)?.sport === 'football') setFootball(s);
   };
   const planActions = usePlanActions(setEditing, (s) => openFootballIfAny(s));
 
@@ -113,11 +116,12 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     if (profile) void repo.ensurePlanned(profile.id, planningThroughForWeek(today, weekStart), today);
   }, [profile?.id, weekStart, today]);
 
-  const footballIds = (sessions ?? []).filter((s) => typeMap.get(s.activityTypeId)?.sport === 'football').map((s) => s.id).join(',');
-  const footballDetails = useLiveQuery(
+  const footballIds = footballOn ? (sessions ?? []).filter((s) => typeMap.get(s.activityTypeId)?.sport === 'football').map((s) => s.id).join(',') : '';
+  const fbDetails = useLiveQuery(
     () => (footballIds ? repo.footballDetailsFor(footballIds.split(',')) : Promise.resolve(new Map())),
     [footballIds],
   );
+  const footballDetails = footballOn ? fbDetails : undefined;
 
   // Aloitusopas näytetään, kunnes profiililla on ensimmäinen kirjaus.
   const hasAnySessions = useLiveQuery(
@@ -347,7 +351,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             plannedById={plannedById}
             fixtures={fixtureByPlan}
             footballDetails={footballDetails}
-            onFootball={setFootball}
+            onFootball={footballOn ? setFootball : () => undefined}
             onPlanOpen={setPlanOpen}
             onPlanConfirm={(p) => void planActions.confirm(p)}
             types={typeMap}
@@ -491,7 +495,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
           />
           <ReviewSheet open={reviewOpen} onClose={() => setReviewOpen(false)} profile={profile} types={typeMap} onOpenSession={setEditing} />
           {/* Viimeisenä, jotta muokkaus aukeaa muiden paneelien päälle (toinen kuittaus avaa kerran). */}
-          <SessionEditor session={editing} onClose={() => setEditing(null)} onFootball={setFootball} />
+          <SessionEditor session={editing} onClose={() => setEditing(null)} onFootball={footballOn ? setFootball : undefined} />
           <FootballPanel
             session={football}
             type={football ? typeMap.get(football.activityTypeId) : undefined}

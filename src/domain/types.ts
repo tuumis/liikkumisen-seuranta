@@ -73,6 +73,11 @@ export interface Profile extends SyncFields {
   photo?: string;
   /** Seurannan alku, jos eri kuin profiilin luontipäivä (esim. aiemmin aloitettu seuranta). */
   trackingStart?: ISODate;
+  /**
+   * Jalkapallo-ominaisuus (SPEC 16): välilehti, joukkueet, pelit ja jalkapallon lisätiedot.
+   * Puuttuessa päätellään datasta (on jalkapallokirjauksia, joukkueita tai pelejä).
+   */
+  football?: boolean;
   sortOrder: number;
   archived: boolean;
   createdAt: Timestamp;

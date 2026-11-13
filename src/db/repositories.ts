@@ -48,7 +48,7 @@ import type {
   UUID,
   Weekday,
 } from '../domain/types';
-import { isGameFormat, LEVEL_EFFORT, POSITIONS } from '../domain/football';
+import { isClubFootball, isGameFormat, LEVEL_EFFORT, POSITIONS } from '../domain/football';
 import { BUILT_IN_ACTIVITY_TYPES } from '../seed/activityTypes';
 import { nowTimestamp } from './clock';
 import { createPlanner } from './ensurePlanned';
@@ -234,7 +234,7 @@ export function createRepositories(db: AppDB = defaultDb) {
   }
 
   type ProfileInput = Pick<Profile, 'name' | 'kind' | 'birthYear' | 'birthMonth' | 'color'> &
-    Partial<Pick<Profile, 'schoolStart' | 'groupOverride' | 'trackingStart' | 'photo'>>;
+    Partial<Pick<Profile, 'schoolStart' | 'groupOverride' | 'trackingStart' | 'photo' | 'football'>>;
 
   async function createProfile(input: ProfileInput): Promise<Profile> {
     const all = await db.profiles.toArray();
@@ -257,10 +257,23 @@ export function createRepositories(db: AppDB = defaultDb) {
     if (!current || current.deletedAt) throw new Error('Profiilia ei löydy');
     const next: Profile = await stamp({ ...current, ...changes });
     // Valinnaisten kenttien tyhjennys: undefined poistaa kentän.
-    for (const k of ['schoolStart', 'groupOverride', 'trackingStart', 'photo'] as const) {
+    for (const k of ['schoolStart', 'groupOverride', 'trackingStart', 'photo', 'football'] as const) {
       if (k in changes && changes[k] === undefined) delete next[k];
     }
     await db.profiles.put(next);
+  }
+
+  /**
+   * Onko profiililla jalkapallodataa (seurajalkapallon kerta tai suunnitelma, joukkue): käytetään
+   * jalkapallo-ominaisuuden oletuksena, kun profiilille ei ole tallennettu valintaa (SPEC 16).
+   */
+  async function hasFootballData(profileId: UUID): Promise<boolean> {
+    const ids = (await db.activityTypes.toArray()).filter((t) => isClubFootball(t)).map((t) => t.id);
+    if (live(await db.teams.where('profileId').equals(profileId).toArray()).length) return true;
+    if (!ids.length) return false;
+    const mine = (r: { profileId: UUID; deletedAt?: Timestamp }) => r.profileId === profileId && !r.deletedAt;
+    if (await db.sessions.where('activityTypeId').anyOf(ids).filter(mine).count()) return true;
+    return (await db.plannedSessions.where('profileId').equals(profileId).filter((p) => !p.deletedAt && ids.includes(p.activityTypeId)).count()) > 0;
   }
 
   async function setProfileArchived(id: string, archived: boolean): Promise<void> {
@@ -1553,6 +1566,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     updateProfile,
     setProfileArchived,
     listActivityTypes,
+    hasFootballData,
     getActivityType,
     updateActivityType,
     restoreActivityTypeDefaults,
