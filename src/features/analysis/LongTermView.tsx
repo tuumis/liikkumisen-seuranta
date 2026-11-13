@@ -19,7 +19,9 @@ import { SERIES } from './DailyMvpaChart';
 import { useReport } from './useReport';
 import { SeasonReport } from './SeasonReport';
 import { HeatmapCard } from './HeatmapCard';
-import { useAnalysisLayout } from './layout';
+import { fullWidthSegments, useLongTermLayout, type LongCardId } from './layout';
+import { EditLayoutSheet } from '../../ui/EditLayoutSheet';
+import { IconSettings } from '../../ui/icons';
 
 const KIND_TEXT: Record<LongKind, { this: string; prev: string; bucket: string }> = {
   month: { this: 'Tämä kuukausi', prev: 'Edellinen kuukausi', bucket: 'viikoittain' },
@@ -32,7 +34,7 @@ const CONTEXT_TEXT: Record<Context, string> = { organized: 'Ohjattu (harrastus, 
 const pct = (x: number | null | undefined) => (x === null || x === undefined ? '–' : `${Math.round(x * 100)} %`);
 const min = (x: number | null | undefined) => (x === null || x === undefined ? '–' : `${Math.round(x)} min/pv`);
 
-function useSummary(profile: Profile, period: Period): LongTermSummary | undefined {
+export function useLongSummary(profile: Profile, period: Period): LongTermSummary | undefined {
   const report = useReport(profile, period);
   const data = useLiveQuery(async () => {
     const [sessions, types, settings] = await Promise.all([
@@ -51,12 +53,57 @@ export function LongTermView({ profile, kind }: { profile: Profile; kind: LongKi
   const period = periodOf(kind, anchor);
   const prev = previousPeriod(period);
   const isCurrent = period.start <= today && today <= period.end;
-  const s = useSummary(profile, period);
-  const p = useSummary(profile, prev);
+  const s = useLongSummary(profile, period);
+  const p = useLongSummary(profile, prev);
   const texts = KIND_TEXT[kind];
   const [reportOpen, setReportOpen] = useState(false);
-  // Aktiivisuuskartta näkyy myös pitkillä jaksoilla, jos se on valittu Analyysin kortteihin.
-  const showHeatmap = useAnalysisLayout().visible.includes('heatmap');
+  // Kortit käyttäjän valitsemassa järjestyksessä (oma asetus pitkille jaksoille).
+  const layout = useLongTermLayout();
+  const [editing, setEditing] = useState(false);
+
+  const longCard = (id: LongCardId) => {
+    if (!s) return null;
+    switch (id) {
+      case 'trend':
+        return (
+          <Card title={`Reipas ja rasittava ${texts.bucket}`} eyebrow={`Kehitys · ${profile.name}`}>
+            <TrendChart buckets={s.buckets} target={DAY_BAR_TARGET[s.group]} group={s.group} />
+          </Card>
+        );
+      case 'compare':
+        return (
+          <Card title={`Vertailu: ${periodName(period)} ja ${periodName(prev)}`} eyebrow={texts.prev}>
+            <CompareTable s={s} p={p} />
+          </Card>
+        );
+      case 'context':
+        return (
+          <Card title="Ohjattu ja omaehtoinen" eyebrow="Mistä reipas ja rasittava kertyy">
+            <ContextBars s={s} p={p} prevName={periodName(prev)} />
+          </Card>
+        );
+      case 'variety':
+        return (
+          <Card title="Monipuolisuus ja lajit" eyebrow="Kirjatut kerrat">
+            <Variety s={s} />
+          </Card>
+        );
+      case 'weeklyGoals':
+        return (
+          <Card title="Suositusten toteutuminen viikoittain" eyebrow="Viikkotavoitteet">
+            <WeeklyGoals s={s} />
+          </Card>
+        );
+      case 'quality':
+        return (
+          <Card title="Datan laatu" eyebrow="Luotettavuus">
+            <Quality s={s} p={p} prevName={periodName(prev)} />
+          </Card>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -86,13 +133,16 @@ export function LongTermView({ profile, kind }: { profile: Profile; kind: LongKi
             {texts.this}
           </Button>
         )}
-        {s && s.validDays > 0 && (
-          <span className="ml-auto">
+        <span className="ml-auto flex flex-wrap gap-2">
+          {s && s.validDays > 0 && (
             <Button variant="secondary" onClick={() => setReportOpen(true)}>
               Raportti (PDF)
             </Button>
-          </span>
-        )}
+          )}
+          <Button variant="secondary" onClick={() => setEditing(true)}>
+            <IconSettings size="1rem" /> Muokkaa näkymää
+          </Button>
+        </span>
       </div>
       {reportOpen && s && <SeasonReport profile={profile} s={s} p={p} onClose={() => setReportOpen(false)} />}
 
@@ -102,45 +152,32 @@ export function LongTermView({ profile, kind }: { profile: Profile; kind: LongKi
           <EmptyState title="Ei vertailtavia päiviä">Jaksolla ei ole seurannan päiviä. Valitse aiempi tai myöhempi jakso.</EmptyState>
         </Card>
       )}
-      {s && s.validDays > 0 && (
-        <div className="columns-1 gap-5 lg:columns-2 lg:gap-6">
-          <Block>
-            <Card title={`Reipas ja rasittava ${texts.bucket}`} eyebrow={`Kehitys · ${profile.name}`}>
-              <TrendChart buckets={s.buckets} target={DAY_BAR_TARGET[s.group]} group={s.group} />
-            </Card>
-          </Block>
-          <Block>
-            <Card title={`Vertailu: ${periodName(period)} ja ${periodName(prev)}`} eyebrow={texts.prev}>
-              <CompareTable s={s} p={p} />
-            </Card>
-          </Block>
-          <Block>
-            <Card title="Ohjattu ja omaehtoinen" eyebrow="Mistä reipas ja rasittava kertyy">
-              <ContextBars s={s} p={p} prevName={periodName(prev)} />
-            </Card>
-          </Block>
-          <Block>
-            <Card title="Monipuolisuus ja lajit" eyebrow="Kirjatut kerrat">
-              <Variety s={s} />
-            </Card>
-          </Block>
-          <Block>
-            <Card title="Suositusten toteutuminen viikoittain" eyebrow="Viikkotavoitteet">
-              <WeeklyGoals s={s} />
-            </Card>
-          </Block>
-          <Block>
-            <Card title="Datan laatu" eyebrow="Luotettavuus">
-              <Quality s={s} p={p} prevName={periodName(prev)} />
-            </Card>
-          </Block>
-        </div>
+      {s && s.validDays > 0 && layout.visible.length === 0 && (
+        <Card>
+          <p className="text-sm text-slate-600">Kaikki kortit on piilotettu. Valitse näytettävät kortit painikkeesta "Muokkaa näkymää".</p>
+        </Card>
       )}
-      {showHeatmap && (
-        <div className="anim-rise">
-          <HeatmapCard key={`${kind}:${period.start}`} profile={profile} focus={{ kind, start: period.start, end: period.end, label: periodName(period) }} />
-        </div>
-      )}
+      {s &&
+        fullWidthSegments(layout.visible, 'heatmap').map((seg) =>
+          seg === 'heatmap' ? (
+            <div key="heatmap" className="anim-rise">
+              <HeatmapCard key={`${kind}:${period.start}`} profile={profile} focus={{ kind, start: period.start, end: period.end, label: periodName(period) }} />
+            </div>
+          ) : s.validDays > 0 ? (
+            <div key={seg[0]} className="columns-1 gap-5 lg:columns-2 lg:gap-6">
+              {seg.map((id) => (
+                <Block key={id}>{longCard(id)}</Block>
+              ))}
+            </div>
+          ) : null,
+        )}
+      <EditLayoutSheet
+        open={editing}
+        onClose={() => setEditing(false)}
+        title="Muokkaa jaksonäkymää"
+        intro="Valitse kuukausi-, kausi- ja vuosinäkymän kortit ja niiden järjestys. Aktiivisuuskartta vie aina koko leveyden."
+        api={layout}
+      />
     </div>
   );
 }

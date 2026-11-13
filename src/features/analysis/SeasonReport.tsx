@@ -119,11 +119,11 @@ export function SeasonReport({ profile, s, p, onClose }: { profile: Profile; s: 
           </p>
         </Section>
 
-        <Section title="Kehitys">
+        <Section title={s.period.kind === 'week' ? 'Päivittäin' : 'Kehitys'}>
           <table className="w-full border-collapse">
             <thead>
               <tr className="text-left text-[11px] text-[#5a645d]">
-                <th className="py-1 pr-2 font-semibold">{s.period.kind === 'month' ? 'Viikko' : 'Kuukausi'}</th>
+                <th className="py-1 pr-2 font-semibold">{s.period.kind === 'week' ? 'Päivä' : s.period.kind === 'month' ? 'Viikko' : 'Kuukausi'}</th>
                 <th className="w-1/2 py-1 pr-2 font-semibold">Reipas ja rasittava ka. (kirjattu + arvio)</th>
                 <th className="py-1 pr-2 text-right font-semibold">min/pv</th>
                 <th className="py-1 text-right font-semibold">Kattavuus</th>

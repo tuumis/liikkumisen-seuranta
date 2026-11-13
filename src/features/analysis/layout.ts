@@ -19,3 +19,30 @@ export const ANALYSIS_CARDS: CardDef<AnalysisCardId>[] = [
 ];
 
 export const useAnalysisLayout = () => useCardLayout('analysisLayout', ANALYSIS_CARDS, ['quality']);
+
+/** Kuukausi-, kausi- ja vuosinäkymän kortit (oma järjestys ja näkyvyys). */
+export type LongCardId = 'trend' | 'compare' | 'context' | 'variety' | 'weeklyGoals' | 'quality' | 'heatmap';
+
+export const LONG_CARDS: CardDef<LongCardId>[] = [
+  { id: 'trend', title: 'Reipas ja rasittava', text: 'Kehitys viikoittain tai kuukausittain' },
+  { id: 'compare', title: 'Vertailu', text: 'Valittu jakso ja edellinen samanlainen jakso' },
+  { id: 'context', title: 'Ohjattu ja omaehtoinen', text: 'Mistä reipas ja rasittava kertyy' },
+  { id: 'variety', title: 'Monipuolisuus ja lajit', text: 'Liikuntaryhmät ja lajit kirjatuista kerroista' },
+  { id: 'weeklyGoals', title: 'Suositusten toteutuminen viikoittain', text: 'Viikkotavoitteet' },
+  { id: 'quality', title: 'Datan laatu', text: 'Kattavuus ja arvion osuus' },
+  { id: 'heatmap', title: 'Aktiivisuuskartta', text: 'Vuoden päivät ruudukkona; valittu jakso korostettuna. Koko leveys' },
+];
+
+export const useLongTermLayout = () => useCardLayout('longTermLayout', LONG_CARDS);
+
+/** Kortit palstaryhmiin; täysleveä kortti (aktiivisuuskartta) omaksi lohkokseen järjestyksen mukaiseen kohtaan. */
+export function fullWidthSegments<Id extends string, F extends Id>(ids: Id[], full: F): (Exclude<Id, F>[] | F)[] {
+  const out: (Exclude<Id, F>[] | F)[] = [];
+  for (const id of ids) {
+    const last = out.at(-1);
+    if (id === full) out.push(full);
+    else if (Array.isArray(last)) last.push(id as Exclude<Id, F>);
+    else out.push([id as Exclude<Id, F>]);
+  }
+  return out;
+}

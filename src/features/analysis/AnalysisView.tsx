@@ -23,10 +23,10 @@ import { HighlightsCard } from './HighlightsCard';
 import { IconChevronLeft, IconChevronRight, IconSettings, IconSparkle } from '../../ui/icons';
 import { dispatchCommand } from '../desktop/commands';
 import { EditLayoutSheet } from '../../ui/EditLayoutSheet';
-import { useAnalysisLayout } from './layout';
-import { LongTermView } from './LongTermView';
+import { fullWidthSegments, useAnalysisLayout } from './layout';
+import { LongTermView, useLongSummary } from './LongTermView';
+import { SeasonReport } from './SeasonReport';
 import { HeatmapCard } from './HeatmapCard';
-import type { AnalysisCardId } from './layout';
 import type { LongKind } from '../../domain/longTerm';
 import { Segmented } from '../../ui/controls';
 
@@ -126,7 +126,8 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
             Tämä viikko
           </Button>
         )}
-        <span className="ml-auto">
+        <span className="ml-auto flex flex-wrap gap-2">
+          {profile && <WeekReportButton profile={profile} weekStart={weekStart} />}
           <Button variant="secondary" onClick={() => setEditing(true)}>
             <IconSettings size="1rem" /> Muokkaa näkymää
           </Button>
@@ -151,7 +152,7 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
         <>
           {/* Käyttäjän valitsemat kortit omassa järjestyksessään; palstat täyttyvät ylhäältä alas ilman aukkoja.
               Aktiivisuuskartta katkaisee palstat ja vie koko leveyden. */}
-          {segments(visible).map((seg) =>
+          {fullWidthSegments(visible, 'heatmap').map((seg) =>
             seg === 'heatmap' ? (
               <div key="heatmap" className="anim-rise mb-5 lg:mb-6">
                 <HeatmapCard profile={profile} />
@@ -223,16 +224,20 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
   );
 }
 
-/** Kortit palstaryhmiin; aktiivisuuskartta omaksi täysleveäksi lohkokseen järjestyksen mukaiseen kohtaan. */
-function segments(ids: AnalysisCardId[]): (AnalysisCardId[] | 'heatmap')[] {
-  const out: (AnalysisCardId[] | 'heatmap')[] = [];
-  for (const id of ids) {
-    const last = out.at(-1);
-    if (id === 'heatmap') out.push('heatmap');
-    else if (Array.isArray(last)) last.push(id);
-    else out.push([id]);
-  }
-  return out;
+/** Viikon raportti (PDF) samalla raporttipohjalla kuin pitkät jaksot; vertailu edelliseen viikkoon. */
+function WeekReportButton({ profile, weekStart }: { profile: Profile; weekStart: ISODate }) {
+  const [open, setOpen] = useState(false);
+  const s = useLongSummary(profile, weekPeriod(weekStart));
+  const p = useLongSummary(profile, weekPeriod(addDays(weekStart, -7)));
+  if (!s || s.validDays === 0) return null;
+  return (
+    <>
+      <Button variant="secondary" onClick={() => setOpen(true)}>
+        Raportti (PDF)
+      </Button>
+      {open && <SeasonReport profile={profile} s={s} p={p} onClose={() => setOpen(false)} />}
+    </>
+  );
 }
 
 function CategoryCard({ report }: { report: PeriodReport }) {

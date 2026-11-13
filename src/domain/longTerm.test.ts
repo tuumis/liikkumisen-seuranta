@@ -65,6 +65,13 @@ describe('pitkän aikavälin kooste', () => {
     expect(byKey).toMatchObject({ mvpa: 1, vigorous: 1, muscle: 1, bone: 1 });
   });
 
+  it('viikon raportti: nimi ja palkit päivittäin', () => {
+    const report = periodReport(input({ period: { kind: 'week', start: '2026-11-09', end: '2026-11-15' } }));
+    const s = longTermSummary(report, [], types, DEFAULT_SETTINGS);
+    expect(periodName(s.period)).toBe('viikko 46/2026');
+    expect(s.buckets.map((b) => b.label)).toEqual(['ma 9.11.', 'ti 10.11.', 'ke 11.11.', 'to 12.11.', 'pe 13.11.', 'la 14.11.', 'su 15.11.']);
+  });
+
   it('kuukauden palkit viikoittain', () => {
     const report = periodReport(input({ period: periodOf('month', '2026-11-01') }));
     const s = longTermSummary(report, [], types, DEFAULT_SETTINGS);

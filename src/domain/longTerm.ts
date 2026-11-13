@@ -2,7 +2,7 @@
 // kuin viikkoanalyysi. Puhdas funktio jakson raportista ja kerroista; ei tallennettua tilastotaulua.
 
 import { evaluatePeriod } from './aggregate';
-import { addDays, isoWeek, monthPeriod, parseISODate, seasonPeriod, startOfIsoWeek, yearPeriod } from './dates';
+import { addDays, isoWeek, isoWeekday, monthPeriod, parseISODate, seasonPeriod, startOfIsoWeek, yearPeriod } from './dates';
 import { contextOf } from './groups';
 import { isEstimateConfirmation } from './hours';
 import { mvpaOf, totalOf } from './intensity';
@@ -20,8 +20,14 @@ export const nextPeriod = (p: Period): Period => periodOf(p.kind as LongKind, ad
 const MONTHS = ['tammi', 'helmi', 'maalis', 'huhti', 'touko', 'kesä', 'heinä', 'elo', 'syys', 'loka', 'marras', 'joulu'];
 const SEASON_NAME = (month: number) => (month <= 5 ? 'Kevät' : month <= 8 ? 'Kesä' : 'Syksy');
 
-/** Jakson nimi: "marraskuu 2026", "Syksy 2026", "2026". */
+const WEEKDAYS = ['ma', 'ti', 'ke', 'to', 'pe', 'la', 'su'];
+
+/** Jakson nimi: "viikko 46/2026", "marraskuu 2026", "Syksy 2026", "2026". */
 export function periodName(p: Period): string {
+  if (p.kind === 'week') {
+    const w = isoWeek(p.start);
+    return `viikko ${w.week}/${w.year}`;
+  }
   const { year, month } = parseISODate(p.start);
   if (p.kind === 'month') return `${MONTHS[month - 1]}kuu ${year}`;
   if (p.kind === 'season') return `${SEASON_NAME(month)} ${year}`;
@@ -80,7 +86,8 @@ const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.le
 const NOT_VARIETY: MovementGroup[] = ['varies', 'other'];
 
 function bucketsOf(period: Period, days: DayTotals[], valid: Set<ISODate>): TrendBucket[] {
-  const keyOf = (d: ISODate) => (period.kind === 'month' ? startOfIsoWeek(d) : d.slice(0, 7));
+  // Viikko päivittäin, kuukausi viikoittain, kausi ja vuosi kuukausittain.
+  const keyOf = (d: ISODate) => (period.kind === 'week' ? d : period.kind === 'month' ? startOfIsoWeek(d) : d.slice(0, 7));
   const groups = new Map<string, DayTotals[]>();
   for (const d of days) {
     const k = keyOf(d.date);
@@ -91,7 +98,15 @@ function bucketsOf(period: Period, days: DayTotals[], valid: Set<ISODate>): Tren
     const v = all.filter((d) => valid.has(d.date));
     const m = MONTHS[parseISODate(all[0].date).month - 1];
     // Vuodessa 12 palkkia: kolmen kirjaimen lyhenne, ettei akseli mene päällekkäin.
-    const label = period.kind === 'month' ? `vk ${isoWeek(key).week}` : period.kind === 'year' ? m.slice(0, 3) : m;
+    const { day, month } = parseISODate(all[0].date);
+    const label =
+      period.kind === 'week'
+        ? `${WEEKDAYS[isoWeekday(key) - 1]} ${day}.${month}.`
+        : period.kind === 'month'
+          ? `vk ${isoWeek(key).week}`
+          : period.kind === 'year'
+            ? m.slice(0, 3)
+            : m;
     return {
       key,
       label,
