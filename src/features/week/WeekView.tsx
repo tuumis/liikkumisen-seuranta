@@ -34,6 +34,7 @@ import { useWeekLayout, type WeekCardId } from './layout';
 import { HoursGauge } from './HoursGauge';
 import { HoursCard, HoursDetailCard } from './HoursCard';
 import { GettingStarted } from './GettingStarted';
+import { LastWeekCard } from './LastWeekCard';
 import type { SettingsSectionId } from '../settings/SettingsView';
 import { DaySheet } from './DaySheet';
 import { EstimateDaySheet } from './EstimateDaySheet';
@@ -383,6 +384,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
       {!profile && <Card>Lisää profiili Asetukset-välilehdellä.</Card>}
 
       {profile && hasAnySessions === false && <GettingStarted onAdd={() => setQuickAdd({})} onOpenSettings={onOpenSettings} />}
+      {profile && isCurrent && <LastWeekCard profile={profile} today={today} onOpenWeek={setWeekStart} />}
 
       {profile && report && (() => {
         // Käyttäjän valitsemat kortit järjestyksessään; PC:llä pää- ja sivupalstaan valinnan mukaan.
