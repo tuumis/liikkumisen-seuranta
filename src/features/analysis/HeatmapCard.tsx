@@ -148,7 +148,16 @@ function useHeatData(profile: Profile, start: ISODate, end: ISODate, withEstimat
   }, [raw, withEstimates, profile, pid, start, end, today]);
 }
 
-export function HeatmapCard({ profile }: { profile: Profile }) {
+/** Pitkän aikavälin näkymän valittu jakso: vuosi näyttää sen vuoden, kuukausi ja kausi korostetaan kartalla. */
+export interface HeatFocus {
+  kind: 'month' | 'season' | 'year';
+  start: ISODate;
+  end: ISODate;
+  /** Esim. "marraskuu 2026". */
+  label: string;
+}
+
+export function HeatmapCard({ profile, focus }: { profile: Profile; focus?: HeatFocus }) {
   const today = todayFn();
   const [prefs, setPrefsState] = useState<Prefs>(readPrefs);
   const setPrefs = (p: Partial<Prefs>) => {
@@ -160,7 +169,13 @@ export function HeatmapCard({ profile }: { profile: Profile }) {
       /* ei tallennusta */
     }
   };
-  const [periodKey, setPeriodKey] = useState<PeriodKey>('12');
+  // Oletusjakso: pitkän aikavälin näkymässä valitun jakson vuosi (tai 12 kk, kun jakso on viimeisten 12 kuukauden sisällä).
+  const [periodKey, setPeriodKey] = useState<PeriodKey>(() => {
+    if (!focus) return '12';
+    const r12 = last12Months(today);
+    if (focus.kind !== 'year' && focus.start >= r12.start && focus.end <= r12.end) return '12';
+    return String(parseISODate(focus.kind === 'year' ? focus.start : focus.end).year) as PeriodKey;
+  });
   const [large, setLarge] = useState(false);
 
   const thisYear = parseISODate(today).year;
@@ -214,6 +229,7 @@ export function HeatmapCard({ profile }: { profile: Profile }) {
           big={big}
           withEstimates={withEstimates}
           futureLabel={periodKey === '12' ? 'loppuviikolle' : Number(periodKey) === thisYear ? 'loppuvuodelle' : `vuodelle ${periodKey}`}
+          highlight={focus && focus.kind !== 'year' && focus.end >= range.start && focus.start <= range.end ? focus : undefined}
         />
       ) : (
         <div className="skeleton h-48 rounded-2xl" aria-busy="true" aria-label="Ladataan" />
@@ -294,6 +310,7 @@ function HeatBody({
   big,
   withEstimates,
   futureLabel,
+  highlight,
 }: {
   data: HeatData;
   start: ISODate;
@@ -303,6 +320,8 @@ function HeatBody({
   withEstimates: boolean;
   /** "loppuvuodelle", "vuodelle 2027" … */
   futureLabel: string;
+  /** Korostettava jakso (kuukausi tai kausi); muut päivät himmennetään. */
+  highlight?: HeatFocus;
 }) {
   const cols = useMemo(() => heatColumns(start, end), [start, end]);
   const months = useMemo(() => monthLabels(cols), [cols]);
@@ -407,7 +426,7 @@ function HeatBody({
                   height={CELL - inset * 2}
                   rx={2.5}
                   fill={lvl === undefined || (plan && !hollow) ? 'var(--viz-track)' : hollow ? 'var(--surface)' : LEVEL_FILL[lvl]}
-                  opacity={lvl === undefined || (plan && !hollow) ? 0.4 : 1}
+                  opacity={(lvl === undefined || (plan && !hollow) ? 0.4 : 1) * (highlight && (date < highlight.start || date > highlight.end) ? 0.35 : 1)}
                   stroke={on ? 'var(--ink)' : hollow ? LEVEL_FILL[lvl] : data.flags.has(date) && lvl !== undefined ? 'var(--viz-estimate)' : 'none'}
                   strokeWidth={on ? 1.6 : hollow ? 1.8 : 1.1}
                   onPointerEnter={() => setFocus(date)}
@@ -423,7 +442,13 @@ function HeatBody({
 
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
         <p className="min-h-5 text-sm text-slate-700" aria-live="polite">
-          {focus ? detail(focus) : <span className="text-slate-500">Osoita tai napauta päivää nähdäksesi sen tiedot.</span>}
+          {focus ? (
+            detail(focus)
+          ) : (
+            <span className="text-slate-500">
+              {highlight ? `Korostettuna: ${highlight.label}. ` : ''}Osoita tai napauta päivää nähdäksesi sen tiedot.
+            </span>
+          )}
         </p>
         <div className="flex items-center gap-1.5 text-xs text-slate-500">
           <span className="mr-1">Vähemmän</span>
