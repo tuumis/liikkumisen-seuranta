@@ -16,6 +16,15 @@ export function useHiddenCategories(profileId: UUID | undefined, today: ISODate)
   );
 }
 
+/** Sama kaikille profiileille (lajiasetukset eivät ole profiilikohtaisia): piilotetaan, jos jollakin profiililla on arvio. */
+export function useHiddenCategoriesAnyProfile(today: ISODate): ReadonlySet<Category> {
+  const estimates = useLiveQuery(async () => (await Promise.all((await repo.listProfiles({ includeArchived: true })).map((p) => repo.listEstimates(p.id)))).flat(), []);
+  return useMemo(
+    () => new Set((estimates ?? []).filter((e) => ESTIMATE_ONLY_CATEGORIES.includes(e.category) && (!e.validTo || e.validTo >= today)).map((e) => e.category)),
+    [estimates, today],
+  );
+}
+
 /** Suodattaa piilotetut lajit; `keepId` (esim. muokattavan kerran nykyinen laji) jää aina näkyviin. */
 export function visibleTypes<T extends ActivityType>(types: T[] | undefined, hidden: ReadonlySet<Category>, keepId?: string): T[] | undefined {
   return types?.filter((t) => !hidden.has(t.category) || t.id === keepId);

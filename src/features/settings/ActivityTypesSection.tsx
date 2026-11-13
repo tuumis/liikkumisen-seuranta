@@ -14,6 +14,7 @@ import { CATEGORY_LABEL, MOVEMENT_GROUP_LABEL, pct, STRENGTH_LABEL } from '../..
 import { Sheet } from '../../ui/Sheet';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
+import { useHiddenCategoriesAnyProfile, visibleTypes } from '../week/useLoggableTypes';
 
 const STRENGTH_OPTIONS: { value: StrengthDefault; label: string }[] = [
   { value: 'yes', label: 'Esivalittu' },
@@ -22,7 +23,9 @@ const STRENGTH_OPTIONS: { value: StrengthDefault; label: string }[] = [
 ];
 
 export function ActivityTypesSection() {
-  const types = useLiveQuery(() => repo.listActivityTypes(), []);
+  // Välitunnit (arkiliikunnan arvio käytössä) eivät ole kirjattava laji: niiden teho asetetaan arviossa.
+  const hidden = useHiddenCategoriesAnyProfile(todayFn());
+  const types = visibleTypes(useLiveQuery(() => repo.listActivityTypes(), []), hidden);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ActivityType | null>(null);
   return (
@@ -36,6 +39,7 @@ export function ActivityTypesSection() {
     >
       <p className="text-sm text-slate-600">
         Tehoprofiili kertoo arviolta, kuinka suuri osa kestosta on kevyttä, reipasta ja rasittavaa; loput on paikallaanoloa. Arvot ovat sovelluksen lähtöoletuksia, eivät virallisia lukuja. Voit korjata ne vastaamaan esimerkiksi lapsesi treenejä.
+        {hidden.size > 0 && ' Välituntien teho asetetaan arkiliikunnan arviossa (Asetukset → Arkiliikunta).'}
       </p>
       {open && (
         <ul className="mt-3 divide-y divide-slate-100">
