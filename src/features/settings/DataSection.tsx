@@ -15,6 +15,7 @@ import { useToast } from '../../ui/Toast';
 import { localDateOf } from '../../domain/dates';
 import { pickFolder, pickTextFile, saveFile, supportsFolder } from '../sync/fileIO';
 import { ago } from '../sync/SyncBar';
+import { AUTO_BACKUP_DIR, AUTO_BACKUP_KEEP } from '../sync/autoBackup';
 import { useSyncState } from '../sync/useSync';
 
 const stamp = () => localDateOf(new Date());
@@ -30,6 +31,8 @@ async function exportBackup(): Promise<string> {
 export function BackupSection() {
   const toast = useToast();
   const lastExport = useLiveQuery(() => repo.getMeta<string>('lastExportAt'), []);
+  const autoBackup = useLiveQuery(() => repo.getMeta<string>('autoBackupAt'), []);
+  const sync = useSyncState();
   const [confirmImport, setConfirmImport] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -84,6 +87,12 @@ export function BackupSection() {
           </Button>
         </div>
         <p className="text-xs text-slate-500">Edellinen varmuuskopio: {lastExport ? `${formatDate(lastExport.slice(0, 10), 'd.M.yyyy')} (${ago(lastExport)})` : 'ei koskaan'}</p>
+        {sync?.role === 'pc' && sync.hasFolder && (
+          <p className="text-xs text-slate-500">
+            Automaattinen varmuuskopio: kerran viikossa synkronointikansion alikansioon <code>{AUTO_BACKUP_DIR}</code>, {AUTO_BACKUP_KEEP} uusinta säilytetään
+            {autoBackup ? ` · viimeksi ${formatDate(autoBackup.slice(0, 10), 'd.M.yyyy')}` : ' · ensimmäinen tehdään seuraavassa synkronoinnissa'}.
+          </p>
+        )}
         {!confirmImport ? (
           <Button variant="secondary" onClick={() => setConfirmImport(true)}>
             Tuo varmuuskopio…

@@ -9,6 +9,7 @@ import { buildSyncFile, changedSince, markSent, mergeAnyFile, mergeSyncFile, pen
 import { repo } from '../../db/repositories';
 import { db } from '../../db/schema';
 import { today } from '../../ui/today';
+import { runAutoBackup } from './autoBackup';
 import { folderPermission, pickFolder, pickTextFile, readFolderFile, shareOrDownload, supportsFolder, writeFolderFile, downloadText } from './fileIO';
 
 export interface SyncState {
@@ -88,6 +89,15 @@ async function mergeFromFolder(handle: FileSystemDirectoryHandle, deviceId: stri
   return summary;
 }
 
+/** Viikoittainen varmuuskopio kansioon; epäonnistuminen ei estä synkronointia. */
+async function weeklyBackup(handle: FileSystemDirectoryHandle) {
+  try {
+    await runAutoBackup(handle);
+  } catch {
+    /* esim. kansio vain luku -tilassa; yritetään seuraavalla synkronoinnilla */
+  }
+}
+
 /** Kirjoittaa yhdistetyn tilannekuvan yhteiseen tiedostoon ja muistaa oman kirjoitusajan. */
 async function writeToFolder(handle: FileSystemDirectoryHandle, deviceId: string) {
   await ensurePlannedAll();
@@ -108,6 +118,7 @@ export async function pcAutoSync(): Promise<SyncOutcome | null> {
   const deviceId = await repo.deviceId();
   const summary = await mergeFromFolder(handle, deviceId);
   await foldEstimateOnly();
+  await weeklyBackup(handle);
   const since = await repo.getMeta<Timestamp>('lastSyncRunAt');
   const localChanged = !since || (await changedSince(db, since)) > 0;
   if (!summary && !localChanged) {
@@ -139,6 +150,7 @@ export function useSyncActions() {
     if (!(await folderPermission(handle, true))) throw new Error('Kansion käyttöoikeus puuttuu.');
     const summary = await mergeFromFolder(handle, deviceId);
     await foldEstimateOnly();
+    await weeklyBackup(handle);
     await writeToFolder(handle, deviceId);
     return { summary, wrote: true, message: summary ? summaryText(summary) : 'Tiedosto liikkuminen.json päivitetty; puhelimelta ei uutta' };
   }, []);

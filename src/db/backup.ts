@@ -29,6 +29,7 @@ export const DEVICE_META_KEYS = [
   'phoneFileReadAt',
   'deliveredKeys',
   'pendingThere',
+  'autoBackupAt',
 ];
 /** Ei voi tallentaa JSONiin. */
 const NON_EXPORTABLE_META = ['syncFolderHandle'];
