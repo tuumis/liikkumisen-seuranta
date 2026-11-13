@@ -43,6 +43,12 @@ async function ensurePlannedAll() {
   for (const p of await repo.listProfiles()) await repo.ensurePlanned(p.id, defaultPlanningThrough(t), t);
 }
 
+/**
+ * Välituntisiivous myös yhdistämisen jälkeen (ei vain käynnistyksessä): toisen laitteen tiedosto voi
+ * tuoda avoimen välituntikerran tai -rivin, jonka tämä laite on jo siivonnut. Idempotentti.
+ */
+const foldEstimateOnly = () => repo.foldEstimateOnlySessions(today()).catch(() => 0);
+
 export function useSyncState(): SyncState | undefined {
   return useLiveQuery(async () => {
     // Vain lukuja: live-kyselyssä ei saa avata kirjoitustransaktiota (repo.deviceId() voi luoda tunnisteen).
@@ -101,6 +107,7 @@ export async function pcAutoSync(): Promise<SyncOutcome | null> {
   if (!handle || !(await folderPermission(handle, false))) return null;
   const deviceId = await repo.deviceId();
   const summary = await mergeFromFolder(handle, deviceId);
+  await foldEstimateOnly();
   const since = await repo.getMeta<Timestamp>('lastSyncRunAt');
   const localChanged = !since || (await changedSince(db, since)) > 0;
   if (!summary && !localChanged) {
@@ -131,6 +138,7 @@ export function useSyncActions() {
     }
     if (!(await folderPermission(handle, true))) throw new Error('Kansion käyttöoikeus puuttuu.');
     const summary = await mergeFromFolder(handle, deviceId);
+    await foldEstimateOnly();
     await writeToFolder(handle, deviceId);
     return { summary, wrote: true, message: summary ? summaryText(summary) : 'Tiedosto liikkuminen.json päivitetty; puhelimelta ei uutta' };
   }, []);
@@ -145,6 +153,7 @@ export function useSyncActions() {
     const before = await repo.getMeta<Timestamp>('lastIncomingExportedAt');
     // Hyväksyy sekä synkronointitiedoston että varmuuskopion (tunnistus sisällöstä).
     const summary = await mergeAnyFile(db, f.text, me);
+    await foldEstimateOnly();
     await ensurePlannedAll();
     await repo.setMeta('lastSyncRunAt', new Date().toISOString());
     return { summary, message: importMessage(summary, before) };

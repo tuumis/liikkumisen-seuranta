@@ -363,6 +363,30 @@ describe('synkronointi PC ↔ puhelin', () => {
     expect(await pendingCount(phone.db, phone.id)).toBe(0);
   });
 
+  it('F4h: toiselta laitteelta tullut avoin välituntikerta siivotaan yhdistämisen jälkeen, eikä poisto jää odottamaan', async () => {
+    const { pc, phone } = await pair();
+    const recessEstimate = { category: 'school_recess' as const, label: 'Välitunnit', weekdayMin: 45, weekendMin: 0, shares: { light: 0.5, moderate: 0.3, vigorous: 0.1 } };
+    await pc.repo.saveEstimate('p1', recessEstimate, '2026-11-02');
+    const item = await pc.repo.createTemplateItem('p1', { activityTypeId: activityTypeId('school_recess'), weekdays: [1, 2, 3, 4, 5], durationMin: 45, validFrom: '2026-11-02' }, '2026-11-11');
+    await send(pc, 'pc', phone);
+    await markSent(phone.db);
+    // PC siivoaa ensin; puhelin (vanha tieto) luo vielä ensi viikon välituntikerran ja lähettää sen PC:lle.
+    await pc.repo.foldEstimateOnlySessions('2026-11-13');
+    const id = plannedSessionId(item.id, '2026-11-24');
+    const ts = new Date().toISOString();
+    const row = { ...(await phone.db.plannedSessions.get(plannedSessionId(item.id, '2026-11-12')))!, id, date: '2026-11-24', createdAt: ts, updatedAt: ts, updatedBy: phone.id };
+    await phone.db.plannedSessions.put(row);
+    await send(phone, 'phone', pc);
+    expect((await pc.db.plannedSessions.get(id))?.deletedAt).toBeUndefined(); // avoin kerta tuli PC:lle
+    await pc.repo.foldEstimateOnlySessions('2026-11-13'); // synkronoinnin jälkeinen siivous
+    expect((await pc.db.plannedSessions.get(id))?.deletedAt).toBeDefined();
+    await new Promise((r) => setTimeout(r, 5));
+    await phone.repo.foldEstimateOnlySessions('2026-11-13'); // puhelin siivoaa myöhemmin itse
+    expect((await phone.db.plannedSessions.get(id))?.deletedAt).toBeDefined();
+    await send(pc, 'pc', phone);
+    expect(await pendingChanges(phone.db, phone.id)).toEqual([]);
+  });
+
   it('F5: saman tiedoston tuonti kahdesti → toisella kerralla 0 uutta, 0 päivitettyä, 0 poistettua', async () => {
     const { pc, phone } = await pair();
     await seedData(pc.repo);

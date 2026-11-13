@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { sessionsCsv } from '../../domain/csv';
 import type { ActivityType, Profile } from '../../domain/types';
+import { today as todayFn } from '../../ui/today';
 import { buildBackup, clearAll, detectFileKind, importBackup, mergeAnyFile, purgeProfile, toJson, wrongFileMessage } from '../../db/backup';
 import { summaryText } from '../sync/useSync';
 import { repo } from '../../db/repositories';
@@ -41,6 +42,7 @@ export function BackupSection() {
       if (kind === 'sync') {
         // Synkronointitiedosto (esim. liikkuminen.json): yhdistetään, ei korvata.
         const s = await mergeAnyFile(db, f.text, await repo.deviceId());
+        await repo.foldEstimateOnlySessions(todayFn()).catch(() => 0);
         toast(`Tiedosto oli synkronointitiedosto, joten tiedot yhdistettiin. ${summaryText(s)}`);
         setConfirmImport(false);
         return;
