@@ -204,7 +204,16 @@ export function HeatmapCard({ profile }: { profile: Profile }) {
       {controls}
       <p className="text-xs text-slate-500">{MEASURE_TEXT[prefs.measure]}</p>
       {data ? (
-        <HeatBody key={`${range.start}:${big}`} data={data} start={range.start} end={range.end} measure={prefs.measure} big={big} />
+        <HeatBody
+          key={`${range.start}:${big}`}
+          data={data}
+          start={range.start}
+          end={range.end}
+          measure={prefs.measure}
+          big={big}
+          withEstimates={withEstimates}
+          futureLabel={periodKey === '12' ? 'loppuviikolle' : Number(periodKey) === thisYear ? 'loppuvuodelle' : `vuodelle ${periodKey}`}
+        />
       ) : (
         <div className="skeleton h-48 rounded-2xl" aria-busy="true" aria-label="Ladataan" />
       )}
@@ -276,12 +285,35 @@ const LABEL_W = 24;
 const HEAD_H = 16;
 const ROW_LABELS: Record<number, string> = { 0: 'Ma', 2: 'Ke', 4: 'Pe', 6: 'Su' };
 
-function HeatBody({ data, start, end, measure, big }: { data: HeatData; start: ISODate; end: ISODate; measure: HeatMeasure; big: boolean }) {
+function HeatBody({
+  data,
+  start,
+  end,
+  measure,
+  big,
+  withEstimates,
+  futureLabel,
+}: {
+  data: HeatData;
+  start: ISODate;
+  end: ISODate;
+  measure: HeatMeasure;
+  big: boolean;
+  withEstimates: boolean;
+  /** "loppuvuodelle", "vuodelle 2027" … */
+  futureLabel: string;
+}) {
   const cols = useMemo(() => heatColumns(start, end), [start, end]);
   const months = useMemo(() => monthLabels(cols), [cols]);
   const all = useMemo(() => [...data.days, ...data.future], [data.days, data.future]);
   const byDate = useMemo(() => new Map(all.map((d) => [d.date, d])), [all]);
   const stats = useMemo(() => heatStats(data.days, measure), [data.days, measure]);
+  // Tulevien päivien suunniteltu määrä erikseen (ei toteumaa).
+  const planned = useMemo(() => {
+    const hours = data.future.reduce((a, d) => a + d.total, 0) / 60;
+    const sessions = data.future.reduce((a, d) => a + d.sessions, 0);
+    return hours > 0 ? { hours, sessions } : undefined;
+  }, [data.future]);
   const [focus, setFocus] = useState<ISODate>();
   const scroller = useRef<HTMLDivElement>(null);
   const grid = useRef<SVGSVGElement>(null);
@@ -411,13 +443,22 @@ function HeatBody({ data, start, end, measure, big }: { data: HeatData; start: I
       </div>
       <p className="-mt-2 text-right text-[11px] text-slate-500">Asteikko: {['ei liikuntaa', ...LEVEL_LABELS[measure]].join(' · ')}</p>
 
-      <div className={`grid grid-cols-2 gap-3 ${big ? 'lg:grid-cols-4 lg:gap-5' : 'sm:grid-cols-4'}`}>
+      <div className={`grid grid-cols-2 gap-3 ${planned ? `sm:grid-cols-3 ${big ? 'lg:grid-cols-5 lg:gap-5' : 'xl:grid-cols-5'}` : big ? 'lg:grid-cols-4 lg:gap-5' : 'sm:grid-cols-4'}`}>
         <Stat label="Liikuntaa yhteensä" value={`${formatHours(stats.hours)} h`} sub="kaikki teholuokat" big={big} />
         <Stat label="Aktiivisia päiviä" value={String(stats.activeDays)} sub={`/ ${stats.days} päivää`} big={big} />
         <Stat label="Pisin putki" value={`${stats.longestStreak} pv`} sub="peräkkäin" big={big} />
         <Stat label="Suositus täyttyi" value={`${stats.targetDays} pv`} sub="reipas ja rasittava" big={big} />
+        {planned && (
+          <Stat
+            label={`Suunniteltu ${futureLabel}`}
+            value={`+${formatHours(planned.hours)} h`}
+            sub={`${planned.sessions === 1 ? '1 kerta' : `${planned.sessions} kertaa`}${withEstimates ? ' + arkiliikunnan arvio' : ''}`}
+            big={big}
+            planned
+          />
+        )}
       </div>
-      {data.future.length > 0 && <p className="-mt-1 text-xs text-slate-500">Tunnusluvut lasketaan toteutuneista päivistä; suunnitellut päivät eivät ole mukana.</p>}
+      {data.future.length > 0 && <p className="-mt-1 text-xs text-slate-500">Muut tunnusluvut lasketaan toteutuneista päivistä; suunnitellut päivät eivät ole niissä mukana.</p>}
     </div>
   );
 }
@@ -426,9 +467,9 @@ function formatHours(h: number) {
   return h >= 100 ? String(Math.round(h)) : h.toLocaleString('fi-FI', { maximumFractionDigits: 1 });
 }
 
-function Stat({ label, value, sub, big }: { label: string; value: string; sub: string; big: boolean }) {
+function Stat({ label, value, sub, big, planned }: { label: string; value: string; sub: string; big: boolean; planned?: boolean }) {
   return (
-    <div className="rounded-2xl bg-[var(--surface-sunk)] p-3.5 sm:p-4">
+    <div className={`rounded-2xl p-3.5 sm:p-4 ${planned ? 'col-span-2 border-2 border-dashed border-[var(--line-strong)] sm:col-span-1' : 'bg-[var(--surface-sunk)]'}`}>
       <div className="text-xs font-semibold text-slate-500">{label}</div>
       <div className={`mt-1 font-display font-semibold tabular-nums text-slate-900 ${big ? 'text-3xl lg:text-4xl' : 'text-2xl'}`}>{value}</div>
       <div className="text-xs text-slate-500">{sub}</div>
