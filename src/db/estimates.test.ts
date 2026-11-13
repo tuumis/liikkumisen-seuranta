@@ -119,7 +119,7 @@ describe('välitunnit vain arkiliikunnassa', () => {
     const all = await repo.listEstimates('p1');
     const totalsBefore = dayTotals('2026-11-05', await repo.sessionsInRange('p1', '2026-11-05', '2026-11-05'), all, types);
 
-    expect(await repo.foldEstimateOnlySessions()).toBe(1);
+    expect(await repo.foldEstimateOnlySessions('2026-11-13')).toBe(1);
     const s = (await db.sessions.get(inside.id))!;
     expect(s.estimateConfirmed).toBe(true);
     expect(s.label).toBe('Välitunnit ja pihaleikit');
@@ -133,6 +133,31 @@ describe('välitunnit vain arkiliikunnassa', () => {
     expect(after.confirmedMvpa).toBeGreaterThan(0);
 
     // Idempotentti.
-    expect(await repo.foldEstimateOnlySessions()).toBe(0);
+    expect(await repo.foldEstimateOnlySessions('2026-11-13')).toBe(0);
+  });
+});
+
+describe('välituntien viikkorytmi', () => {
+  it('välituntirivi poistuu käytöstä ja sen avoimet suunnitelmat poistuvat; muut rivit säilyvät', async () => {
+    const today = '2026-11-13';
+    await repo.saveEstimate('p1', recess(), '2026-11-02');
+    const rec = await repo.createTemplateItem('p1', { activityTypeId: 't:school_recess', weekdays: [1, 2, 3, 4, 5], durationMin: 45, validFrom: today }, today);
+    const pe = await repo.createTemplateItem('p1', { activityTypeId: 't:school_pe', weekdays: [1], durationMin: 90, validFrom: today }, today);
+    const open = (id: string) => repo.plansInRange('p1', today, '2026-11-30').then((ps) => ps.filter((p) => p.templateItemId === id && p.status === 'open').length);
+    expect(await open(rec.id)).toBeGreaterThan(0);
+
+    expect(await repo.foldEstimateOnlySessions(today)).toBeGreaterThan(0);
+    expect((await db.templateItems.get(rec.id))!.active).toBe(false);
+    expect(await open(rec.id)).toBe(0);
+    expect((await db.templateItems.get(pe.id))!.active).toBe(true);
+    expect(await open(pe.id)).toBeGreaterThan(0);
+    expect(await repo.foldEstimateOnlySessions(today)).toBe(0);
+  });
+
+  it('ilman välituntiarviota viikkorytmi säilyy', async () => {
+    const today = '2026-11-13';
+    const rec = await repo.createTemplateItem('p1', { activityTypeId: 't:school_recess', weekdays: [1, 2], durationMin: 45, validFrom: today }, today);
+    expect(await repo.foldEstimateOnlySessions(today)).toBe(0);
+    expect((await db.templateItems.get(rec.id))!.active).toBe(true);
   });
 });

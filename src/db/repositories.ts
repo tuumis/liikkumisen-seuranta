@@ -1137,22 +1137,46 @@ export function createRepositories(db: AppDB = defaultDb) {
    * Välitunnit vain arkiliikunnassa (ESTIMATE_ONLY_CATEGORIES): erikseen kirjatut välituntikerrat
    * muutetaan arkiliikunnan vahvistuksiksi niinä päivinä, joille kategorialla on arvio. Minuutit
    * ja tehot säilyvät; kerta näkyy jatkossa päivän arkiliikuntarivillä eikä omana rivinään.
-   * Idempotentti (ajetaan käynnistyksessä). Palauttaa muutettujen kertojen määrän.
+   * Samoin viikkorytmin välituntirivit poistetaan käytöstä ja avoimet välituntisuunnitelmat
+   * arviopäiviltä poistetaan, jolloin arvio näkyy päivän arkiliikuntarivillä.
+   * Idempotentti (ajetaan käynnistyksessä). Palauttaa muutettujen tietueiden määrän.
    */
-  async function foldEstimateOnlySessions(): Promise<number> {
+  async function foldEstimateOnlySessions(today: ISODate): Promise<number> {
     const types = new Map((await db.activityTypes.toArray()).map((t) => [t.id, t]));
     const typeIds = [...types.values()].filter((t) => ESTIMATE_ONLY_CATEGORIES.includes(t.category)).map((t) => t.id);
     if (!typeIds.length) return 0;
-    const candidates = live(await db.sessions.where('activityTypeId').anyOf(typeIds).toArray()).filter((s) => !isEstimateConfirmation(s));
-    if (!candidates.length) return 0;
     const estimatesByProfile = new Map<UUID, Estimate[]>();
+    const estimatesOf = async (profileId: UUID) => {
+      let e = estimatesByProfile.get(profileId);
+      if (!e) estimatesByProfile.set(profileId, (e = live(await db.estimates.where('profileId').equals(profileId).toArray())));
+      return e;
+    };
+    const categoryOf = (typeId: UUID) => types.get(typeId)!.category;
     let n = 0;
-    for (const s of candidates) {
-      let estimates = estimatesByProfile.get(s.profileId);
-      if (!estimates) estimatesByProfile.set(s.profileId, (estimates = live(await db.estimates.where('profileId').equals(s.profileId).toArray())));
-      const e = activeEstimate(estimates, types.get(s.activityTypeId)!.category, s.date);
+
+    // Kirjatut kerrat → arvion vahvistuksiksi.
+    const sessions = live(await db.sessions.where('activityTypeId').anyOf(typeIds).toArray()).filter((s) => !isEstimateConfirmation(s));
+    for (const s of sessions) {
+      const e = activeEstimate(await estimatesOf(s.profileId), categoryOf(s.activityTypeId), s.date);
       if (!e) continue;
       await db.sessions.put(await stamp({ ...s, estimateConfirmed: true, label: s.label || e.label }));
+      n++;
+    }
+
+    // Viikkorytmin rivit pois käytöstä, kun arvio on voimassa tänään tai alkaa myöhemmin.
+    const items = live(await db.templateItems.toArray()).filter((i) => i.active && typeIds.includes(i.activityTypeId));
+    for (const i of items) {
+      const cat = categoryOf(i.activityTypeId);
+      if (!(await estimatesOf(i.profileId)).some((e) => e.category === cat && (!e.validTo || e.validTo >= today))) continue;
+      await deleteTemplateItem(i.id, today);
+      n++;
+    }
+
+    // Jäljelle jääneet avoimet suunnitelmat (käsin lisätyt, kuittaamattomat menneet) arviopäiviltä.
+    const plans = live(await db.plannedSessions.toArray()).filter((p) => p.status === 'open' && typeIds.includes(p.activityTypeId));
+    for (const p of plans) {
+      if (!activeEstimate(await estimatesOf(p.profileId), categoryOf(p.activityTypeId), p.date)) continue;
+      await deletePlanned(p.id);
       n++;
     }
     return n;
