@@ -44,16 +44,33 @@ export function TeamLogo({ logo, name, size = 'md', fallback = '👕', className
   );
 }
 
-/** Logon valinta: kuva pienennetään laitteella kokonaisena (ei rajausta). */
+/** Kuvahaun osoite seuran logolle (avataan selaimessa käyttäjän painalluksesta; sovellus ei itse hae mitään). */
+export function logoSearchUrl(teamName: string): string {
+  const club = parseTeamName(teamName).club || teamName.trim();
+  return `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(`${club} jalkapallo logo`)}`;
+}
+
+const btn = 'press min-h-11 rounded-xl bg-[var(--surface-raised)] px-3 text-sm font-semibold text-slate-800 shadow-xs ring-1 ring-slate-200 hover:bg-slate-100 disabled:opacity-50';
+
+/**
+ * Logon valinta: tiedosto, leikepöytä (Liitä kuva / Ctrl+V) tai raahaus. Kuva pienennetään
+ * laitteella kokonaisena (ei rajausta). "Hae logo" avaa kuvahaun selaimeen uuteen välilehteen.
+ */
 export function LogoPicker({ name, value, onChange, label = 'Seuran logo' }: { name: string; value?: string; onChange: (logo: string | undefined) => void; label?: string }) {
   const input = useRef<HTMLInputElement>(null);
+  const zone = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [hint, setHint] = useState<string>();
+  const [over, setOver] = useState(false);
+  const canRead = typeof navigator !== 'undefined' && typeof navigator.clipboard?.read === 'function';
+  const hasName = !!parseTeamName(name).club;
 
-  async function pick(file: File | undefined) {
+  async function pick(file: Blob | undefined | null) {
     if (!file) return;
     setBusy(true);
     setError(undefined);
+    setHint(undefined);
     try {
       onChange(await resizeLogo(file));
     } catch (e) {
@@ -64,19 +81,67 @@ export function LogoPicker({ name, value, onChange, label = 'Seuran logo' }: { n
     }
   }
 
+  const NO_IMAGE = 'Leikepöydällä ei ole kuvaa. Valitse kuvan kohdalla "Kopioi kuva" (ei "Kopioi kuvan osoite") ja liitä uudelleen.';
+
+  async function pasteFromClipboard() {
+    setError(undefined);
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const type = item.types.find((t) => t.startsWith('image/'));
+        if (type) return void (await pick(await item.getType(type)));
+      }
+      setError(NO_IMAGE);
+    } catch {
+      // Lupa evätty tai selain ei salli: tavallinen liittäminen (Ctrl+V / pitkä painallus) toimii.
+      setHint('Selain ei antanut lukea leikepöytää. Napauta logoaluetta ja liitä kuva (Ctrl+V tai pitkä painallus → Liitä).');
+      zone.current?.focus();
+    }
+  }
+
+  const fromTransfer = (dt: DataTransfer | null): File | undefined => [...(dt?.files ?? [])].find((f) => f.type.startsWith('image/'));
+
   return (
     <div>
       <span className="mb-1 block text-sm font-medium text-slate-700">{label} (valinnainen)</span>
-      <div className="flex items-center gap-3">
+      <div
+        ref={zone}
+        tabIndex={-1}
+        className={`flex flex-wrap items-center gap-3 rounded-2xl p-1 outline-none transition-[box-shadow,background-color] focus-visible:ring-2 focus-visible:ring-[var(--focus)] ${over ? 'bg-[color-mix(in_oklab,var(--focus)_12%,transparent)] ring-2 ring-[var(--focus)]' : ''}`}
+        onPaste={(e) => {
+          const f = fromTransfer(e.clipboardData);
+          if (f) {
+            e.preventDefault();
+            void pick(f);
+          } else if (e.clipboardData?.types.length) setError(NO_IMAGE);
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setOver(true);
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setOver(false);
+          const f = fromTransfer(e.dataTransfer);
+          if (f) void pick(f);
+          else setError('Raahattu kohde ei ollut kuvatiedosto. Kopioi kuva ja käytä "Liitä kuva" tai tallenna kuva ensin laitteelle.');
+        }}
+      >
         <TeamLogo logo={value} name={name} size="lg" />
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => input.current?.click()}
-            className="press min-h-11 rounded-xl bg-[var(--surface-raised)] px-3 text-sm font-semibold text-slate-800 shadow-xs ring-1 ring-slate-200 hover:bg-slate-100 disabled:opacity-50"
-          >
-            {busy ? 'Käsitellään…' : value ? 'Vaihda logo' : 'Lisää logo'}
+        <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+          {hasName && (
+            <a href={logoSearchUrl(name)} target="_blank" rel="noopener noreferrer" className={`${btn} inline-flex items-center`}>
+              Hae logo ↗
+            </a>
+          )}
+          {canRead && (
+            <button type="button" disabled={busy} onClick={() => void pasteFromClipboard()} className={btn}>
+              Liitä kuva
+            </button>
+          )}
+          <button type="button" disabled={busy} onClick={() => input.current?.click()} className={btn}>
+            {busy ? 'Käsitellään…' : value ? 'Vaihda tiedostosta' : 'Valitse tiedosto'}
           </button>
           {value && (
             <button type="button" onClick={() => onChange(undefined)} className="min-h-11 rounded-xl px-3 text-sm font-medium text-red-700 hover:bg-red-50">
@@ -87,7 +152,11 @@ export function LogoPicker({ name, value, onChange, label = 'Seuran logo' }: { n
         <input ref={input} type="file" accept="image/*" className="hidden" onChange={(e) => void pick(e.target.files?.[0])} aria-label={`${label}: valitse tiedosto`} />
       </div>
       {error && <p className="mt-1 text-sm text-red-700">{error}</p>}
-      <p className="mt-1 text-xs text-slate-500">Logo näytetään kokonaisena. Kuva pienennetään ja tallennetaan vain omille laitteillesi ja varmuuskopioihin.</p>
+      {hint && !error && <p className="mt-1 text-sm text-slate-700">{hint}</p>}
+      <p className="mt-1 text-xs text-slate-500">
+        {hasName ? '"Hae logo" avaa kuvahaun selaimeen. Kopioi sieltä kuva ("Kopioi kuva") ja paina "Liitä kuva", tai raahaa kuvatiedosto tähän. ' : ''}
+        Logo näytetään kokonaisena. Kuva pienennetään ja tallennetaan vain omille laitteillesi ja varmuuskopioihin.
+      </p>
     </div>
   );
 }

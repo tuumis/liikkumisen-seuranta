@@ -61,10 +61,47 @@ export function OpponentLibrary({ profile }: { profile: Profile }) {
     return (library ?? []).filter((c) => !q || [c.name, ...c.squads.map((s) => squadLabel(s.parts))].join(' ').toLocaleLowerCase('fi').includes(q));
   }, [library, query]);
   const club = library?.find((c) => c.key === open);
+  // Puuttuvien logojen läpikäynti: seurat kirjaston järjestyksessä, yksi kerrallaan.
+  const missing = (library ?? []).filter((c) => !logos.has(c.key));
+  const [walking, setWalking] = useState(false);
+  const [skipped, setSkipped] = useState<ReadonlySet<string>>(new Set());
+  const toast = useToast();
+  const pending = (after: string | null) => missing.filter((c) => c.key !== after && !skipped.has(c.key));
+  function walkNext() {
+    const all = library ?? [];
+    const skip = new Set(skipped);
+    if (open && !logos.has(open)) skip.add(open);
+    setSkipped(skip);
+    const from = all.findIndex((c) => c.key === open);
+    for (let i = 1; i <= all.length; i++) {
+      const c = all[(from + i) % all.length];
+      if (c.key !== open && !logos.has(c.key) && !skip.has(c.key)) return setOpen(c.key);
+    }
+    setWalking(false);
+    setOpen(null);
+    toast(missing.length ? 'Logojen läpikäynti valmis' : 'Kaikilla seuroilla on nyt logo', undefined, 'success');
+  }
 
   return (
     <Card title="Vastustajat" eyebrow="Joukkuekirjasto">
       <p className="-mt-1 mb-3 text-sm text-slate-600">Peleihin ja turnauksiin merkityt joukkueet kootaan tähän automaattisesti. Avaa seura nähdäksesi ryhmät, tulokset ja kommentit.</p>
+      {missing.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-[var(--surface-sunk)] px-3 py-2">
+          <span className="min-w-0 flex-1 text-sm text-slate-700">
+            <strong className="tabular-nums">{missing.length}</strong> {missing.length === 1 ? 'seura ilman logoa' : 'seuraa ilman logoa'}
+          </span>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setSkipped(new Set());
+              setWalking(true);
+              setOpen(missing[0].key);
+            }}
+          >
+            Lisää logot yksi kerrallaan
+          </Button>
+        </div>
+      )}
       {library && library.length > 6 && (
         <input className={`${inputClass} mb-3`} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Hae seuraa tai ryhmää" aria-label="Hae vastustajaa" />
       )}
@@ -75,7 +112,7 @@ export function OpponentLibrary({ profile }: { profile: Profile }) {
       )}
       <ul className="grid gap-2 sm:grid-cols-2">
         {shown.map((c) => (
-          <li key={c.key}>
+          <li key={c.key} className="min-w-0">
             <button type="button" onClick={() => setOpen(c.key)} className="press flex w-full items-center gap-3 rounded-2xl bg-[var(--surface-sunk)] p-2.5 text-left hover:brightness-[0.98]">
               <TeamLogo logo={logos.get(c.key)} name={c.name} size="lg" />
               <span className="min-w-0 flex-1">
@@ -95,7 +132,19 @@ export function OpponentLibrary({ profile }: { profile: Profile }) {
         ))}
       </ul>
       {/* key: jokainen seura avautuu omalla tilallaan (keskeneräinen nimen muokkaus ei siirry toiselle seuralle). */}
-      <ClubSheet key={club?.key ?? 'none'} club={club} profile={profile} notes={notes} logo={club ? logos.get(club.key) : undefined} onClose={() => setOpen(null)} onRenamed={(name) => setOpen(clubKey(name))} />
+      <ClubSheet
+        key={club?.key ?? 'none'}
+        club={club}
+        profile={profile}
+        notes={notes}
+        logo={club ? logos.get(club.key) : undefined}
+        walk={walking && club ? { left: pending(club.key).length, onNext: walkNext, onStop: () => setWalking(false) } : undefined}
+        onClose={() => {
+          setOpen(null);
+          setWalking(false);
+        }}
+        onRenamed={(name) => setOpen(clubKey(name))}
+      />
     </Card>
   );
 }
@@ -105,6 +154,7 @@ function ClubSheet({
   profile,
   notes,
   logo,
+  walk,
   onClose,
   onRenamed,
 }: {
@@ -112,6 +162,8 @@ function ClubSheet({
   profile: Profile;
   notes: Map<string, string>;
   logo?: string;
+  /** Puuttuvien logojen läpikäynti käynnissä: jäljellä olevat muut seurat ja siirtymät. */
+  walk?: { left: number; onNext: () => void; onStop: () => void };
   onClose: () => void;
   onRenamed: (name: string) => void;
 }) {
@@ -140,6 +192,18 @@ function ClubSheet({
     <Sheet open={!!club} onClose={onClose} title={club?.name ?? 'Seura'}>
       {club && (
         <div className="space-y-5 pb-2">
+          {walk && (
+            <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-[color-mix(in_oklab,var(--focus)_10%,var(--surface-sunk))] px-3 py-2" role="status">
+              <span className="min-w-0 flex-1 text-sm text-slate-700">
+                {logo ? 'Logo lisätty. ' : ''}
+                {walk.left > 0 ? `Vielä ${walk.left} ${walk.left === 1 ? 'muu seura' : 'muuta seuraa'} ilman logoa.` : 'Tämä on viimeinen seura ilman logoa.'}
+              </span>
+              <Button variant="ghost" onClick={walk.onStop}>
+                Lopeta
+              </Button>
+              <Button onClick={walk.onNext}>{walk.left > 0 ? (logo ? 'Seuraava ›' : 'Ohita ›') : 'Valmis'}</Button>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-4">
             <TeamLogo logo={logo} name={club.name} size="xl" />
             <div className="min-w-0 flex-1">
