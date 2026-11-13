@@ -134,10 +134,9 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
   // Uudelle kerralle ehdotetaan viimeksi käytettyä omaa joukkuetta.
   useEffect(() => {
     if (existing === null && names?.teams[0] && kind !== 'training') setTeam((t) => t || names.teams[0]);
-    // Uudelle kerralle oma joukkue, jos niitä on vain yksi (taso joukkueen sarjatasosta).
+    // Uudelle kerralle oma joukkue, jos niitä on vain yksi (taso valitaan tapahtumakohtaisesti).
     if (existing === null && teams?.length === 1 && kind !== 'training') {
       setTeamId((t) => t || teams[0].id);
-      setLevel((l) => l || teams[0].level);
       setFormat((f) => f || teams[0].format || '');
     }
   }, [existing, names, kind, teams]);
@@ -296,7 +295,6 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
                     setTeamId(e.target.value);
                     if (t) {
                       setTeam(t.name);
-                      setLevel(t.level);
                       if (t.format) setFormat(t.format);
                     }
                   }}
@@ -304,7 +302,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
                   <option value="">– muu joukkue –</option>
                   {teams.map((t) => (
                     <option key={t.id} value={t.id}>
-                      {t.name} ({LEVEL_LABEL[t.level]})
+                      {t.name}
                     </option>
                   ))}
                 </select>

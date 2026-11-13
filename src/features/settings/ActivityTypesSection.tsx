@@ -15,6 +15,7 @@ import { Sheet } from '../../ui/Sheet';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { useHiddenCategoriesAnyProfile, visibleTypes } from '../week/useLoggableTypes';
+import { DateInput } from '../../ui/DateInput';
 
 const STRENGTH_OPTIONS: { value: StrengthDefault; label: string }[] = [
   { value: 'yes', label: 'Esivalittu' },
@@ -190,7 +191,7 @@ function TypeEditor({ type, onClose }: { type: ActivityType | null; onClose: () 
             <div className="flex flex-wrap items-center gap-2">
               <label className="text-sm text-slate-700">
                 Alkaen{' '}
-                <input type="date" className="field-shell min-h-10 border-0 px-2 text-sm" value={from} max={today} onChange={(e) => e.target.value && setFrom(e.target.value)} />
+                <DateInput className="field-shell inline-flex min-h-10 min-w-40 border-0 px-2 text-sm" value={from} max={today} onChange={setFrom} aria-label="Alkaen" />
               </label>
               <Button variant="secondary" disabled={!affected} onClick={recalc}>
                 Laske uudelleen ({affected ?? 0} {affected === 1 ? 'kerta' : 'kertaa'})

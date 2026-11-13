@@ -15,6 +15,7 @@ import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { TeamNameFields, useTeamNameSuggestions } from './TeamNameFields';
 import { OpponentHistoryCard } from './OpponentHistory';
+import { DateInput } from '../../ui/DateInput';
 
 export type FixtureDraft = {
   kind: 'game' | 'tournament';
@@ -186,10 +187,12 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
             { value: 'tournament', label: '🏆 Turnaus' },
           ]}
         />
-        <div className="grid grid-cols-3 gap-2">
-          <Field label="Päivä">
-            <input type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} />
-          </Field>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="col-span-2">
+            <Field label="Päivä">
+              <DateInput className={inputClass} value={date} onChange={setDate} aria-label="Päivä" />
+            </Field>
+          </div>
           <Field label={autoStart ? 'Saapuminen' : 'Kello'}>
             {autoStart ? (
               <div className="field-shell flex min-h-11 items-center justify-center text-base tabular-nums text-slate-700" title="1. peli − lämmittely">
@@ -215,7 +218,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
             <option value="">{teams?.length ? '– valitse –' : 'Lisää joukkue Joukkueet-osiossa'}</option>
             {teams?.map((t) => (
               <option key={t.id} value={t.id}>
-                {t.name} ({LEVEL_LABEL[t.level]})
+                {t.name}
               </option>
             ))}
           </select>
@@ -365,7 +368,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
           <div className="mb-1 text-sm font-medium text-slate-700">Taso</div>
           <div className="flex flex-wrap gap-2">
             <ToggleChip on={level === ''} onChange={() => setLevel('')}>
-              {team ? `Joukkueen taso (${LEVEL_LABEL[team.level]})` : 'Ei tasoa'}
+              Ei tasoa
             </ToggleChip>
             {LEVELS.map((l) => (
               <ToggleChip key={l} on={level === l} onChange={() => setLevel(l)}>

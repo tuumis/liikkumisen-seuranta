@@ -155,7 +155,7 @@ export const settingsSchema = z.looseObject({
 const level = z.enum(['elite', 'kilpa', 'haaste']);
 
 export const teamSchema = either(
-  z.looseObject({ id: z.string().min(1), profileId: z.string(), name: z.string(), level, photo: photo.optional(), archived: z.boolean(), createdAt: ts, ...sync }),
+  z.looseObject({ id: z.string().min(1), profileId: z.string(), name: z.string(), level: level.optional(), photo: photo.optional(), archived: z.boolean(), createdAt: ts, ...sync }),
 );
 
 export const fixtureSchema = either(

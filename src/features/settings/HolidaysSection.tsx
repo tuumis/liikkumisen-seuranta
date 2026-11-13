@@ -12,6 +12,7 @@ import { Button, Card, Field, inputClass } from '../../ui/components';
 import { formatDate } from '../../ui/format';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
+import { DateInput } from '../../ui/DateInput';
 
 const range = (h: Holiday) =>
   h.start === h.end ? formatDate(h.start, 'EEEEEE d.M.yyyy') : `${formatDate(h.start, 'd.M.')}–${formatDate(h.end, 'd.M.yyyy')}`;
@@ -141,12 +142,12 @@ function HolidayForm({ draft, profiles, onSave, onCancel }: { draft: Holiday; pr
           </button>
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Alkaa">
-          <input type="date" className={inputClass} value={v.start} onChange={(e) => setV((c) => ({ ...c, start: e.target.value, end: c.end < e.target.value ? e.target.value : c.end }))} />
+          <DateInput className={inputClass} value={v.start} onChange={(d) => setV((c) => ({ ...c, start: d, end: c.end < d ? d : c.end }))} aria-label="Alkaa" />
         </Field>
         <Field label="Päättyy (mukaan lukien)">
-          <input type="date" className={inputClass} value={v.end} min={v.start} onChange={(e) => setV((c) => ({ ...c, end: e.target.value }))} />
+          <DateInput className={inputClass} value={v.end} min={v.start} onChange={(d) => setV((c) => ({ ...c, end: d }))} aria-label="Päättyy" />
         </Field>
       </div>
       {profiles.length > 1 && (

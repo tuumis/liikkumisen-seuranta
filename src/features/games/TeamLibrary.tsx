@@ -221,7 +221,7 @@ function ClubSheet({
           </div>
 
           <div className="card-sunk space-y-3 p-3">
-            <LogoPicker name={club.name} value={logo} onChange={(v) => void saveLogo(v)} />
+            <LogoPicker name={club.name} value={logo} onChange={(v) => void saveLogo(v)} hideCompactLogo />
             {renaming ? (
               <form
                 className="flex gap-2"

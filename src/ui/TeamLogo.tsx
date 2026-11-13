@@ -56,13 +56,28 @@ const btn = 'press min-h-11 rounded-xl bg-[var(--surface-raised)] px-3 text-sm f
  * Logon valinta: tiedosto, leikepöytä (Liitä kuva / Ctrl+V) tai raahaus. Kuva pienennetään
  * laitteella kokonaisena (ei rajausta). "Hae logo" avaa kuvahaun selaimeen uuteen välilehteen.
  */
-export function LogoPicker({ name, value, onChange, label = 'Seuran logo' }: { name: string; value?: string; onChange: (logo: string | undefined) => void; label?: string }) {
+export function LogoPicker({
+  name,
+  value,
+  onChange,
+  label = 'Seuran logo',
+  hideCompactLogo,
+}: {
+  name: string;
+  value?: string;
+  onChange: (logo: string | undefined) => void;
+  label?: string;
+  /** Tiivis tila ilman logoa (logo näkyy jo muualla näkymässä). */
+  hideCompactLogo?: boolean;
+}) {
   const input = useRef<HTMLInputElement>(null);
   const zone = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [hint, setHint] = useState<string>();
   const [over, setOver] = useState(false);
+  // Kun logo on jo annettu, valinta on piilossa painikkeen takana (vähemmän tilaa ja ohjetekstiä).
+  const [open, setOpen] = useState(!value);
   const canRead = typeof navigator !== 'undefined' && typeof navigator.clipboard?.read === 'function';
   const hasName = !!parseTeamName(name).club;
 
@@ -73,6 +88,7 @@ export function LogoPicker({ name, value, onChange, label = 'Seuran logo' }: { n
     setHint(undefined);
     try {
       onChange(await resizeLogo(file));
+      setOpen(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -100,6 +116,18 @@ export function LogoPicker({ name, value, onChange, label = 'Seuran logo' }: { n
   }
 
   const fromTransfer = (dt: DataTransfer | null): File | undefined => [...(dt?.files ?? [])].find((f) => f.type.startsWith('image/'));
+
+  if (value && !open) {
+    return (
+      <div className="flex flex-wrap items-center gap-3">
+        {!hideCompactLogo && <TeamLogo logo={value} name={name} size="md" />}
+        <span className="min-w-0 flex-1 text-sm font-medium text-slate-700">{label} annettu</span>
+        <button type="button" onClick={() => setOpen(true)} className={btn}>
+          Vaihda logo
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -143,6 +171,11 @@ export function LogoPicker({ name, value, onChange, label = 'Seuran logo' }: { n
           <button type="button" disabled={busy} onClick={() => input.current?.click()} className={btn}>
             {busy ? 'Käsitellään…' : value ? 'Vaihda tiedostosta' : 'Valitse tiedosto'}
           </button>
+          {value && (
+            <button type="button" onClick={() => setOpen(false)} className="min-h-11 rounded-xl px-3 text-sm font-medium text-slate-600 hover:bg-[var(--surface-sunk)]">
+              Valmis
+            </button>
+          )}
           {value && (
             <button type="button" onClick={() => onChange(undefined)} className="min-h-11 rounded-xl px-3 text-sm font-medium text-red-700 hover:bg-red-50">
               Poista logo

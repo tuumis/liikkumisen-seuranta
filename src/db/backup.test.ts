@@ -107,7 +107,7 @@ describe('varmuuskopio', () => {
     const a = await device('photo');
     const photo = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgK';
     const p = await a.repo.createProfile({ name: 'A', kind: 'child', birthYear: 2018, birthMonth: 5, color: '#000', photo });
-    await a.repo.saveTeam(p.id, { name: 'P2018', level: 'kilpa', photo });
+    await a.repo.saveTeam(p.id, { name: 'P2018', photo });
     const file = await buildBackup(a.db);
     await clearAll(a.db);
     await a.repo.initialize();

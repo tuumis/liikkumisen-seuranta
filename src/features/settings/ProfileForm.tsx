@@ -7,6 +7,7 @@ import { PhotoPicker } from '../../ui/Avatar';
 import { Button, Field, inputClass } from '../../ui/components';
 import { GROUP_LABEL, MONTHS, PROFILE_COLORS } from '../../ui/labels';
 import { today } from '../../ui/today';
+import { DateInput } from '../../ui/DateInput';
 
 const currentYear = Number(today().slice(0, 4));
 
@@ -198,7 +199,7 @@ export function ProfileForm({
       </Field>
 
       <Field label="Seuranta alkoi" hint="Analyysi laskee päivät tästä alkaen. Voit siirtää alkua aiemmaksi, jos kirjaat vanhoja kertoja.">
-        <input type="date" className={inputClass} value={raw.trackingStart} max={today()} onChange={set('trackingStart')} />
+        <DateInput className={inputClass} value={raw.trackingStart} max={today()} onChange={(v) => set('trackingStart')({ target: { value: v } })} aria-label="Seurannan alku" />
         {errors.trackingStart && <span className="mt-1 block text-sm text-red-700">{errors.trackingStart}</span>}
       </Field>
 

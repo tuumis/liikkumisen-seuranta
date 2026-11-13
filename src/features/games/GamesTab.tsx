@@ -228,7 +228,7 @@ function CalendarView({ profile, onEdit }: { profile: Profile; onEdit: (e: Fixtu
 function FixtureSummary({ e, team, history }: { e: FixtureEntry; team?: Team; history?: (opponent: string | undefined) => string | undefined }) {
   const tournament = e.plan.activityTypeId === 't:football_tournament';
   const f = e.fixture;
-  const level = f?.level ?? team?.level;
+  const level = f?.level;
   return (
     <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-2">
@@ -287,7 +287,6 @@ function TeamsView({ profile }: { profile: Profile }) {
   const teams = useLiveQuery(() => repo.listTeams(profile.id, { includeArchived: true }), [profile.id]);
   const [editing, setEditing] = useState<Team | 'new' | null>(null);
   const [name, setName] = useState('');
-  const [level, setLevel] = useState<GameLevel>('kilpa');
   const [photo, setPhoto] = useState<string | undefined>();
   const [format, setFormat] = useState<GameFormat | ''>('');
   const [share, setShare] = useState(70); // peliaika-arvio %
@@ -306,7 +305,6 @@ function TeamsView({ profile }: { profile: Profile }) {
   const open = (t: Team | 'new') => {
     setEditing(t);
     setName(t === 'new' ? '' : t.name);
-    setLevel(t === 'new' ? 'kilpa' : t.level);
     setPhoto(t === 'new' ? undefined : t.photo);
     setLogo(undefined);
     setLogoTouched(false);
@@ -320,7 +318,7 @@ function TeamsView({ profile }: { profile: Profile }) {
       // Logo seuralle (näkyy kaikissa seuran joukkueissa ja peleissä); ilman seuraa joukkueen kuvaksi.
       if (logoTouched && hasClub) await repo.saveClubLogo(club, logo);
       const teamPhoto = logoTouched && !hasClub ? logo : logoTouched && hasClub ? undefined : photo;
-      await repo.saveTeam(profile.id, { name, level, photo: teamPhoto, format: format || undefined, playShare: share === 70 ? undefined : share / 100 }, editing && editing !== 'new' ? editing.id : undefined);
+      await repo.saveTeam(profile.id, { name, photo: teamPhoto, format: format || undefined, playShare: share === 70 ? undefined : share / 100 }, editing && editing !== 'new' ? editing.id : undefined);
       toast('Joukkue tallennettu');
       setEditing(null);
     } catch (e) {
@@ -346,17 +344,6 @@ function TeamsView({ profile }: { profile: Profile }) {
           }}
         >
           <TeamNameFields own value={name} onChange={setName} suggestions={suggestions} label="Oma joukkue" />
-          <div>
-            <div className="mb-1 text-sm font-medium text-slate-700">Sarjataso (oletus peleille)</div>
-            <div className="flex flex-wrap gap-2">
-              {(['elite', 'kilpa', 'haaste'] as GameLevel[]).map((l) => (
-                <ToggleChip key={l} on={level === l} onChange={() => setLevel(l)}>
-                  {LEVEL_LABEL[l]}
-                </ToggleChip>
-              ))}
-            </div>
-            <p className="mt-1 text-xs text-slate-500">Elite = kovatempoinen (kovempi), Kilpa = reipas (tavallinen), Haaste = kevyempi. Tason voi vaihtaa yksittäiselle pelille tai turnaukselle.</p>
-          </div>
           <div>
             <div className="mb-1 text-sm font-medium text-slate-700">Pelimuoto (oletus peleille)</div>
             <div className="flex flex-wrap gap-2">
@@ -409,7 +396,6 @@ function TeamsView({ profile }: { profile: Profile }) {
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-medium text-slate-900">{displayTeamName(t.name)}</span>
                 <span className="mt-0.5 flex items-center gap-1.5">
-                  <LevelBadge level={t.level} />
                   {t.format && <span className="text-xs text-slate-500">{t.format}</span>}
                   <span className="text-xs text-slate-500">· peliaika ~{Math.round((t.playShare ?? 0.7) * 100)} %</span>
                 </span>

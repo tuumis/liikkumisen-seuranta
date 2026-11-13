@@ -8,7 +8,7 @@ import { footballPeriodSummary } from '../../domain/football';
 import { formatHours } from '../../domain/hours';
 import { DEFAULT_SETTINGS } from '../../domain/recommendations';
 import type { ISODate, Profile } from '../../domain/types';
-import { distinctTypes, latestComment, previousWeekStart, shouldShowDigest } from '../../domain/weekDigest';
+import { previousWeekStart, shouldShowDigest } from '../../domain/weekDigest';
 import { repo } from '../../db/repositories';
 import { formatDate } from '../../ui/format';
 import { useReport } from '../analysis/useReport';
@@ -48,7 +48,7 @@ export function LastWeekCard({ profile, today, onOpenWeek }: { profile: Profile;
   const settings = useLiveQuery(() => repo.getSettings(), []) ?? DEFAULT_SETTINGS;
   const week = useLiveQuery(async () => {
     const sessions = (await repo.sessionsInRange(profile.id, period.start, period.end)).filter((s) => !s.deletedAt);
-    return { sessions, details: await repo.footballDetailsFor(sessions.map((s) => s.id)) };
+    return { sessions };
   }, [profile.id, period.start, period.end]);
   const football = useFootball(profile.id, period.start, period.end);
 
@@ -64,17 +64,12 @@ export function LastWeekCard({ profile, today, onOpenWeek }: { profile: Profile;
   const ev = report.evaluation;
   const fb = football && football.sessions.length ? footballPeriodSummary(football, period) : undefined;
   const g = fb?.games;
-  const comment = latestComment(week.sessions, week.details);
-  const types = distinctTypes(week.sessions);
-
-  const tiles: [string, string][] = [
-    ['Liikuntaa yhteensä', formatHours(report.hours.actualMin)],
-    ['Kertoja', `${logged.length}${types > 1 ? ` · ${types} lajia` : ''}`],
-  ];
-  if (main && ev.evaluable) tiles.unshift([main.label, `${Math.round(main.value)} ${main.unit}`]);
-  if (fb && fb.training.count) tiles.push(['Treenit', String(fb.training.count)]);
-  if (g && g.games) tiles.push(['Pelit V–T–H', `${g.wins}–${g.draws}–${g.losses}${g.noResult ? ` (+${g.noResult})` : ''}`]);
-  if (g && g.playerGoalsGames) tiles.push([`${profile.name}: maalit`, `⚽ ${g.playerGoals}`]);
+  // Selkeät, isot luvut: pääluku omana rivinään, muut ruutuina (kertoja ja kommentteja ei näytetä).
+  const tiles: { label: string; value: string; unit?: string }[] = [{ label: 'Liikuntaa yhteensä', value: formatHours(report.hours.actualMin) }];
+  if (fb && fb.training.count) tiles.push({ label: 'Treenit', value: String(fb.training.count) });
+  if (g && g.games) tiles.push({ label: 'Pelit V–T–H', value: `${g.wins}–${g.draws}–${g.losses}`, unit: g.noResult ? `+${g.noResult} ilman tulosta` : undefined });
+  if (g && g.playerGoalsGames) tiles.push({ label: `${profile.name}: maalit`, value: `⚽ ${g.playerGoals}` });
+  const showMain = main && ev.evaluable;
 
   return (
     <section className="card anim-rise p-4 sm:p-5" aria-label="Viime viikko lyhyesti">
@@ -87,27 +82,32 @@ export function LastWeekCard({ profile, today, onOpenWeek }: { profile: Profile;
             <h2 className="font-display text-lg font-semibold leading-tight text-slate-900">
               {formatDate(period.start, 'd.M.')} – {formatDate(period.end, 'd.M.')}
             </h2>
-            {main && ev.evaluable && <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${STATUS_CLASS[main.m.status]}`}>{STATUS_TEXT[main.m.status]}</span>}
+            {showMain && <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${STATUS_CLASS[main.m.status]}`}>{STATUS_TEXT[main.m.status]}</span>}
           </div>
         </div>
         <button type="button" onClick={close} className="press -mr-1 -mt-1 flex size-10 shrink-0 items-center justify-center rounded-xl text-slate-500 hover:bg-[var(--surface-sunk)] hover:text-slate-900" aria-label="Sulje viime viikon kooste">
           ✕
         </button>
       </div>
-      <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-        {tiles.map(([label, value]) => (
-          <div key={label} className="min-w-0 rounded-2xl bg-[var(--surface-sunk)] px-3 py-2">
-            <dt className="text-[11px] font-semibold leading-tight text-slate-500">{label}</dt>
-            <dd className="stat truncate text-base font-semibold tabular-nums text-slate-900">{value}</dd>
+      {showMain && (
+        <div className="mt-3 rounded-2xl bg-[var(--surface-sunk)] px-4 py-3">
+          <div className="text-sm font-semibold text-slate-600">{main.label}</div>
+          <div className="mt-0.5 flex items-baseline gap-2">
+            <span className="stat text-4xl font-semibold tabular-nums text-slate-900">{Math.round(main.value)}</span>
+            <span className="text-base font-semibold text-slate-600">{main.unit}</span>
+          </div>
+          <div className="text-sm text-slate-500">{main.target}</div>
+        </div>
+      )}
+      <dl className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {tiles.map((t) => (
+          <div key={t.label} className="min-w-0 rounded-2xl bg-[var(--surface-sunk)] px-4 py-3">
+            <dt className="text-sm font-semibold leading-tight text-slate-600">{t.label}</dt>
+            <dd className="stat mt-1 text-2xl font-semibold tabular-nums text-slate-900">{t.value}</dd>
+            {t.unit && <dd className="text-xs text-slate-500">{t.unit}</dd>}
           </div>
         ))}
       </dl>
-      {comment && (
-        <blockquote className="mt-3 border-l-2 border-[var(--accent)] pl-3 text-sm text-slate-700">
-          <span className="line-clamp-2">”{comment.text}”</span>
-          <span className="text-xs text-slate-500">{formatDate(comment.date, 'EEEEEE d.M.')}</span>
-        </blockquote>
-      )}
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"

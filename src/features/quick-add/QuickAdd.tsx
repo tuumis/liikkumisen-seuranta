@@ -22,6 +22,7 @@ import { useToast } from '../../ui/Toast';
 import { markFresh } from '../../ui/fresh';
 import { today as todayFn } from '../../ui/today';
 import { dateSchema, durationSchema, manualSchema, optionalMinutes, showStrength, strengthDefaults } from '../week/sessionForm';
+import { DateInput } from '../../ui/DateInput';
 
 const DURATIONS = [15, 30, 45, 60, 75, 90];
 const CATEGORY_ORDER: Category[] = ['hobby', 'school_pe', 'school_recess', 'commute', 'self_directed', 'family', 'other'];
@@ -279,12 +280,11 @@ export function QuickAdd({
               <ToggleChip on={date === yesterday} onChange={() => setDate(yesterday)}>
                 Eilen
               </ToggleChip>
-              <input
-                type="date"
+              <DateInput
                 className="field-shell min-h-10 rounded-full border-0 px-3 text-sm font-semibold text-slate-800"
                 value={date}
                 max={today}
-                onChange={(e) => e.target.value && setDate(e.target.value)}
+                onChange={setDate}
                 aria-label="Päivä"
               />
             </div>

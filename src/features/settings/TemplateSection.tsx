@@ -14,6 +14,7 @@ import { today as todayFn } from '../../ui/today';
 import { durationSchema, issuesByField } from '../week/sessionForm';
 import { LabelField } from '../week/LabelField';
 import { useHiddenCategories, visibleTypes } from '../week/useLoggableTypes';
+import { DateInput } from '../../ui/DateInput';
 
 const WEEKDAYS: { value: Weekday; label: string }[] = [
   { value: 1, label: 'Ma' },
@@ -223,13 +224,20 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
         </Field>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Alkaa">
-          <input type="date" className={inputClass} value={v.validFrom} onChange={(e) => setV((c) => ({ ...c, validFrom: e.target.value }))} />
+          <DateInput className={inputClass} value={v.validFrom} onChange={(d) => setV((c) => ({ ...c, validFrom: d }))} aria-label="Alkaa" />
           {err('validFrom')}
         </Field>
         <Field label="Päättyy (valinnainen)">
-          <input type="date" className={inputClass} value={v.validTo} min={v.validFrom} onChange={(e) => setV((c) => ({ ...c, validTo: e.target.value }))} />
+          <div className="flex gap-1">
+            <DateInput className={inputClass} value={v.validTo} min={v.validFrom} onChange={(d) => setV((c) => ({ ...c, validTo: d }))} aria-label="Päättyy" placeholder="Ei päättymispäivää" />
+            {v.validTo && (
+              <button type="button" onClick={() => setV((c) => ({ ...c, validTo: '' }))} className="min-h-11 shrink-0 rounded-xl px-2 text-sm text-slate-600 hover:bg-[var(--surface-sunk)]" aria-label="Poista päättymispäivä">
+                ✕
+              </button>
+            )}
+          </div>
           {err('validTo')}
         </Field>
       </div>

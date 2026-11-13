@@ -26,22 +26,23 @@ const TODAY = '2026-11-12';
 describe('joukkueet', () => {
   it('luonti, nimen siistiminen, muokkaus ja arkistointi', async () => {
     const { repo } = await device('teams');
-    const a = await repo.saveTeam('p1', { name: '  P2018   Valkoinen ', level: 'kilpa' });
-    expect(a).toMatchObject({ name: 'P2018 Valkoinen', level: 'kilpa', archived: false });
-    await repo.saveTeam('p1', { name: 'P2018 Vihreä', level: 'elite' });
-    await repo.saveTeam('p1', { name: 'P2018 Valkoinen', level: 'haaste' }, a.id);
-    expect((await repo.listTeams('p1')).map((t) => `${t.name}:${t.level}`)).toEqual(['P2018 Valkoinen:haaste', 'P2018 Vihreä:elite']);
+    const a = await repo.saveTeam('p1', { name: '  P2018   Valkoinen ' });
+    expect(a).toMatchObject({ name: 'P2018 Valkoinen', archived: false });
+    expect(a.level).toBeUndefined(); // sarjataso on tapahtumakohtainen
+    await repo.saveTeam('p1', { name: 'P2018 Vihreä' });
+    await repo.saveTeam('p1', { name: 'P2018 Valkoinen' }, a.id);
+    expect((await repo.listTeams('p1')).map((t) => t.name)).toEqual(['P2018 Valkoinen', 'P2018 Vihreä']);
     await repo.setTeamArchived(a.id, true);
     expect(await repo.listTeams('p1')).toHaveLength(1);
     expect(await repo.listTeams('p2')).toEqual([]);
-    await expect(repo.saveTeam('p1', { name: '   ', level: 'kilpa' })).rejects.toThrow();
+    await expect(repo.saveTeam('p1', { name: '   ' })).rejects.toThrow();
   });
 });
 
 describe('pelikalenteri', () => {
   it('uusi peli näkyy suunnitelmana; muokkaus ja poisto', async () => {
     const { repo, db } = await device('fixture');
-    const team = await repo.saveTeam('p1', { name: 'P2018 Valkoinen', level: 'kilpa' });
+    const team = await repo.saveTeam('p1', { name: 'P2018 Valkoinen' });
     const e = await repo.createFixture('p1', { kind: 'game', date: '2026-11-15', startTime: '10:00', durationMin: 60, teamId: team.id, opponent: ' HJK ', location: 'Kenttä 2' });
     expect(e.plan).toMatchObject({ activityTypeId: 't:football_game', status: 'open', date: '2026-11-15', startTime: '10:00', durationMin: 60 });
     expect(e.plan.templateItemId).toBeUndefined();
@@ -62,7 +63,7 @@ describe('pelikalenteri', () => {
 
   it('kuittaus esitäyttää lisätiedot; taso ponnisteluna (Elite = kovempi)', async () => {
     const { repo } = await device('confirm');
-    const team = await repo.saveTeam('p1', { name: 'P2018 Valkoinen', level: 'kilpa' });
+    const team = await repo.saveTeam('p1', { name: 'P2018 Valkoinen' });
     const e = await repo.createFixture('p1', { kind: 'game', date: '2026-11-10', durationMin: 90, teamId: team.id, opponent: 'HJK', level: 'elite' });
     const r = await repo.confirmPlanned(e.plan.id, TODAY);
     expect(r.session.effort).toBe(1);
@@ -81,13 +82,18 @@ describe('pelikalenteri', () => {
     expect(h.minutes.moderate + h.minutes.vigorous).toBe(23 + 7);
   });
 
-  it('ilman tapahtumakohtaista tasoa käytetään joukkueen tasoa', async () => {
-    const { repo } = await device('team-level');
-    const team = await repo.saveTeam('p1', { name: 'P2018', level: 'haaste' });
+  it('ilman tapahtumakohtaista tasoa ei tasoa (vanhan joukkuerivin sarjatasoa ei käytetä)', async () => {
+    const { repo, db } = await device('team-level');
+    const team = await repo.saveTeam('p1', { name: 'P2018' });
+    await db.teams.put({ ...team, level: 'haaste' }); // vanha rivi, jossa sarjataso
     const e = await repo.createFixture('p1', { kind: 'tournament', date: '2026-11-08', durationMin: 240, teamId: team.id, eventName: 'Cup' });
     const r = await repo.confirmPlanned(e.plan.id, TODAY);
-    expect(r.session.effort).toBe(-1);
-    expect(await repo.getFootballDetails(r.session.id)).toMatchObject({ level: 'haaste', eventName: 'Cup' });
+    expect(r.session.effort).toBe(0);
+    const fd = (await repo.getFootballDetails(r.session.id))!;
+    expect(fd).toMatchObject({ eventName: 'Cup', teamId: team.id });
+    expect(fd.level).toBeUndefined();
+    // Joukkueen muokkaus poistaa vanhan sarjatason.
+    expect((await repo.saveTeam('p1', { name: 'P2018' }, team.id)).level).toBeUndefined();
   });
 
   it('turnauksen kesto otteluohjelmasta: pelin pituus, lämmittely ja verryttely tallentuvat; käsin annettu merkitään', async () => {
@@ -112,7 +118,7 @@ describe('pelikalenteri', () => {
 
   it('peliaika: Ei / Osan / Koko pelin, joukkueen peliaika-arvio ja lämmittely ennen jokaista peliä', async () => {
     const { repo, db } = await device('played');
-    const team = await repo.saveTeam('p1', { name: 'P2018', level: 'kilpa', format: '5v5', playShare: 0.8 });
+    const team = await repo.saveTeam('p1', { name: 'P2018', format: '5v5', playShare: 0.8 });
     expect(team.playShare).toBe(0.8);
     const e = await repo.createFixture('p1', {
       kind: 'tournament',
@@ -150,7 +156,7 @@ describe('pelikalenteri', () => {
 
   it('pikalisätty turnaus: lämmittely pelien määrän mukaan ja joukkueen peliaika-arvio lisätiedoista', async () => {
     const { repo, db } = await device('quickTournament');
-    const team = await repo.saveTeam('p1', { name: 'P2018', level: 'kilpa', format: '5v5', playShare: 0.6 });
+    const team = await repo.saveTeam('p1', { name: 'P2018', format: '5v5', playShare: 0.6 });
     const s = await repo.createSession({ profileId: 'p1', activityTypeId: 't:football_tournament', date: TODAY, durationMin: 105, effort: 0, muscle: false, bone: false });
     expect(s.warmupMin).toBeUndefined();
     await repo.saveFootballDetails(s.id, { attendance: 'full', focusTags: [], teamId: team.id, games: [{}, {}, {}] });
@@ -204,7 +210,7 @@ describe('pelikalenteri', () => {
 
   it('omat maalit, pelipaikka ja pelimuoto (joukkueen oletus, tapahtuma voi ohittaa)', async () => {
     const { repo, db } = await device('format');
-    const team = await repo.saveTeam('p1', { name: 'P2018', level: 'kilpa', format: '8v8' });
+    const team = await repo.saveTeam('p1', { name: 'P2018', format: '8v8' });
     const g = await repo.createFixture('p1', { kind: 'game', date: '2026-11-10', durationMin: 60, teamId: team.id, opponent: 'HJK' });
     const t = await repo.createFixture('p1', { kind: 'tournament', date: '2026-11-11', durationMin: 240, teamId: team.id, format: '5v5', games: [{ opponent: 'A' }, { opponent: 'B' }] });
     const rg = await repo.confirmPlanned(g.plan.id, TODAY);
@@ -264,7 +270,7 @@ describe('synkronointi ja poisto', () => {
   it('joukkueet ja kalenteri synkronoituvat; profiilin poisto tyhjentää ne', async () => {
     const pc = await device('sync-pc');
     const phone = await device('sync-phone');
-    const team = await pc.repo.saveTeam('p1', { name: 'P2018', level: 'kilpa' });
+    const team = await pc.repo.saveTeam('p1', { name: 'P2018' });
     const e = await pc.repo.createFixture('p1', { kind: 'game', date: '2026-11-20', durationMin: 60, teamId: team.id, opponent: 'HJK' });
     const r = await mergeSyncFile(phone.db, toJson(await buildSyncFile(pc.db, pc.id, 'pc')), phone.id);
     expect(r.added).toBeGreaterThanOrEqual(3); // joukkue + suunnitelma + kalenteritiedot

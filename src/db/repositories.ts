@@ -653,7 +653,7 @@ export function createRepositories(db: AppDB = defaultDb) {
       const fx = await db.fixtures.get(planId);
       const fixture = fx && !fx.deletedAt ? fx : undefined;
       const fixtureTeam = fixture?.teamId ? await db.teams.get(fixture.teamId) : undefined;
-      const fixtureLevel = fixture?.level ?? (fixtureTeam && !fixtureTeam.deletedAt ? fixtureTeam.level : undefined);
+      const fixtureLevel = fixture?.level; // taso on tapahtumakohtainen (ei joukkueen oletusta)
 
       const linked = live(await db.sessions.where('plannedSessionId').equals(planId).toArray())[0];
       if (linked) {
@@ -1107,14 +1107,15 @@ export function createRepositories(db: AppDB = defaultDb) {
   }
 
   /** `photo`: undefined poistaa kuvan, kenttä puuttuu = kuva ennallaan. */
-  async function saveTeam(profileId: UUID, input: { name: string; level: GameLevel; photo?: string; format?: GameFormat; playShare?: number }, id?: UUID): Promise<Team> {
+  async function saveTeam(profileId: UUID, input: { name: string; photo?: string; format?: GameFormat; playShare?: number }, id?: UUID): Promise<Team> {
     const share = input.playShare !== undefined && input.playShare > 0 && input.playShare <= 1 ? input.playShare : undefined;
     const name = input.name.trim().replace(/\s+/g, ' ');
     if (!name) throw new Error('Anna joukkueen nimi');
     if (id) {
       const current = await db.teams.get(id);
       if (!current || current.deletedAt) throw new Error('Joukkuetta ei löydy');
-      const next = await stamp({ ...current, name, level: input.level });
+      const next = await stamp({ ...current, name });
+      delete next.level; // sarjataso on peli- ja turnauskohtainen (SPEC 16)
       if ('photo' in input) {
         if (input.photo) next.photo = input.photo;
         else delete next.photo;
@@ -1131,7 +1132,7 @@ export function createRepositories(db: AppDB = defaultDb) {
       return next;
     }
     const ts = nowTimestamp();
-    const team: Team = { id: newId(), profileId, name, level: input.level, archived: false, createdAt: ts, updatedAt: ts, updatedBy: await deviceId() };
+    const team: Team = { id: newId(), profileId, name, archived: false, createdAt: ts, updatedAt: ts, updatedBy: await deviceId() };
     if (input.photo) team.photo = input.photo;
     if (isGameFormat(input.format)) team.format = input.format;
     if (share !== undefined) team.playShare = share;

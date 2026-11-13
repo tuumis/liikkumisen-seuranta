@@ -16,6 +16,7 @@ import { formatDate } from '../../ui/format';
 import { CATEGORY_LABEL, pct } from '../../ui/labels';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
+import { DateInput } from '../../ui/DateInput';
 
 const minutesField = z.coerce.number().int().min(0, 'Vähintään 0').max(600, 'Enintään 600');
 
@@ -212,7 +213,7 @@ function EstimateForm({ profile, draft, onDone }: { profile: Profile; draft: Dra
       )}
       {(!e || mode === 'correct') && (
         <Field label="Voimassa alkaen" hint={e ? 'Korjaus muuttaa myös aiempien päivien arvion.' : 'Voit valita myös menneen päivän, esim. seurannan alun.'}>
-          <input type="date" className={inputClass} value={validFrom} max={today} onChange={(ev) => setValidFrom(ev.target.value)} />
+          <DateInput className={inputClass} value={validFrom} max={today} onChange={setValidFrom} aria-label="Voimassa alkaen" />
         </Field>
       )}
       <Slider label="Arkipäivä (ma–pe)" value={weekday} onChange={setWeekday} />

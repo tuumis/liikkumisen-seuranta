@@ -20,7 +20,7 @@ const DAY = '2026-11-14';
 
 describe('turnauspäivän pikakirjaus', () => {
   it('ensimmäinen tulos kuittaa turnauksen, myöhemmät päivittävät saman kirjauksen', async () => {
-    const team = await repo.saveTeam('p1', { name: 'P2016 Sininen', level: 'kilpa', format: '7v7' });
+    const team = await repo.saveTeam('p1', { name: 'P2016 Sininen', format: '7v7' });
     const e = await repo.createFixture('p1', {
       kind: 'tournament',
       date: DAY,

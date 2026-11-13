@@ -57,7 +57,7 @@ describe('seurat', () => {
   it('seuran nimen muutos säilyttää ryhmät ja siirtää logon; myös omat joukkueet', async () => {
     const { repo, db } = await device('rename');
     const a = await playedGame(repo, 'Honka / Valkoinen');
-    const team = await repo.saveTeam('p1', { name: 'Honka · Musta · 2016', level: 'kilpa' });
+    const team = await repo.saveTeam('p1', { name: 'Honka · Musta · 2016' });
     await repo.saveClubLogo('Honka', LOGO);
     await repo.renameClub('honka', 'FC Honka');
     expect((await db.footballDetails.get(a.id))!.opponent).toBe('FC Honka · Valkoinen');

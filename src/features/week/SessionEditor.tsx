@@ -16,6 +16,7 @@ import { TermInfo } from '../../ui/glossary';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { dateSchema, durationSchema, manualSchema, optionalMinutes, showStrength } from './sessionForm';
+import { DateInput } from '../../ui/DateInput';
 
 
 export function SessionEditor({
@@ -168,9 +169,9 @@ export function SessionEditor({
             </select>
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-3">
             <Field label="Päivä">
-              <input type="date" className={inputClass} value={date} max={today} onChange={(e) => setDate(e.target.value)} />
+              <DateInput className={inputClass} value={date} max={today} onChange={setDate} aria-label="Päivä" />
               {errors.date && <span className="mt-1 block text-sm text-red-700">{errors.date}</span>}
             </Field>
             <Field label="Kesto (min)">

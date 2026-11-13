@@ -261,7 +261,8 @@ export interface Team extends SyncFields {
   id: UUID;
   profileId: UUID;
   name: string;
-  level: GameLevel;
+  /** Vanha sarjataso: ei enää käytössä (taso on peli- ja turnauskohtainen); säilyy vanhoissa riveissä. */
+  level?: GameLevel;
   /** Joukkuekuva pienennettynä (JPEG data URL), valinnainen. */
   photo?: string;
   /** Joukkueen tavallinen pelimuoto (oletus peleille), esim. 8v8. */
