@@ -1,4 +1,4 @@
-// Analyysi-välilehti, viikkonäkymä (vaihe 4). Kuukausi, kausi ja vuosi tulevat vaiheessa 7.
+// Analyysi-välilehti: viikkonäkymä (vaihe 4) sekä kuukausi, kausi ja vuosi (vaihe 7, LongTermView).
 
 import { useState } from 'react';
 import { addDays, isoWeek, startOfIsoWeek, weekPeriod } from '../../domain/dates';
@@ -22,6 +22,25 @@ import { HighlightsCard } from './HighlightsCard';
 import { IconChevronLeft, IconChevronRight, IconSettings } from '../../ui/icons';
 import { EditLayoutSheet } from '../../ui/EditLayoutSheet';
 import { useAnalysisLayout } from './layout';
+import { LongTermView } from './LongTermView';
+import type { LongKind } from '../../domain/longTerm';
+import { Segmented } from '../../ui/controls';
+
+type Mode = 'week' | LongKind;
+const MODES: { value: Mode; label: string }[] = [
+  { value: 'week', label: 'Viikko' },
+  { value: 'month', label: 'Kuukausi' },
+  { value: 'season', label: 'Kausi' },
+  { value: 'year', label: 'Vuosi' },
+];
+function readMode(): Mode {
+  try {
+    const v = localStorage.getItem('analysisMode');
+    return MODES.some((m) => m.value === v) ? (v as Mode) : 'week';
+  } catch {
+    return 'week';
+  }
+}
 
 export function AnalysisView({ profile }: { profile?: Profile }) {
   const today = todayFn();
@@ -31,14 +50,39 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
   const wk = isoWeek(weekStart);
   const isCurrent = weekStart === startOfIsoWeek(today);
   const [games, setGames] = useState(false);
+  const [mode, setModeState] = useState<Mode>(readMode);
+  const setMode = (m: Mode) => {
+    setModeState(m);
+    try {
+      localStorage.setItem('analysisMode', m);
+    } catch {
+      /* ei tallennusta */
+    }
+  };
   const [editing, setEditing] = useState(false);
   const layoutApi = useAnalysisLayout();
   const visible = layoutApi.visible;
 
   if (games && profile) return <GamesView profile={profile} onBack={() => setGames(false)} />;
 
+  const modePicker = (
+    <div className="anim-fade max-w-md">
+      <Segmented<Mode> label="Jakso" value={mode} onChange={setMode} options={MODES} />
+    </div>
+  );
+
+  if (mode !== 'week' && profile)
+    return (
+      <div className="space-y-5">
+        {modePicker}
+        <LongTermView key={mode} profile={profile} kind={mode} />
+        <Rationale />
+      </div>
+    );
+
   return (
     <div className="space-y-5">
+      {profile && modePicker}
       {/* Jakson valinta */}
       <div className="anim-fade flex flex-wrap items-center gap-2">
         <div className="flex flex-1 items-center gap-1 rounded-2xl bg-[var(--surface)] p-1 shadow-sm sm:flex-none">
