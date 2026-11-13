@@ -69,3 +69,38 @@ export function buildOpponentLibrary(rows: GameRow[], upcoming: UpcomingGame[]):
   }
   return out.sort((a, b) => a.name.localeCompare(b.name, 'fi'));
 }
+
+// ---------- vastustajan historia (pelikalenteri) ----------
+
+export interface OpponentHistory {
+  /** Seuran nimi annetusta vastustajasta. */
+  club: string;
+  /** Saman ryhmän pelit uusin ensin: seura ja ryhmä samat, ikäluokka sama tai toisesta puuttuu. */
+  squad: GameRow[];
+  /** Saman seuran muiden ryhmien pelit uusin ensin. */
+  others: GameRow[];
+  squadSummary: GameSummary;
+  othersSummary: GameSummary;
+}
+
+const low = (s: string | undefined) => (s ?? '').replace(/\s+/g, ' ').trim().toLocaleLowerCase('fi');
+
+/** Aiemmat kohtaamiset vastustajan kanssa; undefined, jos vastustajalla ei ole seuran nimeä. */
+export function opponentHistory(rows: GameRow[], opponent: string | undefined): OpponentHistory | undefined {
+  const want = parseTeamName(opponent);
+  if (!want.club) return undefined;
+  const ck = clubKey(want.club);
+  const squad: GameRow[] = [];
+  const others: GameRow[] = [];
+  for (const r of rows) {
+    const p = parseTeamName(r.opponent);
+    if (!p.club || clubKey(p.club) !== ck) continue;
+    const sameGroup = low(p.group) === low(want.group);
+    const sameAge = !p.age || !want.age || low(p.age) === low(want.age);
+    (sameGroup && sameAge ? squad : others).push(r);
+  }
+  const newest = (a: GameRow, b: GameRow) => b.date.localeCompare(a.date) || (b.index ?? 0) - (a.index ?? 0);
+  squad.sort(newest);
+  others.sort(newest);
+  return { club: want.club, squad, others, squadSummary: summarizeGames(squad), othersSummary: summarizeGames(others) };
+}

@@ -14,6 +14,7 @@ import { Sheet } from '../../ui/Sheet';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { TeamNameFields, useTeamNameSuggestions } from './TeamNameFields';
+import { OpponentHistoryCard } from './OpponentHistory';
 
 export type FixtureDraft = {
   kind: 'game' | 'tournament';
@@ -224,6 +225,11 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
           <div>
             <div className="mb-1.5 text-[13px] font-semibold text-slate-700">Vastustaja</div>
             <TeamNameFields value={opponent} onChange={setOpponent} suggestions={teamNames} label="Vastustaja" />
+            {opponent.trim() && (
+              <div className="mt-2">
+                <OpponentHistoryCard profile={profile} opponent={opponent} />
+              </div>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-2">

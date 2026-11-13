@@ -7,6 +7,8 @@ import { GAME_FORMATS, LEVEL_LABEL } from '../../domain/football';
 import type { ActivityType, GameFormat, GameLevel, Profile, Session, Team } from '../../domain/types';
 import { repo, type FixtureEntry } from '../../db/repositories';
 import { clubKey, displayTeamName, parseTeamName } from '../../domain/opponent';
+import { opponentHistory } from '../../domain/opponentLibrary';
+import { historyLine, useGameRows } from './OpponentHistory';
 import { LogoPicker, TeamLogo, useClubLogos } from '../../ui/TeamLogo';
 import { Button, Card, EmptyState } from '../../ui/components';
 import { Segmented, ToggleChip } from '../../ui/controls';
@@ -118,6 +120,8 @@ function CalendarView({ profile, onEdit }: { profile: Profile; onEdit: (e: Fixtu
   const [skipping, setSkipping] = useState<string | null>(null);
   const teamById = useMemo(() => new Map((teams ?? []).map((t) => [t.id, t])), [teams]);
   const typeMap = useMemo(() => new Map<string, ActivityType>((types ?? []).map((t) => [t.id, t])), [types]);
+  const gameHistory = useGameRows(profile.id);
+  const history = (opponent: string | undefined) => (gameHistory ? historyLine(opponentHistory(gameHistory, opponent)) : undefined);
 
   const upcoming = (entries ?? []).filter((e) => e.plan.status === 'open' && e.plan.date >= today);
   const pending = (entries ?? []).filter((e) => e.plan.status === 'open' && e.plan.date < today);
@@ -153,7 +157,7 @@ function CalendarView({ profile, onEdit }: { profile: Profile; onEdit: (e: Fixtu
                 <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{formatDate(`${month}-01`, 'LLLL yyyy')}</h3>
                 <ul className="space-y-2">
                   {list.map((e) => (
-                    <FixtureRow key={e.plan.id} e={e} team={e.fixture?.teamId ? teamById.get(e.fixture.teamId) : undefined} today={today} onClick={() => onEdit(e)} />
+                    <FixtureRow key={e.plan.id} e={e} team={e.fixture?.teamId ? teamById.get(e.fixture.teamId) : undefined} today={today} history={history} onClick={() => onEdit(e)} />
                   ))}
                 </ul>
               </div>
@@ -221,7 +225,7 @@ function CalendarView({ profile, onEdit }: { profile: Profile; onEdit: (e: Fixtu
   );
 }
 
-function FixtureSummary({ e, team }: { e: FixtureEntry; team?: Team }) {
+function FixtureSummary({ e, team, history }: { e: FixtureEntry; team?: Team; history?: (opponent: string | undefined) => string | undefined }) {
   const tournament = e.plan.activityTypeId === 't:football_tournament';
   const f = e.fixture;
   const level = f?.level ?? team?.level;
@@ -242,6 +246,7 @@ function FixtureSummary({ e, team }: { e: FixtureEntry; team?: Team }) {
         {(f?.format ?? team?.format) && ` · ${f?.format ?? team?.format}`}
         {f?.location && ` · ${f.location}`}
       </div>
+      {!tournament && history?.(f?.opponent) && <div className="mt-0.5 text-xs text-slate-500">{history(f?.opponent)}</div>}
       {tournament && f?.games && f.games.length > 0 && (
         <ol className="mt-1 space-y-0.5 text-xs text-slate-600">
           {f.games.map((g, i) => (
@@ -249,6 +254,7 @@ function FixtureSummary({ e, team }: { e: FixtureEntry; team?: Team }) {
               {i + 1}. {g.time && `klo ${g.time} · `}
               {g.opponent ?? 'vastustaja ?'}
               {g.location && ` · ${g.location}`}
+              {history?.(g.opponent) && <span className="block pl-3 text-slate-500">{history(g.opponent)}</span>}
             </li>
           ))}
         </ol>
@@ -258,7 +264,7 @@ function FixtureSummary({ e, team }: { e: FixtureEntry; team?: Team }) {
   );
 }
 
-function FixtureRow({ e, team, today, onClick }: { e: FixtureEntry; team?: Team; today: string; onClick: () => void }) {
+function FixtureRow({ e, team, today, history, onClick }: { e: FixtureEntry; team?: Team; today: string; history?: (opponent: string | undefined) => string | undefined; onClick: () => void }) {
   const days = Math.round((Date.parse(e.plan.date) - Date.parse(today)) / 86_400_000);
   return (
     <li>
@@ -268,7 +274,7 @@ function FixtureRow({ e, team, today, onClick }: { e: FixtureEntry; team?: Team;
           <div className="text-[11px] uppercase text-slate-500">{formatDate(e.plan.date, 'EEEEEE')}</div>
         </div>
         <div className="min-w-0 flex-1">
-          <FixtureSummary e={e} team={team} />
+          <FixtureSummary e={e} team={team} history={history} />
         </div>
         <span className="shrink-0 text-xs text-slate-500">{days === 0 ? 'tänään' : days === 1 ? 'huomenna' : `${days} pv`}</span>
       </button>
