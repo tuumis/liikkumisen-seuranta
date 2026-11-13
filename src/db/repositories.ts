@@ -1256,6 +1256,11 @@ export function createRepositories(db: AppDB = defaultDb) {
       return e;
     };
     const categoryOf = (typeId: UUID) => types.get(typeId)!.category;
+    // Siivouksen muutokset saavat johdetun aikaleiman (tietueen oma versio + 1 ms), eivät nykyhetkeä:
+    // siivous on seurausta jo synkronoidusta tiedosta, joten se ei saa kumota toisella laitteella
+    // myöhemmin tehtyä muokkausta (esim. kuittausta) eikä näy "odottaa siirtoa" -luvussa.
+    const by = await deviceId();
+    const after = (ts: Timestamp): Timestamp => new Date(Date.parse(ts) + 1).toISOString();
     let n = 0;
 
     // Kirjatut kerrat → arvion vahvistuksiksi.
@@ -1263,7 +1268,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     for (const s of sessions) {
       const e = activeEstimate(await estimatesOf(s.profileId), categoryOf(s.activityTypeId), s.date);
       if (!e) continue;
-      await db.sessions.put(await stamp({ ...s, estimateConfirmed: true, label: s.label || e.label }));
+      await db.sessions.put({ ...s, estimateConfirmed: true, label: s.label || e.label, updatedAt: after(s.updatedAt), updatedBy: by });
       n++;
     }
 
@@ -1280,7 +1285,8 @@ export function createRepositories(db: AppDB = defaultDb) {
     const plans = live(await db.plannedSessions.toArray()).filter((p) => p.status === 'open' && typeIds.includes(p.activityTypeId));
     for (const p of plans) {
       if (!activeEstimate(await estimatesOf(p.profileId), categoryOf(p.activityTypeId), p.date)) continue;
-      await deletePlanned(p.id);
+      const ts = after(p.updatedAt);
+      await db.plannedSessions.put({ ...p, overridden: true, deletedAt: ts, updatedAt: ts, updatedBy: by });
       n++;
     }
     return n;

@@ -14,6 +14,21 @@ export function pickWinner<T extends SyncFields>(local: T | undefined, incoming:
   return undefined; // paikallinen pysyy
 }
 
+/**
+ * Kuitattu suunnitelma voittaa avoimena poistetun version aikaleimoista riippumatta: kuitattua kertaa
+ * ei voi poistaa (deletePlanned), joten avoimen version poisto on tehty laitteella, joka ei vielä
+ * tiennyt kuittauksesta (esim. käynnistyksen välituntisiivous ennen "Päivitä PC:ltä"). Profiilin
+ * poiston merkinnöissä ei ole tilaa, joten ne eivät kuulu tähän sääntöön.
+ */
+export function confirmedBeatsDeletion(table: SyncedTable, local: Row | undefined, incoming: Row): 'local' | 'incoming' | undefined {
+  if (table !== 'plannedSessions' || !local) return undefined;
+  const done = (r: Row) => !r.deletedAt && r.status === 'done';
+  const openDeleted = (r: Row) => !!r.deletedAt && r.status === 'open';
+  if (done(local) && openDeleted(incoming)) return 'local';
+  if (openDeleted(local) && done(incoming)) return 'incoming';
+  return undefined;
+}
+
 /** Taulun pääavain. */
 export const keyOf = (table: SyncedTable, row: Record<string, unknown>): string =>
   String(table === 'footballDetails' ? row.sessionId : table === 'fixtures' ? row.plannedSessionId : row.id);
@@ -55,7 +70,8 @@ export function mergeSnapshot(
     for (const inc of incoming[table] ?? []) {
       const key = keyOf(table, inc);
       const loc = localByKey.get(key);
-      const win = pickWinner(loc, inc);
+      const rule = confirmedBeatsDeletion(table, loc, inc);
+      const win = rule ? (rule === 'incoming' ? inc : undefined) : pickWinner(loc, inc);
 
       // Ristiriita: molemmilla laitteilla muokattu edellisen synkronoinnin jälkeen.
       if (

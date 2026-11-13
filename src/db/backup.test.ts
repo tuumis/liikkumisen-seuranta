@@ -388,6 +388,57 @@ describe('synkronointi PC ↔ puhelin', () => {
     expect(await pendingChanges(phone.db, phone.id)).toEqual([]);
   });
 
+  it('F4i: PC:n kuittaama kerta voittaa puhelimen myöhemmän avoimen version poiston; mitään ei jää odottamaan', async () => {
+    const { pc, phone } = await pair();
+    const item = await pc.repo.createTemplateItem('p1', { activityTypeId: TRAINING, weekdays: [5], durationMin: 45, validFrom: '2026-11-02' }, '2026-11-11');
+    await send(pc, 'pc', phone);
+    await markSent(phone.db);
+    const id = plannedSessionId(item.id, '2026-11-13');
+    const base = (await pc.db.plannedSessions.get(id))!;
+    // PC kuittaa klo 0.02; puhelin (ei vielä tiennyt) poistaa avoimen kerran klo 9.15.
+    await pc.db.plannedSessions.put({ ...base, status: 'done', sessionId: `s:${id}`, updatedAt: '2026-11-13T00:02:00.000Z', updatedBy: pc.id });
+    await phone.db.plannedSessions.put({ ...base, overridden: true, deletedAt: '2026-11-13T09:15:00.000Z', updatedAt: '2026-11-13T09:15:00.000Z', updatedBy: phone.id });
+    expect(await pendingCount(phone.db, phone.id)).toBe(1);
+    await send(pc, 'pc', phone);
+    const healed = (await phone.db.plannedSessions.get(id))!;
+    expect(healed.status).toBe('done');
+    expect(healed.deletedAt).toBeUndefined();
+    expect(await pendingCount(phone.db, phone.id)).toBe(0);
+    // Toiseen suuntaan: PC säilyttää kuittauksen, vaikka puhelimen tiedostossa on uudempi poisto.
+    await phone.db.plannedSessions.put({ ...base, overridden: true, deletedAt: '2026-11-13T09:16:00.000Z', updatedAt: '2026-11-13T09:16:00.000Z', updatedBy: phone.id });
+    await send(phone, 'phone', pc);
+    expect((await pc.db.plannedSessions.get(id))!.status).toBe('done');
+    expect((await pc.db.plannedSessions.get(id))!.deletedAt).toBeUndefined();
+  });
+
+  it('F4j: välituntisiivous ei kumoa toisella laitteella myöhemmin tehtyä muutosta', async () => {
+    const { pc, phone } = await pair();
+    const recessEstimate = { category: 'school_recess' as const, label: 'Välitunnit', weekdayMin: 45, weekendMin: 0, shares: { light: 0.5, moderate: 0.3, vigorous: 0.1 } };
+    await pc.repo.saveEstimate('p1', recessEstimate, '2026-11-02');
+    const s = await pc.repo.createSession(sessionInput({ activityTypeId: activityTypeId('school_recess'), date: '2026-11-10', durationMin: 30 }));
+    await send(pc, 'pc', phone);
+    await new Promise((r) => setTimeout(r, 5));
+    // PC muokkaa kertaa; puhelin (vanha tieto) siivoaa sen myöhemmin vahvistukseksi.
+    await pc.repo.updateSession(s.id, sessionInput({ activityTypeId: activityTypeId('school_recess'), date: '2026-11-10', durationMin: 50 }));
+    await new Promise((r) => setTimeout(r, 5));
+    await phone.repo.foldEstimateOnlySessions('2026-11-13');
+    await send(pc, 'pc', phone);
+    expect((await phone.db.sessions.get(s.id))!.durationMin).toBe(50);
+    await phone.repo.foldEstimateOnlySessions('2026-11-13'); // yhdistämisen jälkeinen siivous
+    const after = (await phone.db.sessions.get(s.id))!;
+    expect(after.durationMin).toBe(50);
+    expect(after.estimateConfirmed).toBe(true);
+  });
+
+  it('F4k: profiilin poisto poistaa myös kuitatut kerrat (poistomerkinnässä ei ole tilaa)', async () => {
+    const { confirmedBeatsDeletion } = await import('../domain/merge');
+    const done = { id: 'x', status: 'done', updatedAt: '2026-11-13T00:00:00.000Z', updatedBy: 'a' };
+    const stub = { id: 'x', deletedAt: '2026-11-13T01:00:00.000Z', updatedAt: '2026-11-13T01:00:00.000Z', updatedBy: 'b' };
+    expect(confirmedBeatsDeletion('plannedSessions', done, stub)).toBeUndefined();
+    expect(confirmedBeatsDeletion('plannedSessions', { ...done, status: 'open', deletedAt: stub.deletedAt }, done)).toBe('incoming');
+    expect(confirmedBeatsDeletion('sessions', done, { ...stub, status: 'open' })).toBeUndefined();
+  });
+
   it('F5: saman tiedoston tuonti kahdesti → toisella kerralla 0 uutta, 0 päivitettyä, 0 poistettua', async () => {
     const { pc, phone } = await pair();
     await seedData(pc.repo);
