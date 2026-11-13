@@ -11,6 +11,7 @@ import { HelpSheet } from './features/help/HelpSheet';
 import type { SettingsSectionId } from './features/settings/SettingsView';
 import { GamesTab } from './features/games/GamesTab';
 import { DesktopAgent } from './features/desktop/DesktopAgent';
+import { GoalSound } from './features/week/GoalSound';
 import { SyncBar } from './features/sync/SyncBar';
 import { SidebarUpdate } from './features/update/appUpdate';
 import { consumeLaunchAction, dispatchCommand, type AppCommand } from './features/desktop/commands';
@@ -324,6 +325,8 @@ export default function App() {
           )}
         </div>
       </main>
+
+      {ready && selected && <GoalSound key={selected.id} profile={selected} />}
 
       {ready && profiles && profiles.length > 0 && (
         <DesktopAgent

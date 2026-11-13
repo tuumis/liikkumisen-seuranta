@@ -7,8 +7,9 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { addDays, isoWeek, weekPeriod } from '../../domain/dates';
 import { footballPeriodSummary } from '../../domain/football';
 import { formatHours } from '../../domain/hours';
-import { DEFAULT_SETTINGS, RECOMMENDATIONS } from '../../domain/recommendations';
-import type { DayTotals, ISODate, Profile, RecommendationGroup } from '../../domain/types';
+import { DAY_TARGET } from '../../domain/dayTarget';
+import { DEFAULT_SETTINGS } from '../../domain/recommendations';
+import type { DayTotals, ISODate, Profile } from '../../domain/types';
 import { previousWeekStart, shouldShowDigest } from '../../domain/weekDigest';
 import { repo } from '../../db/repositories';
 import { formatDate } from '../../ui/format';
@@ -42,12 +43,6 @@ const STATUS_CLASS = {
   below: 'bg-slate-100 text-slate-700',
 } as const;
 
-/** Päiväpylvään tavoite (sama kuin viikkonäkymän palkeissa). */
-const DAY_TARGET: Record<RecommendationGroup, number> = {
-  early_years: RECOMMENDATIONS.early_years.mvpaMinPerDay.value,
-  school_age: RECOMMENDATIONS.school_age.mvpaAvgMinPerDay.value,
-  adult: RECOMMENDATIONS.adult.weightedMinPerWeek.value / 7,
-};
 const WD = ['ma', 'ti', 'ke', 'to', 'pe', 'la', 'su'];
 
 /** Viikon päivät minipylväinä: reipas ja rasittava, katkoviiva = päivän tavoite. */

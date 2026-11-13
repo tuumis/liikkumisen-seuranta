@@ -24,6 +24,7 @@ import { markFresh } from '../../ui/fresh';
 import { today as todayFn } from '../../ui/today';
 import { dateSchema, durationSchema, manualSchema, optionalMinutes, showStrength, strengthDefaults } from '../week/sessionForm';
 import { DateInput } from '../../ui/DateInput';
+import { playSound } from '../../ui/sound';
 
 const DURATIONS = [15, 30, 45, 60, 75, 90];
 const CATEGORY_ORDER: Category[] = ['hobby', 'school_pe', 'school_recess', 'commute', 'self_directed', 'family', 'other'];
@@ -150,6 +151,7 @@ export function QuickAdd({
     setSaving(true);
     try {
       const r = await repo.confirmPlanned(openPlan.id, today);
+      if (r.created) playSound('confirm');
       onClose();
       toast(`Kuitattu suunniteltu: ${type!.name} ${r.session.durationMin} min`, {
         label: 'Kumoa',

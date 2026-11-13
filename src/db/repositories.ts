@@ -52,6 +52,7 @@ import { isClubFootball, isGameFormat, LEVEL_EFFORT, POSITIONS } from '../domain
 import { BUILT_IN_ACTIVITY_TYPES } from '../seed/activityTypes';
 import { nowTimestamp } from './clock';
 import { createPlanner } from './ensurePlanned';
+import { noteLocalChange } from './localChange';
 import { AppDB, db as defaultDb } from './schema';
 
 export { nowTimestamp };
@@ -424,6 +425,7 @@ export function createRepositories(db: AppDB = defaultDb) {
   }
 
   async function createSession(input: SessionInput & { profileId: UUID }): Promise<Session> {
+    noteLocalChange();
     const type = await getActivityType(input.activityTypeId);
     const warmupShares = await warmupSharesFor(type);
     const ts = nowTimestamp();
@@ -453,6 +455,7 @@ export function createRepositories(db: AppDB = defaultDb) {
   }
 
   async function updateSession(id: UUID, input: SessionInput): Promise<Session> {
+    noteLocalChange();
     return db.transaction('rw', db.sessions, db.activityTypes, db.meta, async () => {
       const current = await db.sessions.get(id);
       if (!current || current.deletedAt) throw new Error('Kertaa ei löydy');
@@ -666,6 +669,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     today: ISODate,
     opts: { durationMin?: number } = {},
   ): Promise<{ session: Session; created: boolean }> {
+    noteLocalChange();
     return db.transaction('rw', [db.sessions, db.plannedSessions, db.activityTypes, db.fixtures, db.teams, db.footballDetails, db.meta], async () => {
       const plan = await db.plannedSessions.get(planId);
       if (!plan || plan.deletedAt) throw new Error('Suunnitelmaa ei löydy');
@@ -765,6 +769,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     result: GameResult,
     today: ISODate,
   ): Promise<{ sessionId: UUID; created: boolean }> {
+    noteLocalChange();
     let sessionId: UUID;
     let created = false;
     if ('planId' in target) {
@@ -801,6 +806,7 @@ export function createRepositories(db: AppDB = defaultDb) {
 
   /** "Merkitse loput tehdyiksi": kuittaa kaikki; palauttaa luodut kerrat kumoamista varten. */
   async function confirmMany(planIds: UUID[], today: ISODate): Promise<UUID[]> {
+    noteLocalChange();
     const created: UUID[] = [];
     await db.transaction('rw', [db.sessions, db.plannedSessions, db.activityTypes, db.fixtures, db.teams, db.footballDetails, db.meta], async () => {
       for (const id of planIds) {
@@ -835,6 +841,7 @@ export function createRepositories(db: AppDB = defaultDb) {
 
   /** Ohitus: status skipped ja valinnainen syy. Kuitattua ei ohiteta (poista kerta ensin). */
   async function skipPlanned(planId: UUID, reason?: SkipReason): Promise<void> {
+    noteLocalChange();
     const plan = await db.plannedSessions.get(planId);
     if (!plan || plan.deletedAt) throw new Error('Suunnitelmaa ei löydy');
     if (plan.status === 'done') throw new Error('Kuitattu kerta: poista kerta ensin');

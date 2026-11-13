@@ -5,6 +5,7 @@ import { repo } from '../../db/repositories';
 import { dayLabel } from '../../ui/format';
 import { SKIP_REASON_LABEL } from '../../ui/labels';
 import { markFresh } from '../../ui/fresh';
+import { playSound } from '../../ui/sound';
 import { useToast } from '../../ui/Toast';
 import { today } from '../../ui/today';
 
@@ -24,6 +25,7 @@ export function usePlanActions(onOpenSession: (s: Session) => void, onConfirmed?
         return;
       }
       markFresh(r.session.id);
+      playSound('confirm');
       toast(`Kuitattu: ${dayLabel(plan.date)} ${r.session.durationMin} min`, {
         label: 'Kumoa',
         run: () => repo.undoConfirm([r.session.id]),
@@ -54,6 +56,7 @@ export function usePlanActions(onOpenSession: (s: Session) => void, onConfirmed?
       today(),
     );
     markFresh(...created);
+    if (created.length) playSound('confirm');
     toast(`Merkitty tehdyiksi: ${created.length}`, { label: 'Kumoa', run: () => repo.undoConfirm(created) });
   }
 

@@ -26,6 +26,7 @@ import { OpponentLibrary } from './TeamLibrary';
 import { TeamNameFields, useTeamNameSuggestions } from './TeamNameFields';
 import { FootballHero } from './FootballHero';
 import { IconPlus } from '../../ui/icons';
+import { playSound } from '../../ui/sound';
 
 type View = 'diary' | 'calendar' | 'results' | 'teams';
 
@@ -138,6 +139,7 @@ function CalendarView({ profile, onEdit }: { profile: Profile; onEdit: (e: Fixtu
   async function record(e: FixtureEntry) {
     try {
       const r = await repo.confirmPlanned(e.plan.id, today);
+      if (r.created) playSound('confirm');
       setPanel(r.session);
     } catch (err) {
       toast(err instanceof Error ? err.message : String(err));

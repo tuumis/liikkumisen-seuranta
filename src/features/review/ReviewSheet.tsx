@@ -1,12 +1,13 @@
 // "Käy viikko läpi" (SPEC 12): kaikki kuittaamattomat (open, päivä < tänään, sekä tämän päivän jo päättyneet).
 // Rivillä ✓ kuten suunniteltu, ✗ ei tehty → valinnainen syy, ✎ muokkaa kestoa.
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import type { ActivityType, PlannedSession, Profile, Session, UUID } from '../../domain/types';
 import { Button, inputClass } from '../../ui/components';
 import { dayLabel } from '../../ui/format';
 import { Sheet } from '../../ui/Sheet';
+import { playSound } from '../../ui/sound';
 import { today } from '../../ui/today';
 import { durationSchema } from '../week/sessionForm';
 import { SkipReasons } from './SkipReasons';
@@ -29,6 +30,15 @@ export function ReviewSheet({
   const minute = useMinuteTick();
   const plans = useLiveQuery(() => loadUnconfirmed(profile.id, today()), [profile.id, minute]);
   const actions = usePlanActions(onOpenSession);
+
+  // Läpikäynti tyhjeni omasta toiminnasta (lista auki): "valmis"-ääni kuittausäänen perään.
+  const count = plans?.length;
+  const prevCount = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    const prev = prevCount.current;
+    prevCount.current = open ? count : undefined;
+    if (open && prev !== undefined && prev > 0 && count === 0) playSound('allDone', 0.28);
+  }, [open, count]);
 
   return (
     <Sheet open={open} onClose={onClose} title={`Käy viikko läpi · ${profile.name}`}>

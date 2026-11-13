@@ -29,7 +29,7 @@ export const SETTINGS_SECTIONS: { id: SettingsSectionId; Icon: typeof IconUser; 
   { id: 'everyday', Icon: IconSun, title: 'Arkiliikunta', text: 'Arvio välitunneista, koulumatkoista ja leikistä', needsProfile: true },
   { id: 'goals', Icon: IconTarget, title: 'Tavoitteet ja lajit', text: 'Rasittavan päivän raja, pääluku ja lajien tehot' },
   { id: 'devices', Icon: IconDevices, title: 'Laitteet ja varmuuskopio', text: 'PC ja puhelin, synkronointi, ilmoitukset, vienti ja tuonti' },
-  { id: 'appearance', Icon: IconContrast, title: 'Ulkoasu', text: 'Vaalea, tumma tai järjestelmän mukaan' },
+  { id: 'appearance', Icon: IconContrast, title: 'Ulkoasu', text: 'Teema, näkymä ja äänet' },
   { id: 'privacy', Icon: IconLock, title: 'Tietosuoja ja poisto', text: 'Mitä tallennetaan ja tietojen poistaminen' },
 ];
 

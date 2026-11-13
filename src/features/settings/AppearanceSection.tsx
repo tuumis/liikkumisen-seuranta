@@ -1,6 +1,8 @@
-import { Card } from '../../ui/components';
+import { Button, Card } from '../../ui/components';
 import { Segmented } from '../../ui/controls';
+import { playSound, soundsSupported, useSoundsEnabled } from '../../ui/sound';
 import { ACCENT_THEMES, useAccent, useThemeChoice, useViewMode, type ThemeChoice, type ViewMode } from '../../ui/theme';
+import { Switch } from './DesktopSection';
 
 const VIEW_MODES: { id: ViewMode; label: string; text: string }[] = [
   { id: 'full', label: 'Kattava', text: 'Kaikki tiedot ja kaaviot: viikon tilanne, päiväkaavio, rytmi, liikuntatunnit, tulevat ja viimeisimmät kerrat.' },
@@ -11,6 +13,7 @@ export function AppearanceSection() {
   const [choice, setChoice] = useThemeChoice();
   const [accent, setAccent] = useAccent();
   const [view, setView] = useViewMode();
+  const [sounds, setSounds] = useSoundsEnabled();
   return (
     <div className="space-y-5">
       <Card title="Näkymä">
@@ -89,6 +92,30 @@ export function AppearanceSection() {
         </div>
         <p className="mt-3 text-xs text-slate-500">Väriteema vaihtaa korostevärit, navigaation ja kaavioiden pääsävyn. Kaaviovärit on tarkistettu erottuviksi myös värisokeille.</p>
       </Card>
+
+      {soundsSupported() && (
+        <Card title="Äänet">
+          <Switch
+            on={sounds}
+            onChange={setSounds}
+            label="Äänet"
+            text="Lyhyt, hiljainen ääni, kun kuittaat kerran tehdyksi, kun läpikäynti tyhjenee ja kun päivän tavoite tai viikon suositus täyttyy. iPhonella äänetön tila hiljentää äänet. Valinta koskee vain tätä laitetta."
+          />
+          {sounds && (
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button variant="secondary" onClick={() => playSound('confirm')}>
+                Kuittaus
+              </Button>
+              <Button variant="secondary" onClick={() => playSound('allDone')}>
+                Läpikäynti valmis
+              </Button>
+              <Button variant="secondary" onClick={() => playSound('goal')}>
+                Tavoite täyttyi
+              </Button>
+            </div>
+          )}
+        </Card>
+      )}
     </div>
   );
 }
