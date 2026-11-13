@@ -355,6 +355,7 @@ describe('synkronointi PC ↔ puhelin', () => {
     expect(await pendingCount(phone.db, phone.id)).toBe(2);
     await send(pc, 'pc', phone);
     expect((await pendingChanges(phone.db, phone.id)).map((p) => p.key)).toEqual([missing.id]);
+    expect((await pendingChanges(phone.db, phone.id))[0].there).toEqual({ state: 'missing' });
     expect(await pendingCount(phone.db, phone.id)).toBe(1);
     // Kuitattu muutos muokataan uudelleen → taas odottava.
     await phone.repo.updateSession(there.id, sessionInput({ date: '2026-11-11', durationMin: 40 }));

@@ -28,6 +28,7 @@ export const DEVICE_META_KEYS = [
   'lastIncomingExportedAt',
   'phoneFileReadAt',
   'deliveredKeys',
+  'pendingThere',
 ];
 /** Ei voi tallentaa JSONiin. */
 const NON_EXPORTABLE_META = ['syncFolderHandle'];
@@ -249,6 +250,14 @@ export interface PendingChange {
   table: SyncedTable;
   key: string;
   row: PendingRow;
+  /** Viimeksi tuodun toisen laitteen tiedoston versio samasta tietueesta (erittelyä varten). */
+  there?: PendingThere;
+}
+
+/** Toisen laitteen tiedoston tila tietueelle: puuttuu, poistettu tai olemassa (suunnitelmalla tila). */
+export interface PendingThere {
+  state: 'missing' | 'deleted' | 'open' | 'done' | 'skipped' | 'present';
+  updatedAt?: Timestamp;
 }
 
 /** Kuitatun muutoksen tunniste: sama tietue samassa versiossa (uusi muokkaus on taas odottava). */
@@ -288,14 +297,22 @@ async function acknowledgeDelivered(db: AppDB, incoming: TableMap, thisDevice: D
     return m;
   };
   const delivered: PendingChange[] = [];
+  const info: Record<string, PendingThere> = {};
   let firstMissing: Timestamp | undefined;
   for (const p of pending) {
     const r = p.row;
     const inc = there(p.table).get(p.key);
     const ok = inc ? inc.updatedAt >= r.updatedAt || (!!inc.deletedAt && !!r.deletedAt) || sameContent(inc, r) : !!r.deletedAt;
     if (ok) delivered.push(p);
-    else if (!firstMissing || r.updatedAt < firstMissing) firstMissing = r.updatedAt;
+    else {
+      if (!firstMissing || r.updatedAt < firstMissing) firstMissing = r.updatedAt;
+      const status = inc?.status;
+      info[`${p.table}|${p.key}`] = !inc
+        ? { state: 'missing' }
+        : { state: inc.deletedAt ? 'deleted' : status === 'open' || status === 'done' || status === 'skipped' ? status : 'present', updatedAt: inc.updatedAt };
+    }
   }
+  await db.meta.put({ key: 'pendingThere', value: info });
   // Kaikki perillä: nykyhetki tai uusin kuitattu (jos kello on ollut edellä), muuten viimeinen ennen puuttuvaa.
   const times = delivered.map((p) => p.row.updatedAt);
   const upTo = firstMissing ? times.filter((ts) => ts < firstMissing!).sort().pop() : delivered.length ? [nowTimestamp(), ...times].sort().pop() : undefined;
@@ -308,7 +325,10 @@ async function acknowledgeDelivered(db: AppDB, incoming: TableMap, thisDevice: D
 /** Odottavat muutokset: tämän laitteen muutokset edellisen "Lähetä PC:lle" jälkeen, joita toisella laitteella ei vielä ole. */
 export async function pendingChanges(db: AppDB, thisDevice: DeviceId): Promise<PendingChange[]> {
   const done = new Set((await getMeta<string[]>(db, 'deliveredKeys')) ?? []);
-  return (await ownChangesSince(db, thisDevice)).filter((p) => !done.has(deliveredKey(p.table, p.key, p.row.updatedAt)));
+  const info = (await getMeta<Record<string, PendingThere>>(db, 'pendingThere')) ?? {};
+  return (await ownChangesSince(db, thisDevice))
+    .filter((p) => !done.has(deliveredKey(p.table, p.key, p.row.updatedAt)))
+    .map((p) => ({ ...p, there: info[`${p.table}|${p.key}`] }));
 }
 
 /** Odottavien kirjausten määrä (Lähetä PC:lle -palkki). */
@@ -340,6 +360,7 @@ export async function markSent(db: AppDB): Promise<void> {
   await db.meta.bulkPut([
     { key: 'lastSentAt', value: nowTimestamp() },
     { key: 'deliveredKeys', value: [] },
+    { key: 'pendingThere', value: {} },
   ]);
 }
 

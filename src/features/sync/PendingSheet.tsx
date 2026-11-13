@@ -37,6 +37,15 @@ function describe(p: PendingChange, typeName: (id: unknown) => string | undefine
   return parts.filter(Boolean).join(' · ');
 }
 
+const THERE_LABEL: Record<NonNullable<PendingChange['there']>['state'], string> = {
+  missing: 'ei ole',
+  deleted: 'poistettu',
+  open: 'avoin',
+  done: 'kuitattu',
+  skipped: 'ohitettu',
+  present: 'eri versio',
+};
+
 function stateOf(p: PendingChange): string {
   if (p.row.deletedAt) return 'poistettu';
   return p.row.createdAt === p.row.updatedAt ? 'uusi' : 'muutettu';
@@ -70,6 +79,12 @@ export function PendingSheet({ open, onClose, otherRole = 'PC' }: { open: boolea
                 <span className="min-w-0 flex-1 truncate">{describe(p, typeName) || '—'}</span>
                 <span className="shrink-0 tabular-nums text-slate-500">{savedAtText(p.row.updatedAt)}</span>
               </div>
+              {p.there && (
+                <div className="mt-0.5 text-xs text-slate-500">
+                  {otherRole}:n tiedostossa: {THERE_LABEL[p.there.state]}
+                  {p.there.updatedAt ? ` (muutettu ${savedAtText(p.there.updatedAt)})` : ''}
+                </div>
+              )}
             </li>
           ))}
         </ul>
