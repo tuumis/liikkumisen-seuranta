@@ -11,6 +11,7 @@ import {
   importBackup,
   markSent,
   mergeSyncFile,
+  pendingChanges,
   pendingCount,
   purgeProfile,
   toJson,
@@ -331,6 +332,34 @@ describe('synkronointi PC ↔ puhelin', () => {
     expect(await pendingCount(phone.db, phone.id)).toBe(0);
     await send(pc, 'pc', phone);
     expect((await phone.db.plannedSessions.get(removed))?.deletedAt).toBeDefined();
+    expect(await pendingCount(phone.db, phone.id)).toBe(0);
+  });
+
+  it('F4f: puhelimella luotu ja poistettu tietue, jota PC:llä ei ole koskaan ollut, ei odota siirtoa', async () => {
+    const { pc, phone } = await pair();
+    await markSent(phone.db);
+    const s = await phone.repo.createSession(sessionInput({ date: '2026-11-10' }));
+    await phone.repo.deleteSession(s.id);
+    expect(await pendingCount(phone.db, phone.id)).toBe(1);
+    await send(pc, 'pc', phone);
+    expect(await pendingCount(phone.db, phone.id)).toBe(0);
+  });
+
+  it('F4g: yksi puuttuva muutos ei pidä myöhempiä, jo perillä olevia odottamassa', async () => {
+    const { pc, phone } = await pair();
+    await markSent(phone.db);
+    const missing = await phone.repo.createSession(sessionInput({ date: '2026-11-10' })); // PC:llä ei ole
+    await new Promise((r) => setTimeout(r, 5));
+    const there = await phone.repo.createSession(sessionInput({ date: '2026-11-11' }));
+    await pc.db.sessions.put({ ...(await phone.db.sessions.get(there.id))!, updatedBy: pc.id, updatedAt: '2026-01-01T00:00:00.000Z' });
+    expect(await pendingCount(phone.db, phone.id)).toBe(2);
+    await send(pc, 'pc', phone);
+    expect((await pendingChanges(phone.db, phone.id)).map((p) => p.key)).toEqual([missing.id]);
+    expect(await pendingCount(phone.db, phone.id)).toBe(1);
+    // Kuitattu muutos muokataan uudelleen → taas odottava.
+    await phone.repo.updateSession(there.id, sessionInput({ date: '2026-11-11', durationMin: 40 }));
+    expect(await pendingCount(phone.db, phone.id)).toBe(2);
+    await markSent(phone.db);
     expect(await pendingCount(phone.db, phone.id)).toBe(0);
   });
 

@@ -11,6 +11,7 @@ import { IconSync } from '../../ui/icons';
 import { useMinuteTick } from '../review/unconfirmed';
 import { useToast } from '../../ui/Toast';
 import { ConflictSheet } from './ConflictSheet';
+import { PendingSheet } from './PendingSheet';
 import { folderPermission, readFolderFile, supportsFolder } from './fileIO';
 import { syncFileDevice, useSyncActions, useSyncState } from './useSync';
 import { subscribeCommands } from '../desktop/commands';
@@ -36,6 +37,7 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' }) {
   const [busy, setBusy] = useState(false);
   const [conflicts, setConflicts] = useState<MergeSummary | null>(null);
   const [phoneHasNew, setPhoneHasNew] = useState(false);
+  const [showPending, setShowPending] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   // "Synkronoi"-komento (pikanäppäin, komentovalikko, tehtäväpalkki): vain näkyvissä oleva instanssi suorittaa.
   const runRef = useRef<() => void>(() => {});
@@ -172,9 +174,13 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' }) {
         <div className="space-y-2">
           {stale && <div className="rounded-2xl bg-sky-50 p-3 text-sm text-sky-950 ring-1 ring-sky-200">Tiedot PC:ltä {pcDays ?? '?'} päivän takaa</div>}
           <div className="card flex flex-wrap items-center gap-2 !rounded-2xl p-2 pl-3">
-            <span className="min-w-0 flex-1 text-xs text-slate-600">
-              {state.pending > 0 ? `${state.pending} odottaa siirtoa PC:lle` : `PC:ltä ${ago(state.lastSyncAt)}`}
-            </span>
+            {state.pending > 0 ? (
+              <button type="button" onClick={() => setShowPending(true)} className="min-w-0 flex-1 text-left text-xs text-slate-600 underline decoration-dotted underline-offset-2 hover:text-slate-900">
+                {state.pending} odottaa siirtoa PC:lle
+              </button>
+            ) : (
+              <span className="min-w-0 flex-1 text-xs text-slate-600">PC:ltä {ago(state.lastSyncAt)}</span>
+            )}
             <Button variant="secondary" disabled={busy} onClick={() => run(actions.importFile)}>
               Päivitä PC:ltä
             </Button>
@@ -187,6 +193,7 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' }) {
         </div>
       )}
       <ConflictSheet summary={conflicts} onClose={() => setConflicts(null)} />
+      <PendingSheet open={showPending} onClose={() => setShowPending(false)} />
     </div>
   );
 }

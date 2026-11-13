@@ -27,6 +27,7 @@ export const DEVICE_META_KEYS = [
   'lastSentAt',
   'lastIncomingExportedAt',
   'phoneFileReadAt',
+  'deliveredKeys',
 ];
 /** Ei voi tallentaa JSONiin. */
 const NON_EXPORTABLE_META = ['syncFolderHandle'];
@@ -242,40 +243,79 @@ function sameContent(a: Record<string, unknown>, b: Record<string, unknown>): bo
   return canonicalJson(strip(a)) === canonicalJson(strip(b));
 }
 
-/**
- * Toisen laitteen tiedoston tuonnin jälkeen (puhelin: "Päivitä PC:ltä"): tämän laitteen odottavat muutokset,
- * jotka tiedostossa jo ovat (sama tai uudempi versio tai sama sisältö), kuitataan siirretyiksi siirtämällä
- * lastSentAt eteenpäin – enintään vanhimpaan muutokseen asti, jota toisella laitteella ei vielä ole.
- */
-async function acknowledgeDelivered(db: AppDB, incoming: TableMap, thisDevice: DeviceId): Promise<void> {
+type PendingRow = SyncFields & Record<string, unknown>;
+/** Odottava tämän laitteen muutos. */
+export interface PendingChange {
+  table: SyncedTable;
+  key: string;
+  row: PendingRow;
+}
+
+/** Kuitatun muutoksen tunniste: sama tietue samassa versiossa (uusi muokkaus on taas odottava). */
+const deliveredKey = (t: SyncedTable, key: string, updatedAt: Timestamp) => `${t}|${key}|${updatedAt}`;
+
+/** Tämän laitteen muutokset lastSentAt-ajan jälkeen (ennen kuittauksia). */
+async function ownChangesSince(db: AppDB, thisDevice: DeviceId): Promise<PendingChange[]> {
   const since = (await getMeta<Timestamp>(db, 'lastSentAt')) ?? '';
-  const delivered: Timestamp[] = [];
-  let firstMissing: Timestamp | undefined;
+  const out: PendingChange[] = [];
   for (const t of SYNCED_TABLES) {
-    const pending = (await db
+    const rows = (await db
       .table(t)
       .where('updatedAt')
       .above(since)
       .filter((r: SyncFields) => r.updatedBy === thisDevice)
-      .toArray()) as (SyncFields & Record<string, unknown>)[];
-    if (!pending.length) continue;
-    const there = new Map(((incoming[t] ?? []) as Record<string, unknown>[]).map((r) => [keyOf(t, r), r as SyncFields & Record<string, unknown>]));
-    for (const r of pending) {
-      const inc = there.get(keyOf(t, r));
-      // Perillä: sama tai uudempi versio, sama sisältö tai molemmilla poistettu (esim. sama siivous
-      // ajettu kummallakin laitteella eri aikaan; poistoaika ei ole sisältöä).
-      if (inc && (inc.updatedAt >= r.updatedAt || (inc.deletedAt && r.deletedAt) || sameContent(inc, r))) delivered.push(r.updatedAt);
-      else if (!firstMissing || r.updatedAt < firstMissing) firstMissing = r.updatedAt;
-    }
+      .toArray()) as PendingRow[];
+    for (const row of rows) out.push({ table: t, key: keyOf(t, row), row });
   }
-  if (!delivered.length) return;
-  // Kaikki perillä: nykyhetki tai uusin kuitattu (jos kello on ollut edellä), muuten viimeinen ennen puuttuvaa.
-  const upTo = firstMissing ? delivered.filter((ts) => ts < firstMissing!).sort().pop() : [nowTimestamp(), ...delivered].sort().pop();
-  if (upTo && upTo > since) await db.meta.put({ key: 'lastSentAt', value: upTo });
+  return out;
 }
 
-/** Odottavat kirjaukset: tämän laitteen muutokset edellisen "Lähetä PC:lle" jälkeen (ja joita toisella laitteella ei vielä ole). */
+/**
+ * Toisen laitteen tiedoston tuonnin jälkeen (puhelin: "Päivitä PC:ltä"): tämän laitteen odottavat muutokset,
+ * jotka tiedostossa jo ovat, kuitataan siirretyiksi. Perillä on muutos, jonka toisella laitteella on
+ * sama tai uudempi versio, sama sisältö (eri aikaleimat) tai joka on poistettu molemmilla; samoin poisto
+ * tietueesta, jota toisella laitteella ei ole koskaan ollut (esim. puhelimen luoma ja heti siivoama kerta).
+ * lastSentAt siirtyy enintään vanhimpaan puuttuvaan asti; sen jälkeiset perillä olevat muistetaan
+ * tietuekohtaisesti (deliveredKeys), joten yksi puuttuva muutos ei pidä kaikkia myöhempiä odottamassa.
+ */
+async function acknowledgeDelivered(db: AppDB, incoming: TableMap, thisDevice: DeviceId): Promise<void> {
+  const since = (await getMeta<Timestamp>(db, 'lastSentAt')) ?? '';
+  const pending = await ownChangesSince(db, thisDevice);
+  const index = new Map<SyncedTable, Map<string, PendingRow>>();
+  const there = (t: SyncedTable) => {
+    let m = index.get(t);
+    if (!m) index.set(t, (m = new Map(((incoming[t] ?? []) as PendingRow[]).map((r) => [keyOf(t, r), r]))));
+    return m;
+  };
+  const delivered: PendingChange[] = [];
+  let firstMissing: Timestamp | undefined;
+  for (const p of pending) {
+    const r = p.row;
+    const inc = there(p.table).get(p.key);
+    const ok = inc ? inc.updatedAt >= r.updatedAt || (!!inc.deletedAt && !!r.deletedAt) || sameContent(inc, r) : !!r.deletedAt;
+    if (ok) delivered.push(p);
+    else if (!firstMissing || r.updatedAt < firstMissing) firstMissing = r.updatedAt;
+  }
+  // Kaikki perillä: nykyhetki tai uusin kuitattu (jos kello on ollut edellä), muuten viimeinen ennen puuttuvaa.
+  const times = delivered.map((p) => p.row.updatedAt);
+  const upTo = firstMissing ? times.filter((ts) => ts < firstMissing!).sort().pop() : delivered.length ? [nowTimestamp(), ...times].sort().pop() : undefined;
+  const mark = upTo && upTo > since ? upTo : since;
+  if (mark !== since) await db.meta.put({ key: 'lastSentAt', value: mark });
+  const rest = delivered.filter((p) => p.row.updatedAt > mark).map((p) => deliveredKey(p.table, p.key, p.row.updatedAt));
+  await db.meta.put({ key: 'deliveredKeys', value: rest });
+}
+
+/** Odottavat muutokset: tämän laitteen muutokset edellisen "Lähetä PC:lle" jälkeen, joita toisella laitteella ei vielä ole. */
+export async function pendingChanges(db: AppDB, thisDevice: DeviceId): Promise<PendingChange[]> {
+  const done = new Set((await getMeta<string[]>(db, 'deliveredKeys')) ?? []);
+  return (await ownChangesSince(db, thisDevice)).filter((p) => !done.has(deliveredKey(p.table, p.key, p.row.updatedAt)));
+}
+
+/** Odottavien kirjausten määrä (Lähetä PC:lle -palkki). */
 export async function pendingCount(db: AppDB, thisDevice: DeviceId): Promise<number> {
+  const done = (await getMeta<string[]>(db, 'deliveredKeys')) ?? [];
+  if (done.length) return (await pendingChanges(db, thisDevice)).length;
+  // Nopea polku: ei tietuekohtaisia kuittauksia.
   const since = (await getMeta<Timestamp>(db, 'lastSentAt')) ?? '';
   let n = 0;
   for (const t of SYNCED_TABLES) {
@@ -297,7 +337,10 @@ export async function changedSince(db: AppDB, since: Timestamp): Promise<number>
 }
 
 export async function markSent(db: AppDB): Promise<void> {
-  await db.meta.put({ key: 'lastSentAt', value: nowTimestamp() });
+  await db.meta.bulkPut([
+    { key: 'lastSentAt', value: nowTimestamp() },
+    { key: 'deliveredKeys', value: [] },
+  ]);
 }
 
 // ---------- poistot (SPEC 11) ----------
