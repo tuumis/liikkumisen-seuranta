@@ -42,7 +42,13 @@ export function LevelBadge({ level }: { level?: GameLevel }) {
 }
 
 export function GamesTab({ profile }: { profile?: Profile }) {
-  const [view, setView] = useState<View>('diary');
+  const [view, setViewState] = useState<View>('diary');
+  // Kerran avatut näkymät pysyvät taustalla valmiina: vaihto ei näytä latautumista (sivu ei hetkeksi lyhene).
+  const [visited, setVisited] = useState<ReadonlySet<View>>(() => new Set(['diary']));
+  const setView = (v: View) => {
+    setVisited((s) => (s.has(v) ? s : new Set([...s, v])));
+    setViewState(v);
+  };
   const [draft, setDraft] = useState<FixtureDraft | null>(null);
   if (!profile) return <Card>Lisää profiili Asetukset-välilehdellä.</Card>;
   return (
@@ -97,15 +103,30 @@ export function GamesTab({ profile }: { profile?: Profile }) {
         ]}
       />
 
-      {view === 'diary' && <DiaryView profile={profile} />}
-      {view === 'calendar' && <CalendarView profile={profile} onEdit={(entry) => setDraft({ kind: 'game', entry })} />}
-      {view === 'results' && <GamesView profile={profile} />}
-      {view === 'teams' && (
-        <>
-          <TeamsView profile={profile} />
-          <OpponentLibrary profile={profile} />
-        </>
-      )}
+      {/* Vähintään näytön korkuinen: lyhyempi näkymä ei vedä vierityskohtaa ylös, joten valitsin pysyy paikallaan. */}
+      <div className="min-h-screen">
+        {visited.has('diary') && (
+          <div hidden={view !== 'diary'}>
+            <DiaryView profile={profile} />
+          </div>
+        )}
+        {visited.has('calendar') && (
+          <div hidden={view !== 'calendar'}>
+            <CalendarView profile={profile} onEdit={(entry) => setDraft({ kind: 'game', entry })} />
+          </div>
+        )}
+        {visited.has('results') && (
+          <div hidden={view !== 'results'}>
+            <GamesView profile={profile} />
+          </div>
+        )}
+        {visited.has('teams') && (
+          <div hidden={view !== 'teams'} className="space-y-5">
+            <TeamsView profile={profile} />
+            <OpponentLibrary profile={profile} />
+          </div>
+        )}
+      </div>
 
       <FixtureSheet profile={profile} draft={draft} onClose={() => setDraft(null)} />
     </div>
