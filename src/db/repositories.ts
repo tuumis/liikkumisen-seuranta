@@ -581,12 +581,33 @@ export function createRepositories(db: AppDB = defaultDb) {
   }
 
   /** Poisto: active = false (vanhat linkit säilyvät); tulevat avoimet suunnitelmat poistuvat. */
-  async function deleteTemplateItem(id: UUID, today: ISODate): Promise<void> {
+  /** Poistaa viikkopohjan rivin käytöstä; palauttaa poistuneiden tulevien kertojen tunnisteet kumoamista varten. */
+  async function deleteTemplateItem(id: UUID, today: ISODate): Promise<UUID[]> {
+    return db.transaction('rw', PLAN_TABLES, async () => {
+      const current = await db.templateItems.get(id);
+      if (!current) return [];
+      const before = live(await db.plannedSessions.where('profileId').equals(current.profileId).toArray()).filter((p) => p.templateItemId === id && p.date >= today);
+      const item = await stamp({ ...current, active: false });
+      await db.templateItems.put(item);
+      await planner.regenerateItem(item, today);
+      const after = await db.plannedSessions.bulkGet(before.map((p) => p.id));
+      return before.filter((_, i) => after[i]?.deletedAt).map((p) => p.id);
+    });
+  }
+
+  /** Kumoaa rivin poiston: rivi takaisin käyttöön ja poistuneet kerrat (myös yksittäin muutetut) ennalleen. */
+  async function restoreTemplateItem(id: UUID, today: ISODate, planIds: UUID[] = []): Promise<void> {
     await db.transaction('rw', PLAN_TABLES, async () => {
       const current = await db.templateItems.get(id);
       if (!current) return;
-      const item = await stamp({ ...current, active: false });
+      const item = await stamp({ ...current, active: true });
       await db.templateItems.put(item);
+      for (const p of await db.plannedSessions.bulkGet(planIds)) {
+        if (!p?.deletedAt) continue;
+        const next = await stamp({ ...p });
+        delete next.deletedAt;
+        await db.plannedSessions.put(next);
+      }
       await planner.regenerateItem(item, today);
     });
   }
@@ -1302,6 +1323,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     getFootballDetails,
     footballDetailsFor,
     saveFootballDetails,
+    restoreTemplateItem,
     setFootballNote,
     footballNameSuggestions,
     listEstimates,

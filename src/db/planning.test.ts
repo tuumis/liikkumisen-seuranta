@@ -163,6 +163,19 @@ describe('pohjan muokkaus ja poisto', () => {
     await repo.ensurePlanned('p1', '2026-11-29', WED);
     expect(await repo.plansInRange('p1', '2026-11-11', '2026-11-30')).toEqual([]);
   });
+
+  it('poiston kumoaminen palauttaa rivin ja tulevat kerrat, myös yksittäin muutetun', async () => {
+    const item = await setupWithHistory();
+    const before = await repo.plansInRange('p1', WED, '2026-11-30');
+    await repo.updatePlannedOccurrence(before[0].id, { durationMin: 45 });
+    const removed = await repo.deleteTemplateItem(item.id, WED);
+    expect(removed.length).toBe(before.length);
+    await repo.restoreTemplateItem(item.id, WED, removed);
+    expect((await db.templateItems.get(item.id))!.active).toBe(true);
+    const after = await repo.plansInRange('p1', WED, '2026-11-30');
+    expect(after.map((p) => p.id)).toEqual(expect.arrayContaining(before.map((p) => p.id)));
+    expect(after.find((p) => p.id === before[0].id)!.durationMin).toBe(45); // yksittäin muutettu säilyi
+  });
 });
 
 describe('kuittaus ja ohitus', () => {

@@ -111,7 +111,6 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
     label: item?.label ?? '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [saving, setSaving] = useState(false);
   // Menneet kerrat kuitattaviksi, kun alkupäivä on menneisyydessä (oletus: kyllä).
   const [backfill, setBackfill] = useState(true);
@@ -161,9 +160,10 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
 
   async function remove() {
     if (!item) return;
-    if (!confirmDelete) return setConfirmDelete(true);
-    await repo.deleteTemplateItem(item.id, today);
-    toast('Rivi poistettu – menneet ja kuitatut kerrat säilyvät');
+    // Ei vahvistuskysymystä: poisto on kumottavissa ilmoituksen "Kumoa"-painikkeella (SPEC 16).
+    const restored = await repo.deleteTemplateItem(item.id, today);
+    const id = item.id;
+    toast('Rivi poistettu – menneet ja kuitatut kerrat säilyvät', { label: 'Kumoa', run: () => repo.restoreTemplateItem(id, today, restored) });
     onDone();
   }
 
@@ -261,9 +261,9 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
           <button
             type="button"
             onClick={remove}
-            className={`min-h-11 rounded-xl px-3 text-sm font-medium ring-1 ${confirmDelete ? 'bg-red-700 text-white ring-red-700' : 'bg-[var(--surface-raised)] text-red-700 ring-red-200'}`}
+            className="min-h-11 rounded-xl bg-[var(--surface-raised)] px-3 text-sm font-medium text-red-700 ring-1 ring-red-200"
           >
-            {confirmDelete ? 'Vahvista' : 'Poista'}
+            Poista
           </button>
         )}
       </div>

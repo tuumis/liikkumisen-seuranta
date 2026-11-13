@@ -137,7 +137,7 @@ export function SessionEditor({
 
   async function remove() {
     if (!session) return;
-    if (!confirmDelete) return setConfirmDelete(true);
+    // Ei vahvistuskysymystä: poisto on kumottavissa ilmoituksen "Kumoa"-painikkeella (SPEC 16).
     const undo = await repo.deleteSession(session.id);
     onClose();
     toast('Kerta poistettu', { label: 'Kumoa', run: () => repo.undoDelete(undo) });

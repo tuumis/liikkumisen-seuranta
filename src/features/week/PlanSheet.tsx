@@ -59,7 +59,7 @@ export function PlanSheet({
   };
 
   async function remove() {
-    if (!confirmDelete) return setConfirmDelete(true);
+    // Ei vahvistuskysymystä: poisto on kumottavissa ilmoituksen "Kumoa"-painikkeella (SPEC 16).
     try {
       const id = plan!.id;
       await repo.deletePlanned(id);

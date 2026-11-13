@@ -7,6 +7,7 @@ import { requestPersistentStorage } from '../../db/storage';
 import { Avatar } from '../../ui/Avatar';
 import { IconChevronRight, IconContrast, IconDevices, IconLock, IconRepeat, IconSun, IconTarget, IconUser } from '../../ui/icons';
 import { Button, Card, EmptyState } from '../../ui/components';
+import { useToast } from '../../ui/Toast';
 import { GROUP_LABEL, MONTHS } from '../../ui/labels';
 import { today } from '../../ui/today';
 import { ProfileForm, type ProfileFormValues } from './ProfileForm';
@@ -142,6 +143,7 @@ function SectionContent({ id, profile, onProfileCreated }: { id: SettingsSection
 }
 
 function ProfilesSection({ onProfileCreated }: { onProfileCreated: (id: string) => void }) {
+  const toast = useToast();
   const profiles = useLiveQuery(() => repo.listProfiles({ includeArchived: true }), []);
   const [editing, setEditing] = useState<Profile | 'new' | null>(null);
 
@@ -196,7 +198,11 @@ function ProfilesSection({ onProfileCreated }: { onProfileCreated: (id: string) 
             <Button variant="ghost" className="px-2" onClick={() => setEditing(p)}>
               Muokkaa
             </Button>
-            <Button variant="ghost" className="px-2" onClick={() => repo.setProfileArchived(p.id, !p.archived)}>
+            <Button variant="ghost" className="px-2" onClick={async () => {
+                const next = !p.archived;
+                await repo.setProfileArchived(p.id, next);
+                toast(next ? `${p.name} arkistoitu` : `${p.name} palautettu`, { label: 'Kumoa', run: () => repo.setProfileArchived(p.id, !next) });
+              }}>
               {p.archived ? 'Palauta' : 'Arkistoi'}
             </Button>
           </li>

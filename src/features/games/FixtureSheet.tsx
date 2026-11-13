@@ -150,10 +150,11 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
 
   async function remove() {
     if (!draft?.entry) return;
-    if (!confirmDelete) return setConfirmDelete(true);
+    // Ei vahvistuskysymystä: poisto on kumottavissa ilmoituksen "Kumoa"-painikkeella (SPEC 16).
     try {
-      await repo.deleteFixture(draft.entry.plan.id);
-      toast('Poistettu kalenterista');
+      const id = draft.entry.plan.id;
+      await repo.deleteFixture(id);
+      toast('Poistettu kalenterista', { label: 'Kumoa', run: () => repo.restorePlanned(id) });
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

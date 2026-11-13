@@ -377,7 +377,11 @@ function TeamsView({ profile }: { profile: Profile }) {
                 ✎
               </span>
             </button>
-            <Button variant="ghost" className="px-2" onClick={() => repo.setTeamArchived(t.id, !t.archived)}>
+            <Button variant="ghost" className="px-2" onClick={async () => {
+                const next = !t.archived;
+                await repo.setTeamArchived(t.id, next);
+                toast(next ? `${t.name} arkistoitu` : `${t.name} palautettu`, { label: 'Kumoa', run: () => repo.setTeamArchived(t.id, !next) });
+              }}>
               {t.archived ? 'Palauta' : 'Arkistoi'}
             </Button>
           </li>
