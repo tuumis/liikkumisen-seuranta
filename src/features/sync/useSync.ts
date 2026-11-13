@@ -142,11 +142,12 @@ export function useSyncActions() {
     const me = await repo.deviceId();
     // Oma tiedosto (esim. puhelin tallensi liikkuminen.json, eikä PC ole vielä synkronoinut): ei yhdistettävää.
     if (syncFileDevice(f.text) === me) return { message: 'Tiedosto on tämän laitteen oma tallennus – toinen laite ei ole vielä päivittänyt sitä' };
+    const before = await repo.getMeta<Timestamp>('lastIncomingExportedAt');
     // Hyväksyy sekä synkronointitiedoston että varmuuskopion (tunnistus sisällöstä).
     const summary = await mergeAnyFile(db, f.text, me);
     await ensurePlannedAll();
     await repo.setMeta('lastSyncRunAt', new Date().toISOString());
-    return { summary, message: summaryText(summary) };
+    return { summary, message: importMessage(summary, before) };
   }, []);
 
   /** PC ilman kansiotukea: lataa PC:n tiedosto. */
@@ -167,6 +168,29 @@ export function useSyncActions() {
   }, []);
 
   return { pcSync, importFile, downloadPcFile, phoneSend };
+}
+
+/** Aikaleima lyhyesti: "tänään klo 9.41" tai "12.11. klo 18.05". */
+export function savedAtText(ts: Timestamp, now = new Date()): string {
+  const d = new Date(ts);
+  const clock = `klo ${d.getHours()}.${String(d.getMinutes()).padStart(2, '0')}`;
+  const sameDay = d.toDateString() === now.toDateString();
+  return sameDay ? `tänään ${clock}` : `${d.getDate()}.${d.getMonth() + 1}. ${clock}`;
+}
+
+/**
+ * Tuonnin viesti: yhteenveto ja tiedoston tallennusaika. Jos tiedosto on sama (tai vanhempi) kuin
+ * edellisellä tuonnilla eikä mitään muuttunut, kerrotaan se suoraan: PC tai pilvikansio ei ole
+ * vielä ehtinyt päivittää tiedostoa.
+ */
+export function importMessage(s: MergeSummary & { kind?: 'backup' | 'sync' }, previousExportedAt: Timestamp | undefined, now = new Date()): string {
+  if (s.kind === 'backup') return summaryText(s);
+  const who = s.incomingRole === 'phone' ? 'Puhelin' : 'PC';
+  const saved = `${who} tallensi tiedoston ${savedAtText(s.incomingExportedAt, now)}`;
+  const nothing = !s.added && !s.updated && !s.deleted && !s.conflicts.length;
+  if (nothing && previousExportedAt && s.incomingExportedAt <= previousExportedAt)
+    return `Ei uutta: tiedosto on sama kuin edellisellä kerralla (tallennettu ${savedAtText(s.incomingExportedAt, now)}). Jos teit juuri muutoksia, odota hetki, että tiedosto ehtii päivittyä pilvikansioon, ja yritä uudelleen.`;
+  return `${summaryText(s)} · ${saved}`;
 }
 
 export function summaryText(s: MergeSummary): string {

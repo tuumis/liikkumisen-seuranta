@@ -31,14 +31,16 @@ export function createPlanner(db: AppDB, deviceId: () => Promise<DeviceId>) {
     return db.transaction('rw', db.templateItems, db.plannedSessions, db.meta, async () => {
       const done = await getPlannedThrough(profileId);
       const from = planningFrom(done, today);
-      const by = await deviceId();
       let created = 0;
       for (const item of await activeItems(profileId)) {
         for (const date of templateItemDates(item, from, through)) {
           // Myös poistomerkityt lasketaan: poistettua suunnitelmaa ei luoda uudelleen.
           const exists = await db.plannedSessions.where('[templateItemId+date]').equals([item.id, date]).count();
           if (!exists) {
-            await db.plannedSessions.add(newPlanned(item, date, nowTimestamp(), by));
+            // Aikaleima ja tekijä pohjarivin versiosta: molemmat laitteet tuottavat saman tietueen, eikä
+            // automaattinen luonti ole "muutos" – se ei odota siirtoa eikä voita toisella laitteella
+            // tehtyä muokkausta tai poistoa samaan kertaan.
+            await db.plannedSessions.add(newPlanned(item, date, item.updatedAt, item.updatedBy));
             created++;
           }
         }

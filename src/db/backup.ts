@@ -262,7 +262,9 @@ async function acknowledgeDelivered(db: AppDB, incoming: TableMap, thisDevice: D
     const there = new Map(((incoming[t] ?? []) as Record<string, unknown>[]).map((r) => [keyOf(t, r), r as SyncFields & Record<string, unknown>]));
     for (const r of pending) {
       const inc = there.get(keyOf(t, r));
-      if (inc && (inc.updatedAt >= r.updatedAt || sameContent(inc, r))) delivered.push(r.updatedAt);
+      // Perillä: sama tai uudempi versio, sama sisältö tai molemmilla poistettu (esim. sama siivous
+      // ajettu kummallakin laitteella eri aikaan; poistoaika ei ole sisältöä).
+      if (inc && (inc.updatedAt >= r.updatedAt || (inc.deletedAt && r.deletedAt) || sameContent(inc, r))) delivered.push(r.updatedAt);
       else if (!firstMissing || r.updatedAt < firstMissing) firstMissing = r.updatedAt;
     }
   }

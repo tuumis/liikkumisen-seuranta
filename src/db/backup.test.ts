@@ -304,6 +304,36 @@ describe('synkronointi PC ↔ puhelin', () => {
     expect(await pendingCount(phone.db, phone.id)).toBe(1);
   });
 
+  it('F4d: sama poisto molemmilla laitteilla eri aikaan (esim. käynnistyksen siivous) ei odota siirtoa', async () => {
+    const { pc, phone } = await pair();
+    const s = await pc.repo.createSession(sessionInput({ date: '2026-11-10' }));
+    await send(pc, 'pc', phone);
+    await markSent(phone.db);
+    await pc.repo.deleteSession(s.id);
+    await new Promise((r) => setTimeout(r, 5));
+    await phone.repo.deleteSession(s.id); // puhelin poisti saman myöhemmin
+    expect(await pendingCount(phone.db, phone.id)).toBe(1);
+    await send(pc, 'pc', phone);
+    expect(await pendingCount(phone.db, phone.id)).toBe(0);
+  });
+
+  it('F4e: viikkorytmin automaattisesti luomat kerrat eivät odota siirtoa eivätkä kumoa PC:n muutosta', async () => {
+    const { pc, phone } = await pair();
+    const item = await pc.repo.createTemplateItem('p1', { activityTypeId: TRAINING, weekdays: [2, 4], durationMin: 90, validFrom: '2026-08-01' }, '2026-11-11');
+    await send(pc, 'pc', phone);
+    await markSent(phone.db);
+    // PC jatkaa suunnitelmia ja poistaa yhden uusista kerroista; puhelin luo samat kerrat myöhemmin itse.
+    await pc.repo.ensurePlanned('p1', '2026-12-06', '2026-11-11');
+    const removed = plannedSessionId(item.id, '2026-12-03');
+    await pc.repo.deletePlanned(removed);
+    await new Promise((r) => setTimeout(r, 5));
+    expect(await phone.repo.ensurePlanned('p1', '2026-12-06', '2026-11-11')).toBeGreaterThan(0);
+    expect(await pendingCount(phone.db, phone.id)).toBe(0);
+    await send(pc, 'pc', phone);
+    expect((await phone.db.plannedSessions.get(removed))?.deletedAt).toBeDefined();
+    expect(await pendingCount(phone.db, phone.id)).toBe(0);
+  });
+
   it('F5: saman tiedoston tuonti kahdesti → toisella kerralla 0 uutta, 0 päivitettyä, 0 poistettua', async () => {
     const { pc, phone } = await pair();
     await seedData(pc.repo);

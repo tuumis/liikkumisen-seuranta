@@ -16,7 +16,7 @@ import { pcAutoSync } from '../sync/useSync';
 import { requestWeek, showNotification, useDesktopSettings } from './settings';
 
 const BASE_TITLE = typeof document !== 'undefined' ? document.title : 'Liikkumisen seuranta';
-const SYNC_EVERY_MS = 5 * 60_000;
+const SYNC_EVERY_MS = 60_000;
 const SYNC_THROTTLE_MS = 60_000;
 const EVENING_KEY = 'desktopEveningShown';
 
@@ -128,7 +128,9 @@ export function DesktopAgent({ onOpen }: { onOpen: (profileId: string) => void }
     }
   }, [nowMin, t, data, settings.notify, settings.planEnd, settings.evening, settings.eveningTime]);
 
-  // PC: automaattinen synkronointi käynnistyessä, 5 min välein ja ikkunan saadessa fokuksen.
+  // PC: automaattinen synkronointi käynnistyessä, minuutin välein, ikkunan saadessa fokuksen ja
+  // ikkunasta poistuttaessa (muutokset ehtivät tiedostoon ennen kuin puhelin lukee sen). Tiedosto
+  // kirjoitetaan vain, jos jotain muuttui.
   const busy = useRef(false);
   const lastRun = useRef(0);
   useEffect(() => {
@@ -154,13 +156,16 @@ export function DesktopAgent({ onOpen }: { onOpen: (profileId: string) => void }
     const first = window.setTimeout(() => void run(true), 3000);
     const id = window.setInterval(() => void run(true), SYNC_EVERY_MS);
     const onFocus = () => void run();
-    const onVis = () => document.visibilityState === 'visible' && void run();
+    const onBlur = () => void run(true);
+    const onVis = () => void run(document.visibilityState === 'hidden');
     window.addEventListener('focus', onFocus);
+    window.addEventListener('blur', onBlur);
     document.addEventListener('visibilitychange', onVis);
     return () => {
       window.clearTimeout(first);
       window.clearInterval(id);
       window.removeEventListener('focus', onFocus);
+      window.removeEventListener('blur', onBlur);
       document.removeEventListener('visibilitychange', onVis);
     };
   }, [settings.autoSync, toast]);
