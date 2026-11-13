@@ -16,7 +16,7 @@ import { useLongPress } from '../../ui/useLongPress';
 import { IconButton } from '../review/ReviewSheet';
 import { FLAG_LABEL } from './DaySheet';
 import { TypeIcon } from './Dashboard';
-import { IconSun } from '../../ui/icons';
+import { IconPlus, IconSun } from '../../ui/icons';
 import { isFresh, useConfirmFeedback } from '../../ui/fresh';
 import { morphOpen } from '../../ui/morph';
 import { CATEGORY_LABEL } from '../../ui/labels';
@@ -39,6 +39,7 @@ export function DayRow({
   flag,
   barTarget,
   onOpenMenu,
+  onAdd,
   onEdit,
   onPlanOpen,
   onPlanConfirm,
@@ -66,6 +67,8 @@ export function DayRow({
   flag?: DayFlag;
   barTarget: number;
   onOpenMenu: () => void;
+  /** Uusi kerta tälle päivälle (ei tuleville päiville: kerta on toteutunut liikkuminen). */
+  onAdd?: () => void;
   onEdit: (s: Session) => void;
   onPlanOpen: (p: PlannedSession) => void;
   onPlanConfirm: (p: PlannedSession) => void;
@@ -175,6 +178,17 @@ export function DayRow({
               </InfoTip>
               </div>
             </div>
+          )}
+          {onAdd && !isFuture && (
+            <button
+              type="button"
+              onClick={onAdd}
+              className="press flex size-9 shrink-0 items-center justify-center rounded-full border border-dashed border-slate-300 text-slate-500 hover:border-slate-400 hover:bg-[var(--surface-sunk)] hover:text-slate-900"
+              aria-label={`Lisää kerta: ${dayLabel(date)}`}
+              title="Lisää kerta tälle päivälle"
+            >
+              <IconPlus size="1rem" />
+            </button>
           )}
           <button
             type="button"
