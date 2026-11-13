@@ -25,6 +25,8 @@ import { dispatchCommand } from '../desktop/commands';
 import { EditLayoutSheet } from '../../ui/EditLayoutSheet';
 import { useAnalysisLayout } from './layout';
 import { LongTermView } from './LongTermView';
+import { HeatmapCard } from './HeatmapCard';
+import type { AnalysisCardId } from './layout';
 import type { LongKind } from '../../domain/longTerm';
 import { Segmented } from '../../ui/controls';
 
@@ -147,9 +149,16 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
 
       {profile && report && (
         <>
-          {/* Käyttäjän valitsemat kortit omassa järjestyksessään; palstat täyttyvät ylhäältä alas ilman aukkoja. */}
-          <div className="columns-1 gap-5 lg:columns-2 lg:gap-6 2xl:columns-3">
-            {visible.map((id) => {
+          {/* Käyttäjän valitsemat kortit omassa järjestyksessään; palstat täyttyvät ylhäältä alas ilman aukkoja.
+              Aktiivisuuskartta katkaisee palstat ja vie koko leveyden. */}
+          {segments(visible).map((seg) =>
+            seg === 'heatmap' ? (
+              <div key="heatmap" className="anim-rise mb-5 lg:mb-6">
+                <HeatmapCard profile={profile} />
+              </div>
+            ) : (
+          <div key={seg[0]} className="columns-1 gap-5 lg:columns-2 lg:gap-6 2xl:columns-3">
+            {seg.map((id) => {
               const card =
                 id === 'goals' ? (
                   <Card title={`Tavoitteet · ${profile.name}`} eyebrow="Suositusvertailu">
@@ -192,6 +201,8 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
               );
             })}
           </div>
+            ),
+          )}
           {visible.length === 0 && (
             <Card>
               <p className="text-sm text-slate-600">Kaikki kortit on piilotettu. Valitse näytettävät kortit painikkeesta "Muokkaa näkymää".</p>
@@ -210,6 +221,18 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
       <Rationale />
     </div>
   );
+}
+
+/** Kortit palstaryhmiin; aktiivisuuskartta omaksi täysleveäksi lohkokseen järjestyksen mukaiseen kohtaan. */
+function segments(ids: AnalysisCardId[]): (AnalysisCardId[] | 'heatmap')[] {
+  const out: (AnalysisCardId[] | 'heatmap')[] = [];
+  for (const id of ids) {
+    const last = out.at(-1);
+    if (id === 'heatmap') out.push('heatmap');
+    else if (Array.isArray(last)) last.push(id);
+    else out.push([id]);
+  }
+  return out;
 }
 
 function CategoryCard({ report }: { report: PeriodReport }) {

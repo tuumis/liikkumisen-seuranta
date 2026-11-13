@@ -8,7 +8,7 @@ import { takeMorph } from './morph';
 // Laskuri sallii sisäkkäiset paneelit (esim. kerran muokkaus suunnitelmapaneelin päällä).
 let locks = 0;
 let savedY = 0;
-function lockScroll() {
+export function lockScroll() {
   if (locks++ > 0) return;
   savedY = window.scrollY;
   const b = document.body.style;
@@ -19,7 +19,7 @@ function lockScroll() {
   b.width = '100%';
   b.overflow = 'hidden';
 }
-function unlockScroll() {
+export function unlockScroll() {
   if (--locks > 0) return;
   locks = 0;
   const b = document.body.style;

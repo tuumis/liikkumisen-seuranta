@@ -2,7 +2,7 @@
 
 import { useCardLayout, type CardDef } from '../../ui/cardLayout';
 
-export type AnalysisCardId = 'goals' | 'daily' | 'gauge' | 'hours' | 'hoursDetail' | 'highlights' | 'football' | 'categories' | 'adherence' | 'quality';
+export type AnalysisCardId = 'goals' | 'daily' | 'gauge' | 'hours' | 'hoursDetail' | 'highlights' | 'football' | 'categories' | 'adherence' | 'heatmap' | 'quality';
 
 export const ANALYSIS_CARDS: CardDef<AnalysisCardId>[] = [
   { id: 'goals', title: 'Tavoitteet', text: 'Suositusvertailu: reipas ja rasittava, rasittavat ja vahvistavat päivät' },
@@ -14,6 +14,7 @@ export const ANALYSIS_CARDS: CardDef<AnalysisCardId>[] = [
   { id: 'football', title: 'Jalkapallo', text: 'Treenit, pelit, peliaika ja tulokset' },
   { id: 'categories', title: 'Jakauma kategorioittain', text: 'Mistä reipas ja rasittava liikunta kertyy' },
   { id: 'adherence', title: 'Suunnitelma vs. toteuma', text: 'Kuinka suunnitellut kerrat toteutuivat' },
+  { id: 'heatmap', title: 'Aktiivisuuskartta', text: 'Vuoden päivät ruudukkona: tavoite, minuutit tai kerrat. Koko leveys, suurennettavissa' },
   { id: 'quality', title: 'Datan laatu', text: 'Vertailtavat päivät, kattavuus ja arvion osuus' },
 ];
 

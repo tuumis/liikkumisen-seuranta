@@ -1,8 +1,8 @@
-// Ensikäynnistys (SPEC 12): enintään neljä ohitettavaa näkymää.
-// 1 profiili, 2 viikkopohja, 3 perusarvio, 4 laitteen rooli ja asennusohje.
-// "Tuo tiedot PC:ltä" ensimmäisellä näkymällä ohittaa vaiheet 1–3 (vahvistettu tulkinta).
+// Ensikäynnistys (SPEC 12, 16): tervetulosivu perustietoineen ja sen jälkeen enintään neljä ohitettavaa
+// vaihetta: 1 profiili, 2 viikkopohja, 3 perusarvio, 4 laitteen rooli ja asennusohje.
+// "Tuo tiedot" ohittaa vaiheet 1–3 (vahvistettu tulkinta). PC:llä koko näytön levyinen asettelu.
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { activityTypeId } from '../../domain/ids';
 import type { Category, Profile } from '../../domain/types';
@@ -19,10 +19,17 @@ import { InstallHint } from '../settings/InstallHint';
 import { pickTextFile } from '../sync/fileIO';
 import { summaryText } from '../sync/useSync';
 
-type Step = 1 | 2 | 3 | 4;
+type Step = 0 | 1 | 2 | 3 | 4;
+
+const STEPS: { n: Exclude<Step, 0>; title: string; text: string }[] = [
+  { n: 1, title: 'Profiili', text: 'Nimi ja syntymävuosi: niistä valitaan ikäryhmän liikkumissuositus.' },
+  { n: 2, title: 'Viikkorytmi', text: 'Toistuvat harrastukset ja koululiikunta. Niistä tulee suunniteltuja kertoja, jotka kuittaat viikolla.' },
+  { n: 3, title: 'Arkiliikunta', text: 'Arvio välitunneista, koulumatkoista ja leikistä, joita ei kirjata kerta kerralta.' },
+  { n: 4, title: 'Laite', text: 'PC vai puhelin, ja miten sovellus asennetaan kotinäytölle.' },
+];
 
 export function Onboarding({ onDone }: { onDone: (profileId?: string) => void }) {
-  const [step, setStep] = useState<Step>(1);
+  const [step, setStep] = useState<Step>(0);
   const [profile, setProfile] = useState<Profile>();
   const [message, setMessage] = useState<string>();
   const [error, setError] = useState<string>();
@@ -48,29 +55,54 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
     }
   }
 
+  if (step === 0) return <Welcome onStart={() => setStep(1)} onImport={importFromPc} onSkip={finish} error={error} />;
+
+  const current = STEPS[step - 1];
   return (
-    <div className="mx-auto max-w-xl space-y-4 px-4 py-6">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto w-full max-w-6xl px-4 py-6 lg:px-10 lg:py-10">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-xl font-semibold text-slate-900">Liikkumisen seuranta</h1>
-          <p className="text-xs text-slate-500">Aloitus · vaihe {step}/4</p>
+          <h1 className="font-display text-xl font-semibold text-slate-900 lg:text-2xl">Liikkumisen seuranta</h1>
+          <p className="text-xs text-slate-500">
+            Aloitus · vaihe {step}/4 · {current.title}
+          </p>
         </div>
         <Button variant="ghost" onClick={finish}>
           Ohita kaikki
         </Button>
       </div>
+      {/* Puhelin: etenemispalkki; PC: vaiheluettelo vasemmalla. */}
+      <div className="mt-3 flex gap-1.5 lg:hidden" aria-hidden>
+        {STEPS.map((x) => (
+          <span key={x.n} className={`h-1.5 flex-1 rounded-full ${x.n <= step ? 'bg-green-700' : 'bg-slate-200'}`} />
+        ))}
+      </div>
 
-      {step === 1 && (
-        <section className="hero anim-rise p-6">
-          <h2 className="relative z-10 font-display text-3xl font-semibold tracking-tight">Tervetuloa</h2>
-          <ul className="relative z-10 mt-3 space-y-1.5 text-sm text-[var(--hero-ink-soft)]">
-            <li>⚽ Kirjaa lapsen liikunta muutamalla napautuksella.</li>
-            <li>📈 Näe viikon tilanne suhteessa suomalaisiin liikkumissuosituksiin.</li>
-            <li>🔒 Tiedot pysyvät vain tällä laitteella – ei tiliä, ei pilvipalvelua.</li>
-          </ul>
-        </section>
-      )}
+      <div className="mt-5 lg:mt-8 lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start lg:gap-10">
+        <aside className="hidden lg:block">
+          <ol className="space-y-1" aria-label="Aloituksen vaiheet">
+            {STEPS.map((x) => {
+              const done = x.n < step;
+              const on = x.n === step;
+              return (
+                <li key={x.n} className={`flex gap-3 rounded-2xl p-3 ${on ? 'bg-[var(--surface-raised)] shadow-sm ring-1 ring-slate-200' : ''}`} aria-current={on ? 'step' : undefined}>
+                  <span
+                    className={`flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${done ? 'bg-green-700 text-white' : on ? 'bg-slate-900 text-white' : 'bg-[var(--surface-sunk)] text-slate-500'}`}
+                  >
+                    {done ? '✓' : x.n}
+                  </span>
+                  <span className="min-w-0">
+                    <span className={`block text-sm font-semibold ${on ? 'text-slate-900' : 'text-slate-600'}`}>{x.title}</span>
+                    {on && <span className="mt-0.5 block text-xs leading-snug text-slate-500">{x.text}</span>}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+          <p className="mt-4 px-3 text-xs leading-snug text-slate-500">Kaikki vaiheet voi ohittaa ja tehdä myöhemmin Asetuksissa.</p>
+        </aside>
 
+        <div className="min-w-0 space-y-4">
       {step === 1 && (
         <Card title="Kenen liikkumista seurataan?">
           <ProfileForm
@@ -110,6 +142,117 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
         ))}
 
       {step === 4 && <DeviceStep message={message} onDone={finish} />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Tervetulosivu: mitä sovellus tekee, missä tiedot ovat ja miten ne varmuuskopioidaan. */
+function Welcome({ onStart, onImport, onSkip, error }: { onStart: () => void; onImport: () => void; onSkip: () => void; error?: string }) {
+  return (
+    <div className="mx-auto flex min-h-dvh w-full max-w-7xl flex-col px-4 py-6 lg:px-10 lg:py-10">
+      <div className="flex items-center justify-between gap-3">
+        <span className="font-display text-lg font-semibold text-slate-900">Liikkumisen seuranta</span>
+        <Button variant="ghost" onClick={onSkip}>
+          Ohita aloitus
+        </Button>
+      </div>
+
+      <div className="mt-5 grid flex-1 gap-5 lg:mt-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-8">
+        <section className="hero anim-rise flex flex-col justify-between p-7 lg:p-10" aria-labelledby="welcome-title">
+          <div className="relative z-10">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--hero-accent)]">Tervetuloa</p>
+            <h1 id="welcome-title" className="mt-3 font-display text-4xl font-semibold leading-[1.05] tracking-tight lg:text-6xl">
+              Liikkumisen seuranta
+            </h1>
+            <p className="mt-4 max-w-md text-base leading-relaxed text-[var(--hero-ink-soft)] lg:text-lg">
+              Lapsen ja perheen liikunta yhdessä paikassa. Kirjaa kerrat muutamalla napautuksella ja näe, miten viikko vertautuu suomalaisiin liikkumissuosituksiin.
+            </p>
+          </div>
+          <div className="relative z-10 mt-10 space-y-4">
+            <button
+              type="button"
+              onClick={onStart}
+              className="press inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-[var(--hero-accent)] px-8 text-base font-bold text-[#1c2b24] shadow-lg hover:brightness-105 sm:w-auto"
+            >
+              Aloita <span aria-hidden>→</span>
+            </button>
+            <p className="text-sm text-[var(--hero-ink-soft)]">Aloitus vie muutaman minuutin. Kaiken voi muuttaa myöhemmin Asetuksissa.</p>
+            <p className="text-sm text-[var(--hero-ink-soft)]">
+              Onko tiedot jo toisella laitteella?{' '}
+              <button type="button" onClick={onImport} className="font-semibold text-[var(--hero-ink)] underline underline-offset-2">
+                Tuo tiedosto
+              </button>
+            </p>
+            {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-900">{error}</p>}
+          </div>
+        </section>
+
+        <div className="grid content-start gap-4 sm:grid-cols-2">
+          <Info icon="📝" title="Kirjaa ja kuittaa">
+            Lisää liikuntakerta +-painikkeella. Toistuvat harrastukset tulevat viikkorytmistä valmiiksi, ja kuittaat ne tehdyiksi yhdellä napautuksella.
+          </Info>
+          <Info icon="📈" title="Vertaa suosituksiin">
+            Viikon tilanne suhteessa ikäryhmän liikkumissuositukseen: reipas ja rasittava liikunta sekä lihaksia ja luustoa vahvistavat päivät. Minuutit ovat lajin tyypilliseen tehoon perustuvia arvioita.
+          </Info>
+          <Info icon="⚽" title="Jalkapallo valinnaisena">
+            Jos lapsi pelaa, käytössä ovat pelikalenteri, tulokset, turnaukset ja päiväkirja. Muille lajeille tavallinen kirjaus riittää.
+          </Info>
+          <Info icon="🔒" title="Tiedot pysyvät sinulla">
+            Ei tiliä eikä palvelinta. Tiedot tallentuvat vain tämän laitteen selaimeen, eikä sovellus lähetä niitä minnekään.
+          </Info>
+          <div className="card anim-rise p-5 ring-1 ring-green-700/25 sm:col-span-2">
+            <div className="flex items-start gap-3">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-green-50 text-xl" aria-hidden>
+                ☁️
+              </span>
+              <div className="min-w-0">
+                <h2 className="font-display text-lg font-semibold text-slate-900">Varmuuskopio pilveen</h2>
+                <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                  Koska tiedot ovat vain tällä laitteella, ne katoavat, jos selaimen tiedot tyhjennetään tai laite vaihtuu. Siksi kannattaa tehdä varmuuskopio:
+                </p>
+                <ol className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-3">
+                  <li className="rounded-xl bg-[var(--surface-sunk)] p-3">
+                    <span className="block text-xs font-bold text-green-800">1</span>
+                    Asetukset → Laitteet ja varmuuskopio → <strong>Vie varmuuskopio</strong>
+                  </li>
+                  <li className="rounded-xl bg-[var(--surface-sunk)] p-3">
+                    <span className="block text-xs font-bold text-green-800">2</span>
+                    Tallenna tiedosto <strong>pilvikansioon</strong>: OneDrive, iCloud Drive tai Google Drive
+                  </li>
+                  <li className="rounded-xl bg-[var(--surface-sunk)] p-3">
+                    <span className="block text-xs font-bold text-green-800">3</span>
+                    Palautus samasta kohdasta: <strong>Tuo varmuuskopio</strong>, myös uudelle laitteelle
+                  </li>
+                </ol>
+                <p className="mt-3 text-xs leading-snug text-slate-500">
+                  Kun PC:lle valitaan synkronoinnin pilvikansio, varmuuskopio tehdään sinne myös automaattisesti kerran viikossa. Tiedosto sisältää lapsen tietoja: säilytä se vain omassa pilvessäsi.
+                </p>
+              </div>
+            </div>
+          </div>
+          <Info icon="🔄" title="PC ja puhelin" wide>
+            PC on päälaite. Kun valitset pilvikansion, laitteet vaihtavat tiedot saman tiedoston kautta: puhelimella kirjaat ja painat "Lähetä PC:lle", ja PC yhdistää muutokset. Yhdelläkin laitteella pärjää hyvin.
+          </Info>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Info({ icon, title, children, wide }: { icon: string; title: string; children: ReactNode; wide?: boolean }) {
+  return (
+    <div className={`card anim-rise p-5 ${wide ? 'sm:col-span-2' : ''}`}>
+      <div className="flex items-start gap-3">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface-sunk)] text-xl" aria-hidden>
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <h2 className="font-display text-lg font-semibold text-slate-900">{title}</h2>
+          <p className="mt-1 text-sm leading-relaxed text-slate-600">{children}</p>
+        </div>
+      </div>
     </div>
   );
 }
