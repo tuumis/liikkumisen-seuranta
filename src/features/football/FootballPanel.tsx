@@ -14,6 +14,7 @@ import { dayLabel } from '../../ui/format';
 import { ENJOYMENT_LABEL, FOCUS_TAG_LABEL, RATING_LABEL } from '../../ui/labels';
 import { Sheet } from '../../ui/Sheet';
 import { useToast } from '../../ui/Toast';
+import { TeamNameFields, useTeamNameSuggestions } from '../games/TeamNameFields';
 
 const PLAYED_PICKS = [10, 15, 20, 30, 40, 50, 60];
 
@@ -62,6 +63,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
   const toast = useToast();
   const kind = type?.footballKind;
   const names = useLiveQuery(() => (session ? repo.footballNameSuggestions(session.profileId) : undefined), [session?.profileId]);
+  const teamNames = useTeamNameSuggestions(session?.profileId);
   const playerName = useLiveQuery(
     async () => (session ? (await repo.listProfiles({ includeArchived: true })).find((p) => p.id === session.profileId)?.name : undefined),
     [session?.profileId],
@@ -392,10 +394,10 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
                 Arvio: lämmittely {warmupMin} min treenin teholla, pelattu aika pelin teholla, vaihtopenkki ei kerrytä liikuntaa. Ilman valintaa käytetään peliaika-arviota ({shareText}).
               </p>
             </div>
-            <Field label="Vastustaja">
-              <input className={inputClass} value={opponent} onChange={(e) => setOpponent(e.target.value)} list="fb-opponents" maxLength={60} />
-              {list('fb-opponents', names?.opponents)}
-            </Field>
+            <div>
+              <div className="mb-1 text-sm font-medium text-slate-700">Vastustaja</div>
+              <TeamNameFields value={opponent} onChange={setOpponent} suggestions={teamNames} label="Vastustaja" />
+            </div>
             <div>
               <div className="mb-1 text-sm font-medium text-slate-700">Tulos (oma joukkue – vastustaja)</div>
               <div className="flex items-center gap-2">
@@ -431,7 +433,6 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
                 </div>
               </div>
             )}
-            {list('fb-opponents', names?.opponents)}
             {games.map((g, i) => (
               <div key={i} className="space-y-2 card-sunk p-3">
                 <div className="flex items-center justify-between">
@@ -444,13 +445,12 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
                     Poista
                   </button>
                 </div>
-                <input
-                  className={inputClass}
+                <TeamNameFields
+                  compact
                   value={g.opponent}
-                  list="fb-opponents"
-                  placeholder="Vastustaja"
-                  aria-label={`Peli ${i + 1}: vastustaja`}
-                  onChange={(e) => setGames((cur) => cur.map((x, j) => (j === i ? { ...x, opponent: e.target.value } : x)))}
+                  suggestions={teamNames}
+                  label={`Peli ${i + 1}: vastustaja`}
+                  onChange={(v) => setGames((cur) => cur.map((x, j) => (j === i ? { ...x, opponent: v } : x)))}
                 />
                 <PlayedChips
                   value={g.played}

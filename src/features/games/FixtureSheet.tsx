@@ -13,6 +13,7 @@ import { Segmented, ToggleChip } from '../../ui/controls';
 import { Sheet } from '../../ui/Sheet';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
+import { TeamNameFields, useTeamNameSuggestions } from './TeamNameFields';
 
 export type FixtureDraft = {
   kind: 'game' | 'tournament';
@@ -28,6 +29,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
   const toast = useToast();
   const teams = useLiveQuery(() => repo.listTeams(profile.id), [profile.id]);
   const names = useLiveQuery(() => repo.footballNameSuggestions(profile.id), [profile.id]);
+  const teamNames = useTeamNameSuggestions(profile.id);
   const [kind, setKind] = useState<'game' | 'tournament'>('game');
   const [date, setDate] = useState(todayFn());
   const [time, setTime] = useState('');
@@ -219,14 +221,10 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
         </Field>
 
         {kind === 'game' ? (
-          <Field label="Vastustaja">
-            <input className={inputClass} value={opponent} onChange={(e) => setOpponent(e.target.value)} list="fx-opponents" maxLength={60} />
-            <datalist id="fx-opponents">
-              {names?.opponents.map((o) => (
-                <option key={o} value={o} />
-              ))}
-            </datalist>
-          </Field>
+          <div>
+            <div className="mb-1.5 text-[13px] font-semibold text-slate-700">Vastustaja</div>
+            <TeamNameFields value={opponent} onChange={setOpponent} suggestions={teamNames} label="Vastustaja" />
+          </div>
         ) : (
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-2">
@@ -270,21 +268,19 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
             {schedule.length > 0 && (
               <ul className="mt-2 space-y-2">
                 {schedule.map((g, i) => (
-                  <li key={i} className="grid grid-cols-[7rem_1fr_auto] items-center gap-2">
+                  <li key={i} className="grid grid-cols-[7rem_1fr_auto] items-start gap-2">
                     <TimeField
                       label={`Ottelu ${i + 1}: kello`}
                       value={g.time}
                       onChange={(t) => setSchedule((cur) => cur.map((x, j) => (j === i ? { ...x, time: t } : x)))}
                     />
-                    <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-                      <input
-                        className={inputClass}
+                    <div className="grid grid-cols-1 gap-1">
+                      <TeamNameFields
+                        compact
                         value={g.opponent}
-                        list="fx-opponents"
-                        maxLength={60}
-                        placeholder="Vastustaja"
-                        aria-label={`Ottelu ${i + 1}: vastustaja`}
-                        onChange={(e) => setSchedule((cur) => cur.map((x, j) => (j === i ? { ...x, opponent: e.target.value } : x)))}
+                        suggestions={teamNames}
+                        label={`Ottelu ${i + 1}: vastustaja`}
+                        onChange={(v) => setSchedule((cur) => cur.map((x, j) => (j === i ? { ...x, opponent: v } : x)))}
                       />
                       <input
                         className={inputClass}

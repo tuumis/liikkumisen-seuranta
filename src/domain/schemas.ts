@@ -159,6 +159,8 @@ export const fixtureSchema = either(
   'plannedSessionId',
 );
 
+export const clubSchema = either(z.looseObject({ id: z.string().min(1), name: z.string(), logo: photo.optional(), createdAt: ts, ...sync }));
+
 export const metaSchema = z.looseObject({ key: z.string().min(1), value: z.unknown() });
 
 const syncedData = {
@@ -174,6 +176,8 @@ const syncedData = {
   // Skeema v2; v1-tiedostoissa näitä ei ole.
   teams: z.array(teamSchema).default([]),
   fixtures: z.array(fixtureSchema).default([]),
+  // Skeema v3.
+  clubs: z.array(clubSchema).default([]),
 };
 
 const header = {

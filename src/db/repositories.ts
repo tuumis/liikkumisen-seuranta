@@ -10,6 +10,7 @@ import { defaultGameLength } from '../domain/tournamentTime';
 import { DEFAULT_SETTINGS } from '../domain/recommendations';
 import { addDays, isISODate } from '../domain/dates';
 import { activeEstimate, ESTIMATE_ONLY_CATEGORIES, isEstimateConfirmation } from '../domain/aggregate';
+import { clubIdOf, clubKey, formatTeamName, parseTeamName, squadKey, type TeamParts } from '../domain/opponent';
 import type {
   ActivityType,
   Category,
@@ -21,6 +22,7 @@ import type {
   Fixture,
   FocusTag,
   FootballDetails,
+  Club,
   GameLevel,
   GameResult,
   HHmm,
@@ -951,6 +953,108 @@ export function createRepositories(db: AppDB = defaultDb) {
 
   // ---------- joukkueet (skeema v2) ----------
 
+  // ---------- seurat ja joukkuekirjasto (skeema v3) ----------
+
+  async function listClubs(): Promise<Club[]> {
+    return live(await db.clubs.toArray()).sort((a, b) => a.name.localeCompare(b.name, 'fi'));
+  }
+
+  /** Seuran logo (undefined poistaa). Tietue luodaan tarvittaessa; tunniste johdetaan nimestä. */
+  async function saveClubLogo(name: string, logo: string | undefined): Promise<Club> {
+    const clean = name.replace(/\s+/g, ' ').trim();
+    if (!clean) throw new Error('Anna seuran nimi');
+    const id = clubIdOf(clean);
+    const current = await db.clubs.get(id);
+    const next: Club = await stamp({ ...(current && !current.deletedAt ? current : { id, createdAt: nowTimestamp() }), name: clean } as Club);
+    delete next.deletedAt;
+    if (logo) next.logo = logo;
+    else delete next.logo;
+    await db.clubs.put(next);
+    return next;
+  }
+
+  /**
+   * Muuttaa joukkueiden nimiä kaikkialla (vastustajat peleissä ja pelikalenterissa, omat joukkueet).
+   * `map` palauttaa uudet osat tai null, jos nimi ei kuulu muutokseen. Palauttaa muutettujen nimien määrän.
+   */
+  async function rewriteTeamNames(map: (p: TeamParts) => TeamParts | null): Promise<number> {
+    let n = 0;
+    const next = (text: string | undefined): string | undefined => {
+      if (!text?.trim()) return text;
+      const to = map(parseTeamName(text));
+      if (!to) return text;
+      const out = formatTeamName(to);
+      if (!out || out === text) return text;
+      n++;
+      return out;
+    };
+    const games = <G extends { opponent?: string }>(list: G[] | undefined) => list?.map((g) => ({ ...g, opponent: next(g.opponent) }));
+    await db.transaction('rw', [db.footballDetails, db.fixtures, db.teams, db.meta], async () => {
+      for (const d of live(await db.footballDetails.toArray())) {
+        const before = n;
+        const row = { ...d, opponent: next(d.opponent), games: games(d.games) };
+        if (!d.games) delete row.games;
+        if (d.opponent === undefined) delete row.opponent;
+        if (n > before) await db.footballDetails.put(await stamp(row));
+      }
+      for (const f of live(await db.fixtures.toArray())) {
+        const before = n;
+        const row = { ...f, opponent: next(f.opponent), games: games(f.games) };
+        if (!f.games) delete row.games;
+        if (f.opponent === undefined) delete row.opponent;
+        if (n > before) await db.fixtures.put(await stamp(row));
+      }
+      for (const t of live(await db.teams.toArray())) {
+        const before = n;
+        const name = next(t.name)!;
+        if (n > before) await db.teams.put(await stamp({ ...t, name }));
+      }
+    });
+    return n;
+  }
+
+  /** Seuran uudelleennimeäminen (myös yhdistäminen toiseen seuraan); logo siirtyy, ellei kohteella ole omaa. */
+  async function renameClub(from: string, to: string): Promise<number> {
+    const target = to.replace(/\s+/g, ' ').trim();
+    if (!target) throw new Error('Anna seuran nimi');
+    const key = clubKey(from);
+    const n = await rewriteTeamNames((p) => (clubKey(p.club) === key ? { ...p, club: target } : null));
+    const old = await db.clubs.get(clubIdOf(from));
+    if (old && !old.deletedAt) {
+      const existing = await db.clubs.get(clubIdOf(target));
+      const logo = existing && !existing.deletedAt && existing.logo ? existing.logo : old.logo;
+      if (clubIdOf(target) !== old.id) await softDelete(db.clubs, old.id);
+      await saveClubLogo(target, logo);
+    }
+    return n;
+  }
+
+  /** Ryhmän ja ikäluokan muutos (esim. väärin jaettu vanha nimi korjataan): kaikki saman ryhmän nimet. */
+  async function editSquad(from: TeamParts, to: TeamParts): Promise<number> {
+    if (!to.club.trim()) throw new Error('Anna seuran nimi');
+    const key = squadKey(from);
+    return rewriteTeamNames((p) => (squadKey(p) === key ? to : null));
+  }
+
+  /** Pelin kommentti joukkuekirjastosta: turnauksen pelirivi (`index` 1…) tai yksittäisen pelin kommentti. */
+  async function setGameComment(sessionId: UUID, index: number | undefined, note: string): Promise<void> {
+    const d = await db.footballDetails.get(sessionId);
+    if (!d || d.deletedAt) throw new Error('Pelin tietoja ei löydy');
+    const text = note.trim();
+    const row: FootballDetails = { ...d };
+    if (index) {
+      const games = [...(d.games ?? [])];
+      if (!games[index - 1]) throw new Error('Peliä ei löydy');
+      const g = { ...games[index - 1] };
+      if (text) g.note = text;
+      else delete g.note;
+      games[index - 1] = g;
+      row.games = games;
+    } else if (text) row.ratingNote = text;
+    else delete row.ratingNote;
+    await db.footballDetails.put(await stamp(row));
+  }
+
   async function listTeams(profileId: UUID, opts: { includeArchived?: boolean } = {}): Promise<Team[]> {
     const rows = live(await db.teams.where('profileId').equals(profileId).toArray());
     return (opts.includeArchived ? rows : rows.filter((t) => !t.archived)).sort((a, b) => a.name.localeCompare(b.name, 'fi'));
@@ -1362,6 +1466,12 @@ export function createRepositories(db: AppDB = defaultDb) {
     updatePlannedOccurrence,
     reopenPlanned,
     listTeams,
+    listClubs,
+    saveClubLogo,
+    rewriteTeamNames,
+    renameClub,
+    editSquad,
+    setGameComment,
     saveTeam,
     setTeamArchived,
     listFixtures,

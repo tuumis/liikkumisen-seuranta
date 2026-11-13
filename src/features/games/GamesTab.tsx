@@ -6,8 +6,9 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { GAME_FORMATS, LEVEL_LABEL } from '../../domain/football';
 import type { ActivityType, GameFormat, GameLevel, Profile, Session, Team } from '../../domain/types';
 import { repo, type FixtureEntry } from '../../db/repositories';
-import { Avatar, PhotoPicker } from '../../ui/Avatar';
-import { Button, Card, inputClass, EmptyState } from '../../ui/components';
+import { clubKey, parseTeamName } from '../../domain/opponent';
+import { LogoPicker, TeamLogo, useClubLogos } from '../../ui/TeamLogo';
+import { Button, Card, EmptyState } from '../../ui/components';
 import { Segmented, ToggleChip } from '../../ui/controls';
 import { dayLabel, formatDate } from '../../ui/format';
 import { SKIP_REASON_LABEL } from '../../ui/labels';
@@ -18,6 +19,8 @@ import { GamesView } from '../football/GamesView';
 import { SkipReasons } from '../review/SkipReasons';
 import { FixtureSheet, type FixtureDraft } from './FixtureSheet';
 import { DiaryView } from './DiaryView';
+import { OpponentLibrary } from './TeamLibrary';
+import { TeamNameFields, useTeamNameSuggestions } from './TeamNameFields';
 import { FootballHero } from './FootballHero';
 import { IconPlus } from '../../ui/icons';
 
@@ -93,7 +96,12 @@ export function GamesTab({ profile }: { profile?: Profile }) {
       {view === 'diary' && <DiaryView profile={profile} />}
       {view === 'calendar' && <CalendarView profile={profile} onEdit={(entry) => setDraft({ kind: 'game', entry })} />}
       {view === 'results' && <GamesView profile={profile} />}
-      {view === 'teams' && <TeamsView profile={profile} />}
+      {view === 'teams' && (
+        <>
+          <TeamsView profile={profile} />
+          <OpponentLibrary profile={profile} />
+        </>
+      )}
 
       <FixtureSheet profile={profile} draft={draft} onClose={() => setDraft(null)} />
     </div>
@@ -277,19 +285,36 @@ function TeamsView({ profile }: { profile: Profile }) {
   const [photo, setPhoto] = useState<string | undefined>();
   const [format, setFormat] = useState<GameFormat | ''>('');
   const [share, setShare] = useState(70); // peliaika-arvio %
+  const logos = useClubLogos();
+  const logoFor = (n: string) => {
+    const c = parseTeamName(n).club;
+    return c && /[/·|]/.test(n) ? logos.get(clubKey(c)) : undefined;
+  };
+  const suggestions = useTeamNameSuggestions(profile.id);
+  const club = parseTeamName(name).club.trim();
+  // Seuran logo, kun seura on annettu; muuten joukkueen oma kuva.
+  const [logo, setLogo] = useState<string | undefined>();
+  const [logoTouched, setLogoTouched] = useState(false);
+  const shownLogo = logoTouched ? logo : (club && /[/·|]/.test(name) ? logos.get(clubKey(club)) : undefined) ?? photo;
 
   const open = (t: Team | 'new') => {
     setEditing(t);
     setName(t === 'new' ? '' : t.name);
     setLevel(t === 'new' ? 'kilpa' : t.level);
     setPhoto(t === 'new' ? undefined : t.photo);
+    setLogo(undefined);
+    setLogoTouched(false);
     setFormat(t === 'new' ? '' : (t.format ?? ''));
     setShare(Math.round((t === 'new' ? 0.7 : (t.playShare ?? 0.7)) * 100));
   };
 
   async function save() {
     try {
-      await repo.saveTeam(profile.id, { name, level, photo, format: format || undefined, playShare: share === 70 ? undefined : share / 100 }, editing && editing !== 'new' ? editing.id : undefined);
+      const hasClub = !!club && /[/·|]/.test(name);
+      // Logo seuralle (näkyy kaikissa seuran joukkueissa ja peleissä); ilman seuraa joukkueen kuvaksi.
+      if (logoTouched && hasClub) await repo.saveClubLogo(club, logo);
+      const teamPhoto = logoTouched && !hasClub ? logo : logoTouched && hasClub ? undefined : photo;
+      await repo.saveTeam(profile.id, { name, level, photo: teamPhoto, format: format || undefined, playShare: share === 70 ? undefined : share / 100 }, editing && editing !== 'new' ? editing.id : undefined);
       toast('Joukkue tallennettu');
       setEditing(null);
     } catch (e) {
@@ -314,7 +339,7 @@ function TeamsView({ profile }: { profile: Profile }) {
             void save();
           }}
         >
-          <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} placeholder="esim. P2018 Valkoinen" maxLength={60} autoFocus aria-label="Joukkueen nimi" />
+          <TeamNameFields own value={name} onChange={setName} suggestions={suggestions} label="Oma joukkue" />
           <div>
             <div className="mb-1 text-sm font-medium text-slate-700">Sarjataso (oletus peleille)</div>
             <div className="flex flex-wrap gap-2">
@@ -346,7 +371,15 @@ function TeamsView({ profile }: { profile: Profile }) {
               Kuinka suuren osan peliajasta pelaaja on tavallisesti kentällä, kun pelattuja minuutteja ei kirjata. Oletus 70 % (esim. 5v5 ja 7 pelaajan ryhmä: 5/7). Arvio tarkentuu, kun pelin jälkeen merkitset Ei / Osan / Koko pelin.
             </p>
           </div>
-          <PhotoPicker label="Joukkuekuva" name={name} value={photo} fallback="👕" onChange={setPhoto} />
+          <LogoPicker
+            label={club && /[/·|]/.test(name) ? `Seuran logo (${club})` : 'Logo tai joukkuekuva'}
+            name={name}
+            value={shownLogo}
+            onChange={(v) => {
+              setLogo(v);
+              setLogoTouched(true);
+            }}
+          />
           <div className="flex gap-2">
             <Button type="submit" className="flex-1">
               Tallenna
@@ -366,7 +399,7 @@ function TeamsView({ profile }: { profile: Profile }) {
         {teams?.map((t) => (
           <li key={t.id} className={`flex items-center gap-3 py-3 ${t.archived ? 'opacity-50' : ''}`}>
             <button type="button" className="flex min-w-0 flex-1 items-center gap-3 text-left" onClick={() => open(t)} aria-label={`Muokkaa: ${t.name}`}>
-              <Avatar name={t.name} photo={t.photo} fallback="👕" size="md" />
+              <TeamLogo logo={logoFor(t.name) ?? t.photo} name={t.name} size="lg" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-medium text-slate-900">{t.name}</span>
                 <span className="mt-0.5 flex items-center gap-1.5">

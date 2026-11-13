@@ -28,7 +28,7 @@ describe('käynnistys ja siemendata', () => {
     await repo.initialize();
     const id = await repo.deviceId();
     expect(id).toMatch(/^[0-9a-f-]{36}$/);
-    expect(await repo.getMeta('schemaVersion')).toBe(2);
+    expect(await repo.getMeta('schemaVersion')).toBe(3);
     expect(await db.activityTypes.count()).toBe(18);
     expect((await repo.listActivityTypes())[0].id).toBe('t:football_training');
   });

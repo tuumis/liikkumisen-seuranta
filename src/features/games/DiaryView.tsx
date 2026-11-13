@@ -3,7 +3,7 @@
 
 import { useMemo, useState } from 'react';
 import { footballKindOf, LEVEL_LABEL, OUTCOME_LABEL, outcomeOf, POSITION_LABEL } from '../../domain/football';
-import type { ActivityType, FootballDetails, Profile, Session } from '../../domain/types';
+import type { ActivityType, FootballDetails, PlayedState, Profile, Session } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { Button, Card, inputClass, EmptyState } from '../../ui/components';
 import { ToggleChip } from '../../ui/controls';
@@ -15,6 +15,15 @@ import { FootballPanel } from '../football/FootballPanel';
 import { useFootball } from '../football/useFootball';
 
 type Filter = 'all' | 'training' | 'games';
+type Layout = 'cards' | 'table';
+
+function readLayout(): Layout {
+  try {
+    return localStorage.getItem('diaryView') === 'table' ? 'table' : 'cards';
+  } catch {
+    return 'cards';
+  }
+}
 
 export function DiaryView({ profile }: { profile: Profile }) {
   const data = useFootball(profile.id);
@@ -22,6 +31,15 @@ export function DiaryView({ profile }: { profile: Profile }) {
   const [onlyCommented, setOnlyCommented] = useState(false);
   const [query, setQuery] = useState('');
   const [panel, setPanel] = useState<Session | null>(null);
+  const [layout, setLayoutState] = useState<Layout>(readLayout);
+  const setLayout = (v: Layout) => {
+    setLayoutState(v);
+    try {
+      localStorage.setItem('diaryView', v);
+    } catch {
+      /* ei tallennusta */
+    }
+  };
 
   const entries = useMemo(() => {
     if (!data) return [];
@@ -53,7 +71,10 @@ export function DiaryView({ profile }: { profile: Profile }) {
     <div className="space-y-4">
       <Card>
         <div className="space-y-3">
-          <input className={inputClass} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Hae kommenteista, vastustajista, tageista…" aria-label="Hae päiväkirjasta" />
+          <div className="flex items-center gap-2">
+            <input className={inputClass} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Hae kommenteista, vastustajista, tageista…" aria-label="Hae päiväkirjasta" />
+            <LayoutSwitch value={layout} onChange={setLayout} />
+          </div>
           <div className="flex flex-wrap gap-2">
             <ToggleChip on={filter === 'all'} onChange={() => setFilter('all')}>
               Kaikki
@@ -86,6 +107,8 @@ export function DiaryView({ profile }: { profile: Profile }) {
             </EmptyState>
           )}
         </Card>
+      ) : layout === 'table' ? (
+        <DiaryTable entries={entries} onOpen={setPanel} />
       ) : (
         [...byMonth.entries()].map(([month, list]) => (
           <section key={month}>
@@ -102,6 +125,162 @@ export function DiaryView({ profile }: { profile: Profile }) {
       )}
 
       <FootballPanel session={panel} type={panel ? data?.types.get(panel.activityTypeId) : undefined} onClose={() => setPanel(null)} />
+    </div>
+  );
+}
+
+/** Kortit / taulukko (laitekohtainen valinta, kuten Viikko-näkymässä). */
+function LayoutSwitch({ value, onChange }: { value: Layout; onChange: (v: Layout) => void }) {
+  return (
+    <div className="flex shrink-0 rounded-xl bg-[var(--surface-sunk)] p-0.5 text-xs font-semibold" role="radiogroup" aria-label="Päiväkirjan näkymä">
+      {(
+        [
+          ['cards', 'Kortit', 'M4 5h16v6H4zM4 14h16v5H4z'],
+          ['table', 'Taulukko', 'M4 5h16v14H4zM4 10h16M4 15h16M10 5v14'],
+        ] as const
+      ).map(([v, l, d]) => (
+        <button
+          key={v}
+          type="button"
+          role="radio"
+          aria-checked={value === v}
+          aria-label={l}
+          onClick={() => onChange(v)}
+          className={`press flex min-h-10 items-center gap-1.5 rounded-[0.6rem] px-2.5 ${value === v ? 'bg-[var(--surface-raised)] text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
+        >
+          <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round" aria-hidden>
+            <path d={d} />
+          </svg>
+          <span className="hidden sm:inline">{l}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const PLAYED_LABEL: Record<PlayedState, string> = { full: 'koko peli', part: 'osan', none: 'ei pelannut' };
+
+interface TableRow {
+  key: string;
+  s: Session;
+  event: string;
+  opponent?: string;
+  result?: string;
+  outcome?: 'W' | 'D' | 'L';
+  goals?: number;
+  time?: string;
+  rating?: string;
+  comment?: string;
+}
+
+type Entry = { s: Session; t?: ActivityType; d?: FootballDetails };
+
+function tableRows(entries: Entry[]): TableRow[] {
+  const out: TableRow[] = [];
+  for (const { s, t, d } of entries) {
+    const name = `${s.label ? `${s.label} · ` : ''}${t?.name ?? 'Jalkapallo'}`;
+    const rating = [d?.parentRating ? '★'.repeat(d.parentRating) : '', d?.enjoyment ? ['', '🙁', '🙂', '😄'][d.enjoyment] : ''].filter(Boolean).join(' ') || undefined;
+    const comment = [d?.ratingNote, s.note].filter(Boolean).join(' · ') || undefined;
+    const kind = t?.footballKind;
+    if (kind === 'tournament' && d?.games?.length) {
+      d.games.forEach((g, i) => {
+        const o = outcomeOf(g.goalsFor, g.goalsAgainst);
+        out.push({
+          key: `${s.id}-${i}`,
+          s,
+          event: `${d.eventName ?? name} · peli ${i + 1}`,
+          opponent: g.opponent,
+          result: o ? `${g.goalsFor}–${g.goalsAgainst}` : undefined,
+          outcome: o,
+          goals: g.playerGoals,
+          time: g.playedMin !== undefined ? `${g.playedMin} min` : g.played ? PLAYED_LABEL[g.played] : undefined,
+          rating: i === 0 ? rating : undefined,
+          comment: [g.note, i === 0 ? comment : undefined].filter(Boolean).join(' · ') || undefined,
+        });
+      });
+      continue;
+    }
+    const o = kind === 'game' && d ? outcomeOf(d.goalsFor, d.goalsAgainst) : undefined;
+    const isMatch = kind === 'game' || kind === 'tournament';
+    out.push({
+      key: s.id,
+      s,
+      event: kind === 'tournament' && d?.eventName ? d.eventName : name,
+      opponent: d?.opponent,
+      result: o && d ? `${d.goalsFor}–${d.goalsAgainst}` : undefined,
+      outcome: o,
+      goals: d?.playerGoals,
+      time: isMatch ? (s.playedMin !== undefined ? `${s.playedMin} min` : d?.played ? PLAYED_LABEL[d.played] : undefined) : `${s.durationMin} min`,
+      rating,
+      comment,
+    });
+  }
+  return out;
+}
+
+/** Päiväkirja taulukkona: rivi per treeni, peli tai turnauksen peli; rivin napautus avaa lisätiedot. */
+function DiaryTable({ entries, onOpen }: { entries: Entry[]; onOpen: (s: Session) => void }) {
+  const rows = tableRows(entries);
+  const th = 'px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wide text-slate-500';
+  return (
+    <div className="card overflow-hidden p-0">
+      <div className="scroll-thin overflow-x-auto">
+        <table className="w-full min-w-[50rem] border-collapse text-sm">
+          <thead className="bg-[var(--surface-sunk)]">
+            <tr>
+              <th className={th}>Päivä</th>
+              <th className={th}>Tapahtuma</th>
+              <th className={th}>Vastustaja</th>
+              <th className={`${th} text-right`}>Tulos</th>
+              <th className={`${th} text-right`}>Maalit</th>
+              <th className={`${th} whitespace-nowrap`}>Kesto / peliaika</th>
+              <th className={th}>Arvio</th>
+              <th className={th}>Kommentti</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => {
+              const first = i === 0 || rows[i - 1].s.id !== r.s.id;
+              return (
+                <tr key={r.key} onClick={() => onOpen(r.s)} className={`cursor-pointer hover:bg-[color-mix(in_oklab,var(--surface-sunk)_70%,transparent)] ${first ? 'border-t border-[var(--line)]' : ''}`}>
+                  <td className="whitespace-nowrap px-3 py-2 tabular-nums text-slate-700">{first ? formatDate(r.s.date, 'EEEEEE d.M.yy') : ''}</td>
+                  <td className="max-w-[14rem] truncate px-3 py-2 text-slate-900" title={r.event}>
+                    <button
+                      type="button"
+                      className="max-w-full truncate text-left hover:underline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpen(r.s);
+                      }}
+                    >
+                      {r.event}
+                    </button>
+                  </td>
+                  <td className="max-w-[14rem] truncate px-3 py-2 text-slate-700" title={r.opponent}>
+                    {r.opponent ?? ''}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">
+                    {r.result && r.outcome && (
+                      <span className="font-semibold text-slate-900">
+                        {r.result} <span className="ml-1 inline-block w-5 rounded bg-slate-100 text-center text-xs text-slate-700">{OUTCOME_LABEL[r.outcome]}</span>
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums text-slate-800">{r.goals ? `⚽ ${r.goals}` : ''}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-slate-600">{r.time ?? ''}</td>
+                  <td className="whitespace-nowrap px-3 py-2 text-amber-600">{r.rating ?? ''}</td>
+                  <td className="px-3 py-2 text-slate-700">
+                    <div className="line-clamp-2 min-w-[12rem]" title={r.comment}>
+                      {r.comment ?? ''}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p className="border-t border-[var(--line)] px-3 py-2 text-xs text-slate-500">Napauta riviä avataksesi lisätiedot ja kommentin muokkauksen. Taulukkoa voi vierittää sivusuunnassa.</p>
     </div>
   );
 }

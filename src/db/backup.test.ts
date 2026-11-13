@@ -93,7 +93,7 @@ describe('varmuuskopio', () => {
     await seedData(a.repo);
     const before = await dump(a.db);
     const file = await buildBackup(a.db);
-    expect(file).toMatchObject({ format: 'liikkumisseuranta-backup', schemaVersion: 2, appVersion: '0.1.0' });
+    expect(file).toMatchObject({ format: 'liikkumisseuranta-backup', schemaVersion: 3, appVersion: '0.1.0' });
     expect(file.checksum).toMatch(/^sha256:[0-9a-f]{64}$/);
 
     await clearAll(a.db);
@@ -173,7 +173,7 @@ describe('varmuuskopio', () => {
     const a = await device('bad');
     await expect(importBackup(a.db, '{', () => {})).rejects.toThrow(/JSON/);
     await expect(importBackup(a.db, '{"format":"muu","schemaVersion":1}', () => {})).rejects.toThrow(/varmuuskopio/);
-    const newer = await resign(await buildBackup(a.db), (f) => (f.schemaVersion = 3));
+    const newer = await resign(await buildBackup(a.db), (f) => (f.schemaVersion = 4));
     await expect(importBackup(a.db, newer, () => {})).rejects.toThrow('Päivitä sovellus tällä laitteella ensin');
   });
 
@@ -318,7 +318,7 @@ describe('synkronointi PC ↔ puhelin', () => {
     const { pc, phone } = await pair();
     await seedData(pc.repo);
     const f = await buildSyncFile(pc.db, pc.id, 'pc');
-    f.schemaVersion = 3;
+    f.schemaVersion = 4;
     f.checksum = await dataChecksum(f.data);
     const before = await dump(phone.db);
     await expect(mergeSyncFile(phone.db, toJson(f), phone.id)).rejects.toThrow('Päivitä sovellus tällä laitteella ensin');
@@ -423,7 +423,7 @@ describe('B7: skeemaversioiden fixturet ja migraatioketju', () => {
     expect(await a.db.footballDetails.get('s1')).toMatchObject({ opponent: 'HJK', goalsFor: 3 });
     expect(await a.db.teams.count()).toBe(0);
     expect(await a.db.fixtures.count()).toBe(0);
-    expect(await a.repo.getMeta('schemaVersion')).toBe(2);
+    expect(await a.repo.getMeta('schemaVersion')).toBe(3);
     // Vanhan asetusrivin puuttuvat kentät saavat oletukset.
     expect((await a.repo.getSettings()).vigorousDayRule).toBe('age');
   });

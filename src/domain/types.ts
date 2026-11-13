@@ -299,6 +299,19 @@ export interface Fixture extends SyncFields {
   note?: string;
 }
 
+/**
+ * Seura (skeema v3): seuran logo joukkuekirjastoa varten. Tunniste johdetaan nimestä
+ * (`club:<nimi pienellä>`), joten sama seura on kaikilla laitteilla yksi tietue. Seuraan
+ * kuuluvat ryhmät ja ikäluokat ovat joukkueiden ja vastustajien nimissä (domain/opponent).
+ */
+export interface Club extends SyncFields {
+  id: string;
+  name: string;
+  /** Logo kokonaisena (PNG/JPEG data URL, ei rajausta), valinnainen. */
+  logo?: string;
+  createdAt: Timestamp;
+}
+
 // ---------- muut ----------
 export type DayFlagReason = 'sick' | 'travel' | 'other';
 

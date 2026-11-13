@@ -10,6 +10,7 @@
 import { Dexie, type EntityTable } from 'dexie';
 import type {
   ActivityType,
+  Club,
   DayFlag,
   Estimate,
   Fixture,
@@ -37,6 +38,7 @@ export class AppDB extends Dexie {
   settings!: EntityTable<SettingsRow, 'id'>;
   teams!: EntityTable<Team, 'id'>;
   fixtures!: EntityTable<Fixture, 'plannedSessionId'>;
+  clubs!: EntityTable<Club, 'id'>;
   meta!: EntityTable<MetaRow, 'key'>;
 
   constructor(name = DB_NAME) {
@@ -62,6 +64,12 @@ export class AppDB extends Dexie {
       })
       .upgrade(async (tx) => {
         await tx.table('meta').put({ key: 'schemaVersion', value: 2 });
+      });
+    // Versio 3: seurat (logot joukkuekirjastoon). Uusi taulu alkaa tyhjänä (migrateV2ToV3).
+    this.version(3)
+      .stores({ clubs: 'id, updatedAt' })
+      .upgrade(async (tx) => {
+        await tx.table('meta').put({ key: 'schemaVersion', value: 3 });
       });
   }
 }

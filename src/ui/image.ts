@@ -52,3 +52,34 @@ export async function resizePhoto(file: Blob, size = PHOTO_SIZE): Promise<string
   if ('close' in img && typeof img.close === 'function') img.close();
   return canvas.toDataURL('image/jpeg', 0.82);
 }
+
+/**
+ * Logo kokonaisena (joukkuekirjasto): ei rajausta, kuvasuhde säilyy ja pisin sivu on enintään
+ * `size`. PNG säilyttää läpinäkyvän taustan; liian suuri PNG tallennetaan JPEG:nä valkoisella taustalla.
+ */
+export async function resizeLogo(file: Blob, size = 320): Promise<string> {
+  if (file.type && !file.type.startsWith('image/')) throw new Error('Valitse kuvatiedosto');
+  const img = await decode(file);
+  if (!img.width || !img.height) throw new Error('Kuvaa ei voitu lukea');
+  const scale = Math.min(1, size / Math.max(img.width, img.height));
+  const w = Math.max(1, Math.round(img.width * scale));
+  const h = Math.max(1, Math.round(img.height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Kuvan käsittely ei onnistu tällä selaimella');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, w, h);
+  if ('close' in img && typeof img.close === 'function') img.close();
+  const png = canvas.toDataURL('image/png');
+  if (isPhotoDataUrl(png)) return png;
+  const flat = document.createElement('canvas');
+  flat.width = w;
+  flat.height = h;
+  const f = flat.getContext('2d')!;
+  f.fillStyle = '#ffffff';
+  f.fillRect(0, 0, w, h);
+  f.drawImage(canvas, 0, 0);
+  return flat.toDataURL('image/jpeg', 0.88);
+}

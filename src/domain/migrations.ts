@@ -3,7 +3,7 @@
 // käyttävät sekä Dexien upgrade() että vanhan varmuuskopion tuonti.
 // Versio 1 on lähtötaso, joten migraatioita ei vielä ole.
 
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 export const SYNCED_TABLES = [
   'profiles',
@@ -17,6 +17,7 @@ export const SYNCED_TABLES = [
   'settings',
   'teams',
   'fixtures',
+  'clubs',
 ] as const;
 export type SyncedTable = (typeof SYNCED_TABLES)[number];
 
@@ -32,8 +33,13 @@ export function migrateV1ToV2(data: TableData): TableData {
   return { ...data, teams: data.teams ?? [], fixtures: data.fixtures ?? [] };
 }
 
+/** v2 → v3: uusi taulu clubs (seurojen logot joukkuekirjastossa). Olemassa oleva data ei muutu. */
+export function migrateV2ToV3(data: TableData): TableData {
+  return { ...data, clubs: data.clubs ?? [] };
+}
+
 /** MIGRATIONS[n] muuntaa version n datan versioksi n + 1. */
-export const MIGRATIONS: Readonly<Record<number, Migration>> = Object.freeze({ 1: migrateV1ToV2 });
+export const MIGRATIONS: Readonly<Record<number, Migration>> = Object.freeze({ 1: migrateV1ToV2, 2: migrateV2ToV3 });
 
 /** Ajaa ketjun fromVersion → CURRENT_SCHEMA_VERSION. */
 export function migrateToCurrent(data: TableData, fromVersion: number): TableData {
