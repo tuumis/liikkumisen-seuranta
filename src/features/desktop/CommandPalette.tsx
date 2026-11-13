@@ -176,7 +176,7 @@ function Palette({ ctx, onClose }: { ctx: PaletteContext; onClose: () => void })
   let lastGroup = '';
   return (
     <div className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[12vh]" role="presentation" onKeyDown={onKey}>
-      <div className="anim-fade absolute inset-0 bg-[#1a2520]/45 backdrop-blur-[2px] dark:bg-black/60" onClick={onClose} aria-hidden />
+      <div className="scrim absolute inset-0" onClick={onClose} aria-hidden />
       <div role="dialog" aria-modal="true" aria-label="Komennot" className="palette anim-pop relative flex max-h-[70vh] w-full max-w-xl flex-col overflow-hidden rounded-[1.5rem] bg-[var(--surface)] shadow-2xl ring-1 ring-black/5">
         <div className="flex items-center gap-3 border-b border-slate-200/70 px-4">
           <IconSearch size="1.2rem" className="shrink-0 text-slate-400" />

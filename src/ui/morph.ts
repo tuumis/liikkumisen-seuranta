@@ -30,19 +30,24 @@ export function morphOpen(from: EventTarget | Element | null, open: () => void):
     if (done) return;
     done = true;
     el.style.removeProperty('view-transition-name');
+    if (morph) el.classList.add('morph-source');
     pending = morph;
     flushSync(open);
     pending = false;
   };
+  const finish = () => {
+    el.classList.remove('morph-source');
+    document.documentElement.classList.remove('morphing');
+  };
   try {
     const t = doc.startViewTransition(() => run(true));
-    void t.finished.finally(() => document.documentElement.classList.remove('morphing'));
+    void t.finished.finally(finish);
     // Jos selain ei piirrä (esim. ikkuna taustalla), paneeli avataan heti ilman morfia.
     window.setTimeout(() => {
       if (done) return;
       t.skipTransition?.();
       run(false);
-      document.documentElement.classList.remove('morphing');
+      finish();
     }, 300);
   } catch {
     el.style.removeProperty('view-transition-name');

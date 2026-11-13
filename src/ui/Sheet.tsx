@@ -57,7 +57,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   if (!open) return null;
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center lg:items-center lg:p-6" role="presentation">
-      <div className="anim-fade absolute inset-0 bg-[#1a2520]/45 backdrop-blur-[2px] dark:bg-black/60" onClick={onClose} aria-hidden />
+      <div className="scrim absolute inset-0" onClick={onClose} aria-hidden />
       <div
         ref={panel}
         role="dialog"
