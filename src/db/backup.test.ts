@@ -395,9 +395,11 @@ describe('synkronointi PC ↔ puhelin', () => {
     await markSent(phone.db);
     const id = plannedSessionId(item.id, '2026-11-13');
     const base = (await pc.db.plannedSessions.get(id))!;
-    // PC kuittaa klo 0.02; puhelin (ei vielä tiennyt) poistaa avoimen kerran klo 9.15.
-    await pc.db.plannedSessions.put({ ...base, status: 'done', sessionId: `s:${id}`, updatedAt: '2026-11-13T00:02:00.000Z', updatedBy: pc.id });
-    await phone.db.plannedSessions.put({ ...base, overridden: true, deletedAt: '2026-11-13T09:15:00.000Z', updatedAt: '2026-11-13T09:15:00.000Z', updatedBy: phone.id });
+    // PC kuittaa; puhelin (ei vielä tiennyt) poistaa avoimen kerran myöhemmin. Ajat nykyhetkestä,
+    // jotta ne ovat aina viimeisimmän lähetyksen jälkeen (kiinteät kellonajat vanhenivat).
+    const at = (min: number) => new Date(Date.now() + min * 60_000).toISOString();
+    await pc.db.plannedSessions.put({ ...base, status: 'done', sessionId: `s:${id}`, updatedAt: at(1), updatedBy: pc.id });
+    await phone.db.plannedSessions.put({ ...base, overridden: true, deletedAt: at(10), updatedAt: at(10), updatedBy: phone.id });
     expect(await pendingCount(phone.db, phone.id)).toBe(1);
     await send(pc, 'pc', phone);
     const healed = (await phone.db.plannedSessions.get(id))!;
@@ -405,7 +407,7 @@ describe('synkronointi PC ↔ puhelin', () => {
     expect(healed.deletedAt).toBeUndefined();
     expect(await pendingCount(phone.db, phone.id)).toBe(0);
     // Toiseen suuntaan: PC säilyttää kuittauksen, vaikka puhelimen tiedostossa on uudempi poisto.
-    await phone.db.plannedSessions.put({ ...base, overridden: true, deletedAt: '2026-11-13T09:16:00.000Z', updatedAt: '2026-11-13T09:16:00.000Z', updatedBy: phone.id });
+    await phone.db.plannedSessions.put({ ...base, overridden: true, deletedAt: at(11), updatedAt: at(11), updatedBy: phone.id });
     await send(phone, 'phone', pc);
     expect((await pc.db.plannedSessions.get(id))!.status).toBe('done');
     expect((await pc.db.plannedSessions.get(id))!.deletedAt).toBeUndefined();
