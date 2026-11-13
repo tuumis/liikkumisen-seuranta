@@ -15,6 +15,7 @@ import { ENJOYMENT_LABEL, FOCUS_TAG_LABEL, RATING_LABEL } from '../../ui/labels'
 import { Sheet } from '../../ui/Sheet';
 import { useToast } from '../../ui/Toast';
 import { TeamNameFields, useTeamNameSuggestions } from '../games/TeamNameFields';
+import { openResultShare } from '../share/ResultShare';
 
 const PLAYED_PICKS = [10, 15, 20, 30, 40, 50, 60];
 
@@ -197,7 +198,10 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
     setSaving(true);
     try {
       await repo.saveFootballDetails(session!.id, input);
-      toast('Lisätiedot tallennettu', undefined, 'success');
+      const scored = (a?: number, b?: number) => a !== undefined && b !== undefined;
+      const hasResult = kind === 'game' ? scored(nums.gf, nums.ga) : kind === 'tournament' && rows.some((r) => scored(r.goalsFor, r.goalsAgainst));
+      const id = session!.id;
+      toast('Lisätiedot tallennettu', hasResult ? { label: 'Jaa tulos', run: () => openResultShare(id) } : undefined, 'success');
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

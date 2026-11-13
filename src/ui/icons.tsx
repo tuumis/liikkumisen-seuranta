@@ -180,6 +180,12 @@ export const IconLock = (p: IconProps) => (
     <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5M12 14.5v2" />
   </svg>
 );
+export const IconShare = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 15V4M8 7.5 12 3.5l4 4" />
+    <path d="M8.5 10.5H7a2.5 2.5 0 0 0-2.5 2.5v5A2.5 2.5 0 0 0 7 20.5h10a2.5 2.5 0 0 0 2.5-2.5v-5a2.5 2.5 0 0 0-2.5-2.5h-1.5" />
+  </svg>
+);
 export const IconTrophy = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v3.5M8.5 20h7M9.5 20l.5-3.5h4l.5 3.5" />

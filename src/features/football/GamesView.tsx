@@ -26,6 +26,8 @@ import { num1 } from '../../ui/statusText';
 import { goalsLabel } from '../../ui/labels';
 import { resultLine } from './FootballSection';
 import { useFootball } from './useFootball';
+import { IconShare } from '../../ui/icons';
+import { openResultShare } from '../share/ResultShare';
 
 const ALL = '';
 
@@ -146,7 +148,12 @@ export function GamesView({ profile, onBack }: { profile: Profile; onBack?: () =
         <ul className="space-y-2">
           {groups.map((g) => (
             <li key={g.key}>
-              {g.title && <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">🏆 {g.title}</div>}
+              {g.title && (
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="min-w-0 flex-1 text-xs font-semibold uppercase tracking-wide text-slate-500">🏆 {g.title}</span>
+                  {g.rows.some((r) => r.outcome) && <ShareButton sessionId={g.rows[0].sessionId} />}
+                </div>
+              )}
               <ul className={g.title ? 'border-l-2 border-slate-200 pl-2' : ''}>
                 {g.rows.map((r) => (
                   <GameLine key={`${r.sessionId}:${r.index ?? 0}`} r={r} showDate={!g.title} />
@@ -204,7 +211,22 @@ function GameLine({ r, showDate }: { r: GameRow; showDate: boolean }) {
       </span>
       <span className={`shrink-0 text-sm tabular-nums ${r.outcome ? 'font-semibold text-slate-900' : 'text-slate-500'}`}>{res}</span>
       {r.outcome && <span className="w-6 shrink-0 rounded bg-slate-100 text-center text-xs font-semibold text-slate-700">{OUTCOME_LABEL[r.outcome]}</span>}
+      {showDate && r.outcome && <ShareButton sessionId={r.sessionId} />}
     </li>
+  );
+}
+
+function ShareButton({ sessionId }: { sessionId: string }) {
+  return (
+    <button
+      type="button"
+      onClick={() => openResultShare(sessionId)}
+      className="press relative flex size-8 shrink-0 items-center justify-center rounded-full text-slate-500 before:absolute before:-inset-1.5 hover:bg-[var(--surface-sunk)] hover:text-slate-900"
+      aria-label="Jaa tuloskuva"
+      title="Jaa tuloskuva (esim. Instagram)"
+    >
+      <IconShare size="1rem" />
+    </button>
   );
 }
 
