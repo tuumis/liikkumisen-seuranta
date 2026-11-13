@@ -7,7 +7,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { repo } from '../../db/repositories';
 import { dayTotals, isEstimateConfirmation, trackingStart } from '../../domain/aggregate';
 import { parseISODate, toISODate } from '../../domain/dates';
-import { computeSessionMinutes } from '../../domain/intensity';
+import { computeSessionMinutes, totalOf } from '../../domain/intensity';
 import { DAY_TARGET } from '../../domain/dayTarget';
 import { recommendationGroup } from '../../domain/groups';
 import { futureRange, heatColumns, heatLevel, heatRange, heatStats, last12Months, LEVEL_LABELS, monthLabels, type HeatDay, type HeatLevel, type HeatMeasure } from '../../domain/heatmap';
@@ -106,6 +106,7 @@ function useHeatData(profile: Profile, start: ISODate, end: ISODate, withEstimat
         mvpa: withEstimates ? t.mvpaCombined : t.mvpa,
         total: withEstimates ? t.totalCombined : t.total,
         sessions: list.filter((s) => !isEstimateConfirmation(s)).length,
+        logged: list.filter((s) => !isEstimateConfirmation(s)).reduce((a, s) => a + totalOf(s.minutes), 0),
         target: DAY_TARGET[recommendationGroup(profile, date)],
       };
     });
@@ -308,6 +309,8 @@ function HeatBody({
   const all = useMemo(() => [...data.days, ...data.future], [data.days, data.future]);
   const byDate = useMemo(() => new Map(all.map((d) => [d.date, d])), [all]);
   const stats = useMemo(() => heatStats(data.days, measure), [data.days, measure]);
+  // Päivän suositus nykyisen ikäryhmän mukaan (selitteisiin).
+  const dayTarget = (data.days.at(-1) ?? data.future[0])?.target ?? 60;
   // Tulevien päivien suunniteltu määrä erikseen (ei toteumaa).
   const planned = useMemo(() => {
     const hours = data.future.reduce((a, d) => a + d.total, 0) / 60;
@@ -444,10 +447,19 @@ function HeatBody({
       <p className="-mt-2 text-right text-[11px] text-slate-500">Asteikko: {['ei liikuntaa', ...LEVEL_LABELS[measure]].join(' · ')}</p>
 
       <div className={`grid grid-cols-2 gap-3 ${planned ? `sm:grid-cols-3 ${big ? 'lg:grid-cols-5 lg:gap-5' : 'xl:grid-cols-5'}` : big ? 'lg:grid-cols-4 lg:gap-5' : 'sm:grid-cols-4'}`}>
-        <Stat label="Liikuntaa yhteensä" value={`${formatHours(stats.hours)} h`} sub="kaikki teholuokat" big={big} />
+        <Stat
+          label="Liikuntaa yhteensä"
+          value={`${formatHours(stats.hours)} h`}
+          sub={
+            withEstimates
+              ? `kirjatut ${formatHours(stats.loggedHours)} h + arkiliikunta ${formatHours(Math.max(0, stats.hours - stats.loggedHours))} h`
+              : 'vain kirjatut kerrat'
+          }
+          big={big}
+        />
         <Stat label="Aktiivisia päiviä" value={String(stats.activeDays)} sub={`/ ${stats.days} päivää`} big={big} />
-        <Stat label="Pisin putki" value={`${stats.longestStreak} pv`} sub="peräkkäin" big={big} />
-        <Stat label="Suositus täyttyi" value={`${stats.targetDays} pv`} sub="reipas ja rasittava" big={big} />
+        <Stat label="Pisin putki" value={`${stats.longestStreak} pv`} sub="aktiivisia päiviä peräkkäin" big={big} />
+        <Stat label="Suositus täyttyi" value={`${stats.targetDays} pv`} sub={`reipas ja rasittava ≥ ${Math.round(dayTarget)} min/pv`} big={big} />
         {planned && (
           <Stat
             label={`Suunniteltu ${futureLabel}`}
@@ -458,8 +470,69 @@ function HeatBody({
           />
         )}
       </div>
-      {data.future.length > 0 && <p className="-mt-1 text-xs text-slate-500">Muut tunnusluvut lasketaan toteutuneista päivistä; suunnitellut päivät eivät ole niissä mukana.</p>}
+      <p className="-mt-1 text-xs text-slate-500">
+        {data.days.length > 0
+          ? `Laskettu ${formatDate(data.days[0].date, 'd.M.')}–${formatDate(data.days.at(-1)!.date, 'd.M.yyyy')} (${stats.days} päivää seurannan alusta tähän päivään)${data.future.length > 0 ? '; suunnitellut päivät vain Suunniteltu-luvussa' : ''}.`
+          : 'Jaksolla ei ole vielä toteutuneita päiviä; tunnusluvut lasketaan toteutuneista päivistä.'}
+      </p>
+      <Explain measure={measure} withEstimates={withEstimates} dayTarget={dayTarget} hasFuture={data.future.length > 0} />
     </div>
+  );
+}
+
+/** "Mistä luvut tulevat?": avattava selitys tunnusluvuille ja ruutujen väreille valittujen asetusten mukaan. */
+function Explain({ measure, withEstimates, dayTarget, hasFuture }: { measure: HeatMeasure; withEstimates: boolean; dayTarget: number; hasFuture: boolean }) {
+  const t = Math.round(dayTarget);
+  const active =
+    measure === 'sessions'
+      ? 'päivä, jolle on kirjattu vähintään yksi liikuntakerta'
+      : measure === 'minutes'
+        ? 'päivä, jolla on vähintään minuutti liikuntaa'
+        : 'päivä, jolla on vähintään minuutti reipasta tai rasittavaa liikuntaa';
+  return (
+    <details className="group rounded-2xl bg-[var(--surface-sunk)] px-4 py-3 text-sm text-slate-700">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-semibold text-slate-900 [&::-webkit-details-marker]:hidden">
+        Mistä luvut tulevat?
+        <span className="text-slate-500 transition-transform group-open:rotate-180" aria-hidden>
+          ▾
+        </span>
+      </summary>
+      <ul className="mt-3 list-disc space-y-2 pl-5 leading-relaxed marker:text-slate-400">
+        <li>
+          <strong>Kirjatut kerrat:</strong> itse kirjatut ja kuitatut liikuntakerrat. Minuutit lasketaan kerran kestosta lajin tyypillisen tehon mukaan (kevyt, reipas, rasittava);
+          pelissä ja turnauksessa mukana on peliaika ja lämmittely, ei vaihtopenkkiä.
+        </li>
+        <li>
+          <strong>Arkiliikunta</strong> {withEstimates ? '(nyt mukana)' : '(nyt ei mukana)'}: Asetukset → Arkiliikunta -kohdan arvio välitunneista, koulumatkoista ja leikistä.
+          Arkipäivinä käytetään arkipäivän minuutteja, viikonloppuna ja lomalla viikonlopun minuutteja. Jos päivälle on kirjattu kerta samasta kategoriasta, kirjaus korvaa sen
+          päivän arvion, eikä samaa lasketa kahdesti. Jos olet kuitannut päivän arkiliikunnan, käytetään kuitattua tietoa. Kuluva päivä on mukana kokonaisena.
+        </li>
+        <li>
+          <strong>Liikuntaa yhteensä:</strong> kaikkien teholuokkien minuutit (myös kevyt) tunteina{withEstimates ? ', kirjatut kerrat ja arkiliikunta eriteltyinä' : ''}.
+        </li>
+        <li>
+          <strong>Aktiivinen päivä:</strong> {active}. <strong>Pisin putki</strong> on pisin jakso tällaisia päiviä peräkkäin.
+        </li>
+        <li>
+          <strong>Suositus täyttyi:</strong> päivät, joina reipasta ja rasittavaa liikuntaa oli vähintään päivän suosituksen verran ({t} min).
+        </li>
+        <li>
+          <strong>Ruutujen värit:</strong>{' '}
+          {measure === 'target'
+            ? `reipas ja rasittava liikunta suhteessa ${t} minuuttiin: alle puolet, 50–99 %, suositus täyttyi, 150 % tai enemmän.`
+            : measure === 'minutes'
+              ? 'kaikki liikunta minuutteina: 1–30, 31–60, 61–90, yli 90.'
+              : 'kirjattujen kertojen määrä: 1, 2, 3, 4 tai enemmän. Arkiliikunta ei ole kerta.'}{' '}
+          Himmeät ruudut ovat ennen seurannan alkua.
+        </li>
+        {hasFuture && (
+          <li>
+            <strong>Suunniteltu:</strong> ontot ruudut ja Suunniteltu-luku ovat tulevia päiviä: viikkorytmin ja kertaluonteiset suunnitellut kerrat
+            {withEstimates ? ' sekä arkiliikunnan arvio' : ''}. Ne eivät ole mukana muissa luvuissa ennen kuin päivä on tullut ja kerta kuitattu.
+          </li>
+        )}
+      </ul>
+    </details>
   );
 }
 

@@ -79,7 +79,7 @@ describe('heatStats', () => {
       day({ date: '2026-03-03', total: 0 }),
       day({ date: '2026-03-04', total: 90, mvpa: 90, sessions: 2 }),
     ];
-    expect(heatStats(days, 'minutes')).toEqual({ hours: 3, activeDays: 3, days: 4, longestStreak: 2, targetDays: 2 });
+    expect(heatStats(days, 'minutes')).toEqual({ hours: 3, loggedHours: 3, activeDays: 3, days: 4, longestStreak: 2, targetDays: 2 });
     // Kerrat-mittarilla päivä ilman kirjattua kertaa ei ole aktiivinen.
     expect(heatStats(days, 'sessions')).toMatchObject({ activeDays: 2, longestStreak: 1 });
   });

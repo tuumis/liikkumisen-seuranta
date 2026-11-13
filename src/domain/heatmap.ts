@@ -18,6 +18,8 @@ export interface HeatDay {
   total: number;
   /** Kirjatut kerrat (ei arkiliikunnan vahvistuksia). */
   sessions: number;
+  /** Kirjattujen kertojen osuus kaikesta liikunnasta (min); loput on arkiliikuntaa (arvio tai sen vahvistus). */
+  logged?: number;
   /** Päivän tavoite (reipas + rasittava, min). */
   target: number;
   /** Tuleva päivä: arvot ovat suunniteltuja kertoja (ja valinnalla arviota), eivät toteumaa. */
@@ -99,6 +101,8 @@ export function monthLabels(cols: readonly HeatColumn[]): { col: number; label: 
 export interface HeatStats {
   /** Kaikki liikunta tunteina. */
   hours: number;
+  /** Siitä kirjatut kerrat tunteina (loput arkiliikuntaa). */
+  loggedHours: number;
   activeDays: number;
   /** Tarkastellut päivät (seurannan alusta tähän päivään). */
   days: number;
@@ -112,6 +116,7 @@ export function heatStats(days: readonly HeatDay[], measure: HeatMeasure): HeatS
   const dates = days.map((d) => d.date);
   return {
     hours: days.reduce((a, d) => a + d.total, 0) / 60,
+    loggedHours: days.reduce((a, d) => a + (d.logged ?? d.total), 0) / 60,
     activeDays: days.filter((d) => isActive(measure, d)).length,
     days: days.length,
     longestStreak: longestStreak(dates, (x) => isActive(measure, byDate.get(x)!)),
