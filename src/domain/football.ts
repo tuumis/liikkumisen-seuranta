@@ -17,9 +17,11 @@ import type {
   ISODate,
   Period,
   PlannedSession,
+  PlayedState,
   Session,
   UUID,
 } from './types';
+import { DEFAULT_GAME_WARMUP_MIN } from './intensity';
 
 export type GameOutcome = 'W' | 'D' | 'L';
 
@@ -61,6 +63,10 @@ export interface GameRow {
   playerGoals?: number;
   format?: GameFormat;
   positions?: FieldPosition[];
+  /** Pelin pituus ilman lämmittelyä (peli: kesto − lämmittely; turnaus: otteluohjelman pelin pituus × pelit). */
+  gameMin?: number;
+  /** Pelasiko (ei / osan / koko pelin), jos merkitty. */
+  played?: PlayedState;
 }
 
 export interface GameSummary {
@@ -123,6 +129,8 @@ export function gameRows(sessions: Session[], details: Map<UUID, FootballDetails
     if (kind === 'game') {
       rows.push({
         ...extra,
+        gameMin: Math.max(0, s.durationMin - (s.warmupMin ?? DEFAULT_GAME_WARMUP_MIN)),
+        ...(fd?.played ? { played: fd.played } : {}),
         sessionId: s.id,
         date: s.date,
         kind,
@@ -151,6 +159,8 @@ export function gameRows(sessions: Session[], details: Map<UUID, FootballDetails
           outcome: outcomeOf(g.goalsFor, g.goalsAgainst),
           playedMin: g.playedMin,
           games: 1,
+          ...(fd.gameLengthMin ? { gameMin: fd.gameLengthMin } : {}),
+          ...(g.played ? { played: g.played } : {}),
           ...(g.time ? { time: g.time } : {}),
           ...(g.note ? { note: g.note } : {}),
           ...(g.playerGoals !== undefined ? { playerGoals: g.playerGoals } : {}),
@@ -166,6 +176,7 @@ export function gameRows(sessions: Session[], details: Map<UUID, FootballDetails
         team,
         playedMin: s.playedMin,
         games: Math.max(1, fd?.gamesCount ?? 1),
+        ...(fd?.gameLengthMin ? { gameMin: fd.gameLengthMin * Math.max(1, fd?.gamesCount ?? 1) } : {}),
         ...(fd?.playerGoals !== undefined ? { playerGoals: fd.playerGoals } : {}),
       });
     }
@@ -261,6 +272,55 @@ export function summarizeByPosition(rows: GameRow[]): GroupedSummary[] {
   return POSITIONS.map((p) => ({ key: p, label: POSITION_LABEL[p], summary: summarizeGames(rows.filter((r) => r.positions?.includes(p))) })).filter(
     (g) => g.summary.games > 0,
   );
+}
+
+/** Pelipaikat ja peliaika (SPEC 16): pelipaikkojen jakauma ja peliaikaosuus kausittain. */
+export interface PlaySummary {
+  games: number;
+  /** Pelit, joille on merkitty vähintään yksi pelipaikka. */
+  positionGames: number;
+  /** Pelit pelipaikoittain (peli lasketaan jokaiselle merkitylle paikalle). */
+  positions: Record<FieldPosition, number>;
+  /** Kentällä vietetty osuus peliajasta (0–1) peleistä, joista se tiedetään; null, jos ei yhtään. */
+  share: number | null;
+  /** Montako peliä osuus kattaa. */
+  shareGames: number;
+  /** Pelasiko-merkinnät: koko pelin, osan, ei pelannut. */
+  played: Record<PlayedState, number>;
+}
+
+/**
+ * Peliaikaosuus: tarkat minuutit / pelin pituus, tai "Koko pelin" = 1 ja "Ei pelannut" = 0;
+ * "Osan" ilman minuutteja ei kerro osuutta, joten se ei ole osuudessa mukana.
+ */
+export function playSummary(rows: GameRow[]): PlaySummary {
+  const positions: Record<FieldPosition, number> = { gk: 0, def: 0, mid: 0, fwd: 0 };
+  const played: Record<PlayedState, number> = { full: 0, part: 0, none: 0 };
+  let games = 0;
+  let positionGames = 0;
+  let onField = 0;
+  let length = 0;
+  let shareGames = 0;
+  for (const r of rows) {
+    games += r.games;
+    if (r.positions?.length) {
+      positionGames += r.games;
+      for (const p of new Set(r.positions)) positions[p] += r.games;
+    }
+    if (r.played) played[r.played] += r.games;
+    const len = r.gameMin;
+    if (!len || len <= 0) continue;
+    if (r.playedMin !== undefined && r.playedMin !== null) {
+      onField += Math.min(r.playedMin, len);
+      length += len;
+      shareGames += r.games;
+    } else if (r.played === 'full' || r.played === 'none') {
+      onField += r.played === 'full' ? len : 0;
+      length += len;
+      shareGames += r.games;
+    }
+  }
+  return { games, positionGames, positions, share: length > 0 ? onField / length : null, shareGames, played };
 }
 
 /** Kausi ja vuosi pelilistan suodatukseen ja rinnakkaisvertailuun. */

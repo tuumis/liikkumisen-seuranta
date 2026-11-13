@@ -8,7 +8,9 @@ import {
   LEVEL_LABEL,
   normalizeName,
   OUTCOME_LABEL,
+  playSummary,
   POSITION_LABEL,
+  POSITIONS,
   preferredName,
   seasonKey,
   summarizeBy,
@@ -17,7 +19,7 @@ import {
   type GameRow,
   type GroupedSummary,
 } from '../../domain/football';
-import type { Profile } from '../../domain/types';
+import type { PlayedState, Profile } from '../../domain/types';
 import { Button, Card, inputClass, EmptyState } from '../../ui/components';
 import { dayLabel } from '../../ui/format';
 import { num1 } from '../../ui/statusText';
@@ -128,9 +130,10 @@ export function GamesView({ profile, onBack }: { profile: Profile; onBack?: () =
       <Card title="Kokonaisuus">
         <SummaryBlock s={total} name={profile.name} />
       </Card>
+      <PlayCard rows={rows} />
       {byLevel.length > 0 && <GroupCard title="Taso (Elite · Kilpa · Haaste)" groups={byLevel} />}
       {byFormat.length > 0 && <GroupCard title="Pelimuoto" groups={byFormat} />}
-      {byPosition.length > 0 && <GroupCard title="Pelipaikka" groups={byPosition} />}
+      {byPosition.length > 0 && <GroupCard title="Tulokset pelipaikoittain" groups={byPosition} />}
       </div>
 
       <div className="space-y-4 lg:col-span-7 xl:col-span-8">
@@ -239,6 +242,68 @@ function SummaryBlock({ s, name }: { s: ReturnType<typeof summarizeGames>; name:
         {s.playedMinTotal} min{s.playedMinAvg !== null && ` · ka. ${num1(Math.round(s.playedMinAvg * 10) / 10)}/peli`}
       </dd>
     </dl>
+  );
+}
+
+const PLAYED_TEXT: Record<PlayedState, string> = { full: 'koko pelin', part: 'osan', none: 'ei pelannut' };
+
+/** Pelipaikat ja peliaika kausittain (uusin ensin): yhden värin palkit ja suorat arvot. */
+function PlayCard({ rows }: { rows: GameRow[] }) {
+  const seasons = [...new Set(rows.map((r) => seasonKey(r.date)))].reverse();
+  const blocks = seasons.map((k) => ({ key: k, s: playSummary(rows.filter((r) => seasonKey(r.date) === k)) })).filter((b) => b.s.positionGames > 0 || b.s.shareGames > 0);
+  if (!blocks.length) return null;
+  return (
+    <Card title="Pelipaikat ja peliaika">
+      <div className="space-y-4">
+        {blocks.map(({ key, s }) => (
+          <section key={key} aria-label={`${key}: pelipaikat ja peliaika`}>
+            <div className="flex items-baseline justify-between gap-2">
+              <h3 className="text-sm font-semibold text-slate-900">{key}</h3>
+              <span className="text-xs tabular-nums text-slate-500">
+                {s.games} {s.games === 1 ? 'peli' : 'peliä'}
+              </span>
+            </div>
+            {s.share !== null && (
+              <p className="mt-1 text-sm text-slate-700">
+                Kentällä <strong className="tabular-nums">{Math.round(s.share * 100)} %</strong> peliajasta
+                <span className="text-xs text-slate-500">
+                  {' '}
+                  ({s.shareGames}/{s.games} pelistä tiedossa)
+                </span>
+              </p>
+            )}
+            {s.played.full + s.played.part + s.played.none > 0 && (
+              <p className="text-xs text-slate-500">
+                {(['full', 'part', 'none'] as const)
+                  .filter((k) => s.played[k] > 0)
+                  .map((k) => `${PLAYED_TEXT[k]} ${s.played[k]}`)
+                  .join(' · ')}
+              </p>
+            )}
+            {s.positionGames > 0 && (
+              <ul className="mt-2 space-y-1">
+                {POSITIONS.map((p) => {
+                  const n = s.positions[p];
+                  const pct = Math.round((n / s.positionGames) * 100);
+                  return (
+                    <li key={p} className="grid grid-cols-[6.5rem_1fr_3.5rem] items-center gap-2 text-xs">
+                      <span className="text-slate-700">{POSITION_LABEL[p]}</span>
+                      <span className="h-2.5 overflow-hidden rounded-full bg-[var(--viz-track)]" aria-hidden>
+                        <span className="block h-full rounded-full bg-[var(--viz-logged)]" style={{ width: `${pct}%` }} />
+                      </span>
+                      <span className="text-right tabular-nums text-slate-700">
+                        {n} <span className="text-slate-500">({pct} %)</span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {s.positionGames > 0 && s.positionGames < s.games && <p className="mt-1 text-[11px] text-slate-500">Pelipaikka merkitty {s.positionGames}/{s.games} peliin; peli lasketaan jokaiselle merkitylle paikalle.</p>}
+          </section>
+        ))}
+      </div>
+    </Card>
   );
 }
 

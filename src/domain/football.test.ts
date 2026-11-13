@@ -210,3 +210,42 @@ describe('näyttönimi', () => {
     expect(preferredName(['Fc Kasi', 'FC Kasi', 'Fc Kasi'])).toBe('Fc Kasi');
   });
 });
+
+describe('pelipaikat ja peliaika (playSummary)', () => {
+  const base = { sessionId: 's', date: '2026-10-01', kind: 'game' as const, games: 1 };
+  it('pelipaikat lasketaan peleittäin, osuus minuuteista tai Koko/Ei-merkinnästä', async () => {
+    const { playSummary } = await import('./football');
+    const s = playSummary([
+      { ...base, positions: ['def', 'mid'], playedMin: 30, gameMin: 45 },
+      { ...base, positions: ['mid'], played: 'full', gameMin: 45 },
+      { ...base, played: 'none', gameMin: 45 },
+      { ...base, played: 'part', gameMin: 45 }, // osan ilman minuutteja: ei osuudessa
+      { ...base, playedMin: 60, gameMin: 45 }, // yli pelin pituuden rajataan
+    ]);
+    expect(s.games).toBe(5);
+    expect(s.positionGames).toBe(2);
+    expect(s.positions).toEqual({ gk: 0, def: 1, mid: 2, fwd: 0 });
+    expect(s.shareGames).toBe(4);
+    expect(s.share).toBeCloseTo((30 + 45 + 0 + 45) / (45 * 4));
+    expect(s.played).toEqual({ full: 1, part: 1, none: 1 });
+  });
+  it('ilman pelin pituutta ei osuutta', async () => {
+    const { playSummary } = await import('./football');
+    expect(playSummary([{ ...base, playedMin: 20 }]).share).toBeNull();
+  });
+  it('gameRows: pelin pituus = kesto − lämmittely, turnauksessa otteluohjelman pelin pituus', () => {
+    const M0 = { light: 10, moderate: 20, vigorous: 30 };
+    const g = session({ id: 'g', activityTypeId: activityTypeId('football_game'), minutes: M0, warmupMin: 15, date: '2026-10-01' });
+    const t = session({ id: 't', activityTypeId: activityTypeId('football_tournament'), minutes: M0, date: '2026-10-02' });
+    const details = new Map<string, FootballDetails>([
+      ['g', { sessionId: 'g', attendance: 'full', focusTags: [], played: 'full' } as unknown as FootballDetails],
+      ['t', { sessionId: 't', attendance: 'full', focusTags: [], gameLengthMin: 20, games: [{ played: 'part' }, { playedMin: 10 }] } as unknown as FootballDetails],
+    ]);
+    const rows = gameRows([g, t], details, typesMap());
+    expect(rows.map((r) => [r.gameMin, r.played])).toEqual([
+      [45, 'full'],
+      [20, 'part'],
+      [20, undefined],
+    ]);
+  });
+});
