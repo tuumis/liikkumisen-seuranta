@@ -7,7 +7,7 @@ import { GAME_FORMATS, LEVEL_LABEL } from '../../domain/football';
 import type { ActivityType, GameFormat, GameLevel, Profile, Session, Team } from '../../domain/types';
 import { repo, type FixtureEntry } from '../../db/repositories';
 import { Avatar, PhotoPicker } from '../../ui/Avatar';
-import { Button, Card, inputClass } from '../../ui/components';
+import { Button, Card, inputClass, EmptyState } from '../../ui/components';
 import { Segmented, ToggleChip } from '../../ui/controls';
 import { dayLabel, formatDate } from '../../ui/format';
 import { SKIP_REASON_LABEL } from '../../ui/labels';
@@ -135,7 +135,9 @@ function CalendarView({ profile, onEdit }: { profile: Profile; onEdit: (e: Fixtu
     <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
       <Card title={`Tulevat pelit ja turnaukset (${upcoming.length})`}>
         {upcoming.length === 0 ? (
-          <p className="text-sm text-slate-600">Kalenteri on tyhjä. Lisää tuleva peli tai turnaus yläreunan painikkeista.</p>
+          <EmptyState art="calendar" title="Kalenteri on tyhjä" compact>
+            Lisää tuleva peli tai turnaus yläreunan painikkeista.
+          </EmptyState>
         ) : (
           <div className="space-y-4">
             {[...byMonth.entries()].map(([month, list]) => (
@@ -353,7 +355,11 @@ function TeamsView({ profile }: { profile: Profile }) {
           </div>
         </form>
       )}
-      {teams?.length === 0 && !editing && <p className="text-sm text-slate-600">Ei vielä joukkueita. Lisää lapsen joukkue, niin se esitäyttyy peleihin.</p>}
+      {teams?.length === 0 && !editing && (
+        <EmptyState art="shirt" title="Ei vielä joukkueita" compact>
+          Lisää lapsen joukkue, niin se esitäyttyy peleihin.
+        </EmptyState>
+      )}
       <ul className="divide-y divide-slate-100">
         {teams?.map((t) => (
           <li key={t.id} className={`flex items-center gap-3 py-3 ${t.archived ? 'opacity-50' : ''}`}>

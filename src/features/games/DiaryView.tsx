@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 import { footballKindOf, LEVEL_LABEL, OUTCOME_LABEL, outcomeOf, POSITION_LABEL } from '../../domain/football';
 import type { ActivityType, FootballDetails, Profile, Session } from '../../domain/types';
 import { repo } from '../../db/repositories';
-import { Button, Card, inputClass } from '../../ui/components';
+import { Button, Card, inputClass, EmptyState } from '../../ui/components';
 import { ToggleChip } from '../../ui/controls';
 import { dayLabel, formatDate } from '../../ui/format';
 import { ENJOYMENT_LABEL, FOCUS_TAG_LABEL } from '../../ui/labels';
@@ -76,7 +76,15 @@ export function DiaryView({ profile }: { profile: Profile }) {
 
       {entries.length === 0 ? (
         <Card>
-          <p className="text-sm text-slate-600">{query || onlyCommented || filter !== 'all' ? 'Ei osumia valinnoilla.' : 'Ei vielä jalkapallokertoja.'}</p>
+          {query || onlyCommented || filter !== 'all' ? (
+            <EmptyState art="search" title="Ei osumia valinnoilla" compact>
+              Kokeile toista hakusanaa tai poista rajaukset.
+            </EmptyState>
+          ) : (
+            <EmptyState art="ball" title="Ei vielä jalkapallokertoja" compact>
+              Treenit ja pelit kirjataan Viikko-näkymän +-painikkeella; ne näkyvät tässä päiväkirjana.
+            </EmptyState>
+          )}
         </Card>
       ) : (
         [...byMonth.entries()].map(([month, list]) => (

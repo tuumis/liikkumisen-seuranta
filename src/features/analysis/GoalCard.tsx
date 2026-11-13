@@ -8,7 +8,7 @@ import type { PeriodReport } from '../../domain/report';
 import type { DualMeasure, Measure, Settings } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { DEFAULT_SETTINGS } from '../../domain/recommendations';
-import { EstimateBadge } from '../../ui/components';
+import { EstimateBadge, EmptyState } from '../../ui/components';
 import { formatDate } from '../../ui/format';
 import { GROUP_LABEL } from '../../ui/labels';
 import { aboutMinutes, num1, percent, STATUS_CLASS, statusSentence } from '../../ui/statusText';
@@ -38,7 +38,9 @@ export function GoalCard({ report, variant }: { report: PeriodReport; variant: '
   if (!ev.evaluable) {
     return (
       <div className="space-y-1 text-sm text-slate-600">
-        <p>Ei vielä vertailtavia päiviä tällä jaksolla.</p>
+        <EmptyState art="chart" title="Ei vielä vertailtavia päiviä" compact>
+          Vertailu suosituksiin näkyy, kun jaksolle on kirjattu liikuntaa.
+        </EmptyState>
         {report.excluded.beforeTracking > 0 && <p className="text-xs">Seuranta alkoi {formatDate(report.trackingStart, 'd.M.yyyy')}.</p>}
         {notes}
       </div>

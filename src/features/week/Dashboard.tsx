@@ -11,7 +11,7 @@ import type { ActivityType, ISODate, PlannedSession, Profile, Session, UUID } fr
 import { repo } from '../../db/repositories';
 import { EmptyState, SectionLabel } from '../../ui/components';
 import { dayLabel, formatDate } from '../../ui/format';
-import { IconBolt, IconBone, IconCalendarClock, IconHistory, IconLeaf } from '../../ui/icons';
+import { IconBolt, IconBone, IconLeaf } from '../../ui/icons';
 import { useMounted } from '../../ui/motion';
 import { Term } from '../../ui/glossary';
 import { Collapse, CollapseToggle, useCollapsible } from '../../ui/Collapse';
@@ -313,7 +313,7 @@ export function UpcomingCard({
       </div>
       <Collapse open={open}>
       {plans && list.length === 0 ? (
-        <EmptyState icon={<IconCalendarClock size="1.4rem" />} title="Ei suunniteltuja kertoja">
+        <EmptyState art="calendar" title="Ei suunniteltuja kertoja">
           Lisää toistuvat treenit Asetusten Viikkorytmiin, niin ne näkyvät tässä valmiina kuitattaviksi.
         </EmptyState>
       ) : (
@@ -368,7 +368,7 @@ export function RecentCard({ profile, today, types, onOpen }: { profile: Profile
       </div>
       <Collapse open={open}>
       {sessions && list.length === 0 ? (
-        <EmptyState icon={<IconHistory size="1.4rem" />} title="Ei vielä kirjauksia">
+        <EmptyState art="sprout" title="Ei vielä kirjauksia">
           Kirjatut liikuntakerrat näkyvät tässä uusin ensin.
         </EmptyState>
       ) : (

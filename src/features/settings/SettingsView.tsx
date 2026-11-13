@@ -6,7 +6,7 @@ import { repo, type DeviceRole } from '../../db/repositories';
 import { requestPersistentStorage } from '../../db/storage';
 import { Avatar } from '../../ui/Avatar';
 import { IconChevronRight, IconContrast, IconDevices, IconLock, IconRepeat, IconSun, IconTarget, IconUser } from '../../ui/icons';
-import { Button, Card } from '../../ui/components';
+import { Button, Card, EmptyState } from '../../ui/components';
 import { GROUP_LABEL, MONTHS } from '../../ui/labels';
 import { today } from '../../ui/today';
 import { ProfileForm, type ProfileFormValues } from './ProfileForm';
@@ -173,7 +173,11 @@ function ProfilesSection({ onProfileCreated }: { onProfileCreated: (id: string) 
         </Button>
       }
     >
-      {profiles?.length === 0 && <p className="text-sm text-slate-600">Ei vielä profiileja. Lisää seurattava henkilö.</p>}
+      {profiles?.length === 0 && (
+        <EmptyState art="people" title="Ei vielä profiileja" compact>
+          Lisää seurattava henkilö: lapsi tai aikuinen.
+        </EmptyState>
+      )}
       <ul className="divide-y divide-slate-100">
         {profiles?.map((p) => (
           <li key={p.id} className={`flex items-center gap-3 py-3 ${p.archived ? 'opacity-50' : ''}`}>

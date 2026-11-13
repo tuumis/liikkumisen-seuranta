@@ -1,6 +1,7 @@
 // Perus-UI-komponentit design systemin tokeneilla (src/index.css): kortit, painikkeet, kentät, merkit.
 
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { Illustration, type IllustrationName } from './illustrations';
 
 export function Card({
   title,
@@ -79,11 +80,11 @@ export function EstimateBadge() {
   );
 }
 
-/** Tyhjä tila: ikoni, otsikko ja ohje (sekä valinnainen toiminto). */
-export function EmptyState({ icon, title, children, action }: { icon?: ReactNode; title: string; children?: ReactNode; action?: ReactNode }) {
+/** Tyhjä tila: kuvitus tai ikoni, otsikko ja ohje (sekä valinnainen toiminto). */
+export function EmptyState({ icon, art, title, children, action, compact }: { icon?: ReactNode; art?: IllustrationName; title: string; children?: ReactNode; action?: ReactNode; compact?: boolean }) {
   return (
-    <div className="flex flex-col items-center px-4 py-8 text-center">
-      {icon && <div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-green-100 text-green-800">{icon}</div>}
+    <div className={`flex flex-col items-center px-4 text-center ${compact ? 'py-4' : 'py-8'}`}>
+      {art ? <Illustration name={art} className="anim-pop mb-2" /> : icon && <div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-green-100 text-green-800">{icon}</div>}
       <div className="font-display text-base font-semibold text-slate-900">{title}</div>
       {children && <div className="mt-1 max-w-sm text-sm text-slate-600">{children}</div>}
       {action && <div className="mt-4">{action}</div>}

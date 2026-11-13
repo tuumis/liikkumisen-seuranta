@@ -10,7 +10,6 @@ import type { ActivityType, Period, Profile, UUID } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { EmptyState, SectionLabel } from '../../ui/components';
 import { dayLabel, formatDate } from '../../ui/format';
-import { IconSparkle } from '../../ui/icons';
 import { ENJOYMENT_LABEL, FOCUS_TAG_LABEL, goalsLabel } from '../../ui/labels';
 import { useCountUp } from '../../ui/motion';
 import { TypeIcon } from '../week/Dashboard';
@@ -108,7 +107,7 @@ export function HighlightsCard({ profile, week, className = '' }: { profile: Pro
           <div className="skeleton h-16" />
         </div>
       ) : h.rating.count === 0 && h.comments.length === 0 ? (
-        <EmptyState icon={<IconSparkle size="1.4rem" />} title={`Ei arvioita eikä kommentteja ${scopeLabel}`}>
+        <EmptyState art="notebook" title={`Ei arvioita eikä kommentteja ${scopeLabel}`}>
           Anna jalkapallokerralle tähtiarvio tai kirjoita kommentti (Lisätiedot), niin yhteenveto näkyy tässä.
         </EmptyState>
       ) : (

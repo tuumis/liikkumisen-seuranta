@@ -18,7 +18,7 @@ import {
   type GroupedSummary,
 } from '../../domain/football';
 import type { Profile } from '../../domain/types';
-import { Button, Card, inputClass } from '../../ui/components';
+import { Button, Card, inputClass, EmptyState } from '../../ui/components';
 import { dayLabel } from '../../ui/format';
 import { num1 } from '../../ui/statusText';
 import { goalsLabel } from '../../ui/labels';
@@ -135,7 +135,11 @@ export function GamesView({ profile, onBack }: { profile: Profile; onBack?: () =
 
       <div className="space-y-4 lg:col-span-7 xl:col-span-8">
       <Card title={`Pelit (${total.games})`} action={rows.length > 0 ? <Button variant="ghost" onClick={exportCsv}>Vie CSV</Button> : undefined}>
-        {groups.length === 0 && <p className="text-sm text-slate-500">Ei pelejä valinnoilla.</p>}
+        {groups.length === 0 && (
+          <EmptyState art="ball" title="Ei pelejä valinnoilla" compact>
+            Pelatut pelit ja turnaukset näkyvät tässä tuloksineen.
+          </EmptyState>
+        )}
         <ul className="space-y-2">
           {groups.map((g) => (
             <li key={g.key}>
