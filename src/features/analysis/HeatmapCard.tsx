@@ -7,9 +7,10 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { repo } from '../../db/repositories';
 import { dayTotals, isEstimateConfirmation, trackingStart } from '../../domain/aggregate';
 import { parseISODate, toISODate } from '../../domain/dates';
+import { computeSessionMinutes } from '../../domain/intensity';
 import { DAY_TARGET } from '../../domain/dayTarget';
 import { recommendationGroup } from '../../domain/groups';
-import { heatColumns, heatLevel, heatRange, heatStats, last12Months, LEVEL_LABELS, monthLabels, type HeatDay, type HeatLevel, type HeatMeasure } from '../../domain/heatmap';
+import { futureRange, heatColumns, heatLevel, heatRange, heatStats, last12Months, LEVEL_LABELS, monthLabels, type HeatDay, type HeatLevel, type HeatMeasure } from '../../domain/heatmap';
 import { holidayDates } from '../../domain/holidays';
 import type { ActivityType, DayFlagReason, ISODate, Profile, Session } from '../../domain/types';
 import { Card } from '../../ui/components';
@@ -60,7 +61,10 @@ const MEASURE_TEXT: Record<HeatMeasure, string> = {
 };
 
 interface HeatData {
+  /** Toteutuneet päivät (seurannan alusta tähän päivään); tunnusluvut näistä. */
   days: HeatDay[];
+  /** Tulevat päivät suunnitelmana (avoimet suunnitellut kerrat, valinnalla myös arvio). */
+  future: HeatDay[];
   flags: Map<ISODate, DayFlagReason>;
   holidays: Set<ISODate>;
 }
@@ -69,15 +73,16 @@ function useHeatData(profile: Profile, start: ISODate, end: ISODate, withEstimat
   const today = todayFn();
   const pid = profile.id;
   const raw = useLiveQuery(async () => {
-    const [sessions, estimates, flags, types, settings] = await Promise.all([
+    const [sessions, plans, estimates, flags, types, settings] = await Promise.all([
       repo.sessionsInRange(pid, start, end),
+      end > today ? repo.plansInRange(pid, start, end) : Promise.resolve([]),
       repo.listEstimates(pid),
       repo.dayFlagsInRange(pid, start, end),
       repo.listActivityTypes({ includeArchived: true }),
       repo.getSettings(),
     ]);
-    return { sessions, estimates, flags, types, holidays: settings.holidays };
-  }, [pid, start, end]);
+    return { sessions, plans, estimates, flags, types, holidays: settings.holidays };
+  }, [pid, start, end, today]);
 
   return useMemo(() => {
     if (!raw) return undefined;
@@ -104,8 +109,41 @@ function useHeatData(profile: Profile, start: ISODate, end: ISODate, withEstimat
         target: DAY_TARGET[recommendationGroup(profile, date)],
       };
     });
+    // Tulevat päivät: avoimet suunnitellut kerrat kirjausten tapaan (lajin tyypillinen teho, tavallinen ponnistelu).
+    const plansByDate = new Map<ISODate, Session[]>();
+    for (const p of raw.plans) {
+      if (p.deletedAt || p.status !== 'open' || p.date <= today) continue;
+      const type = types.get(p.activityTypeId);
+      if (!type) continue;
+      const pseudo = {
+        id: p.id,
+        profileId: p.profileId,
+        activityTypeId: p.activityTypeId,
+        date: p.date,
+        durationMin: p.durationMin,
+        effort: 0,
+        muscle: false,
+        bone: false,
+        minutes: computeSessionMinutes(type, { durationMin: p.durationMin, effort: 0 }).minutes,
+      } as unknown as Session;
+      const list = plansByDate.get(p.date);
+      if (list) list.push(pseudo);
+      else plansByDate.set(p.date, [pseudo]);
+    }
+    const future = futureRange(start, end, trackingStart(profile), today).map((date): HeatDay => {
+      const list = plansByDate.get(date) ?? [];
+      const t = dayTotals(date, list, estimates, types, holidays.has(date));
+      return {
+        date,
+        mvpa: withEstimates ? t.mvpaCombined : t.mvpa,
+        total: withEstimates ? t.totalCombined : t.total,
+        sessions: list.length,
+        target: DAY_TARGET[recommendationGroup(profile, date)],
+        planned: true,
+      };
+    });
     const flags = new Map<ISODate, DayFlagReason>(raw.flags.filter((f) => !f.deletedAt).map((f) => [f.date, f.reason]));
-    return { days, flags, holidays };
+    return { days, future, flags, holidays };
   }, [raw, withEstimates, profile, pid, start, end, today]);
 }
 
@@ -126,7 +164,12 @@ export function HeatmapCard({ profile }: { profile: Profile }) {
 
   const thisYear = parseISODate(today).year;
   const firstYear = Math.max(parseISODate(trackingStart(profile)).year, thisYear - 4);
-  const years = Array.from({ length: Math.max(0, thisYear - firstYear + 1) }, (_, i) => thisYear - i);
+  const nextYearPlans = useLiveQuery(
+    async () => (await repo.plansInRange(profile.id, toISODate(thisYear + 1, 1, 1), toISODate(thisYear + 1, 12, 31))).some((p) => p.status === 'open'),
+    [profile.id, thisYear],
+  );
+  const lastYear = nextYearPlans ? thisYear + 1 : thisYear;
+  const years = Array.from({ length: Math.max(0, lastYear - firstYear + 1) }, (_, i) => lastYear - i);
   const range = periodKey === '12' ? last12Months(today) : { start: toISODate(Number(periodKey), 1, 1), end: toISODate(Number(periodKey), 12, 31) };
   const withEstimates = prefs.measure !== 'sessions' && prefs.estimates;
   const data = useHeatData(profile, range.start, range.end, withEstimates);
@@ -236,7 +279,8 @@ const ROW_LABELS: Record<number, string> = { 0: 'Ma', 2: 'Ke', 4: 'Pe', 6: 'Su' 
 function HeatBody({ data, start, end, measure, big }: { data: HeatData; start: ISODate; end: ISODate; measure: HeatMeasure; big: boolean }) {
   const cols = useMemo(() => heatColumns(start, end), [start, end]);
   const months = useMemo(() => monthLabels(cols), [cols]);
-  const byDate = useMemo(() => new Map(data.days.map((d) => [d.date, d])), [data.days]);
+  const all = useMemo(() => [...data.days, ...data.future], [data.days, data.future]);
+  const byDate = useMemo(() => new Map(all.map((d) => [d.date, d])), [all]);
   const stats = useMemo(() => heatStats(data.days, measure), [data.days, measure]);
   const [focus, setFocus] = useState<ISODate>();
   const scroller = useRef<HTMLDivElement>(null);
@@ -262,9 +306,9 @@ function HeatBody({ data, start, end, measure, big }: { data: HeatData; start: I
 
   const levels = useMemo(() => {
     const m = new Map<ISODate, HeatLevel>();
-    for (const d of data.days) m.set(d.date, heatLevel(measure, d));
+    for (const d of all) m.set(d.date, heatLevel(measure, d));
     return m;
-  }, [data.days, measure]);
+  }, [all, measure]);
 
   const pct = (d: HeatDay) => (d.target > 0 ? Math.round((Math.round(d.mvpa) / d.target) * 100) : 0);
   const detail = (date: ISODate) => {
@@ -272,11 +316,12 @@ function HeatBody({ data, start, end, measure, big }: { data: HeatData; start: I
     const extras = [data.flags.has(date) ? FLAG_LABEL[data.flags.get(date)!] : '', data.holidays.has(date) ? 'loma' : ''].filter(Boolean);
     const when = formatDate(date, 'EEEEEE d.M.yyyy');
     if (!d) return `${when} · ${date > todayFn() ? 'tulossa' : 'ennen seurannan alkua'}`;
+    if (d.planned && d.total <= 0) return `${when} · ei suunniteltuja kertoja`;
     const parts = [
-      `${when}`,
+      d.planned ? `${when} · suunniteltu` : `${when}`,
       `reipas ja rasittava ${Math.round(d.mvpa)} min (${pct(d)} % suosituksesta)`,
       `kaikki liikunta ${Math.round(d.total)} min`,
-      d.sessions === 1 ? '1 kerta' : `${d.sessions} kertaa`,
+      d.planned ? (d.sessions === 1 ? '1 suunniteltu kerta' : `${d.sessions} suunniteltua kertaa`) : d.sessions === 1 ? '1 kerta' : `${d.sessions} kertaa`,
       ...extras,
     ];
     return parts.join(' · ');
@@ -314,18 +359,22 @@ function HeatBody({ data, start, end, measure, big }: { data: HeatData; start: I
               const x = ci * STEP;
               const y = HEAD_H + ri * STEP;
               const on = focus === date;
+              const plan = byDate.get(date)?.planned === true;
+              // Tuleva päivä suunnitelmin: ontto ruutu, reunaviiva tason värillä (viiva ruudun sisäpuolella).
+              const hollow = plan && lvl !== undefined && lvl > 0;
+              const inset = hollow ? 0.9 : 0;
               return (
                 <rect
                   key={date}
-                  x={x}
-                  y={y}
-                  width={CELL}
-                  height={CELL}
+                  x={x + inset}
+                  y={y + inset}
+                  width={CELL - inset * 2}
+                  height={CELL - inset * 2}
                   rx={2.5}
-                  fill={lvl === undefined ? 'var(--viz-track)' : LEVEL_FILL[lvl]}
-                  opacity={lvl === undefined ? 0.4 : 1}
-                  stroke={on ? 'var(--ink)' : data.flags.has(date) && lvl !== undefined ? 'var(--viz-estimate)' : 'none'}
-                  strokeWidth={on ? 1.6 : 1.1}
+                  fill={lvl === undefined || (plan && !hollow) ? 'var(--viz-track)' : hollow ? 'var(--surface)' : LEVEL_FILL[lvl]}
+                  opacity={lvl === undefined || (plan && !hollow) ? 0.4 : 1}
+                  stroke={on ? 'var(--ink)' : hollow ? LEVEL_FILL[lvl] : data.flags.has(date) && lvl !== undefined ? 'var(--viz-estimate)' : 'none'}
+                  strokeWidth={on ? 1.6 : hollow ? 1.8 : 1.1}
                   onPointerEnter={() => setFocus(date)}
                   onClick={() => setFocus(date)}
                   className="cursor-pointer"
@@ -352,6 +401,12 @@ function HeatBody({ data, start, end, measure, big }: { data: HeatData; start: I
             />
           ))}
           <span className="ml-1">Enemmän</span>
+          {data.future.some((d) => d.total > 0) && (
+            <span className="ml-3 inline-flex items-center gap-1.5">
+              <span className="size-3.5 rounded-[4px] border-2" style={{ borderColor: LEVEL_FILL[3] }} aria-hidden />
+              suunniteltu
+            </span>
+          )}
         </div>
       </div>
       <p className="-mt-2 text-right text-[11px] text-slate-500">Asteikko: {['ei liikuntaa', ...LEVEL_LABELS[measure]].join(' · ')}</p>
@@ -362,6 +417,7 @@ function HeatBody({ data, start, end, measure, big }: { data: HeatData; start: I
         <Stat label="Pisin putki" value={`${stats.longestStreak} pv`} sub="peräkkäin" big={big} />
         <Stat label="Suositus täyttyi" value={`${stats.targetDays} pv`} sub="reipas ja rasittava" big={big} />
       </div>
+      {data.future.length > 0 && <p className="-mt-1 text-xs text-slate-500">Tunnusluvut lasketaan toteutuneista päivistä; suunnitellut päivät eivät ole mukana.</p>}
     </div>
   );
 }

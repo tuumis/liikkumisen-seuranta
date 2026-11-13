@@ -1,7 +1,7 @@
 // Aktiivisuuskartta (SPEC 16): tasot, ruudukko, kuukausiotsikot ja putket.
 
 import { describe, expect, it } from 'vitest';
-import { heatColumns, heatLevel, heatRange, heatStats, last12Months, longestStreak, monthLabels, type HeatDay } from './heatmap';
+import { futureRange, heatColumns, heatLevel, heatRange, heatStats, last12Months, longestStreak, monthLabels, type HeatDay } from './heatmap';
 
 const day = (p: Partial<HeatDay>): HeatDay => ({ date: '2026-01-01', mvpa: 0, total: 0, sessions: 0, target: 60, ...p });
 
@@ -61,6 +61,13 @@ describe('ruudukko', () => {
   it('arvot vain seurannan alusta tähän päivään', () => {
     expect(heatRange('2026-01-01', '2026-12-31', '2026-09-01', '2026-09-03')).toEqual(['2026-09-01', '2026-09-02', '2026-09-03']);
     expect(heatRange('2025-01-01', '2025-12-31', '2026-09-01', '2026-09-03')).toEqual([]);
+  });
+  it('tulevat päivät huomisesta jakson loppuun', () => {
+    expect(futureRange('2026-01-01', '2026-12-31', '2026-09-01', '2026-12-29')).toEqual(['2026-12-30', '2026-12-31']);
+    expect(futureRange('2027-01-01', '2027-12-31', '2026-09-01', '2026-11-13')).toHaveLength(365);
+    expect(futureRange('2025-01-01', '2025-12-31', '2025-03-01', '2026-11-13')).toEqual([]);
+    // Seuranta alkaa vasta tulevaisuudessa: tulevat päivät vasta siitä.
+    expect(futureRange('2026-01-01', '2026-12-31', '2026-12-30', '2026-11-13')).toEqual(['2026-12-30', '2026-12-31']);
   });
 });
 

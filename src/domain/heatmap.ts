@@ -20,6 +20,8 @@ export interface HeatDay {
   sessions: number;
   /** Päivän tavoite (reipas + rasittava, min). */
   target: number;
+  /** Tuleva päivä: arvot ovat suunniteltuja kertoja (ja valinnalla arviota), eivät toteumaa. */
+  planned?: boolean;
 }
 
 /** Tason rajat näkyviin selitteeseen (tasot 1–4). */
@@ -122,6 +124,13 @@ export function heatRange(start: ISODate, end: ISODate, trackingStart: ISODate, 
   const from = start > trackingStart ? start : trackingStart;
   const to = end < today ? end : today;
   return from <= to ? datesBetween(from, to) : [];
+}
+
+/** Jakson tulevat päivät (huomisesta jakson loppuun): näytetään suunnitelmana, ei lasketa tunnuslukuihin. */
+export function futureRange(start: ISODate, end: ISODate, trackingStart: ISODate, today: ISODate): ISODate[] {
+  const tomorrow = addDays(today, 1);
+  const from = [start, trackingStart, tomorrow].reduce((a, b) => (b > a ? b : a));
+  return from <= end ? datesBetween(from, end) : [];
 }
 
 /** Viimeiset 12 kk: 52 täyttä viikkoa ja kuluva viikko tähän päivään asti. */
