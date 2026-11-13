@@ -6,7 +6,10 @@ import type { DeviceId, ISODate, PlannedSession, TemplateItem, Timestamp } from 
 
 /** Takautuvan luonnin enimmäismäärä: ei kasaa lomien jälkeen. */
 export const MAX_BACKFILL_DAYS = 14;
-/** Tulevia viikkoja voi selata ja suunnitella enintään näin pitkälle. */
+/**
+ * Näin pitkälle tulevat viikot suunnitellaan yhtenäisenä jaksona. Kauempana olevat viikot suunnitellaan
+ * vain selattaessa, viikko kerrallaan (`farWeekPlanning`).
+ */
 export const MAX_WEEKS_AHEAD = 8;
 
 /** Oletusraja: nykyisen viikon +1 sunnuntai. */
@@ -18,6 +21,13 @@ export function defaultPlanningThrough(today: ISODate): ISODate {
 export function planningThroughForWeek(today: ISODate, viewedDate: ISODate): ISODate {
   const max = endOfIsoWeek(addDays(today, 7 * MAX_WEEKS_AHEAD));
   return maxDate(defaultPlanningThrough(today), minDate(endOfIsoWeek(viewedDate), max));
+}
+
+/** Yli +8 viikon päässä selattu viikko: suunnitellaan vain se (ma–su); muuten undefined. */
+export function farWeekPlanning(today: ISODate, viewedDate: ISODate): { from: ISODate; through: ISODate } | undefined {
+  const through = endOfIsoWeek(viewedDate);
+  if (through <= endOfIsoWeek(addDays(today, 7 * MAX_WEEKS_AHEAD))) return undefined;
+  return { from: addDays(through, -6), through };
 }
 
 /**

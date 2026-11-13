@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AppDB } from './schema';
 import { createRepositories, type Repositories, type TemplateItemInput } from './repositories';
 import { activityTypeId, plannedSessionId, sessionIdFromPlanned } from '../domain/ids';
-import { defaultPlanningThrough, planningFrom, planningThroughForWeek, templateItemDates } from '../domain/planning';
+import { defaultPlanningThrough, farWeekPlanning, planningFrom, planningThroughForWeek, templateItemDates } from '../domain/planning';
 
 let n = 0;
 let db: AppDB;
@@ -425,5 +425,21 @@ describe('viikkorytmi kahdella laitteella (käyttäjän havainto 13.11.2026)', (
     const a = (await db.plannedSessions.toArray()).sort((x, y) => x.id.localeCompare(y.id));
     const b = (await db2.plannedSessions.toArray()).sort((x, y) => x.id.localeCompare(y.id));
     expect(b).toEqual(a);
+  });
+});
+
+describe('kaukainen tuleva viikko (käyttäjän havainto 13.11.2026)', () => {
+  it('yli +8 viikon päässä selattu viikko saa kerrat; väliin jääviä ei luoda eikä merkintä siirry', async () => {
+    const item = await repo.createTemplateItem('p1', tueThu(), WED);
+    await repo.ensurePlanned('p1', defaultPlanningThrough(WED), WED);
+    expect(farWeekPlanning(WED, '2026-12-30')).toBeUndefined(); // +7 vko: yhtenäinen jakso riittää
+    const far = farWeekPlanning(WED, '2027-01-27')!; // vk 4
+    expect(far).toEqual({ from: '2027-01-25', through: '2027-01-31' });
+    await repo.ensurePlanned('p1', far.through, WED, { from: far.from });
+    expect((await repo.plansInRange('p1', '2027-01-25', '2027-01-31')).map((p) => p.date)).toEqual(['2027-01-26', '2027-01-28']);
+    expect(await repo.plansInRange('p1', '2026-12-07', '2027-01-24')).toEqual([]);
+    expect(await repo.getPlannedThrough('p1')).toBe('2026-11-22');
+    expect(await repo.ensurePlanned('p1', far.through, WED, { from: far.from })).toBe(0);
+    expect(item.id).toBeDefined();
   });
 });

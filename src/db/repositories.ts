@@ -1617,8 +1617,8 @@ export function createRepositories(db: AppDB = defaultDb) {
     deleteSession,
     undoDelete,
     /** Pohjan suunnitelmat + lomapäivien koululiikunnan ohitus uusille kerroille. */
-    ensurePlanned: async (profileId: UUID, through: ISODate, today: ISODate) => {
-      const n = await planner.ensurePlanned(profileId, through, today);
+    ensurePlanned: async (profileId: UUID, through: ISODate, today: ISODate, only?: { from: ISODate }) => {
+      const n = await planner.ensurePlanned(profileId, through, today, only);
       if (n) await applyHolidaySkips();
       return n;
     },

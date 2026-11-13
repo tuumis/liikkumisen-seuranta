@@ -51,10 +51,13 @@ export function createPlanner(db: AppDB, deviceId: () => Promise<DeviceId>) {
    * tulevat avoimet, yksittäin muuttamattomat suunnitelmat korjataan pohjarivin nykyisen version mukaisiksi
    * (poistettu tai siirretty rivi, muuttunut kellonaika tai kesto).
    */
-  async function ensurePlanned(profileId: UUID, through: ISODate, today: ISODate): Promise<number> {
+  async function ensurePlanned(profileId: UUID, through: ISODate, today: ISODate, only?: { from: ISODate }): Promise<number> {
     return db.transaction('rw', db.templateItems, db.plannedSessions, db.meta, async () => {
       const done = await getPlannedThrough(profileId);
       const from = minDate(planningFrom(done, today), today);
+      // `only`: vain yksi kaukainen tuleva jakso (selattu viikko yli +8 viikon päässä). Väliin jääviä
+      // viikkoja ei luoda, eikä merkintää siirretä, jotta takautuva luonti (B6) toimii edelleen.
+      const createFrom = only ? maxDate(only.from, today) : from;
       const items = await db.templateItems.where('profileId').equals(profileId).toArray();
       const itemById = new Map(items.map((i) => [i.id, i]));
       const rows = await db.plannedSessions
@@ -73,7 +76,7 @@ export function createPlanner(db: AppDB, deviceId: () => Promise<DeviceId>) {
       let changed = 0;
       for (const item of items) {
         if (!item.active || item.deletedAt) continue;
-        for (const date of templateItemDates(item, from, through)) {
+        for (const date of templateItemDates(item, createFrom, through)) {
           const existing = byKey.get(planKey(item.id, date));
           if (!existing) {
             // Aikaleima ja tekijä pohjarivin versiosta: molemmat laitteet tuottavat saman tietueen, eikä
@@ -110,7 +113,7 @@ export function createPlanner(db: AppDB, deviceId: () => Promise<DeviceId>) {
           changed++;
         }
       }
-      await db.meta.put({ key: throughKey(profileId), value: done === undefined ? through : maxDate(done, through) });
+      if (!only) await db.meta.put({ key: throughKey(profileId), value: done === undefined ? through : maxDate(done, through) });
       return changed;
     });
   }

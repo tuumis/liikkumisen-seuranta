@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { addDays, datesBetween, isoWeek, startOfIsoWeek, weekPeriod } from '../../domain/dates';
 import { planAdherence } from '../../domain/adherence';
-import { planningThroughForWeek } from '../../domain/planning';
+import { farWeekPlanning, planningThroughForWeek } from '../../domain/planning';
 import { RECOMMENDATIONS } from '../../domain/recommendations';
 import type { ActivityType, DayFlag, ISODate, PlannedSession, Profile, RecommendationGroup, Session } from '../../domain/types';
 import { repo } from '../../db/repositories';
@@ -113,9 +113,15 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
   );
   const adherence = planAdherence(plans ?? [], sessions ?? [], today);
 
-  // Viikkonavigointi: suunnitelmat selattavan tulevan viikon loppuun (enintään +8 vko).
+  // Viikkonavigointi: suunnitelmat selattavan tulevan viikon loppuun (yhtenäisenä enintään +8 vko);
+  // kauempana selattu viikko suunnitellaan erikseen.
   useEffect(() => {
-    if (profile) void repo.ensurePlanned(profile.id, planningThroughForWeek(today, weekStart), today);
+    if (!profile) return;
+    const far = farWeekPlanning(today, weekStart);
+    void (async () => {
+      await repo.ensurePlanned(profile.id, planningThroughForWeek(today, weekStart), today);
+      if (far) await repo.ensurePlanned(profile.id, far.through, today, { from: far.from });
+    })();
   }, [profile?.id, weekStart, today]);
 
   const footballIds = footballOn ? (sessions ?? []).filter((s) => typeMap.get(s.activityTypeId)?.sport === 'football').map((s) => s.id).join(',') : '';
