@@ -17,6 +17,7 @@ import { today as todayFn } from '../../ui/today';
 import { DAY_BAR_TARGET } from '../week/WeekView';
 import { SERIES } from './DailyMvpaChart';
 import { useReport } from './useReport';
+import { SeasonReport } from './SeasonReport';
 
 const KIND_TEXT: Record<LongKind, { this: string; prev: string; bucket: string }> = {
   month: { this: 'Tämä kuukausi', prev: 'Edellinen kuukausi', bucket: 'viikoittain' },
@@ -51,6 +52,7 @@ export function LongTermView({ profile, kind }: { profile: Profile; kind: LongKi
   const s = useSummary(profile, period);
   const p = useSummary(profile, prev);
   const texts = KIND_TEXT[kind];
+  const [reportOpen, setReportOpen] = useState(false);
 
   return (
     <div className="space-y-5">
@@ -80,7 +82,15 @@ export function LongTermView({ profile, kind }: { profile: Profile; kind: LongKi
             {texts.this}
           </Button>
         )}
+        {s && s.validDays > 0 && (
+          <span className="ml-auto">
+            <Button variant="secondary" onClick={() => setReportOpen(true)}>
+              Raportti (PDF)
+            </Button>
+          </span>
+        )}
       </div>
+      {reportOpen && s && <SeasonReport profile={profile} s={s} p={p} onClose={() => setReportOpen(false)} />}
 
       {!s && <div className="skeleton h-72 rounded-[1.75rem]" aria-busy="true" aria-label="Ladataan" />}
       {s && s.validDays === 0 && (

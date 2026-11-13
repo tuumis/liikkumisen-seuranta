@@ -1061,3 +1061,36 @@ html.morphing .bottom-nav {
 .scroll-thin:hover {
   scrollbar-color: color-mix(in oklab, var(--color-slate-500) 70%, transparent) transparent;
 }
+
+/* Jakson raportti (SPEC 16): tulostuksessa ja PDF:ssä vain raportti, vaalealla paperilla. */
+.print-report {
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  html:has(body.print-report-open),
+  body.print-report-open {
+    background: #fff !important;
+  }
+  body.print-report-open > *:not(.print-report) {
+    display: none !important;
+  }
+  .print-report {
+    position: static !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+  .print-report .print-hide {
+    display: none !important;
+  }
+  .print-report .report-paper {
+    margin: 0 !important;
+    max-width: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+}
