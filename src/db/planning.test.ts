@@ -335,3 +335,95 @@ describe('takautuvat kerrat viikkopohjasta', () => {
     expect(all[0].date >= '2026-08-19').toBe(true);
   });
 });
+
+describe('viikkorytmi kahdella laitteella (käyttäjän havainto 13.11.2026)', () => {
+  const THROUGH = '2026-12-06'; // selattu kolme viikkoa eteenpäin
+  const live = async (d: AppDB) =>
+    (await d.plannedSessions.toArray())
+      .filter((p) => !p.deletedAt)
+      .map((p) => p.date)
+      .sort();
+
+  async function other() {
+    const db2 = new AppDB(`planning-sync-${n}`);
+    extra.push(db2);
+    const repo2 = createRepositories(db2);
+    await repo2.initialize();
+    return { db2, repo2 };
+  }
+
+  it('toiselta laitteelta saapunut rivi saa kerrat myös päiville, jotka tämä laite on jo käynyt läpi', async () => {
+    await repo.ensurePlanned('p1', THROUGH, WED); // PC on selannut eteenpäin ennen riviä
+    const { db2, repo2 } = await other();
+    const item = await repo2.createTemplateItem('p1', tueThu(), WED); // puhelin: kerrat 22.11. asti
+    await db.templateItems.put(item);
+    await db.plannedSessions.bulkPut(await db2.plannedSessions.toArray());
+    await repo.ensurePlanned('p1', THROUGH, WED);
+    expect(await live(db)).toEqual(['2026-11-12', '2026-11-17', '2026-11-19', '2026-11-24', '2026-11-26', '2026-12-01', '2026-12-03']);
+  });
+
+  it('pohjamuokkaus ei poista toiselta laitteelta saapuneita kauempia kertoja; järjestelmän poistamat palaavat, käyttäjän eivät', async () => {
+    const item = await repo.createTemplateItem('p1', tueThu(), WED);
+    await repo.ensurePlanned('p1', THROUGH, WED);
+    const { db2, repo2 } = await other();
+    await db2.templateItems.put(item);
+    await db2.plannedSessions.bulkPut(await db.plannedSessions.toArray());
+    // Puhelin (suunniteltu vain oletusväli) muuttaa kellonajan: myös 1.12. ja 3.12. päivittyvät.
+    await repo2.updateTemplateItem(item.id, tueThu({ startTime: '18:00' }), WED);
+    const phone = (await db2.plannedSessions.toArray()).filter((p) => !p.deletedAt && p.date >= WED);
+    expect(phone.map((p) => [p.date, p.startTime])).toEqual(expect.arrayContaining([['2026-12-01', '18:00'], ['2026-12-03', '18:00']]));
+    expect(phone.length).toBe(7);
+
+    // Vanhan version poistomerkinnät (ilman käyttäjän poistoa) herätetään; käyttäjän poistama pysyy poissa.
+    for (const d of ['2026-12-01', '2026-12-03']) {
+      const p = (await db.plannedSessions.get(plannedSessionId(item.id, d)))!;
+      await db.plannedSessions.put({ ...p, deletedAt: p.updatedAt });
+    }
+    await repo.deletePlanned(plannedSessionId(item.id, '2026-11-24'));
+    await repo.ensurePlanned('p1', THROUGH, WED);
+    expect(await live(db)).toEqual(['2026-11-12', '2026-11-17', '2026-11-19', '2026-11-26', '2026-12-01', '2026-12-03']);
+  });
+
+  it('toisella laitteella muutettu tai poistettu rivi korjaa tulevat avoimet kerrat; kuitatut ja yksittäin muutetut säilyvät', async () => {
+    const item = await repo.createTemplateItem('p1', tueThu(), '2026-11-02');
+    await repo.ensurePlanned('p1', THROUGH, '2026-11-02');
+    await repo.confirmPlanned(plannedSessionId(item.id, '2026-11-10'), WED);
+    await repo.updatePlannedOccurrence(plannedSessionId(item.id, '2026-11-19'), { durationMin: 45 });
+    const later = (ms: number) => new Date(Date.parse(item.updatedAt) + ms).toISOString();
+
+    // Synkronoinnissa saapuu uusi versio: kesto 60 min ja vain tiistaisin.
+    await db.templateItems.put({ ...item, durationMin: 60, weekdays: [2], updatedAt: later(1000) });
+    await repo.ensurePlanned('p1', THROUGH, WED);
+    const byDate = Object.fromEntries((await repo.plansInRange('p1', '2026-11-01', THROUGH)).map((p) => [p.date, p]));
+    expect(byDate['2026-11-05']).toMatchObject({ durationMin: 90 }); // mennyt ei muutu
+    expect(byDate['2026-11-10']).toMatchObject({ status: 'done', durationMin: 90 });
+    expect(byDate['2026-11-12']).toBeUndefined(); // torstai poistui
+    expect(byDate['2026-11-17']).toMatchObject({ status: 'open', durationMin: 60 });
+    expect(byDate['2026-11-19']).toMatchObject({ durationMin: 45 }); // yksittäin muutettu säilyy
+    expect(byDate['2026-11-26']).toBeUndefined();
+    expect(byDate['2026-12-01']).toMatchObject({ durationMin: 60 });
+    expect(await repo.ensurePlanned('p1', THROUGH, WED)).toBe(0); // idempotentti
+
+    // Rivi poistettu toisella laitteella: tulevat avoimet pois, kuitattu säilyy.
+    await db.templateItems.put({ ...item, deletedAt: later(2000), updatedAt: later(2000) });
+    await repo.ensurePlanned('p1', THROUGH, WED);
+    const left = (await repo.plansInRange('p1', WED, THROUGH)).map((p) => p.date);
+    expect(left).toEqual(['2026-11-19']);
+    expect((await db.plannedSessions.get(plannedSessionId(item.id, '2026-11-10')))!.status).toBe('done');
+  });
+
+  it('kaksi laitetta korjaa samat kerrat samoiksi tietueiksi', async () => {
+    const item = await repo.createTemplateItem('p1', tueThu(), WED);
+    await repo.ensurePlanned('p1', THROUGH, WED);
+    const { db2, repo2 } = await other();
+    await db2.plannedSessions.bulkPut(await db.plannedSessions.toArray());
+    const v2 = { ...item, durationMin: 75, updatedAt: new Date(Date.parse(item.updatedAt) + 1000).toISOString() };
+    await db.templateItems.put(v2);
+    await db2.templateItems.put(v2);
+    await repo.ensurePlanned('p1', THROUGH, WED);
+    await repo2.ensurePlanned('p1', THROUGH, WED);
+    const a = (await db.plannedSessions.toArray()).sort((x, y) => x.id.localeCompare(y.id));
+    const b = (await db2.plannedSessions.toArray()).sort((x, y) => x.id.localeCompare(y.id));
+    expect(b).toEqual(a);
+  });
+});
