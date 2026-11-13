@@ -14,6 +14,7 @@ import { today as todayFn } from '../../ui/today';
 import { ConflictSheet } from '../sync/ConflictSheet';
 import { pcAutoSync } from '../sync/useSync';
 import { requestWeek, showNotification, useDesktopSettings } from './settings';
+import { holidayDates } from '../../domain/holidays';
 
 const BASE_TITLE = typeof document !== 'undefined' ? document.title : 'Liikkumisen seuranta';
 const SYNC_EVERY_MS = 60_000;
@@ -45,6 +46,7 @@ export function DesktopAgent({ onOpen }: { onOpen: (profileId: string) => void }
   // Kaikkien profiilien avoimet kerrat tähän päivään asti ja tämän päivän tarkistamaton arkiliikunta.
   const data = useLiveQuery(async () => {
     const types = new Map((await repo.listActivityTypes({ includeArchived: true })).map((x) => [x.id, x]));
+    const { holidays } = await repo.getSettings();
     const rows = await Promise.all(
       (await repo.listProfiles()).map(async (profile) => {
         const [plans, sessions, todayPlans, estimates, flags] = await Promise.all([
@@ -54,7 +56,7 @@ export function DesktopAgent({ onOpen }: { onOpen: (profileId: string) => void }
           repo.listEstimates(profile.id),
           repo.dayFlagsInRange(profile.id, t, t),
         ]);
-        const day = weeklyHours({ period: { kind: 'week', start: t, end: t }, sessions, planned: todayPlans, estimates, flags, types, today: t }).days[0];
+        const day = weeklyHours({ period: { kind: 'week', start: t, end: t }, sessions, planned: todayPlans, estimates, flags, types, today: t, holidays: holidayDates(holidays, profile.id, t, t) }).days[0];
         return { profile, plans, endOf: await endOfFor(plans, t), arkiPending: !!day && !day.flagged && day.estimateMin > 0 };
       }),
     );

@@ -77,7 +77,7 @@ export function FootballSection({ profileId, week, onOpenGames }: { profileId: s
               <>
                 <dt className="text-slate-600">Osallistumisaste (perutut pois)</dt>
                 <dd className="text-right tabular-nums">
-                  {p.adherenceRate === null ? '–' : percent(p.adherenceRate)} ({p.done}/{p.done + p.skipped - p.skippedByReason.cancelled})
+                  {p.adherenceRate === null ? '–' : percent(p.adherenceRate)} ({p.done}/{p.done + p.skipped - p.skippedByReason.cancelled - p.skippedByReason.holiday})
                 </dd>
               </>
             )}

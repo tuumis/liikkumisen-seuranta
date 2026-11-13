@@ -1,6 +1,7 @@
 // Päiväkooste ja jakson arviointi (SPEC 3, 7.1–7.8).
 
-import { datesBetween, isWeekend, timestampToLocalDate } from './dates';
+import { datesBetween, timestampToLocalDate } from './dates';
+import { estimateBaseMin } from './holidays';
 import { addMinutes, minutesFromShares, mvpaOf, totalOf, ZERO_MINUTES } from './intensity';
 import { APP_INTERPRETATIONS, RECOMMENDATIONS } from './recommendations';
 import type {
@@ -53,10 +54,9 @@ export function activeEstimate(estimates: Estimate[], category: Category, d: ISO
   return best;
 }
 
-/** Arvion minuutit päivälle: arki- tai viikonloppuarvo × tehoprofiili, Math.round. */
-export function estimateMinutes(e: Estimate, d: ISODate): IntensityMinutes {
-  const base = isWeekend(d) ? e.weekendMin : e.weekdayMin;
-  return minutesFromShares(base, e.shares);
+/** Arvion minuutit päivälle: arki- tai viikonloppuarvo (lomapäivä = viikonloppu) × tehoprofiili, Math.round. */
+export function estimateMinutes(e: Estimate, d: ISODate, holiday = false): IntensityMinutes {
+  return minutesFromShares(estimateBaseMin(e, d, holiday), e.shares);
 }
 
 // ---------- 7.1 päiväkooste ----------
@@ -87,6 +87,8 @@ export function dayTotals(
   sessions: Session[],
   estimates: Estimate[],
   types: Map<UUID, ActivityType>,
+  /** Lomapäivä: perusarvio viikonlopun arvoilla. */
+  holiday = false,
 ): DayTotals {
   const byCategory: Partial<Record<Category, CategoryTotals>> = {};
   let logged: IntensityMinutes = { ...ZERO_MINUTES };
@@ -115,7 +117,7 @@ export function dayTotals(
     if (byCategory[c]) continue; // kirjaukset korvaavat arvion
     const e = activeEstimate(validEstimates, c, date);
     if (!e) continue;
-    const m = estimateMinutes(e, date);
+    const m = estimateMinutes(e, date, holiday);
     estimate = addMinutes(estimate, m);
     byCategory[c] = { source: 'estimate', minutes: m };
     estimatedCategories.push(c);

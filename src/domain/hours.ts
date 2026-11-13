@@ -9,7 +9,8 @@
 // eikä suunnitelma koskaan näy liikuntamäärissä.
 
 import { activeEstimate, isEstimateConfirmation, isEstimateValidOn } from './aggregate';
-import { datesBetween, isWeekend } from './dates';
+import { datesBetween } from './dates';
+import { estimateBaseMin } from './holidays';
 import { computeSessionMinutes, mvpaOf } from './intensity';
 import type { ActivityType, Category, DayFlag, Estimate, ISODate, Period, PlannedSession, Session, UUID } from './types';
 
@@ -45,6 +46,8 @@ export interface DayHours {
   openPlanMvpa: number;
   future: boolean;
   flagged: boolean;
+  /** Lomapäivä (perusarvio viikonlopun arvoilla). */
+  holiday: boolean;
 }
 
 export interface WeeklyHours {
@@ -66,8 +69,6 @@ const CATEGORY_ORDER: Category[] = ['hobby', 'school_pe', 'school_recess', 'comm
 
 export { ESTIMATE_ONLY_CATEGORIES, isEstimateConfirmation } from './aggregate';
 
-/** Perusarvion kesto päivälle (ei tehokerrointa): arki- tai viikonloppuminuutit. */
-const estimateDuration = (e: Estimate, d: ISODate) => (isWeekend(d) ? e.weekendMin : e.weekdayMin);
 
 export function weeklyHours(input: {
   period: Period;
@@ -77,6 +78,8 @@ export function weeklyHours(input: {
   flags: DayFlag[];
   types: Map<UUID, ActivityType>;
   today: ISODate;
+  /** Lomapäivät: perusarvio viikonlopun arvoilla, lomalla ohitetut suunnitelmat eivät ole arviossa. */
+  holidays?: ReadonlySet<ISODate>;
 }): WeeklyHours {
   const { period, today } = input;
   const catOf = (typeId: UUID): Category => input.types.get(typeId)?.category ?? 'other';
@@ -94,13 +97,15 @@ export function weeklyHours(input: {
   for (const d of datesBetween(period.start, period.end)) {
     const future = d > today;
     const isFlagged = flagged.has(d);
+    const holiday = input.holidays?.has(d) ?? false;
+    const estimateDuration = (e: Estimate) => estimateBaseMin(e, d, holiday);
     const estimates = input.estimates.filter((e) => isEstimateValidOn(e, d));
     const estCats = [...new Set(estimates.map((e) => e.category))];
 
     // Arvio: suunnitellut kerrat (kaikki tilat: suunnitelma oli olemassa) + perusarvio muille kategorioille.
     const planByCat = new Map<Category, number>();
     for (const p of input.planned) {
-      if (p.deletedAt || p.date !== d) continue;
+      if (p.deletedAt || p.date !== d || p.skipReason === 'holiday') continue;
       planByCat.set(catOf(p.activityTypeId), (planByCat.get(catOf(p.activityTypeId)) ?? 0) + p.durationMin);
     }
     let expectedMin = 0;
@@ -110,7 +115,7 @@ export function weeklyHours(input: {
     }
     for (const c of estCats) {
       if (planByCat.has(c)) continue;
-      const m = estimateDuration(activeEstimate(estimates, c, d)!, d);
+      const m = estimateDuration(activeEstimate(estimates, c, d)!);
       if (!m) continue;
       cat(c).expected.estimate += m;
       expectedMin += m;
@@ -136,7 +141,7 @@ export function weeklyHours(input: {
     if (!future && !isFlagged) {
       for (const c of estCats) {
         if (logByCat.has(c)) continue;
-        const m = estimateDuration(activeEstimate(estimates, c, d)!, d);
+        const m = estimateDuration(activeEstimate(estimates, c, d)!);
         if (!m) continue;
         cat(c).actual.estimate += m;
         actualMin += m;
@@ -166,7 +171,7 @@ export function weeklyHours(input: {
       if (!isFlagged) {
         for (const c of estCats) {
           if (logByCat.has(c) || openByCat.has(c)) continue;
-          const m = estimateDuration(activeEstimate(estimates, c, d)!, d);
+          const m = estimateDuration(activeEstimate(estimates, c, d)!);
           if (!m) continue;
           cat(c).forecast += m;
           forecastMin += m;
@@ -176,7 +181,7 @@ export function weeklyHours(input: {
     } else if (!isFlagged) {
       for (const c of estCats) {
         if (openByCat.has(c)) continue;
-        const m = estimateDuration(activeEstimate(estimates, c, d)!, d);
+        const m = estimateDuration(activeEstimate(estimates, c, d)!);
         if (!m) continue;
         cat(c).forecast += m;
         forecastMin += m;
@@ -192,7 +197,7 @@ export function weeklyHours(input: {
     }
 
     if (!future) expectedToDateMin += expectedMin;
-    days.push({ date: d, expectedMin, actualMin, actualLoggedMin, forecastMin, estimateMin, estimateCategories, confirmedMin, openPlanMvpa, future, flagged: isFlagged });
+    days.push({ date: d, expectedMin, actualMin, actualLoggedMin, forecastMin, estimateMin, estimateCategories, confirmedMin, openPlanMvpa, future, flagged: isFlagged, holiday });
   }
 
   const byCategory = CATEGORY_ORDER.filter((c) => acc.has(c)).map((c) => acc.get(c)!);

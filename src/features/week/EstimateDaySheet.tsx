@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { isWeekend } from '../../domain/dates';
+import { estimateBaseMin, holidayOn, weekendLike } from '../../domain/holidays';
 import { isEstimateConfirmation } from '../../domain/hours';
 import { activityTypeId } from '../../domain/ids';
 import type { ActivityType, Category, Estimate, ISODate, Profile, Session } from '../../domain/types';
@@ -32,10 +32,11 @@ function typeFor(category: Category, types: ActivityType[]): ActivityType | unde
 export async function confirmDayEstimates(profileId: string, date: ISODate, categories: Category[]): Promise<string[]> {
   const estimates = await repo.activeEstimates(profileId, date);
   const types = await repo.listActivityTypes({ includeArchived: true });
+  const holiday = !!holidayOn((await repo.getSettings()).holidays, profileId, date);
   const ids: string[] = [];
   for (const e of estimates) {
     if (!categories.includes(e.category)) continue;
-    const minutes = isWeekend(date) ? e.weekendMin : e.weekdayMin;
+    const minutes = estimateBaseMin(e, date, holiday);
     const type = typeFor(e.category, types);
     if (!minutes || !type) continue;
     const s = await repo.createSession({ profileId, activityTypeId: type.id, date, durationMin: minutes, effort: 0, muscle: false, bone: false, label: e.label, estimateConfirmed: true });
@@ -53,12 +54,14 @@ export function EstimateDaySheet({ date, profile, onClose }: { date: ISODate | n
             estimates: await repo.activeEstimates(profile.id, date),
             types: await repo.listActivityTypes({ includeArchived: true }),
             sessions: await repo.sessionsInRange(profile.id, date, date),
+            holiday: holidayOn((await repo.getSettings()).holidays, profile.id, date),
           }
         : undefined,
     [profile.id, date],
   );
   const [values, setValues] = useState<Record<string, string>>({});
-  const minutesOf = (e: Estimate) => (date && isWeekend(date) ? e.weekendMin : e.weekdayMin);
+  const holiday = data?.holiday;
+  const minutesOf = (e: Estimate) => (date ? estimateBaseMin(e, date, !!holiday) : e.weekdayMin);
   const catOf = (s: Session): Category => data?.types.find((t) => t.id === s.activityTypeId)?.category ?? 'other';
   const rows = (data?.estimates ?? []).map((e) => {
     const same = (data?.sessions ?? []).filter((s) => catOf(s) === e.category);
@@ -123,7 +126,7 @@ export function EstimateDaySheet({ date, profile, onClose }: { date: ISODate | n
                   <div className="min-w-0">
                     <div className="font-semibold text-slate-900">{e.label}</div>
                     <div className="text-xs text-slate-500">
-                      {CATEGORY_LABEL[e.category]} · arvio {est} min ({isWeekend(date) ? 'viikonloppu' : 'arkipäivä'})
+                      {CATEGORY_LABEL[e.category]} · arvio {est} min ({holiday ? `${holiday.label.toLowerCase()}, viikonlopun arvo` : weekendLike(date) ? 'viikonloppu' : 'arkipäivä'})
                       {conf && ` · merkitty ${conf.durationMin} min`}
                     </div>
                   </div>

@@ -46,6 +46,7 @@ export function BackupSection() {
         // Synkronointitiedosto (esim. liikkuminen.json): yhdistetään, ei korvata.
         const s = await mergeAnyFile(db, f.text, await repo.deviceId());
         await repo.foldEstimateOnlySessions(todayFn()).catch(() => 0);
+        await repo.applyHolidaySkips().catch(() => 0);
         toast(`Tiedosto oli synkronointitiedosto, joten tiedot yhdistettiin. ${summaryText(s)}`);
         setConfirmImport(false);
         return;

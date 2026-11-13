@@ -121,6 +121,11 @@ export function DayRow({
             {isToday && <span className="sr-only"> ({dayLabel(date)})</span>}
           </div>
           {flag && <span className="mt-0.5 inline-block rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700">{FLAG_LABEL[flag.reason]}</span>}
+          {hours?.holiday && !flag && (
+            <span className="mt-0.5 inline-block rounded-full bg-[var(--surface-sunk)] px-2 py-0.5 text-[11px] font-semibold text-slate-700 ring-1 ring-slate-200" title="Lomapäivä: arkiliikunta viikonlopun arvoilla">
+              Loma
+            </span>
+          )}
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
           {totals && !isFuture && (logged > 0 || est > 0 || (hours?.actualMin ?? 0) > 0) && (

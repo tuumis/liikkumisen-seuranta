@@ -7,6 +7,7 @@ import { weeklyHours, type WeeklyHours } from './hours';
 import { vigorousDayThreshold, type VigorousThreshold } from './vigorous';
 import { dayTotals, evaluatePeriod, trackingStart, validDays } from './aggregate';
 import { datesBetween } from './dates';
+import { holidayDates } from './holidays';
 import { periodGroup, type PeriodGroupInfo } from './groups';
 import { addMinutes, mvpaOf, totalOf, ZERO_MINUTES } from './intensity';
 import type {
@@ -82,7 +83,8 @@ export function periodReport(input: ReportInput): PeriodReport {
   const flags = own(input.flags);
 
   const dates = datesBetween(period.start, period.end);
-  const allDays = dates.map((d) => dayTotals(d, sessions, estimates, input.types));
+  const holidays = holidayDates(input.settings.holidays, profile.id, period.start, period.end);
+  const allDays = dates.map((d) => dayTotals(d, sessions, estimates, input.types, holidays.has(d)));
   const validDates = validDays(period, profile, flags, today);
   const valid = new Set(validDates);
   const days = allDays.filter((d) => valid.has(d.date));
@@ -119,7 +121,7 @@ export function periodReport(input: ReportInput): PeriodReport {
   const inPeriod = <T extends { date: ISODate }>(rows: T[]) => rows.filter((r) => r.date >= period.start && r.date <= period.end);
   const adherence = planAdherence(inPeriod(own(input.planned)), inPeriod(sessions), today);
 
-  const hours = weeklyHours({ period, sessions, planned: own(input.planned), estimates, flags, types: input.types, today });
+  const hours = weeklyHours({ period, sessions, planned: own(input.planned), estimates, flags, types: input.types, today, holidays });
 
   return { period, group, allDays, validDates, days, evaluation, excluded, trackingStart: start, byCategory, adherence, hours, vigorousDay };
 }

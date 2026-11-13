@@ -9,6 +9,7 @@ import { computeSessionMinutes, DEFAULT_GAME_WARMUP_MIN, DEFAULT_PLAY_SHARE, INT
 import { defaultGameLength } from '../domain/tournamentTime';
 import { DEFAULT_SETTINGS } from '../domain/recommendations';
 import { addDays, isISODate } from '../domain/dates';
+import { holidayOn } from '../domain/holidays';
 import { activeEstimate, ESTIMATE_ONLY_CATEGORIES, isEstimateConfirmation } from '../domain/aggregate';
 import { clubIdOf, clubKey, formatTeamName, parseTeamName, squadKey, type TeamParts } from '../domain/opponent';
 import type {
@@ -1292,6 +1293,39 @@ export function createRepositories(db: AppDB = defaultDb) {
     return n;
   }
 
+  /**
+   * Lomajaksot (SPEC 16): avoimet koululiikuntasuunnitelmat lomapäiviltä ohitetaan syyllä "Loma", ja
+   * lomalla ohitetut avataan uudelleen, kun päivä ei enää ole lomaa (jakso poistettu tai lyhennetty).
+   * Muutos on seurausta asetusrivistä, joten aikaleima ja tekijä johdetaan siitä (uudempi versioista
+   * + 1 ms): molemmat laitteet tuottavat saman tietueen, eikä toisen laitteen muutos jää odottamaan.
+   * Idempotentti. Palauttaa muutettujen suunnitelmien määrän.
+   */
+  async function applyHolidaySkips(): Promise<number> {
+    const row = await db.settings.get(SETTINGS_ID);
+    if (!row) return 0;
+    const holidays = row.deletedAt ? [] : (row.holidays ?? []);
+    const peIds = new Set((await db.activityTypes.toArray()).filter((t) => t.category === 'school_pe').map((t) => t.id));
+    if (!peIds.size) return 0;
+    const plans = live(await db.plannedSessions.toArray()).filter((p) => peIds.has(p.activityTypeId));
+    const stampOf = (ts: Timestamp): Pick<PlannedSession, 'updatedAt' | 'updatedBy'> => ({
+      updatedAt: new Date(Math.max(Date.parse(ts), Date.parse(row.updatedAt)) + 1).toISOString(),
+      updatedBy: row.updatedBy,
+    });
+    let n = 0;
+    for (const p of plans) {
+      const onHoliday = !!holidayOn(holidays, p.profileId, p.date);
+      if (p.status === 'open' && onHoliday) {
+        await db.plannedSessions.put({ ...p, status: 'skipped', skipReason: 'holiday', ...stampOf(p.updatedAt) });
+        n++;
+      } else if (p.status === 'skipped' && p.skipReason === 'holiday' && !onHoliday) {
+        const { skipReason: _drop, ...rest } = p;
+        await db.plannedSessions.put({ ...rest, status: 'open', ...stampOf(p.updatedAt) });
+        n++;
+      }
+    }
+    return n;
+  }
+
   /** Tänään voimassa olevat perusarviot, yksi per kategoria. */
   async function activeEstimates(profileId: UUID, today: ISODate): Promise<Estimate[]> {
     const rows = (await listEstimates(profileId)).filter((e) => e.validFrom <= today && (!e.validTo || today <= e.validTo));
@@ -1406,7 +1440,7 @@ export function createRepositories(db: AppDB = defaultDb) {
   async function getSettings(): Promise<Settings> {
     const row = await db.settings.get(SETTINGS_ID);
     const d = DEFAULT_SETTINGS;
-    if (!row || row.deletedAt) return { ...d, vigorousDayByAge: { ...d.vigorousDayByAge } };
+    if (!row || row.deletedAt) return { ...d, vigorousDayByAge: { ...d.vigorousDayByAge }, holidays: [] };
     // Uudet kentät oletuksineen (vanhemmissa riveissä niitä ei ole).
     return {
       vigorousDayMin: row.vigorousDayMin ?? d.vigorousDayMin,
@@ -1414,6 +1448,7 @@ export function createRepositories(db: AppDB = defaultDb) {
       vigorousDayByAge: { ...(row.vigorousDayByAge ?? d.vigorousDayByAge) },
       primaryView: row.primaryView ?? d.primaryView,
       backupReminderDays: row.backupReminderDays ?? d.backupReminderDays,
+      holidays: (row.holidays ?? []).map((h) => ({ ...h })),
     };
   }
 
@@ -1421,6 +1456,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     const current = await getSettings();
     const row: SettingsRow = await stamp({ id: SETTINGS_ID, ...current, ...changes });
     await db.settings.put(row);
+    if (changes.holidays) await applyHolidaySkips();
   }
 
   // ---------- laite ----------
@@ -1456,7 +1492,13 @@ export function createRepositories(db: AppDB = defaultDb) {
     updateSession,
     deleteSession,
     undoDelete,
-    ensurePlanned: planner.ensurePlanned,
+    /** Pohjan suunnitelmat + lomapäivien koululiikunnan ohitus uusille kerroille. */
+    ensurePlanned: async (profileId: UUID, through: ISODate, today: ISODate) => {
+      const n = await planner.ensurePlanned(profileId, through, today);
+      if (n) await applyHolidaySkips();
+      return n;
+    },
+    applyHolidaySkips,
     getPlannedThrough: planner.getPlannedThrough,
     listTemplateItems,
     createTemplateItem,

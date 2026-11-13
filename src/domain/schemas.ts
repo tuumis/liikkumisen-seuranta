@@ -96,7 +96,8 @@ export const plannedSessionSchema = either(
     durationMin: z.number().min(0),
     templateItemId: z.string().optional(),
     status: z.enum(['open', 'done', 'skipped']),
-    skipReason: z.enum(['sick', 'injured', 'cancelled', 'other_commitment', 'other']).optional(),
+    // Tuntematon syy (uudemman version tiedostosta) luetaan muotoon 'other'.
+    skipReason: z.enum(['sick', 'injured', 'cancelled', 'holiday', 'other_commitment', 'other']).catch('other').optional(),
     sessionId: z.string().optional(),
     createdAt: ts,
     ...sync,
@@ -145,6 +146,9 @@ export const settingsSchema = z.looseObject({
   vigorousDayMin: z.number(),
   primaryView: z.enum(['logged_plus_estimate', 'logged']),
   backupReminderDays: z.number(),
+  holidays: z
+    .array(z.looseObject({ id: z.string().min(1), label: z.string(), start: iso, end: iso, profileIds: z.array(z.string()).optional() }))
+    .optional(),
   ...sync,
 });
 

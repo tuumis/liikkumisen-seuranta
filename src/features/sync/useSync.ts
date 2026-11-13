@@ -48,7 +48,10 @@ async function ensurePlannedAll() {
  * Välituntisiivous myös yhdistämisen jälkeen (ei vain käynnistyksessä): toisen laitteen tiedosto voi
  * tuoda avoimen välituntikerran tai -rivin, jonka tämä laite on jo siivonnut. Idempotentti.
  */
-const foldEstimateOnly = () => repo.foldEstimateOnlySessions(today()).catch(() => 0);
+const foldEstimateOnly = async () => {
+  await repo.foldEstimateOnlySessions(today()).catch(() => 0);
+  await repo.applyHolidaySkips().catch(() => 0); // lomajaksot: toisen laitteen tuomat kerrat/jaksot
+};
 
 export function useSyncState(): SyncState | undefined {
   return useLiveQuery(async () => {

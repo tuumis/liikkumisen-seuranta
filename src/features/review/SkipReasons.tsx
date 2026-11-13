@@ -1,11 +1,11 @@
 import type { SkipReason } from '../../domain/types';
 import { SKIP_REASON_LABEL } from '../../ui/labels';
 
-/** Ohituksen syyn valinta; "Ilman syytä" ohittaa valinnaisen syyn. */
+/** Ohituksen syyn valinta; "Ilman syytä" ohittaa valinnaisen syyn. "Loma" tulee lomajaksoista, ei valita käsin. */
 export function SkipReasons({ onPick, onCancel }: { onPick: (r?: SkipReason) => void; onCancel?: () => void }) {
   return (
     <div className="flex flex-wrap gap-2">
-      {(Object.keys(SKIP_REASON_LABEL) as SkipReason[]).map((r) => (
+      {(Object.keys(SKIP_REASON_LABEL) as SkipReason[]).filter((r) => r !== 'holiday').map((r) => (
         <button
           key={r}
           type="button"

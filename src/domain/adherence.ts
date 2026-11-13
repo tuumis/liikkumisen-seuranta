@@ -17,6 +17,7 @@ export function planAdherence(planned: PlannedSession[], sessions: Session[], to
     sick: 0,
     injured: 0,
     cancelled: 0,
+    holiday: 0,
     other_commitment: 0,
     other: 0,
     unspecified: 0,
@@ -41,7 +42,8 @@ export function planAdherence(planned: PlannedSession[], sessions: Session[], to
     }
   }
 
-  const denominator = done + skipped - skippedByReason.cancelled;
+  // Peruttu ja loma eivät ole poisjääntejä: ne eivät ole toteutumisasteen nimittäjässä.
+  const denominator = done + skipped - skippedByReason.cancelled - skippedByReason.holiday;
   return {
     planned: live.length,
     done,

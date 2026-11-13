@@ -13,6 +13,7 @@ import { today } from '../../ui/today';
 import { ProfileForm, type ProfileFormValues } from './ProfileForm';
 import { TemplateSection } from './TemplateSection';
 import { EstimatesSection } from './EstimatesSection';
+import { HolidaysSection } from './HolidaysSection';
 import { ComparisonSection } from './ComparisonSection';
 import { BackupSection, PrivacySection, SyncSettingsSection } from './DataSection';
 import { InstallHint } from './InstallHint';
@@ -118,7 +119,12 @@ function SectionContent({ id, profile, onProfileCreated }: { id: SettingsSection
     case 'routine':
       return <TemplateSection profile={profile!} />;
     case 'everyday':
-      return <EstimatesSection profile={profile!} />;
+      return (
+        <>
+          <EstimatesSection profile={profile!} />
+          <HolidaysSection profile={profile!} />
+        </>
+      );
     case 'goals':
       return (
         <>

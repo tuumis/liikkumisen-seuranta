@@ -2,6 +2,7 @@
 // Sovellus ei muuta näitä arvoja, eikä käyttäjä voi muokata niitä.
 // Sovelluksen omat tulkinnat on erotettu omaksi vakiokseen (APP_INTERPRETATIONS).
 
+import type { Holiday } from './holidays';
 export const RECOMMENDATIONS_VERSION = '2026-11-11';
 
 export interface SourceRef {
@@ -156,4 +157,5 @@ export const DEFAULT_SETTINGS = deepFreeze({
   vigorousDayByAge: VIGOROUS_DAY_BY_AGE_DEFAULT as Record<string, number>,
   primaryView: 'logged_plus_estimate' as const,
   backupReminderDays: 30,
+  holidays: [] as Holiday[],
 });

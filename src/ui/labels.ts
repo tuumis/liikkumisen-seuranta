@@ -41,6 +41,7 @@ export const SKIP_REASON_LABEL: Record<SkipReason, string> = {
   sick: 'Sairas',
   injured: 'Loukkaantunut',
   cancelled: 'Peruttu',
+  holiday: 'Loma',
   other_commitment: 'Muu meno',
   other: 'Muu',
 };

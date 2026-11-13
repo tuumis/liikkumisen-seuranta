@@ -1,5 +1,6 @@
 // Domain types – SPEC.md section 6 (tietomalli) and 7.11 (funktiorajapinnat).
 // Pure type definitions: no runtime dependencies.
+import type { Holiday } from './holidays';
 
 // ---------- perustyypit ----------
 export type UUID = string; // crypto.randomUUID() or a derived id (see ids.ts)
@@ -132,7 +133,7 @@ export interface TemplateItem extends SyncFields {
 }
 
 export type PlannedStatus = 'open' | 'done' | 'skipped';
-export type SkipReason = 'sick' | 'injured' | 'cancelled' | 'other_commitment' | 'other';
+export type SkipReason = 'sick' | 'injured' | 'cancelled' | 'holiday' | 'other_commitment' | 'other';
 
 export interface PlannedSession extends SyncFields {
   id: UUID;
@@ -338,6 +339,8 @@ export interface Settings {
   vigorousDayByAge: Record<string, number>;
   primaryView: 'logged_plus_estimate' | 'logged';
   backupReminderDays: number; // oletus 30
+  /** Lomajaksot (SPEC 16): arkipäivä = viikonloppu perusarviossa, koululiikunta ohitetaan. */
+  holidays: Holiday[];
 }
 
 /** Synkronoituva asetusrivi taulussa `settings` (id = 'settings'). */
