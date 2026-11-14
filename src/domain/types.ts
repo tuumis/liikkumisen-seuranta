@@ -340,6 +340,8 @@ export interface Club extends SyncFields {
   country?: string;
   /** Kotipaikkakunta, esim. Espoo. */
   city?: string;
+  /** Jakokuvien väri (features/share/shareColors: teeman tunniste tai #rrggbb); puuttuessa sovelluksen värit. */
+  shareColor?: string;
   createdAt: Timestamp;
 }
 

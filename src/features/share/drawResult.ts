@@ -4,6 +4,8 @@
 import type { GameOutcome } from '../../domain/football';
 import { initials, OUTCOME_WORD, resultKicker, type ResultCard } from '../../domain/resultCard';
 import { formatDate } from '../../ui/format';
+import { drawFlag } from '../../ui/flags';
+import { alpha, isLightColor, mix, resolveShareColor, type ShareColor } from './shareColors';
 
 export type ShareSize = 'story' | 'post';
 export type ShareStyle = 'theme' | 'sport';
@@ -13,9 +15,19 @@ export interface ShareLogos {
   opponents: (HTMLImageElement | undefined)[];
 }
 
-const W = 1080;
-const HEIGHT: Record<ShareSize, number> = { story: 1920, post: 1350 };
-const PAD = 84;
+/** Seuran maa (lippu) ja kotipaikkakunta kuvaan. */
+export interface Origin {
+  country?: string;
+  city?: string;
+}
+export interface ShareOrigins {
+  team?: Origin;
+  opponents: (Origin | undefined)[];
+}
+
+export const W = 1080;
+export const HEIGHT: Record<ShareSize, number> = { story: 1920, post: 1350 };
+export const PAD = 84;
 
 /** Tuloksen värit (tekstinä myös V / T / H, joten väri ei ole ainoa tunniste). */
 const OUTCOME_COLOR: Record<GameOutcome, string> = { W: '#15803d', D: '#b45309', L: '#b91c1c' };
@@ -23,13 +35,15 @@ const OUTCOME_LETTER: Record<GameOutcome, string> = { W: 'V', D: 'T', L: 'H' };
 
 const css = (name: string, fallback: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 
-interface Palette {
+export interface Palette {
   ink: string;
   soft: string;
   accent: string;
   panel: string;
   display: string;
   sans: string;
+  /** Vaalea tausta (tumma teksti). */
+  light?: boolean;
 }
 
 export function loadImage(src: string | undefined): Promise<HTMLImageElement | undefined> {
@@ -42,13 +56,13 @@ export function loadImage(src: string | undefined): Promise<HTMLImageElement | u
   });
 }
 
-function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+export function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, r);
 }
 
 /** Teksti mahtumaan: fonttia pienennetään rajaan asti, sitten lyhennetään "…"-merkillä. */
-function fit(ctx: CanvasRenderingContext2D, text: string, maxW: number, font: (px: number) => string, size: number, min: number): string {
+export function fit(ctx: CanvasRenderingContext2D, text: string, maxW: number, font: (px: number) => string, size: number, min: number): string {
   let px = size;
   ctx.font = font(px);
   while (ctx.measureText(text).width > maxW && px > min) {
@@ -61,7 +75,7 @@ function fit(ctx: CanvasRenderingContext2D, text: string, maxW: number, font: (p
   return `${t.trimEnd()}…`;
 }
 
-function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number, maxLines: number): string[] {
+export function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number, maxLines: number): string[] {
   const words = text.split(' ');
   const out: string[] = [];
   let line = '';
@@ -84,7 +98,7 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number, maxLine
 }
 
 /** Joukkueen nimi riveiksi erottimien kohdalta ("Seura · Ryhmä · 2018"), ei kesken osan. */
-function wrapName(ctx: CanvasRenderingContext2D, text: string, maxW: number, maxLines: number): string[] {
+export function wrapName(ctx: CanvasRenderingContext2D, text: string, maxW: number, maxLines: number): string[] {
   const parts = text.split(/\s+·\s+/);
   if (parts.length < 2) return wrap(ctx, text, maxW, maxLines);
   const out: string[] = [];
@@ -96,12 +110,12 @@ function wrapName(ctx: CanvasRenderingContext2D, text: string, maxW: number, max
   return out.length > maxLines ? wrap(ctx, text.replace(/\s+·\s+/g, ' '), maxW, maxLines) : out;
 }
 
-function spaced(text: string) {
+export function spaced(text: string) {
   return text.toUpperCase().split('').join(String.fromCharCode(8202));
 }
 
 /** Logo valkoisella pyöristetyllä pohjalla kokonaisena; puuttuessa seuran nimikirjaimet. */
-function drawLogo(ctx: CanvasRenderingContext2D, img: HTMLImageElement | undefined, name: string | undefined, x: number, y: number, size: number, sans: string) {
+export function drawLogo(ctx: CanvasRenderingContext2D, img: HTMLImageElement | undefined, name: string | undefined, x: number, y: number, size: number, sans: string) {
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.25)';
   ctx.shadowBlur = size * 0.12;
@@ -132,19 +146,21 @@ function drawLogo(ctx: CanvasRenderingContext2D, img: HTMLImageElement | undefin
   }
 }
 
-function background(ctx: CanvasRenderingContext2D, H: number, style: ShareStyle) {
+export function background(ctx: CanvasRenderingContext2D, H: number, style: ShareStyle, color?: ShareColor) {
   if (style === 'theme') {
+    const light = color && isLightColor(color.base);
     const g = ctx.createLinearGradient(0, 0, W * 0.6, H);
-    g.addColorStop(0, css('--hero-from', '#2c5a46'));
-    g.addColorStop(1, css('--hero-to', '#1a3a2d'));
+    g.addColorStop(0, color ? (light ? mix(color.base, '#ffffff', 0.12) : mix(color.base, '#000000', 0.08)) : css('--hero-from', '#2c5a46'));
+    g.addColorStop(1, color ? (light ? mix(color.base, '#000000', 0.14) : mix(color.base, '#000000', 0.58)) : css('--hero-to', '#1a3a2d'));
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
+    const glowColor = color ? (light ? '#ffffff' : (color.accent ?? '#ffffff')) : '#dda96e';
     const glow = ctx.createRadialGradient(W, 0, 0, W, 0, W * 1.1);
-    glow.addColorStop(0, 'rgba(221,169,110,0.22)');
-    glow.addColorStop(1, 'rgba(221,169,110,0)');
+    glow.addColorStop(0, alpha(glowColor, color ? 0.16 : 0.22));
+    glow.addColorStop(1, alpha(glowColor, 0));
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, W, H);
-    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.strokeStyle = light ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.04)';
     ctx.lineWidth = 3;
     for (let r = 60; r < 2600; r += 70) {
       ctx.beginPath();
@@ -154,9 +170,10 @@ function background(ctx: CanvasRenderingContext2D, H: number, style: ShareStyle)
     return;
   }
   // Urheilutyyli: tumma yönsininen, viistot raidat ja kirkas reunaviiva.
+  const accent = sportAccent(color);
   const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, '#0b1220');
-  g.addColorStop(1, '#111c33');
+  g.addColorStop(0, color ? mix('#0b1220', color.base, 0.16) : '#0b1220');
+  g.addColorStop(1, color ? mix('#111c33', color.base, 0.26) : '#111c33');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
   ctx.save();
@@ -166,23 +183,53 @@ function background(ctx: CanvasRenderingContext2D, H: number, style: ShareStyle)
   for (let x = -H; x < H; x += 160) ctx.fillRect(x, -H, 70, H * 2);
   ctx.restore();
   const spot = ctx.createRadialGradient(W * 0.15, H * 0.1, 0, W * 0.15, H * 0.1, W);
-  spot.addColorStop(0, 'rgba(74,222,128,0.16)');
-  spot.addColorStop(1, 'rgba(74,222,128,0)');
+  spot.addColorStop(0, alpha(accent, 0.16));
+  spot.addColorStop(1, alpha(accent, 0));
   ctx.fillStyle = spot;
   ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#4ade80';
+  ctx.fillStyle = accent;
   ctx.fillRect(0, 0, 14, H);
 }
 
-function palette(style: ShareStyle): Palette {
+/** Urheilutyylin korostus: valittu väri (liian tumma vaalennetaan) tai vihreä. */
+const sportAccent = (color?: ShareColor) => (!color ? '#4ade80' : color.id === 'black' && color.accent ? color.accent : isDark(color.base) ? mix(color.base, '#ffffff', 0.45) : mix(color.base, '#ffffff', 0.12));
+const isDark = (hex: string) => {
+  const n = parseInt(hex.slice(1), 16);
+  return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) < 60;
+};
+
+export function palette(style: ShareStyle, color?: ShareColor): Palette {
   const display = css('--font-display', 'Georgia, serif');
   const sans = css('--font-sans', 'system-ui, sans-serif');
-  if (style === 'theme')
-    return { ink: css('--hero-ink', '#f6f5f0'), soft: css('--hero-ink-soft', '#c9dccb'), accent: css('--hero-accent', '#e6bd89'), panel: 'rgba(255,255,255,0.09)', display, sans };
-  return { ink: '#ffffff', soft: 'rgba(226,232,240,0.78)', accent: '#4ade80', panel: 'rgba(255,255,255,0.07)', display: sans, sans };
+  if (style === 'theme') {
+    if (!color) return { ink: css('--hero-ink', '#f6f5f0'), soft: css('--hero-ink-soft', '#c9dccb'), accent: css('--hero-accent', '#e6bd89'), panel: 'rgba(255,255,255,0.09)', display, sans };
+    if (isLightColor(color.base))
+      return { ink: '#111827', soft: 'rgba(17,24,39,0.72)', accent: color.accent && !isLightColor(color.accent) ? color.accent : mix(color.base, '#000000', 0.6), panel: 'rgba(0,0,0,0.07)', display, sans, light: true };
+    return { ink: '#ffffff', soft: 'rgba(255,255,255,0.76)', accent: color.accent ?? mix(color.base, '#ffffff', 0.7), panel: 'rgba(255,255,255,0.1)', display, sans };
+  }
+  return { ink: '#ffffff', soft: 'rgba(226,232,240,0.78)', accent: sportAccent(color), panel: 'rgba(255,255,255,0.07)', display: sans, sans };
 }
 
-function chip(ctx: CanvasRenderingContext2D, text: string, color: string, x: number, y: number, h: number, p: Palette, align: 'left' | 'center' | 'right' = 'left') {
+/** Lippu ja kotipaikkakunta yhdellä rivillä (x vasen reuna tai keskikohta); palauttaa leveyden. */
+export function drawOrigin(ctx: CanvasRenderingContext2D, o: Origin | undefined, x: number, baseline: number, px: number, p: Palette, align: 'left' | 'center' = 'left', maxW = W): number {
+  if (!o?.country && !o?.city) return 0;
+  const fw = o.country ? Math.round(px * 1.35) : 0;
+  const gap = o.country && o.city ? Math.round(px * 0.4) : 0;
+  ctx.font = `600 ${px}px ${p.sans}`;
+  const city = o.city ? fit(ctx, o.city, maxW - fw - gap, (s) => `600 ${s}px ${p.sans}`, px, Math.max(14, px - 8)) : '';
+  const tw = city ? ctx.measureText(city).width : 0;
+  const w = fw + gap + tw;
+  const left = align === 'center' ? x - w / 2 : x;
+  if (o.country) drawFlag(ctx, o.country, left, baseline - px * 0.78, fw);
+  if (city) {
+    ctx.fillStyle = p.soft;
+    ctx.textAlign = 'left';
+    ctx.fillText(city, left + fw + gap, baseline);
+  }
+  return w;
+}
+
+export function chip(ctx: CanvasRenderingContext2D, text: string, color: string, x: number, y: number, h: number, p: Palette, align: 'left' | 'center' | 'right' = 'left') {
   ctx.font = `800 ${Math.round(h * 0.46)}px ${p.sans}`;
   const w = ctx.measureText(text).width + h * 0.9;
   const left = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
@@ -202,20 +249,34 @@ export interface DrawOptions {
   logos: ShareLogos;
   /** Lapsen nimi, jos lapsen maalit näytetään. */
   player?: string;
+  /** Tallennettu väriarvo (shareColors); puuttuessa sovelluksen värit. */
+  color?: string;
+  origins?: ShareOrigins;
 }
 
-export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasElement {
+/** Kankaan, paletin ja taustan alustus (tulos- ja ennakkokuva). */
+export function setup(opts: Pick<DrawOptions, 'size' | 'style' | 'color'>) {
   const H = HEIGHT[opts.size];
-  const story = opts.size === 'story';
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext('2d')!;
-  const p = palette(opts.style);
-  background(ctx, H, opts.style);
+  const color = resolveShareColor(opts.color);
+  const p = palette(opts.style, color);
+  background(ctx, H, opts.style, color);
+  return { canvas, ctx, p, H, story: opts.size === 'story' };
+}
+
+export function dateLabelOf(date: string): string {
+  const t = formatDate(date, 'cccc d.M.yyyy');
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasElement {
+  const { canvas, ctx, p, H, story } = setup(opts);
   const maxW = W - PAD * 2;
-  const dateText = formatDate(card.date, 'cccc d.M.yyyy');
-  const dateLabel = dateText.charAt(0).toUpperCase() + dateText.slice(1);
+  const dateLabel = dateLabelOf(card.date);
+  const origins = opts.origins;
 
   // Yläosa: tunniste, otsikko ja päivä.
   let y = story ? 170 : 104;
@@ -257,7 +318,9 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
     drawLogo(ctx, opts.logos.team, card.team, PAD, y, ls, p.sans);
     ctx.fillStyle = p.ink;
     const teamText = fit(ctx, card.team ?? 'Oma joukkue', maxW - ls - 32, (px) => `700 ${px}px ${p.sans}`, story ? 52 : 46, 30);
-    ctx.fillText(teamText, PAD + ls + 32, y + ls / 2 + 17);
+    const teamOrigin = origins?.team?.country || origins?.team?.city;
+    ctx.fillText(teamText, PAD + ls + 32, y + ls / 2 + (teamOrigin ? -4 : 17));
+    if (teamOrigin) drawOrigin(ctx, origins?.team, PAD + ls + 32, y + ls / 2 + (story ? 46 : 40), story ? 30 : 26, p, 'left', maxW - ls - 32);
     y += ls + teamGap;
     const sumTop = y + listH + sumGap + (playerH ? playerH + playerGap : 0);
     card.games.forEach((g, k) => {
@@ -297,9 +360,16 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
       const name = fit(ctx, g.opponent ?? 'Vastustaja', tw, (px) => `700 ${px}px ${p.sans}`, Math.round(Math.min(44, rowH * 0.3)), 24);
       ctx.fillText(name, tx, top + rowH / 2 - 2);
       const sub = [`${k + 1}. peli`, g.time && `klo ${g.time}`, opts.player && g.playerGoals ? `⚽ ${g.playerGoals}` : undefined].filter(Boolean).join('  ·  ');
-      ctx.font = `500 ${Math.round(Math.min(30, rowH * 0.21))}px ${p.sans}`;
+      const subPx = Math.round(Math.min(30, rowH * 0.21));
+      const subY = top + rowH / 2 + Math.min(40, rowH * 0.3);
+      ctx.font = `500 ${subPx}px ${p.sans}`;
       ctx.fillStyle = p.soft;
-      ctx.fillText(sub, tx, top + rowH / 2 + Math.min(40, rowH * 0.3));
+      ctx.fillText(sub, tx, subY);
+      const o = origins?.opponents[k];
+      if (o?.country || o?.city) {
+        const after = tx + ctx.measureText(sub).width + subPx;
+        drawOrigin(ctx, o, after, subY, subPx, p, 'left', tw - (after - tx));
+      }
     });
 
     if (playerH) {
@@ -340,7 +410,8 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
   const nameW = story ? 320 : 290;
   ctx.font = `700 ${namePx}px ${p.sans}`;
   const names = [wrapName(ctx, card.team ?? 'Oma joukkue', nameW, 2), wrapName(ctx, g.opponent ?? 'Vastustaja', nameW, 2)];
-  const nameH = Math.max(...names.map((l) => l.length)) * namePx * 1.2;
+  const hasOrigin = [origins?.team, origins?.opponents[0]].some((o) => o?.country || o?.city);
+  const nameH = Math.max(...names.map((l) => l.length)) * namePx * 1.2 + (hasOrigin ? (story ? 50 : 42) : 0);
   const playerH = opts.player && card.playerGoals > 0 ? (story ? 96 : 80) : 0;
   const bottomLimit = H - (story ? 140 : 84) - (playerH ? playerH + 40 : 0);
   const blockH = ls + 36 + nameH;
@@ -353,6 +424,8 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
     ctx.font = `700 ${namePx}px ${p.sans}`;
     ctx.fillStyle = p.ink;
     lines.forEach((l, i) => ctx.fillText(l, centers[k], top + ls + 36 + namePx + i * namePx * 1.2));
+    drawOrigin(ctx, k === 0 ? origins?.team : origins?.opponents[0], centers[k], top + ls + 36 + namePx + lines.length * namePx * 1.2 + (story ? 10 : 6), story ? 30 : 26, p, 'center', nameW);
+    ctx.textAlign = 'center';
   });
 
   // Tulos logojen välissä, tulossana sen alla.
@@ -376,7 +449,7 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
   return canvas;
 }
 
-function drawPlayer(ctx: CanvasRenderingContext2D, name: string, goals: number, x: number, y: number, h: number, p: Palette) {
+export function drawPlayer(ctx: CanvasRenderingContext2D, name: string, goals: number, x: number, y: number, h: number, p: Palette) {
   const text = `⚽  ${name}: ${goals} ${goals === 1 ? 'maali' : 'maalia'}`;
   ctx.font = `700 ${Math.round(h * 0.4)}px ${p.sans}`;
   const w = Math.min(W - PAD * 2, ctx.measureText(text).width + h * 0.9);

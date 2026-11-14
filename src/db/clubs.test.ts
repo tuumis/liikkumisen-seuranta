@@ -97,9 +97,9 @@ describe('seurat', () => {
     await pc.repo.saveClub('FC Honka', { city: '' });
     const c = (await pc.repo.listClubs())[0];
     expect([c.logo, c.country, c.city]).toEqual([LOGO, 'FI', undefined]);
-    await pc.repo.saveClub('FC Honka', { city: 'Espoo' });
+    await pc.repo.saveClub('FC Honka', { city: 'Espoo', shareColor: 'navy' });
     await pc.repo.renameClub('FC Honka', 'Honka');
-    expect((await pc.repo.listClubs()).map((x) => [x.name, x.country, x.city])).toEqual([['Honka', 'FI', 'Espoo']]);
+    expect((await pc.repo.listClubs()).map((x) => [x.name, x.country, x.city, x.shareColor])).toEqual([['Honka', 'FI', 'Espoo', 'navy']]);
     await mergeSyncFile(phone.db, toJson(await buildSyncFile(pc.db, pc.id, 'pc')), phone.id);
     expect((await phone.repo.listClubs()).map((x) => [x.name, x.country, x.city])).toEqual([['Honka', 'FI', 'Espoo']]);
   });

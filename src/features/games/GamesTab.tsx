@@ -26,7 +26,8 @@ import { DiaryView } from './DiaryView';
 import { OpponentLibrary } from './TeamLibrary';
 import { TeamNameFields, useTeamNameSuggestions } from './TeamNameFields';
 import { FootballHero } from './FootballHero';
-import { IconPlus } from '../../ui/icons';
+import { IconPlus, IconShare } from '../../ui/icons';
+import { openPreviewShare } from '../share/PreviewShare';
 import { playSound } from '../../ui/sound';
 
 type View = 'diary' | 'calendar' | 'results' | 'teams';
@@ -298,8 +299,8 @@ function FixtureSummary({ e, team, history }: { e: FixtureEntry; team?: Team; hi
 function FixtureRow({ e, team, today, history, onClick }: { e: FixtureEntry; team?: Team; today: string; history?: (opponent: string | undefined) => string | undefined; onClick: () => void }) {
   const days = Math.round((Date.parse(e.plan.date) - Date.parse(today)) / 86_400_000);
   return (
-    <li>
-      <button type="button" onClick={onClick} className="press card-sunk flex w-full items-center gap-3 p-3 text-left hover:bg-slate-100">
+    <li className="relative">
+      <button type="button" onClick={onClick} className="press card-sunk flex w-full items-center gap-3 p-3 pb-12 text-left hover:bg-slate-100">
         <div className="w-12 shrink-0 text-center">
           <div className="text-lg font-semibold leading-none text-slate-900">{Number(e.plan.date.slice(8, 10))}</div>
           <div className="text-[11px] uppercase text-slate-500">{formatDate(e.plan.date, 'EEEEEE')}</div>
@@ -307,7 +308,15 @@ function FixtureRow({ e, team, today, history, onClick }: { e: FixtureEntry; tea
         <div className="min-w-0 flex-1">
           <FixtureSummary e={e} team={team} history={history} />
         </div>
-        <span className="shrink-0 text-xs text-slate-500">{days === 0 ? 'tänään' : days === 1 ? 'huomenna' : `${days} pv`}</span>
+        <span className="shrink-0 self-start text-xs text-slate-500">{days === 0 ? 'tänään' : days === 1 ? 'huomenna' : `${days} pv`}</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => openPreviewShare(e.plan.id)}
+        className="press absolute bottom-2 right-2 inline-flex min-h-9 items-center gap-1.5 rounded-full bg-[var(--surface-raised)] px-3 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:text-slate-900"
+        title="Otteluennakko kuvana (esim. Instagram)"
+      >
+        <IconShare size="0.9rem" /> Ennakko
       </button>
     </li>
   );

@@ -2,6 +2,7 @@
 // pelirivien (gameRows) pohjalta; piirto tehdään erikseen (features/share/drawResult).
 
 import { LEVEL_LABEL, type GameOutcome, type GameRow } from './football';
+import { parseTeamName } from './opponent';
 import type { GameFormat, ISODate } from './types';
 
 export interface ResultCardGame {
@@ -72,9 +73,10 @@ export function resultKicker(card: ResultCard): string {
   return [card.kind === 'tournament' ? 'Turnaus' : 'Ottelu', card.level, card.format].filter(Boolean).join(' · ');
 }
 
-/** Seuran nimikirjaimet logon puuttuessa: "FC Lahti 2018" → "FL", "HJK" → "HJK". */
+/** Seuran nimikirjaimet logon puuttuessa: "FC Lahti 2018" → "FL", "HJK · Valkoinen · 2016" → "HJK". */
 export function initials(name: string | undefined): string {
-  const words = (name ?? '').replace(/\d+/g, ' ').split(/\s+/).filter(Boolean);
+  const club = parseTeamName(name).club.trim() || (name ?? '');
+  const words = club.replace(/\d+/g, ' ').replace(/[·/|]/g, ' ').split(/\s+/).filter(Boolean);
   if (words.length === 0) return '?';
   if (words.length === 1) return words[0].slice(0, 3).toUpperCase();
   return (words[0][0] + words[1][0]).toUpperCase();

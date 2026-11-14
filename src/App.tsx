@@ -12,6 +12,7 @@ import type { SettingsSectionId } from './features/settings/SettingsView';
 import { GamesTab } from './features/games/GamesTab';
 import { DesktopAgent } from './features/desktop/DesktopAgent';
 import { GoalSound } from './features/week/GoalSound';
+import { PreviewShareHost } from './features/share/PreviewShare';
 import { ResultShareHost } from './features/share/ResultShare';
 import { SyncBar } from './features/sync/SyncBar';
 import { SidebarUpdate } from './features/update/appUpdate';
@@ -329,6 +330,7 @@ export default function App() {
 
       {ready && selected && <GoalSound key={selected.id} profile={selected} />}
       {ready && <ResultShareHost />}
+      {ready && <PreviewShareHost />}
 
       {ready && profiles && profiles.length > 0 && (
         <DesktopAgent

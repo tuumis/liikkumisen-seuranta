@@ -31,6 +31,8 @@ describe('tuloskortti', () => {
     expect(resultKicker(c)).toBe('Ottelu · Elite · 5v5');
     expect(initials('FC Lahti 2018')).toBe('FL');
     expect(initials('HJK')).toBe('HJK');
+    expect(initials('HJK · Valkoinen · 2016')).toBe('HJK');
+    expect(initials('FC Honka · Musta')).toBe('FH');
     expect(initials(undefined)).toBe('?');
   });
 });

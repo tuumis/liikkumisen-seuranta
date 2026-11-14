@@ -60,6 +60,8 @@ export interface ClubPatch {
   /** Maakoodi (ui/flags), esim. FI tai GB-ENG. */
   country?: string;
   city?: string;
+  /** Jakokuvien väri (teeman tunniste tai #rrggbb). */
+  shareColor?: string;
 }
 
 export { nowTimestamp };
@@ -1122,7 +1124,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     const current = await db.clubs.get(id);
     const next: Club = await stamp({ ...(current && !current.deletedAt ? current : { id, createdAt: nowTimestamp() }), name: clean } as Club);
     delete next.deletedAt;
-    for (const k of ['logo', 'country', 'city'] as const) {
+    for (const k of ['logo', 'country', 'city', 'shareColor'] as const) {
       if (!(k in patch)) continue;
       const v = patch[k]?.replace(/\s+/g, ' ').trim();
       if (v) next[k] = k === 'city' ? v.slice(0, 60) : v;
@@ -1186,7 +1188,7 @@ export function createRepositories(db: AppDB = defaultDb) {
       const existing = await db.clubs.get(clubIdOf(target));
       const keep = existing && !existing.deletedAt ? existing : undefined;
       if (clubIdOf(target) !== old.id) await softDelete(db.clubs, old.id);
-      await saveClub(target, { logo: keep?.logo ?? old.logo, country: keep?.country ?? old.country, city: keep?.city ?? old.city });
+      await saveClub(target, { logo: keep?.logo ?? old.logo, country: keep?.country ?? old.country, city: keep?.city ?? old.city, shareColor: keep?.shareColor ?? old.shareColor });
     }
     return n;
   }
