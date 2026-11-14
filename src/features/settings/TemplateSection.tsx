@@ -13,7 +13,7 @@ import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { durationSchema, issuesByField } from '../week/sessionForm';
 import { LabelField } from '../week/LabelField';
-import { useHiddenCategories, visibleTypes } from '../week/useLoggableTypes';
+import { useHiddenTypes, visibleTypes } from '../week/useLoggableTypes';
 import { useFootballStatus, withoutClubFootball } from '../football/useFootballEnabled';
 import { DateInput } from '../../ui/DateInput';
 
@@ -106,7 +106,7 @@ export function TemplateSection({ profile }: { profile: Profile }) {
 function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: TemplateItem; onDone: () => void }) {
   const today = todayFn();
   const toast = useToast();
-  const hidden = useHiddenCategories(profile.id, today);
+  const hidden = useHiddenTypes(profile.id);
   const footballStatus = useFootballStatus(profile);
   const footballOn = !!footballStatus;
   const types = withoutClubFootball(visibleTypes(useLiveQuery(() => repo.listActivityTypes(), []), hidden, item?.activityTypeId), footballOn, item?.activityTypeId);

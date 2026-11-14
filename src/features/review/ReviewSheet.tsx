@@ -1,6 +1,7 @@
 // "Käy viikko läpi" (SPEC 12): kaikki kuittaamattomat (open, päivä < tänään, sekä tämän päivän jo päättyneet).
 // Rivillä ✓ kuten suunniteltu, ✗ ei tehty → valinnainen syy, ✎ muokkaa kestoa.
 
+import { TypeGlyph } from '../../ui/TypeGlyph';
 import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import type { ActivityType, PlannedSession, Profile, Session, UUID } from '../../domain/types';
@@ -82,7 +83,7 @@ function ReviewRow({
     <li className="card-sunk p-3">
       <div className="flex items-center gap-3">
         <span className="text-xl" aria-hidden>
-          {type?.icon ?? '•'}
+          <TypeGlyph t={type} />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-medium text-slate-900">{type?.name ?? 'Laji'}</span>

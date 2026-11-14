@@ -131,3 +131,43 @@ describe('yksilölliset indeksit', () => {
     ).rejects.toThrow();
   });
 });
+
+describe('omat lajit ja piilotus (14.11.2026)', () => {
+  it('oma laji: luonti, kuva, nimen tarkistus ja poisto valikoista', async () => {
+    await repo.initialize();
+    const img = 'data:image/jpeg;base64,AAAA';
+    const t = await repo.createActivityType({
+      name: ' Parkour ',
+      icon: '🏃',
+      image: img,
+      category: 'self_directed',
+      movementGroup: 'jumping_gymnastics',
+      shares: { light: 0.4, moderate: 0.35, vigorous: 0.15 },
+      muscleDefault: 'ask',
+      boneDefault: 'yes',
+    });
+    expect(t).toMatchObject({ name: 'Parkour', builtIn: false, archived: false, image: img });
+    await expect(repo.createActivityType({ ...t, name: 'parkour' })).rejects.toThrow('Samanniminen');
+    const renamed = await repo.updateActivityType(t.id, { name: 'Parkour ja juoksu', image: undefined });
+    expect(renamed.name).toBe('Parkour ja juoksu');
+    expect('image' in renamed).toBe(false);
+    await repo.updateActivityType(t.id, { archived: true });
+    expect((await repo.listActivityTypes()).some((x) => x.id === t.id)).toBe(false);
+    expect((await repo.listActivityTypes({ includeArchived: true })).some((x) => x.id === t.id)).toBe(true);
+  });
+
+  it('sisäänrakennetun lajin nimi ja kategoria eivät muutu; piilotus on profiilikohtainen', async () => {
+    await repo.initialize();
+    const id = activityTypeId('running');
+    const t = await repo.updateActivityType(id, { name: 'X', category: 'other', archived: true, muscleDefault: 'yes' });
+    expect(t).toMatchObject({ name: 'Juoksu (aikuinen)', category: 'self_directed', archived: false, muscleDefault: 'yes' });
+    const a = await repo.createProfile({ name: 'Aino', kind: 'child', birthYear: 2016, birthMonth: 5, color: '#0891b2' });
+    const b = await repo.createProfile({ name: 'Eino', kind: 'child', birthYear: 2021, birthMonth: 3, color: '#0891b2' });
+    await repo.setTypeHidden(a.id, id, true);
+    const [pa, pb] = await Promise.all([repo.listProfiles(), repo.listProfiles()]).then(([l]) => [l.find((p) => p.id === a.id)!, l.find((p) => p.id === b.id)!]);
+    expect(pa.hiddenTypeIds).toEqual([id]);
+    expect(pb.hiddenTypeIds).toBeUndefined();
+    await repo.setTypeHidden(a.id, id, false);
+    expect((await repo.listProfiles()).find((p) => p.id === a.id)!.hiddenTypeIds).toBeUndefined();
+  });
+});

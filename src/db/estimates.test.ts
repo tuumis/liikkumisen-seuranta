@@ -110,54 +110,17 @@ describe('seurannan alku', () => {
   });
 });
 
-describe('välitunnit vain arkiliikunnassa', () => {
-  it('erillinen välituntikerta muuttuu vahvistukseksi arviopäivinä; minuutit ja luvut säilyvät', async () => {
-    await repo.saveEstimate('p1', recess(), '2026-11-02');
-    const inside = await repo.createSession({ profileId: 'p1', activityTypeId: 't:school_recess', date: '2026-11-05', durationMin: 45, effort: 0, muscle: false, bone: true });
-    const before = await repo.createSession({ profileId: 'p1', activityTypeId: 't:school_recess', date: '2026-10-30', durationMin: 30, effort: 0, muscle: false, bone: false });
-    const other = await repo.createSession({ profileId: 'p1', activityTypeId: 't:commute_walk', date: '2026-11-05', durationMin: 20, effort: 0, muscle: false, bone: false });
-    const all = await repo.listEstimates('p1');
-    const totalsBefore = dayTotals('2026-11-05', await repo.sessionsInRange('p1', '2026-11-05', '2026-11-05'), all, types);
-
-    expect(await repo.foldEstimateOnlySessions('2026-11-13')).toBe(1);
-    const s = (await db.sessions.get(inside.id))!;
-    expect(s.estimateConfirmed).toBe(true);
-    expect(s.label).toBe('Välitunnit ja pihaleikit');
-    expect(s.durationMin).toBe(45);
-    expect(s.bone).toBe(true);
-    expect((await db.sessions.get(before.id))!.estimateConfirmed).toBeUndefined(); // ennen arviota
-    expect((await db.sessions.get(other.id))!.estimateConfirmed).toBeUndefined(); // muu kategoria
-    // Päivän luvut eivät muutu; välituntien minuutit lasketaan nyt arkiliikunnan vahvistukseksi.
-    const after = dayTotals('2026-11-05', await repo.sessionsInRange('p1', '2026-11-05', '2026-11-05'), all, types);
-    expect({ ...after, confirmedMvpa: 0 }).toEqual(totalsBefore);
-    expect(after.confirmedMvpa).toBeGreaterThan(0);
-
-    // Idempotentti.
-    expect(await repo.foldEstimateOnlySessions('2026-11-13')).toBe(0);
-  });
-});
-
-describe('välituntien viikkorytmi', () => {
-  it('välituntirivi poistuu käytöstä ja sen avoimet suunnitelmat poistuvat; muut rivit säilyvät', async () => {
+describe('välitunnit kirjattavina (14.11.2026)', () => {
+  it('välituntikerta pysyy omana kertanaan ja korvaa sen päivän välituntiarvion; viikkorytmi säilyy', async () => {
     const today = '2026-11-13';
     await repo.saveEstimate('p1', recess(), '2026-11-02');
+    const s = await repo.createSession({ profileId: 'p1', activityTypeId: 't:school_recess', date: '2026-11-05', durationMin: 45, effort: 0, muscle: false, bone: true });
     const rec = await repo.createTemplateItem('p1', { activityTypeId: 't:school_recess', weekdays: [1, 2, 3, 4, 5], durationMin: 45, validFrom: today }, today);
-    const pe = await repo.createTemplateItem('p1', { activityTypeId: 't:school_pe', weekdays: [1], durationMin: 90, validFrom: today }, today);
-    const open = (id: string) => repo.plansInRange('p1', today, '2026-11-30').then((ps) => ps.filter((p) => p.templateItemId === id && p.status === 'open').length);
-    expect(await open(rec.id)).toBeGreaterThan(0);
-
-    expect(await repo.foldEstimateOnlySessions(today)).toBeGreaterThan(0);
-    expect((await db.templateItems.get(rec.id))!.active).toBe(false);
-    expect(await open(rec.id)).toBe(0);
-    expect((await db.templateItems.get(pe.id))!.active).toBe(true);
-    expect(await open(pe.id)).toBeGreaterThan(0);
     expect(await repo.foldEstimateOnlySessions(today)).toBe(0);
-  });
-
-  it('ilman välituntiarviota viikkorytmi säilyy', async () => {
-    const today = '2026-11-13';
-    const rec = await repo.createTemplateItem('p1', { activityTypeId: 't:school_recess', weekdays: [1, 2], durationMin: 45, validFrom: today }, today);
-    expect(await repo.foldEstimateOnlySessions(today)).toBe(0);
+    expect((await db.sessions.get(s.id))!.estimateConfirmed).toBeUndefined();
     expect((await db.templateItems.get(rec.id))!.active).toBe(true);
+    const d = dayTotals('2026-11-05', await repo.sessionsInRange('p1', '2026-11-05', '2026-11-05'), await repo.listEstimates('p1'), types);
+    expect(d.byCategory.school_recess).toMatchObject({ source: 'logged', durationMin: 45 });
+    expect(d.sessionCount).toBe(1);
   });
 });

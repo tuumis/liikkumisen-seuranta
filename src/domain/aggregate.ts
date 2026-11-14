@@ -70,11 +70,12 @@ export function estimateMinutes(e: Estimate, d: ISODate, holiday = false): Inten
  * vahvistavaa päivää.
  */
 /**
- * Kategoriat, joita ei kirjata omina kertoinaan, kun profiililla on niille arkiliikunnan arvio
- * (käyttäjän päätös 13.11.2026: välitunnit vain arkiliikunnassa, ei kahdessa paikassa).
- * Laji jää taustalle arvion vahvistusten lajiksi, mutta piilotetaan lajivalikoista.
+ * Kategoriat, joita ei kirjata omina kertoinaan, kun profiililla on niille arkiliikunnan arvio.
+ * 13.11.2026 välitunnit olivat vain arkiliikunnassa; 14.11.2026 käyttäjä palautti ne kirjattaviksi
+ * (kirjaus korvaa sen päivän välituntiarvion tavalliseen tapaan), joten lista on tyhjä. Lajit voi
+ * nyt piilottaa profiilikohtaisesti (Profile.hiddenTypeIds).
  */
-export const ESTIMATE_ONLY_CATEGORIES: readonly Category[] = Object.freeze(['school_recess']);
+export const ESTIMATE_ONLY_CATEGORIES: readonly Category[] = Object.freeze([]);
 
 /** Arkiliikunnan päiväkohtainen vahvistus (myös ennen merkintäkenttää tehdyt, tunnistetaan muistiinpanosta). */
 export function isEstimateConfirmation(s: Session): boolean {

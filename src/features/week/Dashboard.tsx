@@ -1,6 +1,7 @@
 // Etusivun kortit: päivittäinen jakauma, viikon rytmi (rasittava, lihas, luusto), tulevat
 // suunnitellut kerrat ja viimeisimmät kirjaukset. Pelkkää esitystä; luvut tulevat raportista.
 
+import { TypeGlyph } from '../../ui/TypeGlyph';
 import { isEstimateConfirmation } from '../../domain/hours';
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -34,7 +35,7 @@ export function TypeIcon({ t, muted = false, size = 'md' }: { t?: ActivityType; 
       }`}
       aria-hidden
     >
-      {t?.icon ?? '•'}
+      <TypeGlyph t={t} />
     </span>
   );
 }

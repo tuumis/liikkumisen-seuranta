@@ -4,6 +4,7 @@
 // arkiliikunnalle (vahvista arvio). Päivän alla suositusmerkit (rasittava, lihas, luusto).
 // PC:llä valittavat lisäsarakkeet (tehot, jalkapallo, kommentit); summat minuutteina tai tunteina.
 
+import { TypeGlyph } from '../../ui/TypeGlyph';
 import { useEffect, useRef, useState } from 'react';
 import { outcomeOf } from '../../domain/football';
 import type { DayHours } from '../../domain/hours';
@@ -352,7 +353,7 @@ export function DayTable({
                                 </svg>
                               </span>
                             ) : (
-                              <span aria-hidden>{t?.icon}</span>
+                              <span aria-hidden><TypeGlyph t={t} /></span>
                             )}
                             <span className="truncate">{shortName(s, t)}</span>
                             <span className="tabular-nums text-slate-500">{s.durationMin}</span>
@@ -371,7 +372,7 @@ export function DayTable({
                               title={`Suunniteltu: ${t?.name ?? ''} ${p.durationMin} min${skipped ? ' (ei tehty)' : ''}`}
                             >
                               <span aria-hidden className="grayscale-[0.6]">
-                                {t?.icon}
+                                <TypeGlyph t={t} />
                               </span>
                               <span className="truncate">{shortName(p, t)}</span>
                               <span className="tabular-nums">{p.durationMin}</span>
@@ -429,7 +430,7 @@ export function DayTable({
                           const txt = footballCell(s, types.get(s.activityTypeId), footballDetails?.get(s.id));
                           return txt ? (
                             <div key={s.id} className="truncate" title={txt}>
-                              <span aria-hidden>{types.get(s.activityTypeId)?.icon} </span>
+                              <span aria-hidden><TypeGlyph t={types.get(s.activityTypeId)} /> </span>
                               {txt}
                             </div>
                           ) : null;

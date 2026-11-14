@@ -235,7 +235,7 @@ export function createRepositories(db: AppDB = defaultDb) {
   }
 
   type ProfileInput = Pick<Profile, 'name' | 'kind' | 'birthYear' | 'birthMonth' | 'color'> &
-    Partial<Pick<Profile, 'schoolStart' | 'groupOverride' | 'trackingStart' | 'photo' | 'football'>>;
+    Partial<Pick<Profile, 'schoolStart' | 'groupOverride' | 'trackingStart' | 'photo' | 'football' | 'hiddenTypeIds'>>;
 
   async function createProfile(input: ProfileInput): Promise<Profile> {
     const all = await db.profiles.toArray();
@@ -258,7 +258,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     if (!current || current.deletedAt) throw new Error('Profiilia ei löydy');
     const next: Profile = await stamp({ ...current, ...changes });
     // Valinnaisten kenttien tyhjennys: undefined poistaa kentän.
-    for (const k of ['schoolStart', 'groupOverride', 'trackingStart', 'photo', 'football'] as const) {
+    for (const k of ['schoolStart', 'groupOverride', 'trackingStart', 'photo', 'football', 'hiddenTypeIds'] as const) {
       if (k in changes && changes[k] === undefined) delete next[k];
     }
     await db.profiles.put(next);
@@ -309,12 +309,55 @@ export function createRepositories(db: AppDB = defaultDb) {
    */
   async function updateActivityType(
     id: UUID,
-    changes: Partial<Pick<ActivityType, 'shares' | 'muscleDefault' | 'boneDefault'>>,
+    changes: Partial<Pick<ActivityType, 'shares' | 'muscleDefault' | 'boneDefault' | 'name' | 'icon' | 'image' | 'category' | 'movementGroup' | 'archived'>>,
   ): Promise<ActivityType> {
     const current = await getActivityType(id);
-    const next = await stamp({ ...current, ...changes, shares: { ...(changes.shares ?? current.shares) } });
+    // Sisäänrakennetun lajin nimi, kuvake ja kategoria pysyvät (tunnistus ja laskenta nojaavat niihin).
+    if (current.builtIn) {
+      for (const k of ['name', 'icon', 'image', 'category', 'movementGroup', 'archived'] as const) delete changes[k];
+    }
+    const next: ActivityType = await stamp({ ...current, ...changes, shares: { ...(changes.shares ?? current.shares) } });
+    if ('image' in changes && changes.image === undefined) delete next.image;
+    if (next.name !== undefined && !next.name.trim()) throw new Error('Anna lajille nimi');
     await db.activityTypes.put(next);
     return next;
+  }
+
+  /** Oma laji (14.11.2026): nimi, emoji tai oma kuva, kategoria, tehoprofiili ja vahvistavat oletukset. */
+  async function createActivityType(
+    input: Pick<ActivityType, 'name' | 'icon' | 'category' | 'movementGroup' | 'shares' | 'muscleDefault' | 'boneDefault'> & { image?: string },
+  ): Promise<ActivityType> {
+    const name = input.name.trim();
+    if (!name) throw new Error('Anna lajille nimi');
+    const all = await db.activityTypes.toArray();
+    if (all.some((t) => !t.deletedAt && !t.archived && t.name.trim().toLowerCase() === name.toLowerCase())) throw new Error('Samanniminen laji on jo olemassa');
+    const t: ActivityType = await stamp({
+      id: newId(),
+      name,
+      icon: input.icon.trim() || '✳️',
+      ...(input.image ? { image: input.image } : {}),
+      category: input.category,
+      movementGroup: input.movementGroup,
+      shares: { ...input.shares },
+      muscleDefault: input.muscleDefault,
+      boneDefault: input.boneDefault,
+      usesPlayedMinutes: false,
+      builtIn: false,
+      archived: false,
+      sortOrder: Math.max(0, ...all.map((x) => x.sortOrder)) + 1,
+    });
+    await db.activityTypes.add(t);
+    return t;
+  }
+
+  /** Lajin piilotus tai palautus yhden profiilin valikoissa. */
+  async function setTypeHidden(profileId: UUID, typeId: UUID, hidden: boolean): Promise<void> {
+    const p = await db.profiles.get(profileId);
+    if (!p || p.deletedAt) throw new Error('Profiilia ei löydy');
+    const set = new Set(p.hiddenTypeIds ?? []);
+    if (hidden) set.add(typeId);
+    else set.delete(typeId);
+    await updateProfile(profileId, { hiddenTypeIds: set.size ? [...set] : undefined });
   }
 
   /** Sisäänrakennetun lajin lähtöoletukset (SPEC 5 taulukko). */
@@ -1613,6 +1656,8 @@ export function createRepositories(db: AppDB = defaultDb) {
     markDigestSeen,
     getActivityType,
     updateActivityType,
+    createActivityType,
+    setTypeHidden,
     restoreActivityTypeDefaults,
     recalculableSessions,
     recalculateSessions,

@@ -25,7 +25,7 @@ type Step = 0 | 1 | 2 | 3 | 4;
 const STEPS: { n: Exclude<Step, 0>; title: string; text: string }[] = [
   { n: 1, title: 'Profiili', text: 'Nimi ja syntymävuosi: niistä valitaan ikäryhmän liikkumissuositus.' },
   { n: 2, title: 'Viikkorytmi', text: 'Toistuvat harrastukset ja koululiikunta. Niistä tulee suunniteltuja kertoja, jotka kuittaat viikolla.' },
-  { n: 3, title: 'Arkiliikunta', text: 'Arvio välitunneista, koulumatkoista ja leikistä, joita ei kirjata kerta kerralta.' },
+  { n: 3, title: 'Arkiliikunta', text: 'Arvio päiväkodista, välitunneista, koulumatkoista ja leikistä, joita ei kirjata kerta kerralta.' },
   { n: 4, title: 'Laite', text: 'PC vai puhelin, ja miten sovellus asennetaan kotinäytölle.' },
 ];
 

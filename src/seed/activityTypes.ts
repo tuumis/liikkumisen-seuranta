@@ -53,10 +53,38 @@ const ROWS: Row[] = [
   ['football_self', 'Jalkapallo – omatoiminen', '🥾', 'self_directed', 'ball_games', 0.5, 0.35, 0.05, 'ask', 'yes', 'training'],
   // Lisätty 14.11.2026: päiväkotipäivän liikkuminen (Liikkuva varhaiskasvatus: 2 h, josta 40 min reipasta).
   ['daycare_day', 'Päiväkotipäivä', '🧸', 'daycare', 'play', 0.67, 0.25, 0.08, 'no', 'ask'],
+  // Lisätty 14.11.2026 (käyttäjän pyyntö): lisää tehoprofiileja. Sovelluksen lähtöarvioita, muokattavissa.
+  ['activity_park', 'Liikuntapuisto (esim. Superpark)', '🎢', 'self_directed', 'play', 0.35, 0.35, 0.15, 'ask', 'yes'],
+  ['playground', 'Leikkipuisto', '🎠', 'self_directed', 'play', 0.5, 0.3, 0.1, 'ask', 'ask'],
+  ['daycare_outdoor', 'Päiväkodin ulkoilu', '🧤', 'daycare', 'play', 0.5, 0.35, 0.1, 'no', 'ask'],
+  ['cycling', 'Pyöräily', '🚴', 'self_directed', 'wheels', 0.3, 0.55, 0.1, 'no', 'no'],
+  ['inline_skating', 'Rullaluistelu ja rullalauta', '🛼', 'self_directed', 'wheels', 0.35, 0.5, 0.1, 'no', 'no'],
+  ['climbing', 'Kiipeily', '🧗', 'self_directed', 'strength', 0.45, 0.35, 0.1, 'yes', 'yes'],
+  ['sledding', 'Mäenlasku ja lumileikit', '🛷', 'self_directed', 'winter', 0.45, 0.35, 0.1, 'no', 'ask'],
+  ['gymnastics', 'Temppujumppa ja voimistelu', '🤸‍♀️', 'hobby', 'jumping_gymnastics', 0.4, 0.3, 0.15, 'yes', 'yes'],
+  ['dance', 'Tanssi', '💃', 'hobby', 'jumping_gymnastics', 0.35, 0.4, 0.15, 'no', 'yes'],
+  ['floorball', 'Salibandy', '🏑', 'hobby', 'ball_games', 0.3, 0.4, 0.2, 'no', 'ask'],
+  ['ice_hockey', 'Jääkiekko', '🏒', 'hobby', 'winter', 0.3, 0.4, 0.2, 'ask', 'no'],
+  ['hiking', 'Retkeily ja metsäretki', '🌲', 'family', 'endurance', 0.65, 0.3, 0.05, 'no', 'no'],
 ];
 
 /** Myöhemmin lisättyjen lajien järjestys, jotta aiemmat lajit säilyttävät sortOrder-arvonsa. */
-const SORT_ORDER: Record<string, number> = { football_self: 2.5, daycare_day: 4.5 };
+const SORT_ORDER: Record<string, number> = {
+  football_self: 2.5,
+  daycare_day: 4.5,
+  daycare_outdoor: 4.6,
+  activity_park: 8.5,
+  playground: 8.6,
+  cycling: 7.5,
+  inline_skating: 7.6,
+  climbing: 9.5,
+  sledding: 12.5,
+  gymnastics: 2.6,
+  dance: 2.7,
+  floorball: 2.8,
+  ice_hockey: 2.9,
+  hiking: 13.5,
+};
 
 /**
  * Perusarvion oletustehoprofiili kategorian tyypillisestä lajista (sovelluksen

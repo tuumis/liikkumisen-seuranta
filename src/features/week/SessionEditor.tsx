@@ -11,7 +11,7 @@ import { ToggleChip } from '../../ui/controls';
 import { IntensityPicker, isPreset, type IntensityMode } from './IntensityPicker';
 import { Sheet } from '../../ui/Sheet';
 import { LabelField } from './LabelField';
-import { useHiddenCategories } from './useLoggableTypes';
+import { useHiddenTypes } from './useLoggableTypes';
 import { useFootballEnabledById } from '../football/useFootballEnabled';
 import { isClubFootball } from '../../domain/football';
 import { TermInfo } from '../../ui/glossary';
@@ -34,7 +34,7 @@ export function SessionEditor({
   const today = todayFn();
   const toast = useToast();
   const types = useLiveQuery(() => repo.listActivityTypes({ includeArchived: true }), []);
-  const hidden = useHiddenCategories(session?.profileId, today);
+  const hidden = useHiddenTypes(session?.profileId);
   const footballOn = useFootballEnabledById(session?.profileId);
 
   const [typeId, setTypeId] = useState('');
@@ -163,7 +163,7 @@ export function SessionEditor({
           <Field label="Laji">
             <select className={inputClass} value={typeId} onChange={(e) => setTypeId(e.target.value)}>
               {types
-                ?.filter((t) => (!t.archived && !hidden.has(t.category) && (footballOn || !isClubFootball(t))) || t.id === session.activityTypeId)
+                ?.filter((t) => (!t.archived && !hidden.has(t.id) && (footballOn || !isClubFootball(t))) || t.id === session.activityTypeId)
                 .map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.icon} {t.name}

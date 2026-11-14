@@ -160,8 +160,8 @@ describe('tunnisteet ja siemendata', () => {
     expect(newId()).toMatch(/^[0-9a-f-]{36}$/);
   });
 
-  it('sisäänrakennetut lajit (19), pysyvät avaimet, kelvolliset profiilit', () => {
-    expect(BUILT_IN_ACTIVITY_TYPES).toHaveLength(19);
+  it('sisäänrakennetut lajit (31), pysyvät avaimet, kelvolliset profiilit', () => {
+    expect(BUILT_IN_ACTIVITY_TYPES).toHaveLength(31);
     const ids = BUILT_IN_ACTIVITY_TYPES.map((t) => t.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const t of BUILT_IN_ACTIVITY_TYPES) {

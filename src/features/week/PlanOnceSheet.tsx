@@ -15,12 +15,12 @@ import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { useFootballEnabled, withoutClubFootball } from '../football/useFootballEnabled';
 import { LabelField } from './LabelField';
-import { useHiddenCategories, visibleTypes } from './useLoggableTypes';
+import { useHiddenTypes, visibleTypes } from './useLoggableTypes';
 
 export function PlanOnceSheet({ profile, date, onClose }: { profile: Profile; date: ISODate | null; onClose: () => void }) {
   const toast = useToast();
   const today = todayFn();
-  const hidden = useHiddenCategories(profile.id, today);
+  const hidden = useHiddenTypes(profile.id);
   const footballOn = useFootballEnabled(profile);
   const all = useLiveQuery(() => repo.listActivityTypes(), []);
   // Pelit ja turnaukset lisätään pelikalenteriin (vastustaja, otteluohjelma), joten ne eivät ole tässä.

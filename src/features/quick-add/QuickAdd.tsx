@@ -2,6 +2,7 @@
 // Päivä, ponnistelu, lihas/luusto ja muistiinpano ovat valinnaisia ja
 // valitaan samassa paneelissa ennen kestoa.
 
+import { TypeGlyph } from '../../ui/TypeGlyph';
 import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { addDays } from '../../domain/dates';
@@ -11,7 +12,7 @@ import { requestPersistentStorage } from '../../db/storage';
 import { IconBall } from '../../ui/icons';
 import { TermInfo } from '../../ui/glossary';
 import { LabelField } from '../week/LabelField';
-import { useHiddenCategories, visibleTypes } from '../week/useLoggableTypes';
+import { useHiddenTypes, visibleTypes } from '../week/useLoggableTypes';
 import { useFootballEnabled, withoutClubFootball } from '../football/useFootballEnabled';
 import { Button, inputClass } from '../../ui/components';
 import { ToggleChip } from '../../ui/controls';
@@ -48,7 +49,7 @@ function TypeButton({ t, onPick, label, football }: { t: ActivityType; onPick: (
       }`}
     >
       <span className="flex size-10 items-center justify-center rounded-2xl bg-[var(--surface-sage)] text-2xl transition-transform duration-300 group-hover:scale-110" aria-hidden>
-        {t.icon}
+        <TypeGlyph t={t} />
       </span>
       <span className="text-xs font-semibold leading-tight text-slate-800">{label ?? t.name}</span>
     </button>
@@ -72,7 +73,7 @@ export function QuickAdd({
   const today = todayFn();
   const toast = useToast();
   const allTypes = useLiveQuery(() => repo.listActivityTypes(), []);
-  const hidden = useHiddenCategories(profile.id, today);
+  const hidden = useHiddenTypes(profile.id);
   // Jalkapallo pois käytöstä: seurajalkapallon lajit piiloon, omatoiminen jalkapallo tavallisena lajina.
   const footballOn = useFootballEnabled(profile);
   const types = useMemo(() => withoutClubFootball(visibleTypes(allTypes, hidden), footballOn), [allTypes, hidden, footballOn]);

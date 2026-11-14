@@ -26,7 +26,7 @@ export type SettingsSectionId = 'profiles' | 'routine' | 'everyday' | 'goals' | 
 export const SETTINGS_SECTIONS: { id: SettingsSectionId; Icon: typeof IconUser; title: string; text: string; needsProfile?: boolean }[] = [
   { id: 'profiles', Icon: IconUser, title: 'Profiilit', text: 'Lapset ja aikuiset, syntymävuosi ja koulun aloitus' },
   { id: 'routine', Icon: IconRepeat, title: 'Viikkorytmi', text: 'Toistuvat treenit ja koululiikunta, jotka kuitataan viikolla', needsProfile: true },
-  { id: 'everyday', Icon: IconSun, title: 'Arkiliikunta', text: 'Arvio välitunneista, koulumatkoista ja leikistä', needsProfile: true },
+  { id: 'everyday', Icon: IconSun, title: 'Arkiliikunta', text: 'Arvio päiväkodista, välitunneista, koulumatkoista ja leikistä', needsProfile: true },
   { id: 'goals', Icon: IconTarget, title: 'Tavoitteet ja lajit', text: 'Rasittavan päivän raja, pääluku ja lajien tehot' },
   { id: 'devices', Icon: IconDevices, title: 'Laitteet ja varmuuskopio', text: 'PC ja puhelin, synkronointi, ilmoitukset, vienti ja tuonti' },
   { id: 'appearance', Icon: IconContrast, title: 'Ulkoasu', text: 'Teema, näkymä ja äänet' },

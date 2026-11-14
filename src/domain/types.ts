@@ -81,6 +81,8 @@ export interface Profile extends SyncFields {
   football?: boolean;
   /** "Viime viikko lyhyesti" suljettu tämän viikon (maanantai) osalta; synkronoituu laitteiden välillä. */
   digestSeenWeek?: ISODate;
+  /** Lajit, jotka on piilotettu tämän profiilin lajivalikoista (14.11.2026). Vanhat kerrat säilyvät. */
+  hiddenTypeIds?: UUID[];
   sortOrder: number;
   archived: boolean;
   createdAt: Timestamp;
@@ -95,7 +97,10 @@ export interface ActivityType extends SyncFields {
   id: UUID;
   key?: string; // sisäänrakennetuilla pysyvä avain, esim. 'football_training'
   name: string;
+  /** Emoji; käytetään myös tekstinä (valikot, otsikot), kun omaa kuvaa ei voi näyttää. */
   icon: string;
+  /** Oma kuva (pieni JPEG data URL), valinnainen; näytetään emojin sijaan lajikuvakkeissa. */
+  image?: string;
   category: Category;
   movementGroup: MovementGroup;
   shares: IntensityShares; // sovelluksen oletusarvio, muokattava
