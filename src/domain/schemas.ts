@@ -169,7 +169,7 @@ export const fixtureSchema = either(
   'plannedSessionId',
 );
 
-export const clubSchema = either(z.looseObject({ id: z.string().min(1), name: z.string(), logo: photo.optional(), createdAt: ts, ...sync }));
+export const clubSchema = either(z.looseObject({ id: z.string().min(1), name: z.string(), logo: photo.optional(), country: z.string().max(10).optional(), city: z.string().max(80).optional(), createdAt: ts, ...sync }));
 
 export const metaSchema = z.looseObject({ key: z.string().min(1), value: z.unknown() });
 

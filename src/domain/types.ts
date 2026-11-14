@@ -336,6 +336,10 @@ export interface Club extends SyncFields {
   name: string;
   /** Logo kokonaisena (PNG/JPEG data URL, ei rajausta), valinnainen. */
   logo?: string;
+  /** Kansallisuus maakoodina (ui/flags: ISO 3166 -kaksikirjaiminen tai GB-ENG/GB-SCT); lippu piirretään sovelluksessa. */
+  country?: string;
+  /** Kotipaikkakunta, esim. Espoo. */
+  city?: string;
   createdAt: Timestamp;
 }
 

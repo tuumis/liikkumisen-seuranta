@@ -1,10 +1,11 @@
 // Seuran logo tai joukkuekuva pyöristetyssä neliössä (SPEC 16): logo näytetään kokonaisena
 // (object-contain) vaalealla pohjalla, joten tekstilliset logot eivät jää piiloon.
 
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { clubKey, parseTeamName } from '../domain/opponent';
 import { repo } from '../db/repositories';
+import type { Club } from '../domain/types';
 import { isPhotoDataUrl, resizeLogo } from './image';
 
 const SIZES = {
@@ -15,12 +16,29 @@ const SIZES = {
 } as const;
 type Size = keyof typeof SIZES;
 
+/** Seurat nimen avaimella (logo, maa, kotipaikkakunta; elää tietokannan mukana). */
+export function useClubs(): Map<string, Club> {
+  const clubs = useLiveQuery(() => repo.listClubs(), []);
+  return useMemo(() => new Map((clubs ?? []).map((c) => [clubKey(c.name), c])), [clubs]);
+}
+
 /** Seurojen logot nimen avaimella (kaikki seurat kerralla; elää tietokannan mukana). */
 export function useClubLogos(): Map<string, string> {
-  const clubs = useLiveQuery(() => repo.listClubs(), []);
-  const map = new Map<string, string>();
-  for (const c of clubs ?? []) if (c.logo) map.set(clubKey(c.name), c.logo);
-  return map;
+  const clubs = useClubs();
+  return useMemo(() => {
+    const map = new Map<string, string>();
+    for (const [k, c] of clubs) if (c.logo) map.set(k, c.logo);
+    return map;
+  }, [clubs]);
+}
+
+/** Seuran nimi joukkueen nimestä: seuraosa, tai koko nimi, jos seuraa ei ole erotettu. */
+export const clubNameOf = (teamName: string | undefined) => parseTeamName(teamName).club.trim() || (teamName ?? '').replace(/\s+/g, ' ').trim();
+
+/** Joukkueen tai vastustajan seura (maa ja kotipaikkakunta). */
+export function clubFor(clubs: Map<string, Club>, teamName: string | undefined): Club | undefined {
+  const c = clubNameOf(teamName);
+  return c ? clubs.get(clubKey(c)) : undefined;
 }
 
 /** Joukkueen tai vastustajan nimen seuran logo. */

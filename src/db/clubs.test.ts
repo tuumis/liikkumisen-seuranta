@@ -87,4 +87,20 @@ describe('seurat', () => {
     await mergeSyncFile(phone.db, toJson(await buildSyncFile(pc.db, pc.id, 'pc')), phone.id);
     expect((await phone.repo.listClubs()).map((c) => [c.name, c.logo])).toEqual([['FC Lahti', LOGO]]);
   });
+
+  it('maa ja kotipaikkakunta: vain annetut kentät muuttuvat, siirtyvät nimen muutoksessa ja synkronoituvat', async () => {
+    const pc = await device('origin');
+    const phone = await device('origin-phone');
+    await pc.repo.saveClubLogo('FC Honka', LOGO);
+    await pc.repo.saveClub('fc honka', { country: 'FI', city: '  Espoo ' });
+    expect((await pc.repo.listClubs())[0]).toMatchObject({ logo: LOGO, country: 'FI', city: 'Espoo' });
+    await pc.repo.saveClub('FC Honka', { city: '' });
+    const c = (await pc.repo.listClubs())[0];
+    expect([c.logo, c.country, c.city]).toEqual([LOGO, 'FI', undefined]);
+    await pc.repo.saveClub('FC Honka', { city: 'Espoo' });
+    await pc.repo.renameClub('FC Honka', 'Honka');
+    expect((await pc.repo.listClubs()).map((x) => [x.name, x.country, x.city])).toEqual([['Honka', 'FI', 'Espoo']]);
+    await mergeSyncFile(phone.db, toJson(await buildSyncFile(pc.db, pc.id, 'pc')), phone.id);
+    expect((await phone.repo.listClubs()).map((x) => [x.name, x.country, x.city])).toEqual([['Honka', 'FI', 'Espoo']]);
+  });
 });

@@ -10,7 +10,8 @@ import { repo, type FixtureEntry } from '../../db/repositories';
 import { clubKey, displayTeamName, parseTeamName } from '../../domain/opponent';
 import { opponentHistory } from '../../domain/opponentLibrary';
 import { historyLine, useGameRows } from './OpponentHistory';
-import { LogoPicker, TeamLogo, useClubLogos } from '../../ui/TeamLogo';
+import { Flag, OriginFields } from '../../ui/Flag';
+import { clubFor, clubNameOf, LogoPicker, TeamLogo, useClubLogos, useClubs } from '../../ui/TeamLogo';
 import { Button, Card, EmptyState } from '../../ui/components';
 import { Segmented, ToggleChip } from '../../ui/controls';
 import { dayLabel, formatDate } from '../../ui/format';
@@ -321,6 +322,9 @@ function TeamsView({ profile }: { profile: Profile }) {
   const [format, setFormat] = useState<GameFormat | ''>('');
   const [share, setShare] = useState(70); // peliaika-arvio %
   const logos = useClubLogos();
+  const clubs = useClubs();
+  const [country, setCountry] = useState<string | undefined>();
+  const [city, setCity] = useState('');
   const logoFor = (n: string) => {
     const c = parseTeamName(n).club;
     return c && /[/·|]/.test(n) ? logos.get(clubKey(c)) : undefined;
@@ -340,6 +344,9 @@ function TeamsView({ profile }: { profile: Profile }) {
     setLogoTouched(false);
     setFormat(t === 'new' ? '' : (t.format ?? ''));
     setShare(Math.round((t === 'new' ? 0.7 : (t.playShare ?? 0.7)) * 100));
+    const info = t === 'new' ? undefined : clubFor(clubs, t.name);
+    setCountry(info?.country);
+    setCity(info?.city ?? '');
   };
 
   async function save() {
@@ -347,6 +354,9 @@ function TeamsView({ profile }: { profile: Profile }) {
       const hasClub = !!club && /[/·|]/.test(name);
       // Logo seuralle (näkyy kaikissa seuran joukkueissa ja peleissä); ilman seuraa joukkueen kuvaksi.
       if (logoTouched && hasClub) await repo.saveClubLogo(club, logo);
+      // Maa ja kotipaikkakunta seuralle (ilman erotettua seuraa koko nimelle).
+      const info = clubFor(clubs, name);
+      if ((country ?? '') !== (info?.country ?? '') || city.trim() !== (info?.city ?? '')) await repo.saveClub(clubNameOf(name), { country, city });
       const teamPhoto = logoTouched && !hasClub ? logo : logoTouched && hasClub ? undefined : photo;
       await repo.saveTeam(profile.id, { name, photo: teamPhoto, format: format || undefined, playShare: share === 70 ? undefined : share / 100 }, editing && editing !== 'new' ? editing.id : undefined);
       toast('Joukkue tallennettu');
@@ -394,6 +404,7 @@ function TeamsView({ profile }: { profile: Profile }) {
               Kuinka suuren osan peliajasta pelaaja on tavallisesti kentällä, kun pelattuja minuutteja ei kirjata. Oletus 70 % (esim. 5v5 ja 7 pelaajan ryhmä: 5/7). Arvio tarkentuu, kun pelin jälkeen merkitset Ei / Osan / Koko pelin.
             </p>
           </div>
+          <OriginFields country={country} city={city} onCountry={setCountry} onCity={setCity} />
           <LogoPicker
             label={club && /[/·|]/.test(name) ? `Seuran logo (${club})` : 'Logo tai joukkuekuva'}
             name={name}
@@ -424,10 +435,12 @@ function TeamsView({ profile }: { profile: Profile }) {
             <button type="button" className="flex min-w-0 flex-1 items-center gap-3 text-left" onClick={() => open(t)} aria-label={`Muokkaa: ${t.name}`}>
               <TeamLogo logo={logoFor(t.name) ?? t.photo} name={t.name} size="lg" />
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-medium text-slate-900">{displayTeamName(t.name)}</span>
-                <span className="mt-0.5 flex items-center gap-1.5">
-                  {t.format && <span className="text-xs text-slate-500">{t.format}</span>}
-                  <span className="text-xs text-slate-500">· peliaika ~{Math.round((t.playShare ?? 0.7) * 100)} %</span>
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <Flag code={clubFor(clubs, t.name)?.country} />
+                  <span className="truncate font-medium text-slate-900">{displayTeamName(t.name)}</span>
+                </span>
+                <span className="mt-0.5 block truncate text-xs text-slate-500">
+                  {[clubFor(clubs, t.name)?.city, t.format, `peliaika ~${Math.round((t.playShare ?? 0.7) * 100)} %`].filter(Boolean).join(' · ')}
                 </span>
               </span>
               <span className="text-slate-400" aria-hidden>

@@ -7,12 +7,13 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { gameRows, OUTCOME_LABEL, type GameOutcome, type GameRow, type GameSummary } from '../../domain/football';
 import { clubKey, displayTeamName, formatTeamName, parseTeamName, squadLabel } from '../../domain/opponent';
 import { buildOpponentLibrary, type ClubEntry, type SquadEntry, type UpcomingGame } from '../../domain/opponentLibrary';
-import type { Profile } from '../../domain/types';
+import type { Club, Profile } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { Button, Card, EmptyState, inputClass } from '../../ui/components';
 import { formatDate } from '../../ui/format';
 import { Sheet } from '../../ui/Sheet';
-import { LogoPicker, TeamLogo, useClubLogos } from '../../ui/TeamLogo';
+import { ClubOrigin, Flag, OriginFields } from '../../ui/Flag';
+import { LogoPicker, TeamLogo, useClubLogos, useClubs } from '../../ui/TeamLogo';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { useFootball } from '../football/useFootball';
@@ -54,6 +55,7 @@ const gamesText = (n: number) => `${n} ${n === 1 ? 'peli' : 'peliä'}`;
 export function OpponentLibrary({ profile }: { profile: Profile }) {
   const { library, notes } = useLibrary(profile);
   const logos = useClubLogos();
+  const clubs = useClubs();
   const [open, setOpen] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const shown = useMemo(() => {
@@ -116,8 +118,14 @@ export function OpponentLibrary({ profile }: { profile: Profile }) {
             <button type="button" onClick={() => setOpen(c.key)} className="press flex w-full items-center gap-3 rounded-2xl bg-[var(--surface-sunk)] p-2.5 text-left hover:brightness-[0.98]">
               <TeamLogo logo={logos.get(c.key)} name={c.name} size="lg" />
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-semibold text-slate-900">{c.name}</span>
-                <span className="block truncate text-xs text-slate-600">{c.squads.map((s) => squadLabel(s.parts)).join(', ')}</span>
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <Flag code={clubs.get(c.key)?.country} />
+                  <span className="truncate font-semibold text-slate-900">{c.name}</span>
+                </span>
+                <span className="block truncate text-xs text-slate-600">
+                  {clubs.get(c.key)?.city ? `${clubs.get(c.key)?.city} · ` : ''}
+                  {c.squads.map((s) => squadLabel(s.parts)).join(', ')}
+                </span>
                 <span className="mt-0.5 block text-xs tabular-nums text-slate-500">
                   {gamesText(c.summary.games)}
                   {hasResults(c.summary) && ` · V–T–H ${record(c.summary)}`}
@@ -138,6 +146,7 @@ export function OpponentLibrary({ profile }: { profile: Profile }) {
         profile={profile}
         notes={notes}
         logo={club ? logos.get(club.key) : undefined}
+        info={club ? clubs.get(club.key) : undefined}
         walk={walking && club ? { left: pending(club.key).length, onNext: walkNext, onStop: () => setWalking(false) } : undefined}
         onClose={() => {
           setOpen(null);
@@ -154,6 +163,7 @@ function ClubSheet({
   profile,
   notes,
   logo,
+  info,
   walk,
   onClose,
   onRenamed,
@@ -162,6 +172,8 @@ function ClubSheet({
   profile: Profile;
   notes: Map<string, string>;
   logo?: string;
+  /** Tallennettu seura (maa ja kotipaikkakunta). */
+  info?: Club;
   /** Puuttuvien logojen läpikäynti käynnissä: jäljellä olevat muut seurat ja siirtymät. */
   walk?: { left: number; onNext: () => void; onStop: () => void };
   onClose: () => void;
@@ -170,7 +182,17 @@ function ClubSheet({
   const toast = useToast();
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState('');
+  const [city, setCity] = useState(info?.city ?? '');
 
+  async function saveOrigin(patch: { country?: string; city?: string }) {
+    if (!club) return;
+    if ('city' in patch && (patch.city ?? '').trim() === (info?.city ?? '')) return;
+    try {
+      await repo.saveClub(club.name, patch);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : String(e));
+    }
+  }
   async function saveLogo(v: string | undefined) {
     if (!club) return;
     try {
@@ -212,6 +234,7 @@ function ClubSheet({
                 <Stat label="V–T–H" value={record(club.summary)} />
                 <Stat label="Maalit" value={`${club.summary.goalsFor}–${club.summary.goalsAgainst}`} />
               </div>
+              <ClubOrigin club={info} className="mt-2 text-sm text-slate-700" />
               {club.summary.playerGoalsGames > 0 && (
                 <p className="mt-2 text-sm text-slate-700">
                   {profile.name}: <strong>{club.summary.playerGoals}</strong> {club.summary.playerGoals === 1 ? 'maali' : 'maalia'} tätä seuraa vastaan
@@ -222,6 +245,13 @@ function ClubSheet({
 
           <div className="card-sunk space-y-3 p-3">
             <LogoPicker name={club.name} value={logo} onChange={(v) => void saveLogo(v)} hideCompactLogo />
+            <OriginFields
+              country={info?.country}
+              city={city}
+              onCountry={(v) => void saveOrigin({ country: v })}
+              onCity={setCity}
+              onCityDone={(v) => void saveOrigin({ city: v })}
+            />
             {renaming ? (
               <form
                 className="flex gap-2"

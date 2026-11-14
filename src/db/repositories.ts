@@ -54,6 +54,14 @@ import { createPlanner } from './ensurePlanned';
 import { noteLocalChange } from './localChange';
 import { AppDB, db as defaultDb } from './schema';
 
+/** Seuran tietojen muutos (repo.saveClub): vain annetut kentät muuttuvat. */
+export interface ClubPatch {
+  logo?: string;
+  /** Maakoodi (ui/flags), esim. FI tai GB-ENG. */
+  country?: string;
+  city?: string;
+}
+
 export { nowTimestamp };
 
 const live = <T extends Partial<SyncFields>>(rows: T[]): T[] => rows.filter((r) => !r.deletedAt);
@@ -1103,19 +1111,29 @@ export function createRepositories(db: AppDB = defaultDb) {
     return live(await db.clubs.toArray()).sort((a, b) => a.name.localeCompare(b.name, 'fi'));
   }
 
-  /** Seuran logo (undefined poistaa). Tietue luodaan tarvittaessa; tunniste johdetaan nimestä. */
-  async function saveClubLogo(name: string, logo: string | undefined): Promise<Club> {
+  /**
+   * Seuran tiedot: logo, maa (lippu) ja kotipaikkakunta. Vain annetut kentät muuttuvat; tyhjä tai
+   * undefined poistaa kentän. Tietue luodaan tarvittaessa; tunniste johdetaan nimestä.
+   */
+  async function saveClub(name: string, patch: ClubPatch): Promise<Club> {
     const clean = name.replace(/\s+/g, ' ').trim();
     if (!clean) throw new Error('Anna seuran nimi');
     const id = clubIdOf(clean);
     const current = await db.clubs.get(id);
     const next: Club = await stamp({ ...(current && !current.deletedAt ? current : { id, createdAt: nowTimestamp() }), name: clean } as Club);
     delete next.deletedAt;
-    if (logo) next.logo = logo;
-    else delete next.logo;
+    for (const k of ['logo', 'country', 'city'] as const) {
+      if (!(k in patch)) continue;
+      const v = patch[k]?.replace(/\s+/g, ' ').trim();
+      if (v) next[k] = k === 'city' ? v.slice(0, 60) : v;
+      else delete next[k];
+    }
     await db.clubs.put(next);
     return next;
   }
+
+  /** Seuran logo (undefined poistaa). */
+  const saveClubLogo = (name: string, logo: string | undefined) => saveClub(name, { logo });
 
   /**
    * Muuttaa joukkueiden nimiä kaikkialla (vastustajat peleissä ja pelikalenterissa, omat joukkueet).
@@ -1157,7 +1175,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     return n;
   }
 
-  /** Seuran uudelleennimeäminen (myös yhdistäminen toiseen seuraan); logo siirtyy, ellei kohteella ole omaa. */
+  /** Seuran uudelleennimeäminen (myös yhdistäminen toiseen seuraan); logo, maa ja paikkakunta siirtyvät, ellei kohteella ole omia. */
   async function renameClub(from: string, to: string): Promise<number> {
     const target = to.replace(/\s+/g, ' ').trim();
     if (!target) throw new Error('Anna seuran nimi');
@@ -1166,9 +1184,9 @@ export function createRepositories(db: AppDB = defaultDb) {
     const old = await db.clubs.get(clubIdOf(from));
     if (old && !old.deletedAt) {
       const existing = await db.clubs.get(clubIdOf(target));
-      const logo = existing && !existing.deletedAt && existing.logo ? existing.logo : old.logo;
+      const keep = existing && !existing.deletedAt ? existing : undefined;
       if (clubIdOf(target) !== old.id) await softDelete(db.clubs, old.id);
-      await saveClubLogo(target, logo);
+      await saveClub(target, { logo: keep?.logo ?? old.logo, country: keep?.country ?? old.country, city: keep?.city ?? old.city });
     }
     return n;
   }
@@ -1720,6 +1738,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     reopenPlanned,
     listTeams,
     listClubs,
+    saveClub,
     saveClubLogo,
     rewriteTeamNames,
     renameClub,
