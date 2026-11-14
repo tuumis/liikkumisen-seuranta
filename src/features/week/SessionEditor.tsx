@@ -1,5 +1,7 @@
 // Kerran muokkaus ja poisto (SPEC 10: poisto pyytää vahvistusta ja tarjoaa kumoamisen 5 s).
 
+import { PartsEditor, partCandidates, partDraftsOf, partsFromDrafts, type PartDraft } from './PartsEditor';
+import { partsShares, supportsParts } from '../../domain/intensity';
 import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { activityTypeId } from '../../domain/ids';
@@ -49,6 +51,7 @@ export function SessionEditor({
   const [mode, setMode] = useState<IntensityMode>('profile');
   const [manual, setManual] = useState({ light: '', moderate: '', vigorous: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [parts, setParts] = useState<PartDraft[]>([]);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -69,6 +72,7 @@ export function SessionEditor({
       moderate: String(session.minutes.moderate),
       vigorous: String(session.minutes.vigorous),
     });
+    setParts(partDraftsOf(session.parts));
     setErrors({});
     setConfirmDelete(false);
   }, [session]);
@@ -82,8 +86,12 @@ export function SessionEditor({
 
   const type = types?.find((t) => t.id === typeId);
   // Lajin arviossa käytetään kerran omaa profiilia, jos laji ei vaihdu eikä kertaa kirjattu esiasetuksella.
+  const typeMap = useMemo(() => new Map((types ?? []).map((t) => [t.id, t])), [types]);
+  // Osiin jaettu kerta: teho osien lajeista (sama laskenta kuin tallennuksessa).
+  const fromParts = type && supportsParts(type) ? partsShares(partsFromDrafts(parts) ?? [], typeMap, Number(duration) || 0) : undefined;
   const profileShares =
-    type && session && session.activityTypeId === type.id && session.sharesSnapshot && !session.intensityPreset ? session.sharesSnapshot : type?.shares;
+    fromParts ??
+    (type && session && session.activityTypeId === type.id && session.sharesSnapshot && !session.intensityPreset && !session.parts?.length ? session.sharesSnapshot : type?.shares);
 
   // Esikatselu: sama laskenta kuin tallennuksessa (kerran oma profiili, jos laji ei vaihdu).
   const preview: IntensityMinutes | undefined = useMemo(() => {
@@ -110,6 +118,9 @@ export function SessionEditor({
     if (!day.success) errs.date = day.error.issues[0].message;
     if (type.usesPlayedMinutes && !p.success) errs.played = 'Tarkista pelatut minuutit';
     if (d.success && p.success && p.data !== undefined && p.data > d.data) errs.played = 'Pelatut minuutit eivät voi ylittää kestoa';
+    const partList = type && supportsParts(type) ? partsFromDrafts(parts) : [];
+    if (partList === null) errs.parts = 'Tarkista tekemisten minuutit';
+    else if (d.success && partList.reduce((a, x) => a + x.durationMin, 0) > d.data) errs.parts = 'Tekemisten minuutit ylittävät keston';
     if (mode === 'manual') {
       if (!m.success) errs.manual = 'Anna minuutit kokonaislukuina';
       else if (d.success && m.data.light + m.data.moderate + m.data.vigorous > d.data) errs.manual = 'Minuuttien summa ylittää keston';
@@ -131,6 +142,7 @@ export function SessionEditor({
         bone: showStrength(type.boneDefault, bone) && bone,
         note,
         label,
+        parts: partList ?? [],
       });
       onClose();
       toast('Muutokset tallennettu');
@@ -189,6 +201,13 @@ export function SessionEditor({
               {errors.played && <span className="mt-1 block text-sm text-red-700">{errors.played}</span>}
               <span className="mt-1 block text-xs text-slate-500">Ilman pelattuja minuutteja arvio: lämmittely ~15 min treenin teholla ja peliaika-arvio (joukkueen asetus, oletus 70 %) pelin teholla; vaihtopenkki ei kerrytä liikuntaa.</span>
             </Field>
+          )}
+
+          {type && supportsParts(type) && (
+            <div>
+              <PartsEditor types={partCandidates(types)} drafts={parts} onChange={setParts} durationMin={Number(duration) > 0 ? Number(duration) : undefined} />
+              {errors.parts && <p className="mt-1 text-sm text-red-700">{errors.parts}</p>}
+            </div>
           )}
 
           {type && (showStrength(type.muscleDefault, muscle) || showStrength(type.boneDefault, bone)) && (

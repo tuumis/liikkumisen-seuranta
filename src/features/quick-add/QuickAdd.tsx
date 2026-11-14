@@ -17,6 +17,8 @@ import { useFootballEnabled, withoutClubFootball } from '../football/useFootball
 import { Button, inputClass } from '../../ui/components';
 import { ToggleChip } from '../../ui/controls';
 import { IntensityPicker, isPreset, type IntensityMode, type ManualDraft } from '../week/IntensityPicker';
+import { PartsEditor, partCandidates, partsFromDrafts, type PartDraft } from '../week/PartsEditor';
+import { partsShares, supportsParts } from '../../domain/intensity';
 import { dayLabel } from '../../ui/format';
 import { CATEGORY_LABEL } from '../../ui/labels';
 import { Sheet } from '../../ui/Sheet';
@@ -94,6 +96,7 @@ export function QuickAdd({
   /** Valittu kesto (pikavalinta tai "Muu"); tallennus vasta Tallenna-painikkeesta. */
   const [duration, setDuration] = useState('');
   const [custom, setCustom] = useState(false);
+  const [parts, setParts] = useState<PartDraft[]>([]);
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
 
@@ -111,6 +114,7 @@ export function QuickAdd({
     setPlayed('');
     setDuration('');
     setCustom(false);
+    setParts([]);
     setError(undefined);
   }, [open, initialDate, today]);
 
@@ -173,6 +177,7 @@ export function QuickAdd({
     setBone(d.bone);
     setPlayed('');
     setLabel('');
+    setParts([]);
   }
 
   async function save() {
@@ -191,6 +196,9 @@ export function QuickAdd({
       if (m.data.light + m.data.moderate + m.data.vigorous > dur.data) return setError('Oman jaon minuutit ylittävät keston');
       manualMinutes = m.data;
     }
+    const partList = supportsParts(type) ? partsFromDrafts(parts) : [];
+    if (partList === null) return setError('Tarkista tekemisten minuutit');
+    if (partList.reduce((a, p) => a + p.durationMin, 0) > dur.data) return setError('Tekemisten minuutit ylittävät keston');
     setSaving(true);
     try {
       const s = await repo.createSession({
@@ -206,6 +214,7 @@ export function QuickAdd({
         bone: showStrength(type.boneDefault) && bone,
         note,
         label,
+        parts: partList.length ? partList : undefined,
       });
       markFresh(s.id);
       void requestPersistentStorage();
@@ -362,13 +371,17 @@ export function QuickAdd({
             </label>
           )}
 
+          {supportsParts(type) && (
+            <PartsEditor types={partCandidates(types)} drafts={parts} onChange={setParts} durationMin={Number(duration) > 0 ? Number(duration) : undefined} />
+          )}
+
           <LabelField profileId={profile.id} activityTypeId={type.id} value={label} onChange={setLabel} />
 
           <div className="space-y-3 border-t border-slate-100 pt-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Valinnaiset</div>
             <IntensityPicker
               type={type}
-              shares={type.shares}
+              shares={(supportsParts(type) && partsShares(partsFromDrafts(parts) ?? [], new Map((allTypes ?? []).map((t) => [t.id, t])), Number(duration) || 0)) || type.shares}
               mode={mode}
               onMode={setMode}
               effort={effort}

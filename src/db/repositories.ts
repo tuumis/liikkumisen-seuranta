@@ -5,7 +5,7 @@
 import { Dexie, type Table } from 'dexie';
 import { CURRENT_SCHEMA_VERSION } from '../domain/migrations';
 import { activityTypeId, dayFlagId, newId, sessionIdFromPlanned, SETTINGS_ID } from '../domain/ids';
-import { computeSessionMinutes, DEFAULT_GAME_WARMUP_MIN, DEFAULT_PLAY_SHARE, INTENSITY_PRESETS, roundMinutes } from '../domain/intensity';
+import { computeSessionMinutes, DEFAULT_GAME_WARMUP_MIN, DEFAULT_PLAY_SHARE, INTENSITY_PRESETS, roundMinutes, partsShares, supportsParts } from '../domain/intensity';
 import { defaultGameLength, DEFAULT_WARMUP_MIN, legacyTournamentStart, tournamentStart } from '../domain/tournamentTime';
 import { DEFAULT_SETTINGS } from '../domain/recommendations';
 import { addDays, isISODate } from '../domain/dates';
@@ -46,8 +46,7 @@ import type {
   TemplateItem,
   Timestamp,
   UUID,
-  Weekday,
-} from '../domain/types';
+  Weekday, SessionPart } from '../domain/types';
 import { isClubFootball, isGameFormat, LEVEL_EFFORT, POSITIONS } from '../domain/football';
 import { BUILT_IN_ACTIVITY_TYPES } from '../seed/activityTypes';
 import { nowTimestamp } from './clock';
@@ -83,6 +82,8 @@ export interface SessionInput {
   label?: string;
   /** Arkiliikunnan vahvistus päiväkohtaisesti (säilyy muokattaessa). */
   estimateConfirmed?: boolean;
+  /** Osat (liikuntapuisto ym.); vain lajeille, joilla supportsParts. Tyhjä tai puuttuva = ei osia. */
+  parts?: SessionPart[];
 }
 
 /** Jalkapallon lisätietojen tallennettavat tiedot (kaikki valinnaisia osallistumista lukuun ottamatta). */
@@ -309,15 +310,16 @@ export function createRepositories(db: AppDB = defaultDb) {
    */
   async function updateActivityType(
     id: UUID,
-    changes: Partial<Pick<ActivityType, 'shares' | 'muscleDefault' | 'boneDefault' | 'name' | 'icon' | 'image' | 'category' | 'movementGroup' | 'archived'>>,
+    changes: Partial<Pick<ActivityType, 'shares' | 'muscleDefault' | 'boneDefault' | 'name' | 'icon' | 'image' | 'category' | 'movementGroup' | 'archived' | 'multiActivity'>>,
   ): Promise<ActivityType> {
     const current = await getActivityType(id);
     // Sisäänrakennetun lajin nimi, kuvake ja kategoria pysyvät (tunnistus ja laskenta nojaavat niihin).
     if (current.builtIn) {
-      for (const k of ['name', 'icon', 'image', 'category', 'movementGroup', 'archived'] as const) delete changes[k];
+      for (const k of ['name', 'icon', 'image', 'category', 'movementGroup', 'archived', 'multiActivity'] as const) delete changes[k];
     }
     const next: ActivityType = await stamp({ ...current, ...changes, shares: { ...(changes.shares ?? current.shares) } });
     if ('image' in changes && changes.image === undefined) delete next.image;
+    if (!next.multiActivity) delete next.multiActivity;
     if (next.name !== undefined && !next.name.trim()) throw new Error('Anna lajille nimi');
     await db.activityTypes.put(next);
     return next;
@@ -325,7 +327,7 @@ export function createRepositories(db: AppDB = defaultDb) {
 
   /** Oma laji (14.11.2026): nimi, emoji tai oma kuva, kategoria, tehoprofiili ja vahvistavat oletukset. */
   async function createActivityType(
-    input: Pick<ActivityType, 'name' | 'icon' | 'category' | 'movementGroup' | 'shares' | 'muscleDefault' | 'boneDefault'> & { image?: string },
+    input: Pick<ActivityType, 'name' | 'icon' | 'category' | 'movementGroup' | 'shares' | 'muscleDefault' | 'boneDefault'> & { image?: string; multiActivity?: boolean },
   ): Promise<ActivityType> {
     const name = input.name.trim();
     if (!name) throw new Error('Anna lajille nimi');
@@ -336,6 +338,7 @@ export function createRepositories(db: AppDB = defaultDb) {
       name,
       icon: input.icon.trim() || '✳️',
       ...(input.image ? { image: input.image } : {}),
+      ...(input.multiActivity ? { multiActivity: true } : {}),
       category: input.category,
       movementGroup: input.movementGroup,
       shares: { ...input.shares },
@@ -370,7 +373,8 @@ export function createRepositories(db: AppDB = defaultDb) {
   /** Kerrat, joihin "Laske uudelleen" vaikuttaisi: lajin profiililla lasketut, päivä ≥ from. */
   async function recalculableSessions(typeId: UUID, from: ISODate): Promise<Session[]> {
     const rows = live(await db.sessions.where('activityTypeId').equals(typeId).toArray());
-    return rows.filter((s) => s.date >= from && s.intensitySource === 'profile' && !s.intensityPreset);
+    // Osiin jaetun kerran teho tulee osien lajeista, ei kerran lajista.
+    return rows.filter((s) => s.date >= from && s.intensitySource === 'profile' && !s.intensityPreset && !s.parts?.length);
   }
 
   /**
@@ -438,17 +442,36 @@ export function createRepositories(db: AppDB = defaultDb) {
     input: SessionInput,
     existing?: Session,
     warmupShares?: IntensityShares,
+    /** Osien yhdistetty tehoprofiili (ks. partsShares); korvaa lajin profiilin. */
+    fromParts?: IntensityShares,
   ): Pick<Session, 'intensitySource' | 'minutes' | 'sharesSnapshot' | 'intensityPreset'> {
+    if (fromParts && !input.intensityPreset && !input.manual) {
+      const r = computeSessionMinutes({ ...type, shares: fromParts }, { ...input, warmupShares });
+      return { intensitySource: 'profile', minutes: r.minutes, sharesSnapshot: r.snapshot };
+    }
     if (input.intensityPreset && !input.manual) {
       const r = computeSessionMinutes({ ...type, shares: INTENSITY_PRESETS[input.intensityPreset] }, { ...input, effort: 0, warmupShares });
       return { intensitySource: 'profile', minutes: r.minutes, sharesSnapshot: r.snapshot, intensityPreset: input.intensityPreset };
     }
-    const keepSnapshot = existing && existing.activityTypeId === type.id && existing.sharesSnapshot && !existing.intensityPreset;
+    // Osista laskettu profiili ei ole lajin oma: se ei jää voimaan, kun osat poistetaan.
+    const keepSnapshot = existing && existing.activityTypeId === type.id && existing.sharesSnapshot && !existing.intensityPreset && !existing.parts?.length;
     const shares = keepSnapshot ? existing.sharesSnapshot! : type.shares;
     const r = computeSessionMinutes({ ...type, shares }, { ...input, warmupShares });
     return input.manual
       ? { intensitySource: 'manual', minutes: r.minutes }
       : { intensitySource: 'profile', minutes: r.minutes, sharesSnapshot: r.snapshot };
+  }
+
+  /** Kerran osat tarkistettuina ja niiden yhdistetty teho; tyhjä, jos lajilla ei ole osia. */
+  async function partsFor(type: ActivityType, input: SessionInput): Promise<{ parts?: SessionPart[]; shares?: IntensityShares }> {
+    if (!supportsParts(type) || !input.parts?.length) return {};
+    const parts = input.parts.filter((p) => p.durationMin > 0).map((p) => ({ activityTypeId: p.activityTypeId, durationMin: Math.round(p.durationMin) }));
+    if (!parts.length) return {};
+    if (parts.reduce((a, p) => a + p.durationMin, 0) > input.durationMin) throw new Error('Osien minuutit ylittävät kerran keston');
+    const rows = await db.activityTypes.bulkGet(parts.map((p) => p.activityTypeId));
+    if (rows.some((t) => !t || t.deletedAt || supportsParts(t) || t.usesPlayedMinutes)) throw new Error('Tarkista osien lajit');
+    const types = new Map(rows.map((t) => [t!.id, t!]));
+    return { parts, shares: partsShares(parts, types, input.durationMin) };
   }
 
   /** Lämmittelyn teho peliin ja turnaukseen: jalkapallotreenin profiili (käyttäjän muokattavissa). */
@@ -471,6 +494,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     noteLocalChange();
     const type = await getActivityType(input.activityTypeId);
     const warmupShares = await warmupSharesFor(type);
+    const p = await partsFor(type, input);
     const ts = nowTimestamp();
     const session: Session = {
       id: newId(),
@@ -481,7 +505,8 @@ export function createRepositories(db: AppDB = defaultDb) {
       effort: input.effort,
       muscle: input.muscle,
       bone: input.bone,
-      ...sessionIntensity(type, input, undefined, warmupShares),
+      ...sessionIntensity(type, input, undefined, warmupShares, p.shares),
+      ...(p.parts ? { parts: p.parts } : {}),
       createdAt: ts,
       updatedAt: ts,
       updatedBy: await deviceId(),
@@ -504,10 +529,12 @@ export function createRepositories(db: AppDB = defaultDb) {
       if (!current || current.deletedAt) throw new Error('Kertaa ei löydy');
       const type = await getActivityType(input.activityTypeId);
       const warmupShares = await warmupSharesFor(type);
+      // Osat säilyvät, ellei niitä anneta (esim. lisätietojen tallennus); tyhjä lista poistaa osat.
+      const p = await partsFor(type, { ...input, parts: input.parts ?? (current.activityTypeId === type.id ? current.parts : undefined) });
       // Lämmittely ja peliaika-arvio säilyvät, ellei niitä anneta (esim. lisätietojen tallennus).
       const eff: SessionInput = { ...input, warmupMin: input.warmupMin ?? current.warmupMin, playShare: input.playShare ?? current.playShare };
       const next: Session = await stamp({ ...current });
-      for (const k of ['playedMin', 'sharesSnapshot', 'intensityPreset', 'note', 'startTime', 'label'] as const) delete next[k];
+      for (const k of ['playedMin', 'sharesSnapshot', 'intensityPreset', 'note', 'startTime', 'label', 'parts'] as const) delete next[k];
       Object.assign(next, {
         activityTypeId: type.id,
         date: input.date,
@@ -515,8 +542,9 @@ export function createRepositories(db: AppDB = defaultDb) {
         effort: input.effort,
         muscle: input.muscle,
         bone: input.bone,
-        ...sessionIntensity(type, eff, current, warmupShares),
+        ...sessionIntensity(type, eff, current, warmupShares, p.shares),
       });
+      if (p.parts) next.parts = p.parts;
       if (type.usesPlayedMinutes && input.playedMin !== undefined) next.playedMin = input.playedMin;
       setFootballTiming(next, type, eff.warmupMin, eff.playShare);
       if (input.startTime) next.startTime = input.startTime;

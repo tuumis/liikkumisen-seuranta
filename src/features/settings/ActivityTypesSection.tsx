@@ -129,6 +129,7 @@ function TypeEditor({
   const [image, setImage] = useState<string | undefined>(existing?.image);
   const [category, setCategory] = useState<Category>(existing?.category ?? 'self_directed');
   const [group, setGroup] = useState<MovementGroup>(existing?.movementGroup ?? 'play');
+  const [multi, setMulti] = useState(!!existing?.multiActivity);
   const [error, setError] = useState<string>();
   const [saved, setSaved] = useState<ActivityType | null>(null);
   const [from, setFrom] = useState(addDays(today, -28));
@@ -154,7 +155,7 @@ function TypeEditor({
     if (custom && !name.trim()) return setError('Anna lajille nimi');
     try {
       if (isNew) {
-        const t = await repo.createActivityType({ name, icon, image, category, movementGroup: group, shares, muscleDefault: muscle, boneDefault: bone });
+        const t = await repo.createActivityType({ name, icon, image, category, movementGroup: group, shares, muscleDefault: muscle, boneDefault: bone, multiActivity: multi });
         toast(`Laji ${t.name} lisätty`);
         onCreated(t);
         return;
@@ -163,7 +164,7 @@ function TypeEditor({
         shares,
         muscleDefault: muscle,
         boneDefault: bone,
-        ...(custom ? { name: name.trim(), icon: icon.trim() || '✳️', image, category, movementGroup: group } : {}),
+        ...(custom ? { name: name.trim(), icon: icon.trim() || '✳️', image, category, movementGroup: group, multiActivity: multi } : {}),
       });
       setSaved(t);
       toast('Laji tallennettu – vanhat kerrat eivät muuttuneet');
@@ -248,6 +249,13 @@ function TypeEditor({
                 </select>
               </Field>
             </div>
+            <label className="flex items-start gap-2 text-sm text-slate-800">
+              <input type="checkbox" className="mt-1 size-4 accent-green-700" checked={multi} onChange={(e) => setMulti(e.target.checked)} />
+              <span>
+                <span className="font-medium">Monta tekemistä yhdessä kerrassa</span>
+                <span className="block text-xs text-slate-500">Kirjatessa voi merkitä, mitä tehtiin ja kuinka kauan (kuten liikuntapuistossa); teho lasketaan tekemisten lajeista.</span>
+              </span>
+            </label>
           </>
         )}
         <div>

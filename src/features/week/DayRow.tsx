@@ -256,7 +256,9 @@ export function DayRow({
                         <>
                           {s.durationMin} min
                       {plan && plan.durationMin !== s.durationMin && ` (suunn. ${plan.durationMin})`}
-                      {s.playedMin !== undefined && ` · pelattu ${s.playedMin}`} · {s.intensitySource === 'manual' ? 'reipas+rasittava' : 'arvio: reipas+rasittava'} {mvpaOf(s.minutes)} min
+                      {s.playedMin !== undefined && ` · pelattu ${s.playedMin}`}
+                      {s.parts?.length ? ` · ${s.parts.map((x) => `${(types.get(x.activityTypeId)?.name ?? 'muu').toLowerCase()} ${x.durationMin}`).join(', ')}` : ''} ·{' '}
+                      {s.intensitySource === 'manual' ? 'reipas+rasittava' : 'arvio: reipas+rasittava'} {mvpaOf(s.minutes)} min
                       {tags && ` · ${tags}`}
                       {s.note && ` · ${s.note}`}
                     

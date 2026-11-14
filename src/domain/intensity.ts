@@ -143,3 +143,33 @@ export function isValidShares(s: IntensityShares): boolean {
   const vals = [s.light, s.moderate, s.vigorous];
   return vals.every((x) => Number.isFinite(x) && x >= 0 && x <= 1) && vals.reduce((a, b) => a + b, 0) <= 1 + 1e-9;
 }
+
+// ---------- osat (monta tekemistä yhdessä kerrassa, 14.11.2026) ----------
+
+/** Voiko lajin kerran jakaa osiin: liikuntapuisto ja omat lajit, joille valinta on tehty. */
+export function supportsParts(t: Pick<ActivityType, 'key' | 'multiActivity' | 'usesPlayedMinutes'> | undefined): boolean {
+  return !!t && !t.usesPlayedMinutes && (t.key === 'activity_park' || !!t.multiActivity);
+}
+
+/**
+ * Osien yhdistetty tehoprofiili koko kestolle: jokaisen osan lajin osuudet painotettuna osan kestolla,
+ * jaettuna kerran kestolla. Osien ulkopuolinen aika on taukoja (0 %). Palauttaa undefined, jos osia ei ole.
+ */
+export function partsShares(
+  parts: readonly { activityTypeId: string; durationMin: number }[] | undefined,
+  types: ReadonlyMap<string, Pick<ActivityType, 'shares'>>,
+  durationMin: number,
+): IntensityShares | undefined {
+  if (!parts?.length || durationMin <= 0) return undefined;
+  const acc = { light: 0, moderate: 0, vigorous: 0 };
+  let used = 0;
+  for (const p of parts) {
+    const t = types.get(p.activityTypeId);
+    if (!t || p.durationMin <= 0) continue;
+    used += p.durationMin;
+    for (const k of ['light', 'moderate', 'vigorous'] as const) acc[k] += t.shares[k] * p.durationMin;
+  }
+  if (used <= 0) return undefined;
+  const d = Math.max(durationMin, used);
+  return { light: acc.light / d, moderate: acc.moderate / d, vigorous: acc.vigorous / d };
+}

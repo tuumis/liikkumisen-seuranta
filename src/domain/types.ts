@@ -109,6 +109,8 @@ export interface ActivityType extends SyncFields {
   sport?: 'football';
   footballKind?: FootballKind; // jalkapallon alalaji määräytyy lajista
   usesPlayedMinutes: boolean; // peli ja turnaus
+  /** Kerran voi jakaa osiin (monta tekemistä, esim. liikuntapuisto); sisäänrakennetuista liikuntapuisto. */
+  multiActivity?: boolean;
   builtIn: boolean;
   archived: boolean;
   sortOrder: number;
@@ -193,7 +195,17 @@ export interface Session extends SyncFields {
   label?: string;
   /** Arkiliikunnan päiväkohtainen vahvistus (Tarkista-paneelista); näytetään arkiliikuntarivillä. */
   estimateConfirmed?: boolean;
+  /**
+   * Osat (14.11.2026): esim. liikuntapuistossa trampoliini 60 min, potkulauta 45 min. Kerran teho on osien
+   * tehoprofiilien kestoilla painotettu keskiarvo; osien ulkopuolinen aika on taukoja (ei kerrytä tehominuutteja).
+   */
+  parts?: SessionPart[];
   createdAt: Timestamp;
+}
+
+export interface SessionPart {
+  activityTypeId: UUID;
+  durationMin: number;
 }
 
 export type FocusTag =
