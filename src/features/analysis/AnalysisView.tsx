@@ -24,8 +24,8 @@ import { IconChevronLeft, IconChevronRight, IconSettings, IconSparkle } from '..
 import { dispatchCommand } from '../desktop/commands';
 import { EditLayoutSheet } from '../../ui/EditLayoutSheet';
 import { fullWidthSegments, useAnalysisLayout } from './layout';
-import { LongTermView, useLongSummary } from './LongTermView';
-import { SeasonReport } from './SeasonReport';
+import { LongTermView } from './LongTermView';
+import { WeekReportButton } from './WeekReport';
 import { HeatmapCard } from './HeatmapCard';
 import type { LongKind } from '../../domain/longTerm';
 import { Segmented } from '../../ui/controls';
@@ -221,22 +221,6 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
 
       <Rationale />
     </div>
-  );
-}
-
-/** Viikon raportti (PDF) samalla raporttipohjalla kuin pitkät jaksot; vertailu edelliseen viikkoon. */
-function WeekReportButton({ profile, weekStart }: { profile: Profile; weekStart: ISODate }) {
-  const [open, setOpen] = useState(false);
-  const s = useLongSummary(profile, weekPeriod(weekStart));
-  const p = useLongSummary(profile, weekPeriod(addDays(weekStart, -7)));
-  if (!s || s.validDays === 0) return null;
-  return (
-    <>
-      <Button variant="secondary" onClick={() => setOpen(true)}>
-        Raportti (PDF)
-      </Button>
-      {open && <SeasonReport profile={profile} s={s} p={p} onClose={() => setOpen(false)} />}
-    </>
   );
 }
 

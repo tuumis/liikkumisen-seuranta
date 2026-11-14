@@ -196,3 +196,9 @@ export const IconExpand = (p: IconProps) => (
     <path d="M14 4h6v6M10 20H4v-6M20 4l-6.5 6.5M4 20l6.5-6.5" />
   </svg>
 );
+export const IconReport = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M7 3.5h7l4.5 4.5v10A2.5 2.5 0 0 1 16 20.5H7A2.5 2.5 0 0 1 4.5 18V6A2.5 2.5 0 0 1 7 3.5z" />
+    <path d="M14 3.5V8h4.5M8.5 17v-3M12 17v-5M15.5 17v-2" />
+  </svg>
+);

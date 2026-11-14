@@ -9,6 +9,7 @@ import { repo } from '../../db/repositories';
 import { Button, Card } from '../../ui/components';
 import { formatDate } from '../../ui/format';
 import { useReport } from '../analysis/useReport';
+import { WeekReportButton } from '../analysis/WeekReport';
 import { today as todayFn } from '../../ui/today';
 import { QuickAdd } from '../quick-add/QuickAdd';
 import { ReviewSheet } from '../review/ReviewSheet';
@@ -262,8 +263,13 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
           Tämä viikko
         </Button>
       )}
+      {profile && (
+        <span className={simple ? 'ml-auto' : 'lg:ml-auto'}>
+          <WeekReportButton profile={profile} weekStart={weekStart} fullOnly compact />
+        </span>
+      )}
       {profile && !simple && (
-        <Button variant="secondary" onClick={() => setEditingLayout(true)} aria-label="Muokkaa näkymää" className="shrink-0 lg:ml-auto">
+        <Button variant="secondary" onClick={() => setEditingLayout(true)} aria-label="Muokkaa näkymää" className="shrink-0">
           <IconSettings size="1.1rem" />
           <span className="hidden sm:inline">Muokkaa näkymää</span>
         </Button>

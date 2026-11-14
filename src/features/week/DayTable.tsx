@@ -6,7 +6,7 @@
 
 import { TypeGlyph } from '../../ui/TypeGlyph';
 import { useEffect, useRef, useState } from 'react';
-import { outcomeOf } from '../../domain/football';
+import { footballBrief, shortName } from '../../domain/weekReport';
 import type { DayHours } from '../../domain/hours';
 import { isEstimateConfirmation } from '../../domain/hours';
 import { earlyYearsDay } from '../../domain/aggregate';
@@ -65,30 +65,7 @@ function useStored<T extends string>(key: string, initial: T, valid: (v: string)
 }
 
 /** Lyhyt nimi taulukkoon: tarkenne tai lajin nimen loppuosa ("Jalkapallo – treeni" → "Treeni"). */
-function shortName(s: { label?: string }, t?: ActivityType): string {
-  if (s.label) return s.label;
-  const n = t?.name ?? 'Laji';
-  const tail = n.includes(' – ') ? n.split(' – ').pop()! : n;
-  return tail.charAt(0).toUpperCase() + tail.slice(1);
-}
-
-/** Jalkapallon tiivis yhteenveto: tulos tai turnauksen V-T-H, peliaika ja pelaajan maalit. */
-function footballCell(s: Session, t: ActivityType | undefined, d: FootballDetails | undefined): string {
-  const parts: string[] = [];
-  if (t?.footballKind === 'game' && d) {
-    const o = outcomeOf(d.goalsFor, d.goalsAgainst);
-    if (o) parts.push(`${d.goalsFor}–${d.goalsAgainst} ${{ W: 'V', D: 'T', L: 'H' }[o]}`);
-    if (d.opponent) parts.push(d.opponent);
-  }
-  if (t?.footballKind === 'tournament' && d) {
-    const games = d.games ?? [];
-    const res = games.map((g) => outcomeOf(g.goalsFor, g.goalsAgainst)).filter(Boolean);
-    parts.push(res.length ? `${res.filter((r) => r === 'W').length}–${res.filter((r) => r === 'D').length}–${res.filter((r) => r === 'L').length}` : `${games.length || d.gamesCount || '?'} peliä`);
-  }
-  if (s.playedMin !== undefined) parts.push(`pelasi ${s.playedMin} min`);
-  if (d?.playerGoals) parts.push(`⚽ ${d.playerGoals}`);
-  return parts.join(' · ');
-}
+const footballCell = footballBrief;
 
 const chip = 'press inline-flex max-w-full items-center gap-1 rounded-lg px-1.5 py-1 text-xs font-semibold leading-none';
 const tick = 'press flex size-6 shrink-0 items-center justify-center rounded-lg text-green-800 ring-1 ring-green-700/25 hover:bg-green-100';
