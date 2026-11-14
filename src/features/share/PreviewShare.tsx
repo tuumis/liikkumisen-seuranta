@@ -11,7 +11,7 @@ import { logoFor, useClubLogos, useClubs } from '../../ui/TeamLogo';
 import { drawPreviewCard } from './drawPreview';
 import { loadImage } from './drawResult';
 import { originOf } from './ResultShare';
-import { ShareImageSheet, type RenderOptions } from './ShareSheet';
+import { findOwnTeam, MissingTeamInfo, ShareImageSheet, type RenderOptions } from './ShareSheet';
 
 const EVENT = 'preview-share-open';
 let pending: UUID | null = null;
@@ -45,28 +45,30 @@ export function usePreviewCard(planId: UUID | null) {
     if (!plan || plan.deletedAt) return null;
     const fixture = await db.fixtures.get(planId);
     const live = fixture && !fixture.deletedAt ? fixture : undefined;
-    let team = live?.teamId ? await db.teams.get(live.teamId) : undefined;
-    if (!team || team.deletedAt) {
+    let team = await findOwnTeam(plan.profileId, live?.teamId, undefined);
+    if (!team) {
       const own = await repo.listTeams(plan.profileId);
       team = own.length === 1 ? own[0] : undefined;
     }
-    return previewCard(plan, live, team);
+    return { card: previewCard(plan, live, team), teamPhoto: team?.photo };
   }, [planId]);
 }
 
 export function PreviewShareSheet({ planId, onClose }: { planId: UUID | null; onClose: () => void }) {
-  const card = usePreviewCard(planId);
+  const data = usePreviewCard(planId);
+  const card = data?.card;
   const logos = useClubLogos();
+  const teamLogo = card ? (logoFor(logos, card.team) ?? data?.teamPhoto) : undefined;
   const clubs = useClubs();
   const names = card ? [card.team, ...card.games.map((g) => g.opponent)] : [];
   const renderKey = useMemo(
-    () => JSON.stringify([card, names.map((n) => (logoFor(logos, n) ?? '').length), names.map((n) => originOf(clubs, n))]),
+    () => JSON.stringify([card, (teamLogo ?? '').length, names.map((n) => (logoFor(logos, n) ?? '').length), names.map((n) => originOf(clubs, n))]),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [card, logos, clubs],
+    [card, logos, clubs, teamLogo],
   );
   const render = card
     ? async (o: RenderOptions) => {
-        const [team, ...opponents] = await Promise.all(names.map((n) => loadImage(logoFor(logos, n))));
+        const [team, ...opponents] = await Promise.all(names.map((n, i) => loadImage(i === 0 ? teamLogo : logoFor(logos, n))));
         return drawPreviewCard(card, {
           ...o,
           logos: { team, opponents },
@@ -76,13 +78,13 @@ export function PreviewShareSheet({ planId, onClose }: { planId: UUID | null; on
     : undefined;
   const base = card?.kind === 'tournament' ? (card.eventName ?? 'turnaus') : 'ottelu';
   const fileName = `ennakko-${base.toLocaleLowerCase('fi').replace(/[^\p{L}\p{N}]+/gu, '-')}-${card?.date ?? ''}.png`;
-  const missing = names.some((n) => n && (!logoFor(logos, n) || !originOf(clubs, n)));
+  const opponentsMissing = card ? card.games.filter((g) => g.opponent && (!logoFor(logos, g.opponent) || !originOf(clubs, g.opponent))).length : 0;
 
   return (
     <ShareImageSheet open={!!planId} onClose={onClose} title="Jaa otteluennakko" alt="Otteluennakon esikatselu" teamName={card?.team} render={render} renderKey={renderKey} fileName={fileName}>
-      {card === null && <p className="text-sm text-slate-600">Tapahtumaa ei löytynyt.</p>}
+      {data === null && <p className="text-sm text-slate-600">Tapahtumaa ei löytynyt.</p>}
       {card && !card.team && <p className="text-xs text-slate-500">Valitse tapahtumalle oma joukkue, niin sen nimi, logo ja väri tulevat kuvaan.</p>}
-      {card && missing && <p className="text-xs text-slate-500">Puuttuvat logot, maat ja paikkakunnat lisätään Jalkapallo → Joukkueet (logon puuttuessa näkyvät nimikirjaimet).</p>}
+      {card && <MissingTeamInfo key={planId ?? ''} teamName={card.team} teamLogo={!!teamLogo} opponentsMissing={opponentsMissing} />}
     </ShareImageSheet>
   );
 }

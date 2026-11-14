@@ -3,7 +3,11 @@
 // Kuva syntyy laitteella; mitään ei lähetetä ennen kuin käyttäjä valitsee "Jaa".
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { clubKey } from '../../domain/opponent';
+import type { Team, UUID } from '../../domain/types';
 import { repo } from '../../db/repositories';
+import { db } from '../../db/schema';
+import { OriginFields } from '../../ui/Flag';
 import { Button } from '../../ui/components';
 import { Segmented } from '../../ui/controls';
 import { Sheet } from '../../ui/Sheet';
@@ -239,6 +243,58 @@ function ColorPicker({ value, onChange, team }: { value: string | undefined; onC
           <input type="color" className="absolute inset-0 size-full cursor-pointer opacity-0" value={own ?? '#1d4ed8'} onChange={(e) => onChange(e.target.value)} aria-label="Oma väri" />
         </label>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Oma joukkue kuvaa varten: tapahtuman joukkue tai profiilin joukkue samalla nimellä. Joukkueen oma kuva
+ * (`Team.photo`) on logon varalla: vanhemmissa joukkueissa logo on tallennettu joukkueen kuvaksi.
+ */
+export async function findOwnTeam(profileId: UUID, teamId: UUID | undefined, name: string | undefined): Promise<Team | undefined> {
+  const byId = teamId ? await db.teams.get(teamId) : undefined;
+  if (byId && !byId.deletedAt) return byId;
+  if (!name?.trim()) return undefined;
+  const key = clubKey(name);
+  return (await repo.listTeams(profileId, { includeArchived: true })).find((t) => clubKey(t.name) === key);
+}
+
+/**
+ * Puuttuvat tiedot jakopaneelissa: oman joukkueen maa ja kotipaikkakunta annetaan suoraan tässä
+ * (tallentuvat seuralle kuten Joukkueet-kohdassa); logot ja vastustajien tiedot Joukkueet-kohdassa.
+ */
+export function MissingTeamInfo({ teamName, teamLogo, opponentsMissing }: { teamName?: string; teamLogo: boolean; opponentsMissing: number }) {
+  const toast = useToast();
+  const clubs = useClubs();
+  const club = clubNameOf(teamName);
+  const info = clubFor(clubs, teamName);
+  const [city, setCity] = useState(info?.city ?? '');
+  useEffect(() => setCity(info?.city ?? ''), [info?.city]);
+  // Kenttä pysyy näkyvissä, kunnes paneeli suljetaan (ei katoa kesken kirjoittamisen).
+  const [needOrigin] = useState(() => !!club && (!info?.country || !info?.city));
+  const save = (patch: { country?: string; city?: string }) => {
+    if (!club) return;
+    if ('city' in patch && (patch.city ?? '').trim() === (info?.city ?? '')) return;
+    repo.saveClub(club, patch).catch((e: unknown) => toast(e instanceof Error ? e.message : String(e)));
+  };
+  const notes: string[] = [];
+  if (club && !teamLogo) notes.push(`${club}: logo puuttuu, joten kuvassa näkyvät nimikirjaimet. Logo lisätään Jalkapallo → Joukkueet → Omat joukkueet.`);
+  if (opponentsMissing > 0)
+    notes.push(`${opponentsMissing} vastustajalta puuttuu logo, maa tai paikkakunta. Ne lisätään Jalkapallo → Joukkueet → Vastustajat.`);
+  if (!needOrigin && !notes.length) return null;
+  return (
+    <div className="space-y-2">
+      {needOrigin && (
+        <div className="space-y-2 rounded-2xl bg-[var(--surface-sunk)] p-3">
+          <div className="text-sm font-medium text-slate-800">{club}: maa ja kotipaikkakunta kuvaan</div>
+          <OriginFields country={info?.country} city={city} onCountry={(v) => save({ country: v })} onCity={setCity} onCityDone={(v) => save({ city: v })} />
+        </div>
+      )}
+      {notes.map((n) => (
+        <p key={n} className="text-xs text-slate-500">
+          {n}
+        </p>
+      ))}
     </div>
   );
 }
