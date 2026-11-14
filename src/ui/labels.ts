@@ -6,6 +6,7 @@ export const CATEGORY_LABEL: Record<Category, string> = {
   hobby: 'Harrastus',
   school_pe: 'Koululiikunta',
   school_recess: 'Välitunnit',
+  daycare: 'Päiväkoti',
   commute: 'Koulumatka',
   self_directed: 'Omaehtoinen',
   family: 'Perhe',

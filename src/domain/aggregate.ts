@@ -96,20 +96,27 @@ export function dayTotals(
   let bone = false;
   let sessionCount = 0;
   let confirmedMvpa = 0;
+  let moving = 0;
 
   for (const s of sessions) {
     if (s.date !== date || s.deletedAt) continue;
     if (isEstimateConfirmation(s)) confirmedMvpa += mvpaOf(s.minutes);
     const category: Category = types.get(s.activityTypeId)?.category ?? 'other';
     logged = addMinutes(logged, s.minutes);
-    const prev = byCategory[category]?.minutes ?? ZERO_MINUTES;
-    byCategory[category] = { source: 'logged', minutes: addMinutes(prev, s.minutes) };
+    moving += Math.max(0, s.durationMin);
+    const prev = byCategory[category];
+    byCategory[category] = {
+      source: 'logged',
+      minutes: addMinutes(prev?.minutes ?? ZERO_MINUTES, s.minutes),
+      durationMin: (prev?.durationMin ?? 0) + Math.max(0, s.durationMin),
+    };
     muscle ||= s.muscle;
     bone ||= s.bone;
     sessionCount++;
   }
 
   let estimate: IntensityMinutes = { ...ZERO_MINUTES };
+  let estimateMoving = 0;
   const estimatedCategories: Category[] = [];
   const validEstimates = estimates.filter((e) => isEstimateValidOn(e, date));
   const categories = [...new Set(validEstimates.map((e) => e.category))];
@@ -118,8 +125,10 @@ export function dayTotals(
     const e = activeEstimate(validEstimates, c, date);
     if (!e) continue;
     const m = estimateMinutes(e, date, holiday);
+    const base = Math.max(0, estimateBaseMin(e, date, holiday));
     estimate = addMinutes(estimate, m);
-    byCategory[c] = { source: 'estimate', minutes: m };
+    estimateMoving += base;
+    byCategory[c] = { source: 'estimate', minutes: m, durationMin: base };
     estimatedCategories.push(c);
   }
 
@@ -133,6 +142,8 @@ export function dayTotals(
     mvpaCombined: mvpaOf(combined),
     total: totalOf(logged),
     totalCombined: totalOf(combined),
+    moving,
+    movingCombined: moving + estimateMoving,
     muscle,
     bone,
     sessionCount,
@@ -232,10 +243,30 @@ function evaluateSchoolAge(days: DayTotals[], settings: Settings): SchoolAgeEval
   };
 }
 
-/** Täyttyykö alle kouluikäisen päiväsuositus: kokonais ≥ 180 ja vauhdikas ≥ 60. */
-export function earlyYearsDayMet(total: number, mvpa: number): boolean {
+/**
+ * Täyttyykö alle kouluikäisen päiväsuositus: liikuttu kesto ≥ 180 min ja vauhdikas (reipas + rasittava) ≥ 60 min.
+ * Kesto lasketaan kertojen ja arkiliikunnan minuuteista (ei tehoprofiilin kevyt+reipas+rasittava-osuudesta),
+ * koska suositus koskee kaikkea liikkumista leikkeineen ja taukoineen (käyttäjän päätös 14.11.2026).
+ */
+export function earlyYearsDayMet(moving: number, mvpa: number): boolean {
   const r = RECOMMENDATIONS.early_years;
-  return total >= r.totalMinPerDay.value && mvpa >= r.mvpaMinPerDay.value;
+  return moving >= r.totalMinPerDay.value - EPS && mvpa >= r.mvpaMinPerDay.value - EPS;
+}
+
+/** Päivän kooste alle kouluikäisen suositusta vasten (kirjattu tai yhdistetty). */
+export function earlyYearsDay(d: DayTotals, combined = true): { moving: number; mvpa: number; met: boolean } {
+  const moving = combined ? d.movingCombined : d.moving;
+  const mvpa = combined ? d.mvpaCombined : d.mvpa;
+  return { moving, mvpa, met: earlyYearsDayMet(moving, mvpa) };
+}
+
+/** Päiväkodin osuus päivästä (Liikkuva varhaiskasvatus: ≥ 2 h, josta ≥ 40 min reipasta ja rasittavaa). */
+export function daycareDay(d: DayTotals): { moving: number; mvpa: number; met: boolean } | null {
+  const c = d.byCategory.daycare;
+  if (!c) return null;
+  const r = RECOMMENDATIONS.early_years;
+  const mvpa = mvpaOf(c.minutes);
+  return { moving: c.durationMin, mvpa, met: c.durationMin >= r.daycareMinPerDay.value - EPS && mvpa >= r.daycareMvpaMinPerDay.value - EPS };
 }
 
 function evaluateEarlyYears(days: DayTotals[]): EarlyYearsEvaluation {
@@ -244,11 +275,12 @@ function evaluateEarlyYears(days: DayTotals[]): EarlyYearsEvaluation {
   return {
     // Tila täyttyneiden päivien osuudesta (vahvistettu tulkinta).
     daysMet: dual(
-      days.filter((d) => earlyYearsDayMet(d.total, d.mvpa)).length,
-      days.filter((d) => earlyYearsDayMet(d.totalCombined, d.mvpaCombined)).length,
+      days.filter((d) => earlyYearsDayMet(d.moving, d.mvpa)).length,
+      days.filter((d) => earlyYearsDayMet(d.movingCombined, d.mvpaCombined)).length,
       n,
     ),
-    totalAvg: dual(sum(days.map((d) => d.total)) / n, sum(days.map((d) => d.totalCombined)) / n, r.totalMinPerDay.value),
+    // Liikkuminen kestona (ks. earlyYearsDayMet).
+    totalAvg: dual(sum(days.map((d) => d.moving)) / n, sum(days.map((d) => d.movingCombined)) / n, r.totalMinPerDay.value),
     mvpaAvg: dual(sum(days.map((d) => d.mvpa)) / n, sum(days.map((d) => d.mvpaCombined)) / n, r.mvpaMinPerDay.value),
   };
 }

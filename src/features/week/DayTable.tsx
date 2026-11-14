@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import { outcomeOf } from '../../domain/football';
 import type { DayHours } from '../../domain/hours';
 import { isEstimateConfirmation } from '../../domain/hours';
+import { earlyYearsDay } from '../../domain/aggregate';
 import type { ActivityType, Category, DayFlag, DayTotals, FootballDetails, ISODate, PlannedSession, RecommendationGroup, Session, UUID } from '../../domain/types';
 import { dayLabel } from '../../ui/format';
 import { IconBolt, IconBone, IconCheck, IconLeaf, IconPlus } from '../../ui/icons';
@@ -157,6 +158,9 @@ export function DayTable({
     ...(group === 'school_age' ? [{ key: 'vig', label: `Rasittava päivä (≥ ${vigorousMin} min)`, short: 'R', Icon: IconBolt, on: (t?: DayTotals) => (t?.logged.vigorous ?? 0) >= vigorousMin, target: 3 }] : []),
     ...(group !== 'early_years' ? [{ key: 'mus', label: 'Lihaksia vahvistava', short: 'L', Icon: IconLeaf, on: (t?: DayTotals) => !!t?.muscle, target: group === 'adult' ? 2 : 3 }] : []),
     ...(group === 'school_age' ? [{ key: 'bone', label: 'Luustoa vahvistava', short: 'Lu', Icon: IconBone, on: (t?: DayTotals) => !!t?.bone, target: 3 }] : []),
+    ...(group === 'early_years'
+      ? [{ key: 'eyd', label: 'Päiväsuositus täyttyi (3 h liikkumista, josta 1 h vauhdikasta)', short: '✓', Icon: IconCheck, on: (t?: DayTotals) => !!t && earlyYearsDay(t).met, target: 7 }]
+      : []),
   ];
 
   const extra = 'hidden lg:table-cell';

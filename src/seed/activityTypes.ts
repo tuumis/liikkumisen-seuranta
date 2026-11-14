@@ -51,10 +51,12 @@ const ROWS: Row[] = [
   // Lisätty 12.11.2026 (käyttäjän pyyntö): omatoiminen pallottelu, pääosin kevyttä ja reipasta.
   // Lasketaan jalkapallon harjoitusmäärään, mutta kategoria on omaehtoinen (ei ohjattu).
   ['football_self', 'Jalkapallo – omatoiminen', '🥾', 'self_directed', 'ball_games', 0.5, 0.35, 0.05, 'ask', 'yes', 'training'],
+  // Lisätty 14.11.2026: päiväkotipäivän liikkuminen (Liikkuva varhaiskasvatus: 2 h, josta 40 min reipasta).
+  ['daycare_day', 'Päiväkotipäivä', '🧸', 'daycare', 'play', 0.67, 0.25, 0.08, 'no', 'ask'],
 ];
 
 /** Myöhemmin lisättyjen lajien järjestys, jotta aiemmat lajit säilyttävät sortOrder-arvonsa. */
-const SORT_ORDER: Record<string, number> = { football_self: 2.5 };
+const SORT_ORDER: Record<string, number> = { football_self: 2.5, daycare_day: 4.5 };
 
 /**
  * Perusarvion oletustehoprofiili kategorian tyypillisestä lajista (sovelluksen
@@ -64,18 +66,37 @@ export const ESTIMATE_DEFAULT_TYPE_KEY: Readonly<Record<Category, string>> = Obj
   hobby: 'football_training',
   school_pe: 'school_pe',
   school_recess: 'school_recess',
+  daycare: 'daycare_day',
   commute: 'commute_walk',
   self_directed: 'outdoor_play',
   family: 'family_walk',
   other: 'other',
 });
 
+export interface EstimateSuggestion {
+  category: Category;
+  label: string;
+  /** Ehdotettu arkipäivän kesto (min); puuttuessa lomake käyttää omaa oletustaan. */
+  weekdayMin?: number;
+}
+
 /** Ensikäynnistyksen ehdotukset (SPEC 12): koulumatkat, välitunnit ja leikki. */
-export const ESTIMATE_SUGGESTIONS: readonly { category: Category; label: string }[] = Object.freeze([
+export const ESTIMATE_SUGGESTIONS: readonly EstimateSuggestion[] = Object.freeze([
   { category: 'school_recess', label: 'Välitunnit ja pihaleikit' },
   { category: 'commute', label: 'Koulumatkat' },
   { category: 'self_directed', label: 'Leikki ja oma liikkuminen' },
 ]);
+
+/** Alle kouluikäiselle: päiväkotipäivä (2 h ma–pe, Liikkuva varhaiskasvatus) ja leikki (14.11.2026). */
+export const EARLY_YEARS_ESTIMATE_SUGGESTIONS: readonly EstimateSuggestion[] = Object.freeze([
+  { category: 'daycare', label: 'Päiväkotipäivä', weekdayMin: 120 },
+  { category: 'self_directed', label: 'Leikki ja oma liikkuminen' },
+]);
+
+/** Arkiliikunnan ehdotukset suositusryhmän mukaan. */
+export function estimateSuggestions(group: 'early_years' | 'school_age' | 'adult'): readonly EstimateSuggestion[] {
+  return group === 'early_years' ? EARLY_YEARS_ESTIMATE_SUGGESTIONS : ESTIMATE_SUGGESTIONS;
+}
 
 export const BUILT_IN_ACTIVITY_TYPES: readonly ActivityType[] = Object.freeze(
   ROWS.map(([key, name, icon, category, movementGroup, light, moderate, vigorous, muscle, bone, footballKind], i) => {

@@ -26,6 +26,11 @@ export const SOURCES = {
     title: 'Iloa, leikkiä ja yhdessä tekemistä – Varhaisvuosien fyysisen aktiivisuuden suositukset, OKM 2016:21',
     checked: '2026-11-11',
   },
+  liikkuvaVaka2020: {
+    title: 'Liikkuva varhaiskasvatus – varhaiskasvatuksen henkilöstön käsikirja (2020): 2 h liikkumista varhaiskasvatuspäivässä, josta 40 min reipasta ja rasittavaa',
+    url: 'https://liikunta2.content.api.hel.fi/uploads/sites/9/2023/06/957b79d6-liikkuva-varhaiskasvatus-100-pienta-askelta.pdf',
+    checked: '2026-11-14',
+  },
   ukkAdult2019: {
     title: 'UKK-instituutti: Viikoittainen liikkumisen suositus 18–64-vuotiaille (2019)',
     url: 'https://ukkinstituutti.fi/wp-content/uploads/2022/04/Diat-ryhmatoteutukseen-aikuiset-taydennetty.pdf',
@@ -63,6 +68,19 @@ export const RECOMMENDATIONS = deepFreeze({
       unit: 'min/pv',
       description: 'Vähintään 1 tunti vauhdikasta liikkumista päivässä',
       source: SOURCES.ukkAllAges,
+    },
+    // Päiväkodin osuus (kaksi kolmasosaa päivän suosituksesta); näytetään päiväkotipäivinä, ei osa päiväsuositusta.
+    daycareMinPerDay: {
+      value: 120,
+      unit: 'min/pv',
+      description: 'Varhaiskasvatuspäivässä vähintään 2 tuntia liikkumista',
+      source: SOURCES.liikkuvaVaka2020,
+    },
+    daycareMvpaMinPerDay: {
+      value: 40,
+      unit: 'min/pv',
+      description: 'Varhaiskasvatuspäivässä siitä vähintään 40 min reipasta ja rasittavaa',
+      source: SOURCES.liikkuvaVaka2020,
     },
   },
   school_age: {

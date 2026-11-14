@@ -10,7 +10,8 @@ import { mergeAnyFile } from '../../db/backup';
 import { repo, type DeviceRole } from '../../db/repositories';
 import { db } from '../../db/schema';
 import { requestPersistentStorage } from '../../db/storage';
-import { ESTIMATE_DEFAULT_TYPE_KEY, ESTIMATE_SUGGESTIONS } from '../../seed/activityTypes';
+import { ESTIMATE_DEFAULT_TYPE_KEY, estimateSuggestions } from '../../seed/activityTypes';
+import { recommendationGroup } from '../../domain/groups';
 import { Button, Card } from '../../ui/components';
 import { today } from '../../ui/today';
 import { ProfileForm } from '../settings/ProfileForm';
@@ -281,12 +282,14 @@ function Skipped({ text, onNext }: { text: string; onNext: () => void }) {
 
 function EstimatesStep({ profile, onNext }: { profile: Profile; onNext: () => void }) {
   const types = useLiveQuery(() => repo.listActivityTypes(), []);
+  // Alle kouluikäiselle päiväkotipäivä ja leikki; koululaiselle välitunnit, koulumatkat ja leikki.
+  const suggestions = estimateSuggestions(recommendationGroup(profile, today()));
   const [values, setValues] = useState<Record<string, { weekday: number; weekend: number }>>(() =>
-    Object.fromEntries(ESTIMATE_SUGGESTIONS.map((s) => [s.category, { weekday: 0, weekend: 0 }])),
+    Object.fromEntries(suggestions.map((s) => [s.category, { weekday: s.weekdayMin ?? 0, weekend: 0 }])),
   );
 
   async function save() {
-    for (const s of ESTIMATE_SUGGESTIONS) {
+    for (const s of suggestions) {
       const v = values[s.category];
       if (!v.weekday && !v.weekend) continue;
       const shares = types?.find((t) => t.id === activityTypeId(ESTIMATE_DEFAULT_TYPE_KEY[s.category as Category]))?.shares;
@@ -322,7 +325,7 @@ function EstimatesStep({ profile, onNext }: { profile: Profile; onNext: () => vo
         Arvioi liikkuminen, jota et kirjaa kerta kerralta. Perusarvio täyttää kategorian vain päivinä, joille siinä ei ole kirjauksia, ja se näytetään aina erikseen.
       </p>
       <div className="space-y-4">
-        {ESTIMATE_SUGGESTIONS.map((s) => (
+        {suggestions.map((s) => (
           <div key={s.category}>
             <div className="mb-1 text-sm font-medium text-slate-800">{s.label}</div>
             {slider(s.category, 'weekday', 'Arkipäivä (ma–pe)')}

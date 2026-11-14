@@ -6,6 +6,8 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { addDays, isoWeekday } from '../../domain/dates';
 import { mvpaOf } from '../../domain/intensity';
+import { earlyYearsDay } from '../../domain/aggregate';
+import { RECOMMENDATIONS } from '../../domain/recommendations';
 import type { PeriodReport } from '../../domain/report';
 import type { ActivityType, ISODate, PlannedSession, Profile, Session, UUID } from '../../domain/types';
 import { repo } from '../../db/repositories';
@@ -39,7 +41,8 @@ export function TypeIcon({ t, muted = false, size = 'md' }: { t?: ActivityType; 
 
 // ---------- päivittäinen jakauma ----------
 
-export function DailyChart({ report, today, target, title }: { report: PeriodReport; today: ISODate; target: number; title: string }) {
+export function DailyChart({ report, today, target: dayTarget, title }: { report: PeriodReport; today: ISODate; target: number; title: string }) {
+  let target = dayTarget;
   const mounted = useMounted();
   const [hover, setHover] = useState<number | null>(null);
   // Näkymä: reipas ja rasittava (suositusvertailu) tai kaikki liikunta kestona (myös kevyt).
@@ -63,7 +66,11 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
     return { date: d.date, total, logged: Math.max(0, total - arkiEst - arkiConf), arkiConf, arkiEst, plan: 0, future };
   });
   const anyPlan = days.some((d) => d.plan > 0);
-  const showTarget = mode === 'mvpa';
+  // Alle kouluikäinen: Kaikki liikunta -näkymässä 3 h -tavoite (kesto) ja päivän ✓, kun molemmat ehdot täyttyvät.
+  const early = report.group.group === 'early_years';
+  const showTarget = mode === 'mvpa' || early;
+  if (mode === 'total' && early) target = RECOMMENDATIONS.early_years.totalMinPerDay.value;
+  const metDay = (i: number) => early && days[i].date <= today && earlyYearsDay(report.allDays[i]).met;
   const peak = Math.max(...days.map((d) => d.total));
   // Asteikko enintään 2,5 × tavoite, jottei yksi pitkä turnauspäivä litistä muita; ylittävä palkki saa arvon yläpuolelleen.
   const max = (showTarget ? Math.max(target * 1.4, Math.min(target * 2.5, peak)) : Math.max(60, Math.min(peak, Math.max(120, median(days.map((d) => d.total)) * 3)))) || 1;
@@ -104,7 +111,7 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
         <div className="inline-flex shrink-0 rounded-xl bg-[var(--surface-sunk)] p-0.5 text-[11px] font-bold" role="radiogroup" aria-label="Kaavion sisältö">
           {(
             [
-              ['mvpa', 'Reipas + rasittava'],
+              ['mvpa', report.group.group === 'early_years' ? 'Vauhdikas' : 'Reipas + rasittava'],
               ['total', 'Kaikki liikunta'],
             ] as const
           ).map(([k, l]) => (
@@ -174,8 +181,13 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
                     </div>
                   )}
                 </div>
-                <span className={`flex h-5 min-w-7 items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${isToday ? 'bg-green-700 text-white' : active === i ? 'text-slate-900' : 'text-slate-500'}`}>
+                <span className={`relative flex h-5 min-w-7 items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${isToday ? 'bg-green-700 text-white' : active === i ? 'text-slate-900' : 'text-slate-500'}`}>
                   {WD[isoWeekday(d.date) - 1]}
+                  {metDay(i) && (
+                    <span className="absolute -right-1.5 -top-1.5 flex size-3.5 items-center justify-center rounded-full bg-green-700 text-[8px] font-black text-white ring-2 ring-[var(--surface)]" title="Päiväsuositus täyttyi: 3 h liikkumista, josta 1 h vauhdikasta">
+                      ✓
+                    </span>
+                  )}
                 </span>
               </button>
             );
@@ -204,10 +216,16 @@ export function DailyChart({ report, today, target, title }: { report: PeriodRep
         )}
         {showTarget ? (
           <span className="flex items-center gap-1.5">
-            <span className="w-4 border-t-2 border-dashed border-[var(--viz-track-line)]" /> Päivätavoite
+            <span className="w-4 border-t-2 border-dashed border-[var(--viz-track-line)]" />{' '}
+            {early ? (mode === 'mvpa' ? 'Tavoite 1 h vauhdikasta' : 'Tavoite 3 h liikkumista (kesto)') : 'Päivätavoite'}
           </span>
         ) : (
           <span className="text-slate-500">Kesto minuutteina, myös kevyt liikunta</span>
+        )}
+        {early && days.some((_, i) => metDay(i)) && (
+          <span className="flex items-center gap-1.5">
+            <span className="flex size-3.5 items-center justify-center rounded-full bg-green-700 text-[8px] font-black text-white">✓</span> Päiväsuositus täyttyi
+          </span>
         )}
       </div>
     </section>

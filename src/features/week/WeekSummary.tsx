@@ -35,7 +35,7 @@ export function weekModel(report: PeriodReport, settings: Settings): WeekModel {
     label: 'Liikuntaa yhteensä',
     term: 'total' as TermId,
     value: formatHours(h.actualMin),
-    sub: `josta reipasta ja rasittavaa ≈ ${formatHours(mvpaMin)}${report.group.group === 'school_age' ? ` · ${hoursBand(h.actualMin).label.toLowerCase()}` : ''}`,
+    sub: `josta ${report.group.group === 'early_years' ? 'vauhdikasta' : 'reipasta ja rasittavaa'} ≈ ${formatHours(mvpaMin)}${report.group.group === 'school_age' ? ` · ${hoursBand(h.actualMin).label.toLowerCase()}` : ''}`,
   };
 
   if (ev.schoolAge) {
@@ -57,7 +57,7 @@ export function weekModel(report: PeriodReport, settings: Settings): WeekModel {
       main: { label: 'Päiviä, joina suositus täyttyi', value: m.actual, unit: `/ ${m.target} päivää`, target: '3 h liikkumista, josta 1 h vauhdikasta', m, shortfall: `${m.target - m.actual} päivää` },
       tiles: [
         hoursTile,
-        { label: 'Liikkumista ka.', value: `${Math.round(pick(e.totalAvg, settings).actual)} min`, sub: 'tavoite 180 / pv' },
+        { label: 'Liikkumista ka.', value: `${Math.round(pick(e.totalAvg, settings).actual)} min`, sub: 'kesto, tavoite 180 / pv' },
         { label: 'Vauhdikasta ka.', value: `${Math.round(pick(e.mvpaAvg, settings).actual)} min`, sub: 'tavoite 60 / pv' },
       ],
     };

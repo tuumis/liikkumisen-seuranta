@@ -9,7 +9,9 @@ import { estimateMinutes } from '../../domain/aggregate';
 import { minutesFromShares, mvpaOf } from '../../domain/intensity';
 import type { Category, Estimate, Profile } from '../../domain/types';
 import { repo } from '../../db/repositories';
-import { ESTIMATE_DEFAULT_TYPE_KEY, ESTIMATE_SUGGESTIONS } from '../../seed/activityTypes';
+import { ESTIMATE_DEFAULT_TYPE_KEY, estimateSuggestions } from '../../seed/activityTypes';
+import { recommendationGroup } from '../../domain/groups';
+import { RECOMMENDATIONS } from '../../domain/recommendations';
 import { Button, Card, EmptyState, EstimateBadge, Field, inputClass } from '../../ui/components';
 import { Segmented } from '../../ui/controls';
 import { formatDate } from '../../ui/format';
@@ -20,7 +22,7 @@ import { DateInput } from '../../ui/DateInput';
 
 const minutesField = z.coerce.number().int().min(0, 'Vähintään 0').max(600, 'Enintään 600');
 
-type Draft = { category: Category; label: string; existing?: Estimate };
+type Draft = { category: Category; label: string; existing?: Estimate; weekdayMin?: number };
 
 export function EstimatesSection({ profile }: { profile: Profile }) {
   const today = todayFn();
@@ -36,7 +38,8 @@ export function EstimatesSection({ profile }: { profile: Profile }) {
   }
 
   const used = new Set(active?.map((e) => e.category));
-  const suggestions = ESTIMATE_SUGGESTIONS.filter((s) => !used.has(s.category));
+  // Alle kouluikäiselle päiväkotipäivä ja leikki, koululaiselle välitunnit, koulumatkat ja leikki.
+  const suggestions = estimateSuggestions(recommendationGroup(profile, today)).filter((s) => !used.has(s.category));
   const freeCategories = (Object.keys(CATEGORY_LABEL) as Category[]).filter((c) => !used.has(c));
 
   return (
@@ -83,7 +86,7 @@ export function EstimatesSection({ profile }: { profile: Profile }) {
       )}
       <div className="mt-3 flex flex-wrap gap-2">
         {suggestions.map((s) => (
-          <Button key={s.category} variant="secondary" onClick={() => setDraft({ category: s.category, label: s.label })}>
+          <Button key={s.category} variant="secondary" onClick={() => setDraft({ category: s.category, label: s.label, weekdayMin: s.weekdayMin })}>
             + {s.label}
           </Button>
         ))}
@@ -122,7 +125,7 @@ function EstimateForm({ profile, draft, onDone }: { profile: Profile; draft: Dra
   const e = draft.existing;
   const [category, setCategory] = useState<Category>(draft.category);
   const [label, setLabel] = useState(draft.label);
-  const [weekday, setWeekday] = useState(e?.weekdayMin ?? 30);
+  const [weekday, setWeekday] = useState(e?.weekdayMin ?? draft.weekdayMin ?? (draft.category === 'daycare' ? 120 : 30));
   const [weekend, setWeekend] = useState(e?.weekendMin ?? 0);
   const [typeKey, setTypeKey] = useState<string>(() => (e ? '' : activityTypeId(ESTIMATE_DEFAULT_TYPE_KEY[draft.category])));
   const [error, setError] = useState<string>();
@@ -217,6 +220,7 @@ function EstimateForm({ profile, draft, onDone }: { profile: Profile; draft: Dra
         </Field>
       )}
       <Slider label="Arkipäivä (ma–pe)" value={weekday} onChange={setWeekday} />
+      {category === 'daycare' && <DaycareHint weekday={weekday} mvpa={preview ? mvpaOf(preview) : undefined} />}
       <Slider label="Viikonloppu (la–su)" value={weekend} onChange={setWeekend} />
       <Field label="Tehoprofiili" hint="Kuinka suuri osa ajasta on arviolta kevyttä, reipasta ja rasittavaa.">
         <select className={inputClass} value={typeKey} onChange={(ev) => setTypeKey(ev.target.value)}>
@@ -253,5 +257,18 @@ function EstimateForm({ profile, draft, onDone }: { profile: Profile; draft: Dra
         )}
       </div>
     </form>
+  );
+}
+
+/** Päiväkotipäivän tavoite (Liikkuva varhaiskasvatus) arvion rinnalla. */
+function DaycareHint({ weekday, mvpa }: { weekday: number; mvpa?: number }) {
+  const r = RECOMMENDATIONS.early_years;
+  const ok = weekday >= r.daycareMinPerDay.value && (mvpa ?? 0) >= r.daycareMvpaMinPerDay.value;
+  return (
+    <p className={`rounded-xl px-3 py-2 text-xs leading-relaxed ring-1 ${ok ? 'bg-green-50 text-green-900 ring-green-200' : 'bg-[var(--surface-sunk)] text-slate-700 ring-slate-200'}`}>
+      <strong>Päiväkodin tavoite:</strong> varhaiskasvatuspäivässä vähintään {r.daycareMinPerDay.value / 60} h liikkumista, josta {r.daycareMvpaMinPerDay.value} min reipasta ja rasittavaa
+      (Liikkuva varhaiskasvatus) – kaksi kolmasosaa koko päivän 3 h / 1 h -suosituksesta.
+      {mvpa !== undefined && ` Tällä arviolla ${weekday} min, josta reipasta ja rasittavaa ${mvpa} min${ok ? ' ✓' : ''}.`}
+    </p>
   );
 }

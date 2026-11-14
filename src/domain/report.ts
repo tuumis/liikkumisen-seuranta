@@ -73,7 +73,7 @@ export interface ReportInput {
   today: ISODate;
 }
 
-const CATEGORY_ORDER: Category[] = ['hobby', 'school_pe', 'school_recess', 'commute', 'self_directed', 'family', 'other'];
+const CATEGORY_ORDER: Category[] = ['hobby', 'school_pe', 'school_recess', 'daycare', 'commute', 'self_directed', 'family', 'other'];
 
 export function periodReport(input: ReportInput): PeriodReport {
   const { profile, period, today } = input;

@@ -55,6 +55,8 @@ export const CATEGORY_CONTEXT: Readonly<Record<Category, Context>> = Object.free
   hobby: 'organized',
   school_pe: 'organized',
   school_recess: 'self_directed',
+  // Päiväkoti: ohjattua ja vapaata leikkiä sekaisin, lasketaan arkeen kuten koulumatka (14.11.2026).
+  daycare: 'everyday',
   self_directed: 'self_directed',
   family: 'self_directed',
   commute: 'everyday',

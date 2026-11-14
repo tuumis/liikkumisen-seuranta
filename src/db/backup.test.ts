@@ -217,7 +217,7 @@ describe('synkronointi PC ↔ puhelin', () => {
     const { pc, phone } = await pair();
     const r = await send(pc, 'pc', phone);
     expect(r).toMatchObject({ added: 0, updated: 0, deleted: 0 });
-    expect(await phone.db.activityTypes.count()).toBe(18);
+    expect(await phone.db.activityTypes.count()).toBe(BUILT_IN_ACTIVITY_TYPES.length);
   });
 
   it('F1: molemmat ajavat ensurePlanned offline-tilassa → yhdistämisen jälkeen 3 suunnitelmaa, ei 6', async () => {

@@ -11,7 +11,7 @@ const shares = z.object({ light: z.number().min(0).max(1), moderate: z.number().
 const minutes = z.object({ light: z.number().min(0), moderate: z.number().min(0), vigorous: z.number().min(0) });
 /** Pienennetty kuva (lisäys 16): vain base64-kuva-data-URL, ei ulkoisia osoitteita. */
 const photo = z.string().max(300_000).regex(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/);
-const category = z.enum(['hobby', 'school_pe', 'school_recess', 'commute', 'self_directed', 'family', 'other']);
+const category = z.enum(['hobby', 'school_pe', 'school_recess', 'daycare', 'commute', 'self_directed', 'family', 'other']);
 
 /** Tyhjennetty poistomerkintä (profiilin poisto): vain avain ja synkronointikentät. */
 const tombstone = (key: 'id' | 'sessionId' | 'plannedSessionId') => z.looseObject({ [key]: z.string().min(1), updatedAt: ts, updatedBy: z.string().min(1), deletedAt: ts });

@@ -9,6 +9,7 @@ import { dayTotals, isEstimateConfirmation, trackingStart } from '../../domain/a
 import { parseISODate, toISODate } from '../../domain/dates';
 import { computeSessionMinutes, totalOf } from '../../domain/intensity';
 import { DAY_TARGET } from '../../domain/dayTarget';
+import { RECOMMENDATIONS } from '../../domain/recommendations';
 import { recommendationGroup } from '../../domain/groups';
 import { futureRange, heatColumns, heatLevel, heatRange, heatStats, last12Months, LEVEL_LABELS, monthLabels, type HeatDay, type HeatLevel, type HeatMeasure } from '../../domain/heatmap';
 import { holidayDates } from '../../domain/holidays';
@@ -107,7 +108,7 @@ function useHeatData(profile: Profile, start: ISODate, end: ISODate, withEstimat
         total: withEstimates ? t.totalCombined : t.total,
         sessions: list.filter((s) => !isEstimateConfirmation(s)).length,
         logged: list.filter((s) => !isEstimateConfirmation(s)).reduce((a, s) => a + totalOf(s.minutes), 0),
-        target: DAY_TARGET[recommendationGroup(profile, date)],
+        ...dayTargets(profile, date, withEstimates ? t.movingCombined : t.moving),
       };
     });
     // Tulevat päivät: avoimet suunnitellut kerrat kirjausten tapaan (lajin tyypillinen teho, tavallinen ponnistelu).
@@ -139,13 +140,21 @@ function useHeatData(profile: Profile, start: ISODate, end: ISODate, withEstimat
         mvpa: withEstimates ? t.mvpaCombined : t.mvpa,
         total: withEstimates ? t.totalCombined : t.total,
         sessions: list.length,
-        target: DAY_TARGET[recommendationGroup(profile, date)],
+        ...dayTargets(profile, date, withEstimates ? t.movingCombined : t.moving),
         planned: true,
       };
     });
     const flags = new Map<ISODate, DayFlagReason>(raw.flags.filter((f) => !f.deletedAt).map((f) => [f.date, f.reason]));
     return { days, future, flags, holidays };
   }, [raw, withEstimates, profile, pid, start, end, today]);
+}
+
+/** Päivän tavoite kartalle: reipas + rasittava; alle kouluikäisellä lisäksi 3 h liikkumista kestona. */
+function dayTargets(profile: Profile, date: ISODate, moving: number): Pick<HeatDay, 'target' | 'moving' | 'movingTarget'> {
+  const g = recommendationGroup(profile, date);
+  return g === 'early_years'
+    ? { target: DAY_TARGET[g], moving, movingTarget: RECOMMENDATIONS.early_years.totalMinPerDay.value }
+    : { target: DAY_TARGET[g] };
 }
 
 /** Pitkän aikavälin näkymän valittu jakso: vuosi näyttää sen vuoden, kuukausi ja kausi korostetaan kartalla. */
@@ -330,6 +339,8 @@ function HeatBody({
   const stats = useMemo(() => heatStats(data.days, measure), [data.days, measure]);
   // Päivän suositus nykyisen ikäryhmän mukaan (selitteisiin).
   const dayTarget = (data.days.at(-1) ?? data.future[0])?.target ?? 60;
+  // Alle kouluikäinen: tavoite on kaksiosainen (3 h liikkumista kestona, josta 1 h vauhdikasta).
+  const early = !!(data.days.at(-1) ?? data.future[0])?.movingTarget;
   // Tulevien päivien suunniteltu määrä erikseen (ei toteumaa).
   const planned = useMemo(() => {
     const hours = data.future.reduce((a, d) => a + d.total, 0) / 60;
@@ -484,7 +495,7 @@ function HeatBody({
         />
         <Stat label="Aktiivisia päiviä" value={String(stats.activeDays)} sub={`/ ${stats.days} päivää`} big={big} />
         <Stat label="Pisin putki" value={`${stats.longestStreak} pv`} sub="aktiivisia päiviä peräkkäin" big={big} />
-        <Stat label="Suositus täyttyi" value={`${stats.targetDays} pv`} sub={`reipas ja rasittava ≥ ${Math.round(dayTarget)} min/pv`} big={big} />
+        <Stat label="Suositus täyttyi" value={`${stats.targetDays} pv`} sub={early ? '3 h liikkumista, josta 1 h vauhdikasta' : `reipas ja rasittava ≥ ${Math.round(dayTarget)} min/pv`} big={big} />
         {planned && (
           <Stat
             label={`Suunniteltu ${futureLabel}`}
@@ -500,13 +511,13 @@ function HeatBody({
           ? `Laskettu ${formatDate(data.days[0].date, 'd.M.')}–${formatDate(data.days.at(-1)!.date, 'd.M.yyyy')} (${stats.days} päivää seurannan alusta tähän päivään)${data.future.length > 0 ? '; suunnitellut päivät vain Suunniteltu-luvussa' : ''}.`
           : 'Jaksolla ei ole vielä toteutuneita päiviä; tunnusluvut lasketaan toteutuneista päivistä.'}
       </p>
-      <Explain measure={measure} withEstimates={withEstimates} dayTarget={dayTarget} hasFuture={data.future.length > 0} />
+      <Explain measure={measure} withEstimates={withEstimates} dayTarget={dayTarget} hasFuture={data.future.length > 0} early={early} />
     </div>
   );
 }
 
 /** "Mistä luvut tulevat?": avattava selitys tunnusluvuille ja ruutujen väreille valittujen asetusten mukaan. */
-function Explain({ measure, withEstimates, dayTarget, hasFuture }: { measure: HeatMeasure; withEstimates: boolean; dayTarget: number; hasFuture: boolean }) {
+function Explain({ measure, withEstimates, dayTarget, hasFuture, early }: { measure: HeatMeasure; withEstimates: boolean; dayTarget: number; hasFuture: boolean; early?: boolean }) {
   const t = Math.round(dayTarget);
   const active =
     measure === 'sessions'
@@ -539,12 +550,17 @@ function Explain({ measure, withEstimates, dayTarget, hasFuture }: { measure: He
           <strong>Aktiivinen päivä:</strong> {active}. <strong>Pisin putki</strong> on pisin jakso tällaisia päiviä peräkkäin.
         </li>
         <li>
-          <strong>Suositus täyttyi:</strong> päivät, joina reipasta ja rasittavaa liikuntaa oli vähintään päivän suosituksen verran ({t} min).
+          <strong>Suositus täyttyi:</strong>{' '}
+          {early
+            ? 'päivät, joina liikkumista oli vähintään 3 tuntia (kirjattujen kertojen ja arkiliikunnan kesto) ja siitä vähintään 1 tunti vauhdikasta (reipasta tai rasittavaa).'
+            : `päivät, joina reipasta ja rasittavaa liikuntaa oli vähintään päivän suosituksen verran (${t} min).`}
         </li>
         <li>
           <strong>Ruutujen värit:</strong>{' '}
           {measure === 'target'
-            ? `reipas ja rasittava liikunta suhteessa ${t} minuuttiin: alle puolet, 50–99 %, suositus täyttyi, 150 % tai enemmän.`
+            ? early
+              ? 'heikompi kahdesta: vauhdikas suhteessa 60 minuuttiin tai liikkuminen suhteessa 3 tuntiin – alle puolet, 50–99 %, suositus täyttyi, 150 % tai enemmän.'
+              : `reipas ja rasittava liikunta suhteessa ${t} minuuttiin: alle puolet, 50–99 %, suositus täyttyi, 150 % tai enemmän.`
             : measure === 'minutes'
               ? 'kaikki liikunta minuutteina: 1–30, 31–60, 61–90, yli 90.'
               : 'kirjattujen kertojen määrä: 1, 2, 3, 4 tai enemmän. Arkiliikunta ei ole kerta.'}{' '}

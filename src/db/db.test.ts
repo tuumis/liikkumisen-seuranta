@@ -24,12 +24,12 @@ afterEach(async () => {
 const base = { createdAt: 'x', updatedAt: 'x', updatedBy: 'd' };
 
 describe('käynnistys ja siemendata', () => {
-  it('luo laitetunnisteen, skeemaversion ja 18 lajia', async () => {
+  it('luo laitetunnisteen, skeemaversion ja sisäänrakennetut lajit', async () => {
     await repo.initialize();
     const id = await repo.deviceId();
     expect(id).toMatch(/^[0-9a-f-]{36}$/);
     expect(await repo.getMeta('schemaVersion')).toBe(3);
-    expect(await db.activityTypes.count()).toBe(18);
+    expect(await db.activityTypes.count()).toBe(BUILT_IN_ACTIVITY_TYPES.length);
     expect((await repo.listActivityTypes())[0].id).toBe('t:football_training');
   });
 
@@ -37,7 +37,7 @@ describe('käynnistys ja siemendata', () => {
     await repo.initialize();
     const id = await repo.deviceId();
     await repo.initialize();
-    expect(await db.activityTypes.count()).toBe(18);
+    expect(await db.activityTypes.count()).toBe(BUILT_IN_ACTIVITY_TYPES.length);
     expect(await repo.deviceId()).toBe(id);
   });
 

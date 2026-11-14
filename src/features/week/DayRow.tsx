@@ -21,6 +21,7 @@ import { isFresh, useConfirmFeedback } from '../../ui/fresh';
 import { morphOpen } from '../../ui/morph';
 import { CATEGORY_LABEL } from '../../ui/labels';
 import { isEstimateConfirmation } from '../../domain/hours';
+import { earlyYearsDay } from '../../domain/aggregate';
 
 export function DayRow({
   index = 0,
@@ -38,6 +39,7 @@ export function DayRow({
   types,
   flag,
   barTarget,
+  earlyYears,
   onOpenMenu,
   onAdd,
   onPlan,
@@ -67,6 +69,8 @@ export function DayRow({
   types: Map<UUID, ActivityType>;
   flag?: DayFlag;
   barTarget: number;
+  /** Alle kouluikäinen: päivän ✓, kun 3 h liikkumista (kesto) ja 1 h vauhdikasta täyttyvät. */
+  earlyYears?: boolean;
   onOpenMenu: () => void;
   /** Uusi kerta tälle päivälle; tulevalle päivälle "+" lisää suunnitellun kerran (`onPlan`). */
   onAdd?: () => void;
@@ -126,6 +130,11 @@ export function DayRow({
             {isToday && <span className="sr-only"> ({dayLabel(date)})</span>}
           </div>
           {flag && <span className="mt-0.5 inline-block rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700">{FLAG_LABEL[flag.reason]}</span>}
+          {earlyYears && totals && !isFuture && !flag && earlyYearsDay(totals).met && (
+            <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-green-700 px-2 py-0.5 text-[11px] font-bold text-white" title="Päiväsuositus täyttyi: vähintään 3 h liikkumista, josta 1 h vauhdikasta">
+              ✓ Suositus
+            </span>
+          )}
           {hours?.holiday && !flag && (
             <span className="mt-0.5 inline-block rounded-full bg-[var(--surface-sunk)] px-2 py-0.5 text-[11px] font-semibold text-slate-700 ring-1 ring-slate-200" title="Lomapäivä: arkiliikunta viikonlopun arvoilla">
               Loma
@@ -144,6 +153,11 @@ export function DayRow({
                       <strong className="block text-[13px]">Liikuntaa yhteensä {hours.actualMin} min</strong>
                       Kaikki liikunta kestona: kevyt, reipas ja rasittava. {hours.actualLoggedMin} min kirjatuista kerroista
                       {hours.actualMin > hours.actualLoggedMin && `, ${hours.actualMin - hours.actualLoggedMin} min arkiliikunnan perusarviosta`}.
+                      {earlyYears && totals && (
+                        <span className="mt-1 block">
+                          Alle kouluikäisen päiväsuositus: 3 h liikkumista ({Math.round(earlyYearsDay(totals).moving)}/180 min) ja siitä 1 h vauhdikasta ({Math.round(earlyYearsDay(totals).mvpa)}/60 min).
+                        </span>
+                      )}
                     </>
                   }
                 >

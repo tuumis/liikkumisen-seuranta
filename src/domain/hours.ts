@@ -72,7 +72,7 @@ export interface WeeklyHours {
   days: DayHours[];
 }
 
-const CATEGORY_ORDER: Category[] = ['hobby', 'school_pe', 'school_recess', 'commute', 'self_directed', 'family', 'other'];
+const CATEGORY_ORDER: Category[] = ['hobby', 'school_pe', 'school_recess', 'daycare', 'commute', 'self_directed', 'family', 'other'];
 
 export { ESTIMATE_ONLY_CATEGORIES, isEstimateConfirmation } from './aggregate';
 

@@ -190,7 +190,12 @@ export function longTermSummary(report: PeriodReport, sessions: Session[], types
     group: report.group.group,
     validDays: n,
     mvpa: n ? { logged: loggedMvpa / n, combined: days.reduce((a, d) => a + d.mvpaCombined, 0) / n } : null,
-    total: n ? { logged: days.reduce((a, d) => a + d.total, 0) / n, combined: days.reduce((a, d) => a + d.totalCombined, 0) / n } : null,
+    // Alle kouluikäisellä kesto (3 h -suositus kestona), muilla kevyt + reipas + rasittava.
+    total: n
+      ? report.group.group === 'early_years'
+        ? { logged: days.reduce((a, d) => a + d.moving, 0) / n, combined: days.reduce((a, d) => a + d.movingCombined, 0) / n }
+        : { logged: days.reduce((a, d) => a + d.total, 0) / n, combined: days.reduce((a, d) => a + d.totalCombined, 0) / n }
+      : null,
     vigorousShare: loggedMvpa > 0 ? loggedVig / loggedMvpa : null,
     context: ctxSum > 0 ? { organized: ctx.organized / ctxSum, self_directed: ctx.self_directed / ctxSum, everyday: ctx.everyday / ctxSum } : null,
     variety: { groups: [...groups], types: byType.size },

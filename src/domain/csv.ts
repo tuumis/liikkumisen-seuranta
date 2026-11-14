@@ -7,6 +7,7 @@ const CATEGORY_FI: Record<Category, string> = {
   hobby: 'Harrastus',
   school_pe: 'Koululiikunta',
   school_recess: 'Välitunnit',
+  daycare: 'Päiväkoti',
   commute: 'Koulumatka',
   self_directed: 'Omaehtoinen',
   family: 'Perhe',

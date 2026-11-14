@@ -7,7 +7,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { addDays, isoWeek, weekPeriod } from '../../domain/dates';
 import { footballPeriodSummary } from '../../domain/football';
 import { formatHours } from '../../domain/hours';
-import { DAY_TARGET } from '../../domain/dayTarget';
+import { DAY_TARGET, dayGoalMet } from '../../domain/dayTarget';
 import { DEFAULT_SETTINGS } from '../../domain/recommendations';
 import type { DayTotals, ISODate, Profile } from '../../domain/types';
 import { previousWeekStart, shouldShowDigest } from '../../domain/weekDigest';
@@ -124,7 +124,7 @@ export function LastWeekCard({ profile, today, onOpenWeek }: { profile: Profile;
   const target = DAY_TARGET[report.group.group];
   const valid = new Set(report.validDates);
   const best = [...report.allDays].sort((a, b) => b.mvpaCombined - a.mvpaCombined)[0];
-  const metDays = report.allDays.filter((d) => d.mvpaCombined >= target).length;
+  const metDays = report.allDays.filter((d) => dayGoalMet(report.group.group, d)).length;
 
   const open = () => {
     close();

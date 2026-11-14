@@ -3,6 +3,7 @@
 // compact = Viikko-näkymän yläkortti; full = Analyysi-välilehti.
 
 import { useLiveQuery } from 'dexie-react-hooks';
+import { daycareDay } from '../../domain/aggregate';
 import { RECOMMENDATIONS } from '../../domain/recommendations';
 import type { PeriodReport } from '../../domain/report';
 import type { DualMeasure, Measure, Settings } from '../../domain/types';
@@ -116,6 +117,18 @@ export function GoalCard({ report, variant }: { report: PeriodReport; variant: '
           {r.mvpaMinPerDay.value} min/pv
         </p>
         {both(e.mvpaAvg, 'min/pv vauhdikasta')}
+        {(() => {
+          // Päiväkotipäivät (Liikkuva varhaiskasvatus): päiväkodin osuus ≥ 2 h, josta ≥ 40 min reipasta.
+          const dc = report.days.map(daycareDay).filter((x) => x !== null);
+          if (dc.length === 0) return null;
+          const ok = dc.filter((x) => x.met).length;
+          return (
+            <p className="text-sm text-slate-800">
+              Päiväkotipäiviä {dc.length}, joista päiväkodin tavoite ({r.daycareMinPerDay.value / 60} h, josta {r.daycareMvpaMinPerDay.value} min reipasta) täyttyi {ok}{' '}
+              päivänä.
+            </p>
+          );
+        })()}
         {full && (
           <p className="text-xs text-slate-600">
             Päivä täyttyy, kun liikkumista on vähintään {r.totalMinPerDay.value} min ja siitä vauhdikasta vähintään {r.mvpaMinPerDay.value} min. Kirjattu: {e.daysMet.logged.actual}/{ev.n}

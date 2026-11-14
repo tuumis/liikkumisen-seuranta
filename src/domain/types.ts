@@ -18,6 +18,7 @@ export type Category =
   | 'hobby'
   | 'school_pe'
   | 'school_recess'
+  | 'daycare'
   | 'commute'
   | 'self_directed'
   | 'family'
@@ -369,6 +370,8 @@ export interface Period {
 export interface CategoryTotals {
   source: 'logged' | 'estimate';
   minutes: IntensityMinutes;
+  /** Liikuttu kesto (min): kirjattujen kertojen kesto tai arvion päivän minuutit. */
+  durationMin: number;
 }
 
 /** Päiväkooste (7.1). */
@@ -388,6 +391,13 @@ export interface DayTotals {
   total: number;
   /** L* + M* + V* (yhdistetty). */
   totalCombined: number;
+  /**
+   * Liikuttu kesto (min, kirjattu): kertojen kesto tauot mukaan lukien. Alle kouluikäisen
+   * 3 h -suositus verrataan tähän (käyttäjän päätös 14.11.2026), vauhdikas 1 h tehoprofiilista.
+   */
+  moving: number;
+  /** Liikuttu kesto (min, yhdistetty): kirjatut kerrat + arkiliikunnan arvion minuutit. */
+  movingCombined: number;
   /** Jokin kirjattu kerta on lihaksia vahvistava. Perusarvio ei koskaan vaikuta. */
   muscle: boolean;
   /** Jokin kirjattu kerta on luustoa vahvistava. Perusarvio ei koskaan vaikuta. */

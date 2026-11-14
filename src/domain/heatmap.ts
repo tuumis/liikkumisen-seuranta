@@ -22,6 +22,9 @@ export interface HeatDay {
   logged?: number;
   /** Päivän tavoite (reipas + rasittava, min). */
   target: number;
+  /** Alle kouluikäinen: liikuttu kesto (min) ja sen tavoite (180); tavoite täyttyy vasta, kun molemmat ehdot täyttyvät. */
+  moving?: number;
+  movingTarget?: number;
   /** Tuleva päivä: arvot ovat suunniteltuja kertoja (ja valinnalla arviota), eivät toteumaa. */
   planned?: boolean;
 }
@@ -33,21 +36,26 @@ export const LEVEL_LABELS: Record<HeatMeasure, [string, string, string, string]>
   sessions: ['1 kerta', '2 kertaa', '3 kertaa', '4+ kertaa'],
 };
 
-export function heatLevel(measure: HeatMeasure, d: Pick<HeatDay, 'mvpa' | 'total' | 'sessions' | 'target'>): HeatLevel {
+type LevelInput = Pick<HeatDay, 'mvpa' | 'total' | 'sessions' | 'target'> & Partial<Pick<HeatDay, 'moving' | 'movingTarget'>>;
+
+export function heatLevel(measure: HeatMeasure, d: LevelInput): HeatLevel {
   if (measure === 'sessions') return Math.min(4, Math.max(0, Math.floor(d.sessions))) as HeatLevel;
   if (measure === 'minutes') {
     const m = Math.round(d.total);
     return m <= 0 ? 0 : m <= 30 ? 1 : m <= 60 ? 2 : m <= 90 ? 3 : 4;
   }
   const m = Math.round(d.mvpa);
-  if (m <= 0) return 0;
-  const r = d.target > 0 ? m / d.target : 1;
+  const mov = d.movingTarget ? Math.round(d.moving ?? 0) : 0;
+  if (m <= 0 && mov <= 0) return 0;
+  let r = d.target > 0 ? m / d.target : 1;
+  // Kaksi ehtoa (alle kouluikäinen): heikompi suhde ratkaisee.
+  if (d.movingTarget) r = Math.min(r, mov / d.movingTarget);
   // Pieni toleranssi pyöristykselle (esim. 59,6 min ≈ 60 min).
   return r < 0.5 ? 1 : r < 1 - 1e-9 ? 2 : r < 1.5 - 1e-9 ? 3 : 4;
 }
 
 /** Onko päivällä mitään liikuntaa valitulla mittarilla. */
-export const isActive = (measure: HeatMeasure, d: Pick<HeatDay, 'mvpa' | 'total' | 'sessions' | 'target'>) => heatLevel(measure, d) > 0;
+export const isActive = (measure: HeatMeasure, d: LevelInput) => heatLevel(measure, d) > 0;
 
 /** Pisin peräkkäisten aktiivisten päivien putki; päivät järjestyksessä, väliin jäävät päivät katkaisevat putken. */
 export function longestStreak(dates: readonly ISODate[], active: (d: ISODate) => boolean): number {
