@@ -18,6 +18,7 @@ import { Button, inputClass } from '../../ui/components';
 import { ToggleChip } from '../../ui/controls';
 import { IntensityPicker, isPreset, type IntensityMode, type ManualDraft } from '../week/IntensityPicker';
 import { PartsEditor, partCandidates, partsFromDrafts, type PartDraft } from '../week/PartsEditor';
+import { CompanionsPicker, companionDuration, type Companion } from '../week/Companions';
 import { partsShares, supportsParts } from '../../domain/intensity';
 import { dayLabel } from '../../ui/format';
 import { CATEGORY_LABEL } from '../../ui/labels';
@@ -97,6 +98,7 @@ export function QuickAdd({
   const [duration, setDuration] = useState('');
   const [custom, setCustom] = useState(false);
   const [parts, setParts] = useState<PartDraft[]>([]);
+  const [companions, setCompanions] = useState<Companion[]>([]);
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
 
@@ -115,6 +117,7 @@ export function QuickAdd({
     setDuration('');
     setCustom(false);
     setParts([]);
+    setCompanions([]);
     setError(undefined);
   }, [open, initialDate, today]);
 
@@ -198,7 +201,18 @@ export function QuickAdd({
     }
     const partList = supportsParts(type) ? partsFromDrafts(parts) : [];
     if (partList === null) return setError('Tarkista tekemisten minuutit');
-    if (partList.reduce((a, p) => a + p.durationMin, 0) > dur.data) return setError('Tekemisten minuutit ylittävät keston');
+    const partsMin = partList.reduce((a, p) => a + p.durationMin, 0);
+    if (partsMin > dur.data) return setError('Tekemisten minuutit ylittävät keston');
+    // Mukana myös: jokaiselle oma kerta (kesto, ponnistelu ja vahvistavat profiileittain).
+    const allProfiles = companions.length ? await repo.listProfiles() : [];
+    const nameOf = (id: string) => allProfiles.find((p) => p.id === id)?.name ?? 'profiili';
+    const others: { c: Companion; min: number }[] = [];
+    for (const c of companions) {
+      const min = companionDuration(c, dur.data);
+      if (min === null) return setError(`${nameOf(c.profileId)}: tarkista kesto`);
+      if (partsMin > min) return setError(`${nameOf(c.profileId)}: tekemisten minuutit ylittävät keston`);
+      others.push({ c, min });
+    }
     setSaving(true);
     try {
       const s = await repo.createSession({
@@ -217,9 +231,30 @@ export function QuickAdd({
         parts: partList.length ? partList : undefined,
       });
       markFresh(s.id);
+      const extra: Session[] = [];
+      for (const { c, min } of others) {
+        extra.push(
+          await repo.createSession({
+            profileId: c.profileId,
+            activityTypeId: type.id,
+            date: day.data,
+            durationMin: min,
+            // Oma jako ei siirry toiselle (minuutit ovat tämän profiilin); muuten sama teho ja oma ponnistelu.
+            effort: mode === 'profile' || mode === 'manual' ? c.effort : 0,
+            intensityPreset: isPreset(mode) ? mode : undefined,
+            muscle: showStrength(type.muscleDefault) && c.muscle,
+            bone: showStrength(type.boneDefault) && c.bone,
+            note,
+            label,
+            parts: partList.length ? partList : undefined,
+          }),
+        );
+      }
       void requestPersistentStorage();
       onClose();
-      toast(`Tallennettu: ${type.name}${label.trim() ? ` (${label.trim()})` : ''} ${dur.data} min`, { label: 'Kumoa', run: () => repo.deleteSession(s.id).then(() => {}) }, 'success');
+      const all = [s, ...extra];
+      const who = extra.length ? ` – ${[profile.name, ...others.map((o) => nameOf(o.c.profileId))].join(', ')}` : '';
+      toast(`Tallennettu: ${type.name}${label.trim() ? ` (${label.trim()})` : ''} ${dur.data} min${who}`, { label: 'Kumoa', run: () => Promise.all(all.map((x) => repo.deleteSession(x.id))).then(() => {}) }, 'success');
       onSaved?.(s);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -376,6 +411,16 @@ export function QuickAdd({
           )}
 
           <LabelField profileId={profile.id} activityTypeId={type.id} value={label} onChange={setLabel} />
+
+          <CompanionsPicker
+            mainProfileId={profile.id}
+            value={companions}
+            onChange={setCompanions}
+            defaults={{ effort, muscle, bone }}
+            mainDuration={duration}
+            intensity
+            strength={{ muscle: showStrength(type.muscleDefault), bone: showStrength(type.boneDefault) }}
+          />
 
           <div className="space-y-3 border-t border-slate-100 pt-3">
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Valinnaiset</div>

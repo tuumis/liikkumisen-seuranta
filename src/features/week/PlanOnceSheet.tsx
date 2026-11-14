@@ -16,6 +16,7 @@ import { today as todayFn } from '../../ui/today';
 import { useFootballEnabled, withoutClubFootball } from '../football/useFootballEnabled';
 import { LabelField } from './LabelField';
 import { useHiddenTypes, visibleTypes } from './useLoggableTypes';
+import { CompanionsPicker, companionDuration, type Companion } from './Companions';
 
 export function PlanOnceSheet({ profile, date, onClose }: { profile: Profile; date: ISODate | null; onClose: () => void }) {
   const toast = useToast();
@@ -32,6 +33,7 @@ export function PlanOnceSheet({ profile, date, onClose }: { profile: Profile; da
   const [label, setLabel] = useState('');
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
+  const [companions, setCompanions] = useState<Companion[]>([]);
 
   useEffect(() => {
     if (!date) return;
@@ -39,6 +41,7 @@ export function PlanOnceSheet({ profile, date, onClose }: { profile: Profile; da
     setTime('');
     setDuration('60');
     setLabel('');
+    setCompanions([]);
     setError(undefined);
   }, [date]);
   const firstId = types?.[0]?.id;
@@ -50,10 +53,17 @@ export function PlanOnceSheet({ profile, date, onClose }: { profile: Profile; da
     const d = Number(duration);
     if (!typeId) return setError('Valitse laji');
     if (!Number.isInteger(d) || d < 1 || d > 1440) return setError('Tarkista kesto (min)');
+    const mins = companions.map((c) => companionDuration(c, d));
+    if (mins.some((m) => m === null)) return setError('Tarkista mukana olevien kesto (min)');
     setSaving(true);
     try {
-      const p = await repo.createPlannedOnce(profile.id, { activityTypeId: typeId, date: day, durationMin: d, startTime: (time || undefined) as HHmm | undefined, label });
-      toast(`Lisätty suunnitelmiin: ${dayLabel(day)}`, { label: 'Kumoa', run: () => repo.deletePlanned(p.id) });
+      const base = { activityTypeId: typeId, date: day, startTime: (time || undefined) as HHmm | undefined, label };
+      const p = await repo.createPlannedOnce(profile.id, { ...base, durationMin: d });
+      // Mukana myös: jokaiselle oma suunnitelma (kesto profiileittain), kuitataan kukin erikseen.
+      const extra = [];
+      for (const [i, c] of companions.entries()) extra.push(await repo.createPlannedOnce(c.profileId, { ...base, durationMin: mins[i]! }));
+      const ids = [p.id, ...extra.map((x) => x.id)];
+      toast(`Lisätty suunnitelmiin: ${dayLabel(day)}${extra.length ? ` (${ids.length} profiilille)` : ''}`, { label: 'Kumoa', run: () => Promise.all(ids.map((id) => repo.deletePlanned(id))).then(() => {}) });
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -100,6 +110,7 @@ export function PlanOnceSheet({ profile, date, onClose }: { profile: Profile; da
             </div>
           </div>
           {typeId && <LabelField profileId={profile.id} activityTypeId={typeId} value={label} onChange={setLabel} placeholder="esim. Uintikoulu, Leiri" />}
+          <CompanionsPicker mainProfileId={profile.id} value={companions} onChange={setCompanions} defaults={{ effort: 0, muscle: false, bone: false }} mainDuration={duration} />
           {error && (
             <p className="text-sm font-medium text-red-700" role="alert">
               {error}
