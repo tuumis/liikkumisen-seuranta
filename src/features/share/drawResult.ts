@@ -2,7 +2,7 @@
 // tai neutraalilla urheilutyylillä. Logot ovat käyttäjän lisäämiä kuvia (data URL); ei verkkoa.
 
 import type { GameOutcome } from '../../domain/football';
-import { initials, OUTCOME_WORD, resultKicker, type ResultCard } from '../../domain/resultCard';
+import { initials, OUTCOME_WORD, type ResultCard } from '../../domain/resultCard';
 import { formatDate } from '../../ui/format';
 import { drawFlag } from '../../ui/flags';
 import { alpha, isLightColor, mix, resolveShareColor, type ShareColor } from './shareColors';
@@ -282,7 +282,7 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
   let y = story ? 170 : 104;
   ctx.font = `700 ${story ? 32 : 28}px ${p.sans}`;
   ctx.fillStyle = p.accent;
-  ctx.fillText(spaced(resultKicker(card)), PAD, y);
+  ctx.fillText(spaced(card.kind === 'tournament' ? 'Turnaus' : 'Ottelu'), PAD, y);
   y += story ? 34 : 26;
 
   if (card.kind === 'tournament') {
@@ -298,6 +298,8 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
     ctx.font = `500 ${story ? 40 : 34}px ${p.sans}`;
     ctx.fillStyle = p.soft;
     ctx.fillText(dateLabel, PAD, y);
+    const bh = levelBadges(ctx, card.level, card.format, PAD, y + (story ? 30 : 22), story, p);
+    if (bh) y += (story ? 30 : 22) + bh - (story ? 14 : 10);
 
     // Oma joukkue, pelirivit, (lapsen maalit) ja yhteenveto yhtenä lohkona, joka keskitetään otsikon alle.
     y += story ? 64 : 44;
@@ -404,6 +406,8 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
   ctx.font = `${opts.style === 'sport' ? 800 : 600} ${story ? 64 : 54}px ${p.display}`;
   ctx.fillStyle = p.ink;
   ctx.fillText(dateLabel, PAD, y);
+  const bh = levelBadges(ctx, card.level, card.format, PAD, y + (story ? 34 : 24), story, p);
+  if (bh) y += (story ? 34 : 24) + bh;
 
   const ls = story ? 250 : 220;
   const namePx = story ? 40 : 34;
@@ -460,4 +464,36 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, name: string, goals: n
   ctx.textBaseline = 'middle';
   ctx.fillText(text, x + h * 0.45, y + h / 2 + 1);
   ctx.textBaseline = 'alphabetic';
+}
+
+/**
+ * Sarjataso ja pelimuoto selkeinä merkkeinä päivän alla (käyttäjän toive 14.11.2026): taso täytettynä
+ * korostusvärillä ("ELITE"), pelimuoto ääriviivoin ("5v5"). Yläreuna y; palauttaa korkeuden (0 = ei merkkejä).
+ */
+export function levelBadges(ctx: CanvasRenderingContext2D, level: string | undefined, format: string | undefined, x: number, y: number, story: boolean, p: Palette): number {
+  const items = [level ? { text: spaced(level), fill: true } : undefined, format ? { text: format, fill: false } : undefined].filter((i): i is { text: string; fill: boolean } => !!i);
+  if (!items.length) return 0;
+  const h = story ? 68 : 58;
+  const px = Math.round(h * 0.46);
+  let cx = x;
+  for (const it of items) {
+    ctx.font = `800 ${px}px ${p.sans}`;
+    const w = ctx.measureText(it.text).width + h * 0.9;
+    rr(ctx, cx + (it.fill ? 0 : 1.5), y + (it.fill ? 0 : 1.5), w - (it.fill ? 0 : 3), h - (it.fill ? 0 : 3), h / 2);
+    if (it.fill) {
+      ctx.fillStyle = p.accent;
+      ctx.fill();
+    } else {
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = p.ink;
+      ctx.stroke();
+    }
+    // Tekstin väri: korostuksen päällä tumma (vaalealla pohjalla korostus on tumma, jolloin valkoinen).
+    ctx.fillStyle = it.fill ? (p.light ? '#ffffff' : '#0f172a') : p.ink;
+    ctx.textBaseline = 'middle';
+    ctx.fillText(it.text, cx + h * 0.45, y + h / 2 + 1);
+    ctx.textBaseline = 'alphabetic';
+    cx += w + (story ? 16 : 12);
+  }
+  return h;
 }

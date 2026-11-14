@@ -2,8 +2,8 @@
 // Ottelu: logo – VS – logo, nimet, liput ja kotipaikkakunnat, aloitusaika, paikalla-aika ja paikka.
 // Turnaus: nimi, päivä, oma joukkue ja otteluohjelma (kellonaika, vastustaja, lippu, paikka).
 
-import { previewKicker, type PreviewCard } from '../../domain/previewCard';
-import { dateLabelOf, drawLogo, drawOrigin, fit, PAD, rr, setup, spaced, W, wrap, wrapName, type DrawOptions, type Palette } from './drawResult';
+import type { PreviewCard } from '../../domain/previewCard';
+import { dateLabelOf, drawLogo, drawOrigin, fit, levelBadges, PAD, rr, setup, spaced, W, wrap, wrapName, type DrawOptions, type Palette } from './drawResult';
 
 type PreviewOptions = Omit<DrawOptions, 'player'>;
 
@@ -54,7 +54,7 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
   let y = story ? 170 : 104;
   ctx.font = `700 ${story ? 32 : 28}px ${p.sans}`;
   ctx.fillStyle = p.accent;
-  ctx.fillText(spaced(previewKicker(card)), PAD, y);
+  ctx.fillText(spaced(card.kind === 'tournament' ? 'Turnausennakko' : 'Otteluennakko'), PAD, y);
   y += story ? 34 : 26;
 
   const boxH = story ? 180 : 140;
@@ -76,6 +76,8 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
     ctx.font = `500 ${story ? 40 : 34}px ${p.sans}`;
     ctx.fillStyle = p.soft;
     ctx.fillText(dateLabelOf(card.date), PAD, y);
+    const bh = levelBadges(ctx, card.level, card.format, PAD, y + (story ? 30 : 22), story, p);
+    if (bh) y += (story ? 30 : 22) + bh - (story ? 14 : 10);
     y += story ? 64 : 44;
 
     // Laatikot alareunaan: ajat (ja pelien määrä) sekä paikka.
@@ -158,6 +160,8 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
   ctx.font = display(story ? 64 : 54);
   ctx.fillStyle = p.ink;
   ctx.fillText(dateLabelOf(card.date), PAD, y);
+  const bh = levelBadges(ctx, card.level, card.format, PAD, y + (story ? 34 : 24), story, p);
+  if (bh) y += (story ? 34 : 24) + bh;
 
   let boxesTop = bottom;
   if (card.location) boxesTop -= placeH;
