@@ -52,7 +52,12 @@ export function useResultCard(sessionId: UUID | null) {
     const card = resultCard(gameRows([session], details, new Map(types.map((t) => [t.id, t]))));
     if (!card) return null;
     const team = await findOwnTeam(session.profileId, details.get(session.id)?.teamId, card.team);
-    return { card, profileName: profile?.name ?? '', teamPhoto: team?.photo };
+    // Kalenterin tapahtuma, josta kerta kuitattiin: pelin alku ja paikka kuvan alalaatikoihin.
+    const plan = (await db.plannedSessions.where('[profileId+date]').equals([session.profileId, session.date]).toArray()).find((x) => x.sessionId === session.id && !x.deletedAt);
+    const fixture = plan ? await db.fixtures.get(plan.id) : undefined;
+    const location = fixture && !fixture.deletedAt ? fixture.location?.replace(/\s+/g, ' ').trim() : undefined;
+    const kickoff = card.kind === 'game' ? (session.startTime ?? plan?.startTime) : undefined;
+    return { card: { ...card, ...(kickoff ? { kickoff } : {}), ...(location ? { location } : {}) }, profileName: profile?.name ?? '', teamPhoto: team?.photo };
   }, [sessionId]);
 }
 

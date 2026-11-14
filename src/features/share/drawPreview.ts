@@ -3,45 +3,9 @@
 // Turnaus: nimi, päivä, oma joukkue ja otteluohjelma (kellonaika, vastustaja, lippu, paikka).
 
 import type { PreviewCard } from '../../domain/previewCard';
-import { dateLabelOf, drawLogo, drawOrigin, fit, levelBadges, PAD, rr, setup, spaced, W, wrap, wrapName, type DrawOptions, type Palette } from './drawResult';
+import { dateLabelOf, drawLogo, drawMatchup, drawOrigin, fit, infoBoxes, levelBadges, PAD, placeBox, rr, setup, spaced, W, wrap, type DrawOptions } from './drawResult';
 
 type PreviewOptions = Omit<DrawOptions, 'player'>;
-
-/** Tietolaatikot rivissä: otsikko pienellä, arvo isolla (kuten tuloskuvan yhteenveto). */
-function infoBoxes(ctx: CanvasRenderingContext2D, items: [string, string][], y: number, h: number, story: boolean, p: Palette, display: (px: number) => string) {
-  const maxW = W - PAD * 2;
-  const gap = 20;
-  const cw = (maxW - gap * (items.length - 1)) / items.length;
-  items.forEach(([label, value], k) => {
-    const x = PAD + k * (cw + gap);
-    ctx.fillStyle = p.panel;
-    rr(ctx, x, y, cw, h, 34);
-    ctx.fill();
-    ctx.font = `700 ${story ? 26 : 23}px ${p.sans}`;
-    ctx.fillStyle = p.soft;
-    ctx.fillText(spaced(label), x + 30, y + (story ? 58 : 46));
-    ctx.fillStyle = p.ink;
-    const px = items.length > 2 ? (story ? 66 : 54) : story ? 80 : 62;
-    ctx.fillText(fit(ctx, value, cw - 60, display, px, 34), x + 30, y + h - (story ? 38 : 28));
-  });
-}
-
-/** Paikka omana leveänä laatikkonaan (kaksi riviä tarvittaessa). */
-function placeBox(ctx: CanvasRenderingContext2D, place: string, y: number, h: number, story: boolean, p: Palette) {
-  const maxW = W - PAD * 2;
-  ctx.fillStyle = p.panel;
-  rr(ctx, PAD, y, maxW, h, 34);
-  ctx.fill();
-  ctx.font = `700 ${story ? 26 : 23}px ${p.sans}`;
-  ctx.fillStyle = p.soft;
-  ctx.fillText(spaced('Paikka'), PAD + 30, y + (story ? 58 : 46));
-  const px = story ? 46 : 40;
-  ctx.font = `700 ${px}px ${p.sans}`;
-  ctx.fillStyle = p.ink;
-  const lines = wrap(ctx, place, maxW - 60, 2);
-  const startY = y + (story ? 58 : 46) + (h - (story ? 58 : 46) - lines.length * px * 1.15) / 2 + px * 0.9;
-  lines.forEach((l, i) => ctx.fillText(l, PAD + 30, startY + i * px * 1.15));
-}
 
 export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCanvasElement {
   const { canvas, ctx, p, H, story } = setup(opts);
@@ -167,31 +131,14 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
   if (card.location) boxesTop -= placeH;
   if (times.length) boxesTop -= boxH + (card.location ? 20 : 0);
 
-  const ls = story ? 250 : 210;
-  const namePx = story ? 40 : 34;
-  const nameW = story ? 340 : 300;
-  ctx.font = `700 ${namePx}px ${p.sans}`;
-  const names = [wrapName(ctx, card.team ?? 'Oma joukkue', nameW, 3), wrapName(ctx, g.opponent ?? 'Vastustaja', nameW, 3)];
-  const hasOrigin = [origins?.team, origins?.opponents[0]].some((o) => o?.country || o?.city);
-  const nameH = Math.max(...names.map((l) => l.length)) * namePx * 1.2 + (hasOrigin ? (story ? 50 : 42) : 0);
-  const blockH = ls + 36 + nameH;
-  const top = y + Math.max(story ? 70 : 40, (boxesTop - (story ? 40 : 24) - y - blockH) / 2);
-  const centers = [PAD + ls / 2 + (story ? 0 : 10), W - PAD - ls / 2 - (story ? 0 : 10)];
-  drawLogo(ctx, opts.logos.team, card.team, centers[0] - ls / 2, top, ls, p.sans);
-  drawLogo(ctx, opts.logos.opponents[0], g.opponent, centers[1] - ls / 2, top, ls, p.sans);
-  ctx.textAlign = 'center';
-  names.forEach((lines, k) => {
-    ctx.font = `700 ${namePx}px ${p.sans}`;
-    ctx.fillStyle = p.ink;
-    lines.forEach((l, i) => ctx.fillText(l, centers[k], top + ls + 36 + namePx + i * namePx * 1.2));
-    drawOrigin(ctx, k === 0 ? origins?.team : origins?.opponents[0], centers[k], top + ls + 36 + namePx + lines.length * namePx * 1.2 + (story ? 10 : 6), story ? 30 : 26, p, 'center', nameW);
+  drawMatchup(ctx, { team: card.team, opponent: g.opponent, logos: opts.logos, origins, y, boxesTop, story, p }, (top, ls) => {
+    // VS logojen välissä
     ctx.textAlign = 'center';
+    ctx.font = display(story ? 120 : 100);
+    ctx.fillStyle = p.accent;
+    ctx.fillText('VS', W / 2, top + ls / 2 + (story ? 42 : 35));
+    ctx.textAlign = 'left';
   });
-  // VS logojen välissä
-  ctx.font = display(story ? 120 : 100);
-  ctx.fillStyle = p.accent;
-  ctx.fillText('VS', W / 2, top + ls / 2 + (story ? 42 : 35));
-  ctx.textAlign = 'left';
 
   let by = boxesTop;
   if (times.length) {

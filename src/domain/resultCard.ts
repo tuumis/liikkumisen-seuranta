@@ -31,6 +31,9 @@ export interface ResultCard {
   goalsAgainst: number;
   /** Oman lapsen maalit yhteensä (näytetään kuvassa vain, jos käyttäjä valitsee). */
   playerGoals: number;
+  /** Ottelun alku ja paikka (kalenterin tapahtumasta tai kerrasta), jos tiedossa. */
+  kickoff?: string;
+  location?: string;
 }
 
 /**
