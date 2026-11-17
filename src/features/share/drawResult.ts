@@ -386,7 +386,15 @@ export interface DrawOptions {
   homeAway?: boolean;
   /** Kommentti harmaalla paneelilla (oletus) vai pelkkänä tekstinä heti pelin alla (18.11.2026). */
   commentPanel?: boolean;
+  /**
+   * Videon kerrokset (19.11.2026): kutsutaan ennen kunkin osan piirtoa (esim. 'kicker', 'team', 'vs'),
+   * jotta osat voidaan erottaa omiksi kuvikseen ja animoida.
+   */
+  mark?: LayerMark;
 }
+
+/** Osan raja piirrossa: seuraavaksi piirretään nimetty osa. */
+export type LayerMark = (name: string, ctx: CanvasRenderingContext2D) => void;
 
 /** Kommentin mitat (0 = ei kommenttia): enintään kolme riviä; paneelissa sisennys ja reunat. */
 export interface CommentBlock {
@@ -750,6 +758,8 @@ export function drawMatchup(
     tags?: [string, string];
     /** Lohkon alle varattava tila (esim. kommentti pelkkänä tekstinä), jotta kokonaisuus keskitetään. */
     belowH?: number;
+    /** Videon kerrokset: oma joukkue ('team'), vastustaja ('opponent') ja keskiosa ('vs'). */
+    mark?: (name: string) => void;
   },
   center: (top: number, ls: number) => void,
 ): number {
@@ -765,10 +775,13 @@ export function drawMatchup(
   const blockH = ls + 36 + nameH + (m.belowH ?? 0);
   const top = m.y + Math.max(story ? 70 : 40, (m.boxesTop - (story ? 40 : 24) - m.y - blockH) / 2);
   const centers = [PAD + ls / 2 + (story ? 0 : 10), W - PAD - ls / 2 - (story ? 0 : 10)];
+  m.mark?.('team');
   drawLogo(ctx, m.logos.team, m.team, centers[0] - ls / 2, top, ls, p.sans);
+  m.mark?.('opponent');
   drawLogo(ctx, m.logos.opponents[0], m.opponent, centers[1] - ls / 2, top, ls, p.sans);
   ctx.textAlign = 'center';
   names.forEach((lines, k) => {
+    m.mark?.(k === 0 ? 'team' : 'opponent');
     ctx.font = `700 ${namePx}px ${p.sans}`;
     ctx.fillStyle = p.ink;
     lines.forEach((l, i) => ctx.fillText(l, centers[k], top + ls + 36 + namePx + i * namePx * 1.2));
@@ -785,6 +798,7 @@ export function drawMatchup(
     }
   });
   ctx.textAlign = 'left';
+  m.mark?.('vs');
   center(top, ls);
   return top + ls + 36 + nameH;
 }

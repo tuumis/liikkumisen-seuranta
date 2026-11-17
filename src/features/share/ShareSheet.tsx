@@ -14,8 +14,9 @@ import { hasTeamDetails, SHOW_ALL_DETAILS, type TeamDetailPrefs } from '../../do
 import { Sheet } from '../../ui/Sheet';
 import { clubFor, clubNameOf, useClubs } from '../../ui/TeamLogo';
 import { useToast } from '../../ui/Toast';
-import { isShareStyle, SHARE_STYLE_LABEL, type ShareSize, type ShareStyle } from './drawResult';
+import { isShareStyle, SHARE_STYLE_LABEL, type LayerMark, type ShareSize, type ShareStyle } from './drawResult';
 import { isHexColor, isLightColor, mix, SHARE_COLORS } from './shareColors';
+import { useVideoShare } from './VideoShare';
 
 const PREFS = 'resultSharePrefs';
 type Prefs = { size: ShareSize; style: ShareStyle };
@@ -31,6 +32,8 @@ function readPrefs(key: string, styles: readonly ShareStyle[]): Prefs {
 
 export interface RenderOptions extends Prefs {
   color?: string;
+  /** Videon kerrokset (vain ennakkovideossa). */
+  mark?: LayerMark;
 }
 
 export function ShareImageSheet({
@@ -45,6 +48,7 @@ export function ShareImageSheet({
   children,
   styles = DEFAULT_STYLES,
   prefsKey = PREFS,
+  video = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -63,6 +67,8 @@ export function ShareImageSheet({
   styles?: readonly ShareStyle[];
   /** Muodon ja tyylin muistipaikka laitteella. */
   prefsKey?: string;
+  /** Kuva | Video -valinta (otteluennakko, 19.11.2026); kuva on aina oletus. */
+  video?: boolean;
 }) {
   const toast = useToast();
   const clubs = useClubs();
@@ -71,6 +77,19 @@ export function ShareImageSheet({
   const [color, setColor] = useState<string | undefined>(saved);
   const [src, setSrc] = useState<string>();
   const canvas = useRef<HTMLCanvasElement | null>(null);
+  const [media, setMedia] = useState<'image' | 'video'>('image');
+  const vid = useVideoShare({
+    active: open && video && media === 'video',
+    render,
+    options: { ...prefs, color },
+    deps: `${renderKey}|${prefs.size}|${prefs.style}|${color ?? ''}`,
+    fileName,
+    alt,
+  });
+  useEffect(() => {
+    if (!open) setMedia('image');
+  }, [open]);
+  const isVideo = video && media === 'video';
 
   // Joukkueen tallennettu väri, kun paneeli avataan tai tieto tulee synkronoinnista.
   useEffect(() => setColor(saved), [saved, teamName, open]);
@@ -151,8 +170,21 @@ export function ShareImageSheet({
     <Sheet open={open} onClose={onClose} title={title}>
       {render ? (
         <div className="space-y-4">
+          {video && (
+            <Segmented<'image' | 'video'>
+              label="Jaa kuvana tai videona"
+              value={media}
+              onChange={setMedia}
+              options={[
+                { value: 'image', label: 'Kuva' },
+                { value: 'video', label: 'Video' },
+              ]}
+            />
+          )}
           <div className="flex justify-center rounded-2xl bg-[var(--surface-sunk)] p-3">
-            {src ? (
+            {isVideo ? (
+              vid.preview
+            ) : src ? (
               <img src={src} alt={alt} className={`h-auto w-auto rounded-xl shadow-lg ${prefs.size === 'story' ? 'max-h-[52dvh]' : 'max-h-[46dvh]'} max-w-full`} />
             ) : (
               <div className={`${prefs.size === 'story' ? 'aspect-[9/16]' : 'aspect-[4/5]'} h-[40dvh] animate-pulse rounded-xl bg-slate-200`} />
@@ -187,16 +219,20 @@ export function ShareImageSheet({
           )}
           <ColorPicker value={color} onChange={pickColor} team={clubNameOf(teamName)} />
           {children}
-          <div className="flex gap-2">
-            {canShare && (
-              <Button className="flex-1" onClick={() => void share()} disabled={!src}>
-                Jaa
+          {isVideo ? (
+            vid.actions
+          ) : (
+            <div className="flex gap-2">
+              {canShare && (
+                <Button className="flex-1" onClick={() => void share()} disabled={!src}>
+                  Jaa
+                </Button>
+              )}
+              <Button variant="secondary" className={canShare ? '' : 'flex-1'} onClick={() => void save()} disabled={!src}>
+                Tallenna kuva
               </Button>
-            )}
-            <Button variant="secondary" className={canShare ? '' : 'flex-1'} onClick={() => void save()} disabled={!src}>
-              Tallenna kuva
-            </Button>
-          </div>
+            </div>
+          )}
         </div>
       ) : (
         children

@@ -25,8 +25,10 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
   const display = (px: number) => `${heavy} ${px}px ${p.display}`;
   const origins = opts.origins;
   const bottom = H - (story ? 140 : 84);
+  const mark = (name: string) => opts.mark?.(name, ctx);
 
   let y = story ? 170 : 104;
+  mark('kicker');
   ctx.font = `700 ${story ? 32 : 28}px ${p.sans}`;
   ctx.fillStyle = p.accent;
   ctx.fillText(spaced(previewTitleOf(card)), PAD, y);
@@ -41,6 +43,7 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
   const list = card.kind === 'tournament' || (card.kind === 'friendly' && card.games.length > 1);
   if (list) {
     const titlePx = story ? 104 : 84;
+    mark('title');
     ctx.font = display(titlePx);
     const lines = wrap(ctx, card.kind === 'friendly' ? 'Pelitälli' : (card.eventName ?? 'Turnaus'), maxW, 2);
     ctx.fillStyle = p.ink;
@@ -49,6 +52,7 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
       ctx.fillText(l, PAD, y);
     });
     y += story ? 74 : 58;
+    mark('date');
     ctx.font = `500 ${story ? 40 : 34}px ${p.sans}`;
     ctx.fillStyle = p.soft;
     ctx.fillText(dateLabelOf(card.date), PAD, y);
@@ -75,6 +79,7 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
     const blockH = ls + teamGap + labelH + (n ? n * rowH + (n - 1) * gap : 0) + plainH;
     y += Math.max(0, (commentTop - listGap - y - blockH) / 2);
 
+    mark('team');
     drawLogo(ctx, opts.logos.team, card.team, PAD, y, ls, p.sans);
     ctx.fillStyle = p.ink;
     const teamText = fit(ctx, card.team ?? 'Oma joukkue', maxW - ls - 32, (px) => `700 ${px}px ${p.sans}`, story ? 52 : 46, 30);
@@ -84,6 +89,7 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
     y += ls + teamGap;
 
     if (n) {
+      mark('label');
       ctx.font = `700 ${story ? 28 : 24}px ${p.sans}`;
       ctx.fillStyle = p.accent;
       ctx.fillText(spaced(card.kind === 'friendly' ? 'Vastustajat' : 'Otteluohjelma'), PAD, y + (story ? 30 : 24));
@@ -91,6 +97,7 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
       const timeW = story ? 190 : 160;
       card.games.forEach((g, k) => {
         const top = y + k * (rowH + gap);
+        mark(`row:${k}`);
         ctx.fillStyle = p.panel;
         rr(ctx, PAD, top, maxW, rowH, Math.min(34, rowH * 0.28));
         ctx.fill();
@@ -125,12 +132,15 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
       });
     }
 
+    mark('comment');
     if (comment.h) drawComment(ctx, comment, comment.panel ? commentTop : y + (n ? n * rowH + (n - 1) * gap : 0) + plainGap, p);
     let by = boxesTop;
+    mark('times');
     if (items.length) {
       infoBoxes(ctx, items, by, boxH, story, p, display);
       by += boxH + 20;
     }
+    mark('place');
     if (place) placeBox(ctx, place, by, placeH, story, p);
     return canvas;
   }
@@ -138,6 +148,7 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
   // Yksittäinen ottelu
   const g = card.games[0];
   y += story ? 92 : 70;
+  mark('date');
   ctx.font = display(story ? 64 : 54);
   ctx.fillStyle = p.ink;
   ctx.fillText(dateLabelOf(card.date), PAD, y);
@@ -150,7 +161,7 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
   const commentTop = comment.h && comment.panel ? boxesTop - comment.h - (times.length || place ? commentGap : 0) : boxesTop;
   const below = comment.h && !comment.panel ? comment.h + plainGap : 0;
 
-  const nameBottom = drawMatchup(ctx, { team: card.team, opponent: g.opponent, logos: opts.logos, origins, y, boxesTop: commentTop, story, p, tags: homeAwayTags(g.homeAway, opts.homeAway), belowH: below }, (top, ls) => {
+  const nameBottom = drawMatchup(ctx, { team: card.team, opponent: g.opponent, logos: opts.logos, origins, y, boxesTop: commentTop, story, p, tags: homeAwayTags(g.homeAway, opts.homeAway), belowH: below, mark }, (top, ls) => {
     // VS logojen välissä
     ctx.textAlign = 'center';
     ctx.font = display(story ? 120 : 100);
@@ -159,12 +170,15 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
     ctx.textAlign = 'left';
   });
 
+  mark('comment');
   if (comment.h) drawComment(ctx, comment, comment.panel ? commentTop : nameBottom + plainGap, p, comment.panel ? 'left' : 'center');
   let by = boxesTop;
+  mark('times');
   if (times.length) {
     infoBoxes(ctx, times, by, boxH, story, p, display);
     by += boxH + 20;
   }
+  mark('place');
   if (place) placeBox(ctx, place, by, placeH, story, p);
   return canvas;
 }

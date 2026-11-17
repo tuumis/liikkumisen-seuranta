@@ -1368,3 +1368,26 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
       - Paikka LOCATION-kenttään. Kuvaukseen paikalla- ja alkamisaika, sarja, taso, koti/vieras, turnauksen otteluohjelma, tulos, puuttuvat tiedot ja linkki (myös URL).
       - Ei pelattu = STATUS:CANCELLED.
       - Pysyvä UID (suunnitelman tai kerran tunniste) ja vientihetkestä kasvava SEQUENCE: uudelleenvienti voi päivittää aiemmin tuodut tapahtumat niissä kalentereissa, jotka tunnistavat UID:n. Ohjeessa kerrotaan, että kalenteri ei päivity itsestään.
+  - **Ennakkovideo** (käyttäjän toive 19.11.2026; `features/share/videoTimeline.ts`, `previewVideo.ts`, `VideoShare.tsx`; `DrawOptions.mark`): otteluennakon jakoikkunassa on valinta **Kuva | Video**, ja kuva on aina oletus. Tuloskuvissa videota ei ole.
+    - Video on samankokoinen kuin kuva (tarina 9:16 tai julkaisu 4:5) ja käyttää samoja valintoja: tyyli, väri, kommentti, koti/vieras, joukkuetiedot ja laatikot. Videon viimeinen kuva on sama kuin ennakkokuva.
+    - Animaatio:
+      - tausta ensin, sitten tunniste ja päivä liukuvat ylös
+      - oma joukkue tulee vasemmalta ja vastustaja oikealta
+      - "VS" ponnahtaa näkyviin
+      - turnauksen ja pelitällin rivit tulevat yksi kerrallaan
+      - lopuksi kommentti, ajat ja paikka
+      - valmis kuva pysyy noin 2 s
+      - kesto 5–9 s, ei ääntä
+    - Toteutus:
+      - piirto merkitsee osien rajat (`mark`), ja osat leikataan omiksi kuvikseen
+      - kehykset piirretään kankaalle ja tallennetaan selaimen MediaRecorderilla (`canvas.captureStream`, 30 kuvaa/s)
+      - ei kirjastoja eikä verkkoliikennettä
+    - Muoto: MP4 (H.264), jos selain osaa; tämä toimii iPhonessa ja WhatsAppissa. Muuten tarjotaan WebM varoituksen kanssa. Jos tallennus ei onnistu lainkaan, ohjataan jakamaan kuva.
+    - Esikatselu:
+      - kankaalla toistuva animaatio, jonka voi toistaa uudelleen ("▶ Toista")
+      - `<video>`-elementtiä ei käytetä, koska sisältöturvakäytäntö ei salli blob-mediaa
+      - vähennetty liike: ei automaattista toistoa
+    - Tekeminen:
+      - "Tee video" toistaa animaation ja tallentaa sen; edistyminen näkyy, ja teon voi perua
+      - valmiin videon jälkeen "Jaa video" (puhelimen jakovalikko) ja "Tallenna video" (lataus)
+      - valintojen muutos hylkää valmiin videon

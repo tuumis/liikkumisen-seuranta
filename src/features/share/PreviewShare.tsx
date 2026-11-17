@@ -145,6 +145,7 @@ export function PreviewShareSheet({ planId, onClose }: { planId: UUID | null; on
   return (
     <ShareImageSheet
       open={!!planId}
+      video
       onClose={onClose}
       title={card?.kind === 'friendly' ? 'Jaa harjoituspelin ennakko' : card?.kind === 'tournament' ? 'Jaa turnausennakko' : 'Jaa otteluennakko'}
       alt="Otteluennakon esikatselu"
