@@ -16,10 +16,12 @@ export interface VideoTimeline {
   total: number;
 }
 
+/** Tempo: alla olevat ajat kerrotaan tällä (käyttäjän palaute 19.11.2026: ensimmäinen versio liian nopea). */
+export const PACE = 1.6;
 /** Lopun pysäytyskuva ja kesto rajoineen. */
-export const HOLD = 2.2;
-export const MIN_TOTAL = 5;
-export const MAX_TOTAL = 9;
+export const HOLD = 3;
+export const MIN_TOTAL = 7;
+export const MAX_TOTAL = 13;
 
 /**
  * Ajoitus osien nimistä (piirtojärjestyksessä, toistot sallittu): tausta ensin, sitten tunniste ja päivä
@@ -56,6 +58,7 @@ export function videoTimeline(names: readonly string[]): VideoTimeline {
     if (n === 'bg' || anims.has(n)) continue;
     put(n, 0.5, 'up', 0.3);
   }
+  for (const [n, a] of anims) anims.set(n, { ...a, start: round(a.start * PACE), dur: round(a.dur * PACE) });
   const end = Math.max(0, ...[...anims.values()].map((a) => a.start + a.dur));
   return { anims, total: Math.min(MAX_TOTAL, Math.max(MIN_TOTAL, round(end + HOLD))) };
 }

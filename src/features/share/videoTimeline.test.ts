@@ -16,7 +16,8 @@ describe('videoTimeline', () => {
     expect(vs.start).toBeGreaterThan(team.start);
     expect(anims.get('times')!.start).toBeLessThan(anims.get('place')!.start);
     expect(anims.has('bg')).toBe(false);
-    expect(total).toBe(MIN_TOTAL);
+    expect(total).toBeGreaterThanOrEqual(MIN_TOTAL);
+    expect(total).toBeLessThan(8);
   });
 
   it('turnaus: rivit yksi kerrallaan ja laatikot rivien jälkeen; pitkä lista pidentää videota', () => {

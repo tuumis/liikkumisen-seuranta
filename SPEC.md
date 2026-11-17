@@ -1376,8 +1376,8 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
       - "VS" ponnahtaa näkyviin
       - turnauksen ja pelitällin rivit tulevat yksi kerrallaan
       - lopuksi kommentti, ajat ja paikka
-      - valmis kuva pysyy noin 2 s
-      - kesto 5–9 s, ei ääntä
+      - valmis kuva pysyy noin 3 s
+      - kesto 7–13 s (ottelu noin 7 s), ei ääntä; tempoa hidastettiin käyttäjän palautteesta 19.11.2026 ("hieman liian nopea"), kaikki ajat ×1,6
     - Toteutus:
       - piirto merkitsee osien rajat (`mark`), ja osat leikataan omiksi kuvikseen
       - kehykset piirretään kankaalle ja tallennetaan selaimen MediaRecorderilla (`canvas.captureStream`, 30 kuvaa/s)

@@ -226,7 +226,7 @@ export function useVideoShare({
         <Button className="w-full" disabled={!scene} onClick={() => void make()}>
           Tee video
         </Button>
-        <p className="text-xs text-slate-500">Video on noin {scene ? Math.round(scene.timeline.total) : 5} sekuntia ja ilman ääntä. Teko kestää yhtä kauan kuin video.</p>
+        <p className="text-xs text-slate-500">Video on noin {scene ? Math.round(scene.timeline.total) : 7} sekuntia ja ilman ääntä. Teko kestää yhtä kauan kuin video.</p>
       </div>
     );
   }
