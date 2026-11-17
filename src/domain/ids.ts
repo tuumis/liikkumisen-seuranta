@@ -13,6 +13,9 @@ export const plannedSessionId = (templateItemId: UUID, date: ISODate): UUID => `
 /** Suunnitelman kuittauksesta syntyvä kerta: s:<plannedSessionId>. */
 export const sessionIdFromPlanned = (plannedId: UUID): UUID => `s:${plannedId}`;
 
+/** Treenin omatoiminen verryttely (17.11.2026): w:<treenikerran id>. */
+export const trainingSelfId = (sessionId: UUID): UUID => `w:${sessionId}`;
+
 /** Päivämerkintä: f:<profileId>:<date>. */
 export const dayFlagId = (profileId: UUID, date: ISODate): UUID => `f:${profileId}:${date}`;
 

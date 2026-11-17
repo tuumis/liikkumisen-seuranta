@@ -4,7 +4,7 @@
 
 import { Dexie, type Table } from 'dexie';
 import { CURRENT_SCHEMA_VERSION } from '../domain/migrations';
-import { activityTypeId, dayFlagId, newId, sessionIdFromPlanned, SETTINGS_ID } from '../domain/ids';
+import { activityTypeId, dayFlagId, newId, sessionIdFromPlanned, SETTINGS_ID, trainingSelfId } from '../domain/ids';
 import { computeSessionMinutes, DEFAULT_GAME_WARMUP_MIN, DEFAULT_PLAY_SHARE, INTENSITY_PRESETS, roundMinutes, partsShares, supportsParts } from '../domain/intensity';
 import { defaultGameLength, DEFAULT_WARMUP_MIN, legacyTournamentStart, tournamentStart } from '../domain/tournamentTime';
 import { DEFAULT_SETTINGS } from '../domain/recommendations';
@@ -48,7 +48,7 @@ import type {
   Timestamp,
   UUID,
   Weekday, SessionPart } from '../domain/types';
-import { isClubFootball, isGameFormat, LEVEL_EFFORT, POSITIONS } from '../domain/football';
+import { isClubFootball, isClubTraining, isGameFormat, LEVEL_EFFORT, POSITIONS, selfMin, trainingSelfLabel, trainingSelfStart } from '../domain/football';
 import { BUILT_IN_ACTIVITY_TYPES, BUILT_IN_RENAMES, ESTIMATE_DEFAULT_TYPE_KEY } from '../seed/activityTypes';
 import { nowTimestamp } from './clock';
 import { createPlanner } from './ensurePlanned';
@@ -180,6 +180,9 @@ export interface TemplateItemInput {
   validTo?: ISODate;
   note?: string;
   label?: string;
+  /** Jalkapallotreeni: omatoiminen alku- ja loppuverryttely (min) oletuksena kuittauksessa. */
+  selfBeforeMin?: number;
+  selfAfterMin?: number;
 }
 
 /** Poistetun kerran ja siihen liittyneiden tietueiden aiemmat versiot. */
@@ -187,6 +190,14 @@ export interface DeleteUndo {
   session: Session;
   football?: FootballDetails;
   plan?: PlannedSession;
+  /** Treenin mukana poistunut omatoiminen verryttely. */
+  companion?: Session;
+}
+
+/** Treenin omatoiminen verryttely (min ennen ja jälkeen). */
+export interface TrainingSelf {
+  before: number;
+  after: number;
 }
 
 /** Tarkenne siistittynä (välilyönnit, enintään 40 merkkiä); tyhjä → undefined. */
@@ -571,8 +582,129 @@ export function createRepositories(db: AppDB = defaultDb) {
       if (input.note?.trim()) next.note = input.note.trim();
       const label = cleanLabel(input.label);
       if (label) next.label = label;
+      if (current.linkedTo) splitSelfDuration(next);
       await db.sessions.put(next);
+      const companion = await db.sessions.get(trainingSelfId(id));
+      if (companion && !companion.deletedAt && companion.linkedTo === id) await putTrainingSelf(next, { before: companion.selfBeforeMin ?? 0, after: companion.selfAfterMin ?? 0 });
       return next;
+    });
+  }
+
+  /** Verryttelykertaa muokattu suoraan: uusi kesto jaetaan ennen/jälkeen-osiin (ennen säilyy, jos mahtuu). */
+  function splitSelfDuration(s: Session) {
+    const before = s.selfBeforeMin ?? 0;
+    const after = s.selfAfterMin ?? 0;
+    if (before + after === s.durationMin) return;
+    if (after > 0 && before < s.durationMin) s.selfAfterMin = s.durationMin - before;
+    else {
+      s.selfBeforeMin = s.durationMin;
+      delete s.selfAfterMin;
+    }
+    if (!s.selfAfterMin) delete s.selfAfterMin;
+  }
+
+  /**
+   * Treenin omatoiminen verryttely (17.11.2026): erillinen "Jalkapallo – omatoiminen" -kerta, tunniste
+   * w:<treenin id>, sama päivä, alku treenin alku − ennen (tai treenin loppu). 0 + 0 poistaa kerran.
+   * Kutsutaan transaktiossa, jossa ovat sessions, activityTypes ja meta.
+   */
+  async function putTrainingSelf(training: Session, self: TrainingSelf): Promise<Session | undefined> {
+    const before = selfMin(self.before);
+    const after = selfMin(self.after);
+    const id = trainingSelfId(training.id);
+    const existing = await db.sessions.get(id);
+    if (!before && !after) {
+      if (existing && !existing.deletedAt) await softDelete(db.sessions, id);
+      return undefined;
+    }
+    const type = await getActivityType(activityTypeId('football_self'));
+    const cur = existing && !existing.deletedAt ? existing : undefined;
+    const input: SessionInput = {
+      activityTypeId: type.id,
+      date: training.date,
+      durationMin: before + after,
+      effort: cur?.effort ?? 0,
+      muscle: cur?.muscle ?? type.muscleDefault === 'yes',
+      bone: cur?.bone ?? type.boneDefault === 'yes',
+    };
+    const ts = nowTimestamp();
+    const s: Session = {
+      ...(cur ?? {}),
+      id,
+      profileId: training.profileId,
+      activityTypeId: type.id,
+      date: training.date,
+      durationMin: input.durationMin,
+      effort: input.effort,
+      muscle: input.muscle,
+      bone: input.bone,
+      ...sessionIntensity(type, input, cur),
+      linkedTo: training.id,
+      selfBeforeMin: before,
+      selfAfterMin: after,
+      label: trainingSelfLabel(before, after),
+      createdAt: existing?.createdAt ?? ts,
+      updatedAt: ts,
+      updatedBy: await deviceId(),
+    };
+    delete s.deletedAt;
+    delete s.startTime;
+    delete s.plannedSessionId;
+    if (!after) delete s.selfAfterMin;
+    if (!before) delete s.selfBeforeMin;
+    const start = trainingSelfStart(training.startTime, training.durationMin, before);
+    if (start) s.startTime = start;
+    await db.sessions.put(s);
+    return s;
+  }
+
+  /** Treenin verryttely nyt (0 + 0, jos ei ole). */
+  async function getTrainingSelf(trainingId: UUID): Promise<TrainingSelf> {
+    const c = await db.sessions.get(trainingSelfId(trainingId));
+    return c && !c.deletedAt && c.linkedTo === trainingId ? { before: c.selfBeforeMin ?? 0, after: c.selfAfterMin ?? 0 } : { before: 0, after: 0 };
+  }
+
+  /** Asettaa treenin omatoimisen verryttelyn (luo, päivittää tai poistaa linkitetyn kerran). */
+  async function setTrainingSelf(trainingId: UUID, self: TrainingSelf): Promise<Session | undefined> {
+    noteLocalChange();
+    return db.transaction('rw', db.sessions, db.activityTypes, db.meta, async () => {
+      const t = await db.sessions.get(trainingId);
+      if (!t || t.deletedAt) throw new Error('Kertaa ei löydy');
+      if (!isClubTraining(await db.activityTypes.get(t.activityTypeId))) throw new Error('Verryttelyn voi lisätä vain seuran jalkapallotreeniin');
+      return putTrainingSelf(t, self);
+    });
+  }
+
+  /** Seuran treenit aikavälillä, joilla ei vielä ole omatoimista verryttelyä (menneiden täydennys). */
+  async function trainingsWithoutSelf(profileId: UUID, from: ISODate, to: ISODate): Promise<Session[]> {
+    const types = new Map((await db.activityTypes.toArray()).map((t) => [t.id, t]));
+    const rows = live(await db.sessions.where('[profileId+date]').between([profileId, from], [profileId, to], true, true).toArray());
+    const linked = new Set(rows.filter((s) => s.linkedTo).map((s) => s.linkedTo));
+    return rows.filter((s) => !s.linkedTo && !linked.has(s.id) && isClubTraining(types.get(s.activityTypeId))).sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  /** Lisää verryttelyn kaikille aikavälin treeneille, joilla sitä ei vielä ole; palauttaa luodut (kumoamista varten). */
+  async function addTrainingSelfFrom(profileId: UUID, from: ISODate, to: ISODate, self: TrainingSelf): Promise<UUID[]> {
+    noteLocalChange();
+    if (!selfMin(self.before) && !selfMin(self.after)) return [];
+    return db.transaction('rw', db.sessions, db.activityTypes, db.meta, async () => {
+      const out: UUID[] = [];
+      for (const t of await trainingsWithoutSelf(profileId, from, to)) {
+        const c = await putTrainingSelf(t, self);
+        if (c) out.push(c.id);
+      }
+      return out;
+    });
+  }
+
+  /** Kumoaa täydennyksen. */
+  async function removeTrainingSelves(ids: UUID[]): Promise<void> {
+    noteLocalChange();
+    await db.transaction('rw', db.sessions, db.meta, async () => {
+      for (const id of ids) {
+        const c = await db.sessions.get(id);
+        if (c && !c.deletedAt && c.linkedTo) await softDelete(db.sessions, id);
+      }
     });
   }
 
@@ -591,6 +723,9 @@ export function createRepositories(db: AppDB = defaultDb) {
       const by = await deviceId();
       const ts = nowTimestamp();
       await db.sessions.put({ ...session, deletedAt: ts, updatedAt: ts, updatedBy: by });
+      const comp = await db.sessions.get(trainingSelfId(id));
+      const companion = comp && !comp.deletedAt && comp.linkedTo === id ? comp : undefined;
+      if (companion) await db.sessions.put({ ...companion, deletedAt: ts, updatedAt: ts, updatedBy: by });
       if (football && !football.deletedAt) {
         await db.footballDetails.put({ ...football, deletedAt: ts, updatedAt: ts, updatedBy: by });
       }
@@ -604,6 +739,7 @@ export function createRepositories(db: AppDB = defaultDb) {
         session,
         football: football && !football.deletedAt ? football : undefined,
         plan: plan && !plan.deletedAt && plan.sessionId === id ? plan : undefined,
+        companion,
       };
     });
   }
@@ -619,12 +755,14 @@ export function createRepositories(db: AppDB = defaultDb) {
       await db.sessions.put(await restore(undo.session));
       if (undo.football) await db.footballDetails.put(await restore(undo.football));
       if (undo.plan) await db.plannedSessions.put(await restore(undo.plan));
+      if (undo.companion) await db.sessions.put(await restore(undo.companion));
     });
   }
 
   // ---------- viikkopohja ja suunnitelmat (kerros 2) ----------
 
   const planner = createPlanner(db, deviceId);
+  const CONFIRM_TABLES = () => [db.sessions, db.plannedSessions, db.activityTypes, db.fixtures, db.teams, db.footballDetails, db.templateItems, db.meta];
   const PLAN_TABLES = [db.templateItems, db.plannedSessions, db.meta];
 
   async function listTemplateItems(profileId: UUID): Promise<TemplateItem[]> {
@@ -645,7 +783,9 @@ export function createRepositories(db: AppDB = defaultDb) {
       durationMin: input.durationMin,
       validFrom: input.validFrom,
     };
-    for (const k of ['startTime', 'validTo', 'note', 'label'] as const) delete next[k];
+    for (const k of ['startTime', 'validTo', 'note', 'label', 'selfBeforeMin', 'selfAfterMin'] as const) delete next[k];
+    if (selfMin(input.selfBeforeMin)) next.selfBeforeMin = selfMin(input.selfBeforeMin);
+    if (selfMin(input.selfAfterMin)) next.selfAfterMin = selfMin(input.selfAfterMin);
     if (input.startTime) next.startTime = input.startTime;
     if (input.validTo) next.validTo = input.validTo;
     if (input.note?.trim()) next.note = input.note.trim();
@@ -761,7 +901,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     opts: { durationMin?: number } = {},
   ): Promise<{ session: Session; created: boolean }> {
     noteLocalChange();
-    return db.transaction('rw', [db.sessions, db.plannedSessions, db.activityTypes, db.fixtures, db.teams, db.footballDetails, db.meta], async () => {
+    return db.transaction('rw', CONFIRM_TABLES(), async () => {
       const plan = await db.plannedSessions.get(planId);
       if (!plan || plan.deletedAt) throw new Error('Suunnitelmaa ei löydy');
       if (plan.date > today) throw new Error('Tulevaa kertaa ei voi kuitata tehdyksi');
@@ -819,6 +959,11 @@ export function createRepositories(db: AppDB = defaultDb) {
       if (plan.label) session.label = plan.label;
       setFootballTiming(session, type, input.warmupMin, input.playShare);
       await db.sessions.put(session); // put herättää poistomerkityn henkiin
+      // Seuran treeni: viikkorytmin omatoiminen alku- ja loppuverryttely linkitetyksi kerraksi.
+      if (isClubTraining(type) && plan.templateItemId) {
+        const item = await db.templateItems.get(plan.templateItemId);
+        if (item && (item.selfBeforeMin || item.selfAfterMin)) await putTrainingSelf(session, { before: item.selfBeforeMin ?? 0, after: item.selfAfterMin ?? 0 });
+      }
       if (fixture) {
         const existingFd = await db.footballDetails.get(sid);
         if (!existingFd || existingFd.deletedAt) {
@@ -899,7 +1044,7 @@ export function createRepositories(db: AppDB = defaultDb) {
   async function confirmMany(planIds: UUID[], today: ISODate): Promise<UUID[]> {
     noteLocalChange();
     const created: UUID[] = [];
-    await db.transaction('rw', [db.sessions, db.plannedSessions, db.activityTypes, db.fixtures, db.teams, db.footballDetails, db.meta], async () => {
+    await db.transaction('rw', CONFIRM_TABLES(), async () => {
       for (const id of planIds) {
         const r = await confirmPlanned(id, today);
         if (r.created) created.push(r.session.id);
@@ -1889,6 +2034,11 @@ export function createRepositories(db: AppDB = defaultDb) {
     updateSession,
     deleteSession,
     undoDelete,
+    getTrainingSelf,
+    setTrainingSelf,
+    trainingsWithoutSelf,
+    addTrainingSelfFrom,
+    removeTrainingSelves,
     /** Pohjan suunnitelmat + lomapäivien koululiikunnan ohitus uusille kerroille. */
     ensurePlanned: async (profileId: UUID, through: ISODate, today: ISODate, only?: { from: ISODate }) => {
       const n = await planner.ensurePlanned(profileId, through, today, only);

@@ -16,6 +16,8 @@ import { LabelField } from '../week/LabelField';
 import { useHiddenTypes, visibleTypes } from '../week/useLoggableTypes';
 import { useFootballStatus, withoutClubFootball } from '../football/useFootballEnabled';
 import { DateInput } from '../../ui/DateInput';
+import { isClubTraining, trainingSelfText } from '../../domain/football';
+import { parseSelfMin, TrainingSelfBackfill, TrainingSelfFields } from '../football/TrainingSelf';
 
 const WEEKDAYS: { value: Weekday; label: string }[] = [
   { value: 1, label: 'Ma' },
@@ -58,6 +60,7 @@ export function TemplateSection({ profile }: { profile: Profile }) {
   }
 
   return (
+    <>
     <Card
       title={`Viikkorytmi · ${profile.name}`}
       action={
@@ -86,6 +89,7 @@ export function TemplateSection({ profile }: { profile: Profile }) {
                 <span className="block text-xs text-slate-600">
                   {i.weekdays.map((d) => WEEKDAYS[d - 1].label).join(', ')}
                   {i.startTime && ` klo ${i.startTime}`} · {i.durationMin} min
+                  {(i.selfBeforeMin || i.selfAfterMin) && isClubTraining(types?.find((t) => t.id === i.activityTypeId)) ? ` · 🥾 ${trainingSelfText(i)}` : ''}
                 </span>
                 <span className="block text-xs text-slate-500">
                   {formatDate(i.validFrom, 'd.M.yyyy')} – {i.validTo ? formatDate(i.validTo, 'd.M.yyyy') : 'toistaiseksi'}
@@ -100,6 +104,8 @@ export function TemplateSection({ profile }: { profile: Profile }) {
         ))}
       </ul>
     </Card>
+    <TrainingSelfBackfill profile={profile} />
+    </>
   );
 }
 
@@ -120,7 +126,10 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
     validTo: item?.validTo ?? '',
     note: item?.note ?? '',
     label: item?.label ?? '',
+    selfBefore: item?.selfBeforeMin ? String(item.selfBeforeMin) : '',
+    selfAfter: item?.selfAfterMin ? String(item.selfAfterMin) : '',
   });
+  const clubTraining = isClubTraining(types?.find((t) => t.id === v.activityTypeId));
   // Uuden rivin oletuslaji, kun jalkapallon päättely ja lajit ovat valmiina.
   const firstId = types?.[0]?.id;
   useEffect(() => {
@@ -143,6 +152,9 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
   async function save() {
     const r = schema.safeParse(v);
     if (!r.success) return setErrors(issuesByField(r.error));
+    const sb = clubTraining ? parseSelfMin(v.selfBefore) : 0;
+    const sa = clubTraining ? parseSelfMin(v.selfAfter) : 0;
+    if (sb === null || sa === null) return setErrors({ self: 'Anna minuutit kokonaislukuina (0–180)' });
     setErrors({});
     setSaving(true);
     const input = {
@@ -154,6 +166,8 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
       validTo: r.data.validTo || undefined,
       note: r.data.note,
       label: r.data.label,
+      selfBeforeMin: sb || undefined,
+      selfAfterMin: sa || undefined,
     };
     try {
       const saved = item ? await repo.updateTemplateItem(item.id, input, today) : await repo.createTemplateItem(profile.id, input, today);
@@ -251,6 +265,17 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
           {err('validTo')}
         </Field>
       </div>
+
+      {clubTraining && (
+        <TrainingSelfFields
+          before={v.selfBefore}
+          after={v.selfAfter}
+          onBefore={(x) => setV((c) => ({ ...c, selfBefore: x }))}
+          onAfter={(x) => setV((c) => ({ ...c, selfAfter: x }))}
+          error={errors.self}
+          hint='Oletus jokaiselle treenille: kuittaus kirjaa treenin viereen oman "Jalkapallo – omatoiminen" -kerran (omatoiminen liikunta). Yksittäistä kertaa voi muuttaa kerran muokkauksesta.'
+        />
+      )}
 
       <LabelField profileId={profile.id} activityTypeId={v.activityTypeId} value={v.label} onChange={(l) => setV((c) => ({ ...c, label: l }))} placeholder="esim. Joukkuetreeni, Taitokoulu" />
 

@@ -35,7 +35,7 @@ export function FootballHero({ profile }: { profile: Profile }) {
 
   const stats = useMemo(() => {
     if (!data) return null;
-    const trainings = data.sessions.filter((s) => !s.deletedAt && footballKindOf(s, data.types) === 'training').length;
+    const trainings = data.sessions.filter((s) => !s.deletedAt && footballKindOf(s, data.types) === 'training' && !s.linkedTo).length;
     const g = summarizeGames(gameRows(data.sessions, data.details, data.types));
     return { trainings, g };
   }, [data]);

@@ -145,6 +145,12 @@ export interface TemplateItem extends SyncFields {
   note?: string;
   /** Tarkenne, joka näkyy viikolla (esim. "Talenttitreeni"); siirtyy suunnitelmiin ja kertoihin. */
   label?: string;
+  /**
+   * Jalkapallotreeni (17.11.2026): oletuksena omatoiminen alku- ja loppuverryttely (min). Kuittaus luo
+   * treenille linkitetyn "Jalkapallo – omatoiminen" -kerran (Session.linkedTo).
+   */
+  selfBeforeMin?: number;
+  selfAfterMin?: number;
   createdAt: Timestamp;
 }
 
@@ -201,6 +207,13 @@ export interface Session extends SyncFields {
    * tehoprofiilien kestoilla painotettu keskiarvo; osien ulkopuolinen aika on taukoja (ei kerrytä tehominuutteja).
    */
   parts?: SessionPart[];
+  /**
+   * Treeniin linkitetty omatoiminen verryttely (17.11.2026): treenikerran tunniste. Tunniste on
+   * johdettu (w:<treenin id>), joten kerta on kaikilla laitteilla sama. Minuutit ennen ja jälkeen treenin.
+   */
+  linkedTo?: UUID;
+  selfBeforeMin?: number;
+  selfAfterMin?: number;
   createdAt: Timestamp;
 }
 

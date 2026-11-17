@@ -2,7 +2,7 @@
 // listassa kommentteineen. Haku, suodatus ja nopea kommentin lisäys suoraan listasta.
 
 import { useMemo, useState } from 'react';
-import { footballKindOf, LEVEL_LABEL, OUTCOME_LABEL, outcomeOf, POSITION_LABEL } from '../../domain/football';
+import { footballKindOf, LEVEL_LABEL, OUTCOME_LABEL, outcomeOf, POSITION_LABEL, trainingSelfText } from '../../domain/football';
 import type { ActivityType, FootballDetails, PlayedState, Profile, Session } from '../../domain/types';
 import { displayTeamName } from '../../domain/opponent';
 import { repo } from '../../db/repositories';
@@ -45,9 +45,11 @@ export function DiaryView({ profile }: { profile: Profile }) {
   const entries = useMemo(() => {
     if (!data) return [];
     const q = query.trim().toLocaleLowerCase('fi');
+    // Treenin omatoiminen verryttely (17.11.2026) näkyy treenin kohdalla, ei omana kirjauksenaan.
+    const selves = new Map(data.sessions.filter((s) => !s.deletedAt && s.linkedTo).map((s) => [s.linkedTo!, s]));
     return data.sessions
-      .filter((s) => !s.deletedAt)
-      .map((s) => ({ s, t: data.types.get(s.activityTypeId), d: data.details.get(s.id), kind: footballKindOf(s, data.types) }))
+      .filter((s) => !s.deletedAt && !s.linkedTo)
+      .map((s) => ({ s, t: data.types.get(s.activityTypeId), d: data.details.get(s.id), kind: footballKindOf(s, data.types), self: selves.get(s.id) }))
       .filter(({ kind }) => (filter === 'all' ? true : filter === 'training' ? kind === 'training' : kind === 'game' || kind === 'tournament' || kind === 'friendly'))
       .filter(({ d, s }) => !onlyCommented || hasComment(s, d))
       .filter(({ s, t, d }) => {
@@ -66,7 +68,7 @@ export function DiaryView({ profile }: { profile: Profile }) {
     const k = e.s.date.slice(0, 7);
     byMonth.set(k, [...(byMonth.get(k) ?? []), e]);
   }
-  const commented = (data?.sessions ?? []).filter((s) => !s.deletedAt && hasComment(s, data?.details.get(s.id))).length;
+  const commented = (data?.sessions ?? []).filter((s) => !s.deletedAt && !s.linkedTo && hasComment(s, data?.details.get(s.id))).length;
 
   return (
     <div className="space-y-4">
@@ -91,7 +93,7 @@ export function DiaryView({ profile }: { profile: Profile }) {
             </ToggleChip>
           </div>
           <p className="text-xs text-slate-500">
-            {data?.sessions.filter((s) => !s.deletedAt).length ?? 0} jalkapallokertaa, joista {commented} kommentoitu. Uusi kerta kirjataan Viikko-näkymän +-painikkeella.
+            {data?.sessions.filter((s) => !s.deletedAt && !s.linkedTo).length ?? 0} jalkapallokertaa, joista {commented} kommentoitu. Uusi kerta kirjataan Viikko-näkymän +-painikkeella.
           </p>
         </div>
       </Card>
@@ -118,7 +120,7 @@ export function DiaryView({ profile }: { profile: Profile }) {
             </h3>
             <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 2xl:grid-cols-3">
               {list.map((e) => (
-                <DiaryEntry key={e.s.id} s={e.s} t={e.t} d={e.d} onDetails={() => setPanel(e.s)} />
+                <DiaryEntry key={e.s.id} s={e.s} t={e.t} d={e.d} self={e.self} onDetails={() => setPanel(e.s)} />
               ))}
             </ul>
           </section>
@@ -174,11 +176,11 @@ interface TableRow {
   comment?: string;
 }
 
-type Entry = { s: Session; t?: ActivityType; d?: FootballDetails };
+type Entry = { s: Session; t?: ActivityType; d?: FootballDetails; self?: Session };
 
 function tableRows(entries: Entry[]): TableRow[] {
   const out: TableRow[] = [];
-  for (const { s, t, d } of entries) {
+  for (const { s, t, d, self } of entries) {
     const name = `${s.label ? `${s.label} · ` : ''}${t?.name ?? 'Jalkapallo'}`;
     const rating = [d?.parentRating ? '★'.repeat(d.parentRating) : '', d?.enjoyment ? ['', '🙁', '🙂', '😄'][d.enjoyment] : ''].filter(Boolean).join(' ') || undefined;
     const comment = [d?.ratingNote, s.note].filter(Boolean).join(' · ') || undefined;
@@ -229,7 +231,7 @@ function tableRows(entries: Entry[]): TableRow[] {
       result: o && d ? `${d.goalsFor}–${d.goalsAgainst}` : undefined,
       outcome: o,
       goals: d?.playerGoals,
-      time: isMatch ? (s.playedMin !== undefined ? `${s.playedMin} min` : d?.played ? PLAYED_LABEL[d.played] : undefined) : `${s.durationMin} min`,
+      time: isMatch ? (s.playedMin !== undefined ? `${s.playedMin} min` : d?.played ? PLAYED_LABEL[d.played] : undefined) : `${s.durationMin} min${self ? ` + ${self.durationMin} omat.` : ''}`,
       rating,
       comment,
     });
@@ -306,7 +308,7 @@ function DiaryTable({ entries, onOpen }: { entries: Entry[]; onOpen: (s: Session
 
 const hasComment = (s: Session, d?: FootballDetails) => !!(d?.ratingNote || s.note || d?.games?.some((g) => g.note));
 
-function DiaryEntry({ s, t, d, onDetails }: { s: Session; t?: ActivityType; d?: FootballDetails; onDetails: () => void }) {
+function DiaryEntry({ s, t, d, self, onDetails }: { s: Session; t?: ActivityType; d?: FootballDetails; self?: Session; onDetails: () => void }) {
   const toast = useToast();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(d?.ratingNote ?? '');
@@ -331,6 +333,7 @@ function DiaryEntry({ s, t, d, onDetails }: { s: Session; t?: ActivityType; d?: 
             </span>
             <span className="text-xs text-slate-500">
               {s.durationMin} min{s.playedMin !== undefined ? ` · pelattu ${s.playedMin}` : ''}
+              {self && ` · 🥾 ${trainingSelfText(self)}`}
             </span>
           </div>
           <div className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-slate-600">

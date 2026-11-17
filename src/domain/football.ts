@@ -12,6 +12,7 @@ import type {
   FocusTag,
   GameFormat,
   GameLevel,
+  HHmm,
   FootballDetails,
   FootballKind,
   ISODate,
@@ -30,6 +31,35 @@ export type GameOutcome = 'W' | 'D' | 'L';
  * "Jalkapallo – omatoiminen" on tavallinen omaehtoinen laji ja näkyy aina.
  */
 export const isClubFootball = (t: Pick<ActivityType, 'sport' | 'category'> | undefined): boolean => t?.sport === 'football' && t.category !== 'self_directed';
+
+/** Seuran jalkapallotreeni (ei omatoiminen): näille voi lisätä omatoimisen alku- ja loppuverryttelyn (17.11.2026). */
+export const isClubTraining = (t: Pick<ActivityType, 'sport' | 'category' | 'footballKind'> | undefined): boolean => isClubFootball(t) && t?.footballKind === 'training';
+
+/** Treeniin linkitetty omatoiminen verryttely (ei lasketa erilliseksi treenikerraksi). */
+export const isTrainingSelf = (s: Pick<Session, 'linkedTo'>): boolean => !!s.linkedTo;
+
+/** Verryttelyn alkuaika: treenin alku − ennen-minuutit, tai treenin loppu, jos alkuverryttelyä ei ole. */
+export function trainingSelfStart(start: HHmm | undefined, durationMin: number, beforeMin: number): HHmm | undefined {
+  if (!start) return undefined;
+  const [h, m] = start.split(':').map(Number);
+  const t = h * 60 + m + (beforeMin > 0 ? -beforeMin : durationMin);
+  if (t < 0 || t >= 24 * 60) return undefined;
+  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}` as HHmm;
+}
+
+/** Verryttelyn minuutit siistittyinä (0–180). */
+export const selfMin = (n: number | undefined): number => (n !== undefined && Number.isFinite(n) && n > 0 ? Math.min(180, Math.round(n)) : 0);
+
+/** Verryttelyn kuvaus treenin yhteydessä, esim. "omatoiminen 10 min ennen · 5 min jälkeen". */
+export function trainingSelfText(s: Pick<Session, 'selfBeforeMin' | 'selfAfterMin'>): string {
+  const parts = [s.selfBeforeMin ? `${s.selfBeforeMin} min ennen` : '', s.selfAfterMin ? `${s.selfAfterMin} min jälkeen` : ''].filter(Boolean);
+  return `omatoiminen ${parts.join(' · ')}`;
+}
+
+/** Verryttelykerran nimi minuuttien mukaan. */
+export function trainingSelfLabel(before: number, after: number): string {
+  return before > 0 && after > 0 ? 'Alku- ja loppuverryttely' : before > 0 ? 'Alkuverryttely' : 'Loppuverryttely';
+}
 
 /** Jalkapallo-ominaisuus profiilille: tallennettu valinta, muuten päätelty datasta. */
 export const footballEnabled = (profile: { football?: boolean } | undefined, hasData: boolean): boolean => profile?.football ?? hasData;
@@ -416,8 +446,9 @@ const inPeriod = (p: Period) => (d: ISODate) => d >= p.start && d <= p.end;
 
 export function footballPeriodSummary(input: FootballInput, period: Period): FootballPeriodSummary {
   const within = inPeriod(period);
-  const sessions = input.sessions.filter((s) => !s.deletedAt && within(s.date) && footballKindOf(s, input.types));
-  const training = sessions.filter((s) => footballKindOf(s, input.types) === 'training');
+  const sessions = input.sessions.filter((s) => !s.deletedAt && !isTrainingSelf(s) && within(s.date) && footballKindOf(s, input.types));
+  // Treenin omatoiminen verryttely ei ole oma treenikertansa (minuutit näkyvät kerrassa itsessään).
+  const training = sessions.filter((s) => footballKindOf(s, input.types) === 'training' && !isTrainingSelf(s));
   const friendlies = sessions.filter((s) => footballKindOf(s, input.types) === 'friendly');
   const det = (s: Session) => {
     const d = input.details.get(s.id);

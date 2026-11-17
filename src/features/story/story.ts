@@ -104,7 +104,7 @@ export function buildStory(input: StoryInput): StorySlide[] {
   // Jalkapallo: treenit, pelit ja pelaajan maalit.
   const football = input.football === false ? [] : input.sessions.filter((s) => !s.deletedAt && types.get(s.activityTypeId)?.sport === 'football');
   if (football.length) {
-    const trainings = football.filter((s) => footballKindOf(s, types) === 'training').length;
+    const trainings = football.filter((s) => footballKindOf(s, types) === 'training' && !s.linkedTo).length;
     const g = summarizeGames(gameRows(football, input.footballDetails, types));
     const stats = [
       { label: 'Treenit', value: fi(trainings) },

@@ -1127,3 +1127,14 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
       - päiväkirja (Ottelut-suodatin mukaan lukien);
       - viikon päivärivi ja viikkoraportti (vastustajat ja tulokset);
       - joukkuekirjasto: seuran ryhmän alla "Harjoituspeli" -rivinä ilman V/T/H-merkkiä, ja listassa "harjoituspelejä n".
+  - **Omatoiminen verryttely treenin yhteydessä** (käyttäjän lista 17.11.2026, vaihe 4; `domain/football.ts` `isClubTraining`, `trainingSelfStart`, `trainingSelfLabel`; `domain/ids.ts` `trainingSelfId`; `db/repositories.ts` `setTrainingSelf`, `trainingsWithoutSelf`, `addTrainingSelfFrom`; `features/football/TrainingSelf.tsx`, `features/settings/TemplateSection.tsx`, `features/week/SessionEditor.tsx`, `features/games/DiaryView.tsx`):
+    - Seuran jalkapallotreenille voi kirjata omatoimisen alku- ja loppuverryttelyn minuutteina ("ennen treeniä" / "treenin jälkeen", 0–180 min). Se tallentuu **erilliseksi, treeniin linkitetyksi "Jalkapallo – omatoiminen" -kerraksi** (kategoria omatoiminen liikunta, lajin oma tehoprofiili, ponnistelu normaali). Treenin kesto ja teho eivät muutu.
+    - Tunniste on johdettu (`w:<treenin id>`), joten kerta on kaikilla laitteilla sama. Kentät `linkedTo`, `selfBeforeMin`, `selfAfterMin`. Nimi on "Alkuverryttely", "Loppuverryttely" tai "Alku- ja loppuverryttely". Alkuaika on treenin alku − ennen-minuutit, tai treenin loppu, jos alkuverryttelyä ei ole.
+    - **Viikkorytmi:** treenirivillä on oletusminuutit (`TemplateItem.selfBeforeMin/selfAfterMin`). Kuittaus luo verryttelykerran automaattisesti. Rivilistassa näkyy "🥾 omatoiminen 10 min ennen · 5 min jälkeen".
+    - **Kerran muokkaus:**
+      - Treenin minuutteja voi muuttaa tai nollata; 0 + 0 poistaa verryttelykerran.
+      - Treenin päivän tai kellonajan muutos siirtää verryttelyn mukana.
+      - Treenin poisto ja kuittauksen kumoaminen poistavat verryttelyn, ja "Kumoa" palauttaa molemmat.
+      - Verryttelykertaa voi muokata myös suoraan; uusi kesto jaetaan ennen- ja jälkeen-osiin.
+    - **Menneet treenit:** Asetukset → Viikkorytmi -kohdan kortti "Omatoiminen verryttely menneille treeneille". Kortissa valitaan alkupäivä (oletus 4 viikkoa sitten) ja minuutit, joiden oletus tulee viikkorytmistä. Esikatselu näyttää treenien määrän ja aikavälin. Verryttely lisätään vain treeneille, joilla sitä ei vielä ole, ja lisäys on kumottavissa.
+    - **Tilastot:** verryttely lasketaan liikuntaan omana omatoimisena kertanaan. Se ei kasvata treenien määrää (jalkapallon jaksoyhteenveto, kauden kooste, tarina) eikä näy "lisätiedot puuttuvat" -laskurissa. Päiväkirjassa se näkyy treenin rivillä, ei omana kirjauksenaan.

@@ -15,7 +15,8 @@ import { Sheet } from '../../ui/Sheet';
 import { LabelField } from './LabelField';
 import { useHiddenTypes } from './useLoggableTypes';
 import { useFootballEnabledById } from '../football/useFootballEnabled';
-import { isClubFootball } from '../../domain/football';
+import { isClubFootball, isClubTraining } from '../../domain/football';
+import { parseSelfMin, TrainingSelfFields } from '../football/TrainingSelf';
 import { TermInfo } from '../../ui/glossary';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
@@ -54,6 +55,10 @@ export function SessionEditor({
   const [parts, setParts] = useState<PartDraft[]>([]);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Treenin omatoiminen verryttely (linkitetty kerta); null = ei muutettu.
+  const [selfBefore, setSelfBefore] = useState<string | null>(null);
+  const [selfAfter, setSelfAfter] = useState<string | null>(null);
+  const self = useLiveQuery(() => (session ? repo.getTrainingSelf(session.id) : undefined), [session?.id]);
 
   useEffect(() => {
     if (!session) return;
@@ -73,6 +78,8 @@ export function SessionEditor({
       vigorous: String(session.minutes.vigorous),
     });
     setParts(partDraftsOf(session.parts));
+    setSelfBefore(null);
+    setSelfAfter(null);
     setErrors({});
     setConfirmDelete(false);
   }, [session]);
@@ -121,6 +128,10 @@ export function SessionEditor({
     const partList = type && supportsParts(type) ? partsFromDrafts(parts) : [];
     if (partList === null) errs.parts = 'Tarkista tekemisten minuutit';
     else if (d.success && partList.reduce((a, x) => a + x.durationMin, 0) > d.data) errs.parts = 'Tekemisten minuutit ylittävät keston';
+    const clubTraining = isClubTraining(type) && !session.linkedTo;
+    const sb = selfBefore === null ? self?.before ?? 0 : parseSelfMin(selfBefore);
+    const sa = selfAfter === null ? self?.after ?? 0 : parseSelfMin(selfAfter);
+    if (clubTraining && (sb === null || sa === null)) errs.self = 'Anna minuutit kokonaislukuina (0–180)';
     if (mode === 'manual') {
       if (!m.success) errs.manual = 'Anna minuutit kokonaislukuina';
       else if (d.success && m.data.light + m.data.moderate + m.data.vigorous > d.data) errs.manual = 'Minuuttien summa ylittää keston';
@@ -144,6 +155,9 @@ export function SessionEditor({
         label,
         parts: partList ?? [],
       });
+      if (clubTraining && (selfBefore !== null || selfAfter !== null) && (sb !== self?.before || sa !== self?.after)) {
+        await repo.setTrainingSelf(session.id, { before: sb ?? 0, after: sa ?? 0 });
+      }
       onClose();
       toast('Muutokset tallennettu');
     } catch (e) {
@@ -254,6 +268,21 @@ export function SessionEditor({
               )}
               {errors.manual && <p className="mt-1 text-sm text-red-700">{errors.manual}</p>}
             </div>
+          )}
+
+          {isClubTraining(type) && !session.linkedTo && (
+            <TrainingSelfFields
+              before={selfBefore ?? (self?.before ? String(self.before) : '')}
+              after={selfAfter ?? (self?.after ? String(self.after) : '')}
+              onBefore={setSelfBefore}
+              onAfter={setSelfAfter}
+              error={errors.self}
+            />
+          )}
+          {session.linkedTo && (
+            <p className="card-sunk p-3 text-xs text-slate-600">
+              🥾 Treeniin liittyvä omatoiminen verryttely. Minuutit ennen ja jälkeen treenin voi muuttaa myös treenin muokkauksesta; poisto poistaa vain verryttelyn.
+            </p>
           )}
 
           {type && <LabelField profileId={session.profileId} activityTypeId={type.id} value={label} onChange={setLabel} />}
