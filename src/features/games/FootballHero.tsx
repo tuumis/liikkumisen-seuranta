@@ -66,9 +66,9 @@ export function FootballHero({ profile }: { profile: Profile }) {
                 </span>
               </span>
             </div>
-          ) : (
+          ) : fixtures ? (
             <p className="mt-2 text-sm text-[var(--hero-ink-soft)]">Ei tulevia pelejä kalenterissa.</p>
-          )}
+          ) : null}
         </div>
         {stats && (
           <dl className="grid flex-1 grid-cols-3 gap-2 sm:grid-cols-5 sm:gap-3">

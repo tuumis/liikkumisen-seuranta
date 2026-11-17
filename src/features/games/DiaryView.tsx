@@ -93,12 +93,15 @@ export function DiaryView({ profile }: { profile: Profile }) {
             </ToggleChip>
           </div>
           <p className="text-xs text-slate-500">
-            {data?.sessions.filter((s) => !s.deletedAt && !s.linkedTo).length ?? 0} jalkapallokertaa, joista {commented} kommentoitu. Uusi kerta kirjataan Viikko-näkymän +-painikkeella.
+            {data ? `${data.sessions.filter((s) => !s.deletedAt && !s.linkedTo).length} jalkapallokertaa, joista ${commented} kommentoitu. ` : ''}Uusi kerta kirjataan Viikko-näkymän +-painikkeella.
           </p>
         </div>
       </Card>
 
-      {entries.length === 0 ? (
+      {/* Latauksen aikana ei tyhjää tilaa ("Ei vielä jalkapallokertoja"), vaan paikanpitäjä (17.11.2026). */}
+      {!data ? (
+        <div className="skeleton h-40 rounded-[1.75rem]" aria-busy="true" aria-label="Ladataan" />
+      ) : entries.length === 0 ? (
         <Card>
           {query || onlyCommented || filter !== 'all' ? (
             <EmptyState art="search" title="Ei osumia valinnoilla" compact>

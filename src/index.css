@@ -632,6 +632,17 @@ html[data-bg] body::before {
 /* Vain sisältöalue vaihtuu animoidusti; sivupalkki, yläpalkki ja alavalikko pysyvät paikallaan. */
 .page-view {
   view-transition-name: page;
+  transition: opacity 0.16s var(--ease-out);
+}
+/* Profiilin vaihto (ui/settle.ts): sisältö piiloon heti, näkyviin häivyttäen kun tiedot ovat valmiit. */
+.page-view[data-switching] {
+  opacity: 0;
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-view {
+    transition: none;
+  }
 }
 /* Juuren vanhaa kuvaa ei näytetä lainkaan: muuten selain laskee vanhan ja uuden kuvan yhteen
    (plus-lighter), ja näkymä vaalenee välähtäen siirtymän ajaksi. */

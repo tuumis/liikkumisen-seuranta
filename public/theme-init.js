@@ -13,6 +13,9 @@
   if (dark) root.classList.add('dark');
   if (accent === 'fjord' || accent === 'heather' || accent === 'graphite') root.setAttribute('data-accent', accent);
   root.style.colorScheme = dark ? 'dark' : 'light';
+  // Yläpalkin väri heti (sama kuin src/ui/theme.ts), ettei tumman teeman ikkunapalkki välähdä vaaleana (17.11.2026).
+  var meta = document.querySelector('meta[name="theme-color"]');
+  if (meta && dark) meta.setAttribute('content', '#0f1613');
   // Tausta (17.11.2026, sama kuin src/ui/theme.ts applyBackground): piirretty tai oma kuva himmennettynä.
   try {
     var bg = localStorage.getItem('background');

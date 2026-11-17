@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useId, useState } from 'react';
+import { lazy, Suspense, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { repo } from './db/repositories';
@@ -19,8 +19,9 @@ import { SidebarUpdate } from './features/update/appUpdate';
 import { consumeLaunchAction, dispatchCommand, type AppCommand } from './features/desktop/commands';
 import { CommandPalette } from './features/desktop/CommandPalette';
 import { StoryHost } from './features/story/StoryViewer';
-import { useFootballStatus } from './features/football/useFootballEnabled';
+import { FootballStatusContext, useFootballStatusMap } from './features/football/useFootballEnabled';
 import { Avatar } from './ui/Avatar';
+import { hideUntilSettled } from './ui/settle';
 import { formatDate } from './ui/format';
 import { IconBall, IconChart, IconHelp, IconLeaf, IconSearch, IconSettings, IconWeek } from './ui/icons';
 
@@ -91,7 +92,14 @@ export default function App() {
   const profiles = useLiveQuery(() => (ready ? repo.listProfiles() : null), [ready]) ?? null;
   const selected = profiles?.find((p) => p.id === selectedId) ?? profiles?.[0];
   // Jalkapallo-välilehti vain, kun jalkapallo on profiilille käytössä (päättelyn aikana näkyy, ei välähdä pois).
-  const football = useFootballStatus(selected) !== false;
+  // Kaikkien profiilien tila lasketaan kerralla, joten profiilin vaihto ei välkytä valikkoa (17.11.2026).
+  const footballMap = useFootballStatusMap(ready);
+  const footballKnown = selected ? (selected.football ?? footballMap?.get(selected.id)) : profiles ? false : undefined;
+  // Käynnistyksessä (profiilit vielä lataamatta) viimeksi tiedetty tila, ettei välilehti ilmesty hetken päästä.
+  useEffect(() => {
+    if (footballKnown !== undefined) store.set('footballTab', footballKnown ? '1' : '0');
+  }, [footballKnown]);
+  const football = (footballKnown ?? store.get('footballTab') !== '0') !== false;
   const tabs = football ? TABS : TABS.filter((t) => t.id !== 'games');
   const tab: Tab = !football && rawTab === 'games' ? 'week' : rawTab;
   const onboarded = useLiveQuery(() => (ready ? repo.getMeta<boolean>('onboarded').then((v) => v ?? false) : null), [ready]) ?? null;
@@ -107,6 +115,16 @@ export default function App() {
     else setTabState(t);
     window.scrollTo({ top: 0 });
   };
+  // Profiilin vaihto: sisältö näkyviin kerralla, kun uuden profiilin tiedot ovat valmiit (ui/settle).
+  const pageRef = useRef<HTMLDivElement>(null);
+  const shownId = useRef<string | undefined>(undefined);
+  const selectedKey = selected?.id;
+  useLayoutEffect(() => {
+    const prev = shownId.current;
+    shownId.current = selectedKey;
+    if (!prev || !selectedKey || prev === selectedKey || !pageRef.current) return;
+    return hideUntilSettled(pageRef.current);
+  }, [selectedKey]);
   const select = (id: string) => {
     setSelectedIdState(id);
     store.set('selectedProfileId', id);
@@ -176,6 +194,7 @@ export default function App() {
   const dateLine = formatDate(today(), 'EEEE d. MMMM');
 
   return (
+    <FootballStatusContext.Provider value={footballMap}>
     <div className="min-h-dvh lg:pl-72">
       {/* PC-sovellus: vetoalue ikkunan ylälaidassa, kun otsikkopalkki on piilotettu (window-controls-overlay). */}
       <div className="titlebar" aria-hidden />
@@ -305,7 +324,7 @@ export default function App() {
           )}
         </div>
         {/* Avatut välilehdet pidetään muistissa (piilotettuina), jotta palatessa sisältö näkyy heti. */}
-        <div className="page-view">
+        <div className="page-view" ref={pageRef}>
           {!ready ? (
             <LoadingSkeleton />
           ) : (
@@ -382,6 +401,7 @@ export default function App() {
         />
       )}
     </div>
+    </FootballStatusContext.Provider>
   );
 }
 
