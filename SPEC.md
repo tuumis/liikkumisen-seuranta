@@ -1148,3 +1148,16 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
     - **Laatikot kuvassa:** "Paikalla", "Peli alkaa" (turnauksessa "1. peli"), "Pelit" (turnaus) ja "Paikka" voi ottaa pois kuvasta. Valittavina ovat vain laatikot, joille on tieto. Valinta muistetaan laitteelle kaikille ennakoille (`previewHiddenBoxes`).
     - **Kommentti pelin alle** (valinnainen, enintään 140 merkkiä): näkyy kuvassa paneelina ottelun (turnauksessa otteluohjelman) ja laatikoiden välissä, enintään kolmella rivillä. Tallentuu tapahtumalle (`Fixture.previewNote`), synkronoituu ja säilyy, kun tapahtumaa muokataan kalenterissa.
     - Ennakkokuvaa ei tehdä harjoituspelille (ennallaan).
+  - **Tehon selitykset** (käyttäjän lista 17.11.2026, vaihe 6; `domain/intensityNotes.ts`, `ui/glossary.tsx` termi `intensity`, `features/week/IntensityPicker.tsx`, `features/settings/ActivityTypesSection.tsx`, `features/help/HelpSheet.tsx`):
+    - **Yleinen selitys** (ⓘ "Teho: kevyt, reipas, rasittava"). Se on kirjauksen ja muokkauksen Teho-otsikon vieressä sekä kohdassa Tavoitteet ja lajit (lajilistan esittely ja lajin tehoprofiili). Selitys kertoo:
+      - mitä kevyt, reipas, rasittava ja paikallaanolo tarkoittavat;
+      - että teho on arvio (kesto × lajin tehoprofiili);
+      - että "Kevyempi"/"Kovempi" ponnistelu muuttaa reippaan ja rasittavan osuutta 25 %;
+      - että pelissä peliaika lasketaan pelin teholla ja lämmittely treenin teholla;
+      - että vaihtoehtoina ovat "Enimmäkseen …" ja oma jako.
+    - **Lajikohtainen perustelu** jokaiselle sisäänrakennetulle lajille (32): miksi oletusjako on sellainen, esimerkiksi treenin ohjeet ja jonotus, pelin vaihtopenkki tai päiväkotipäivän suositus. Perustelu näkyy:
+      - kirjauksessa "Lajin arvio" -tilassa selitteenä "Miksi tämä jako?";
+      - lajilistassa jokaisen lajin alla;
+      - lajin muokkauksessa tehoprofiilin yläpuolella.
+    - Jos lajin tehoprofiilia on muutettu, perustelun perään kerrotaan, että se koskee oletusta (oletusosuudet näkyvät). Omille lajeille ei ole perustelua.
+    - Ohjeessa on lisäksi paikallaanolo, ponnistelun vaikutus ja maininta lajikohtaisista perusteluista.

@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import { InfoTip } from './InfoTip';
 
-export type TermId = 'vigorous_day' | 'muscle' | 'bone' | 'mvpa' | 'estimate' | 'total';
+export type TermId = 'vigorous_day' | 'muscle' | 'bone' | 'mvpa' | 'estimate' | 'total' | 'intensity';
 
 export function termText(id: TermId, vigorousMin = 18): { title: string; body: ReactNode } {
   switch (id) {
@@ -56,6 +56,20 @@ export function termText(id: TermId, vigorousMin = 18): { title: string; body: R
           <>
             Arvio tavallisesta liikkumisesta, jota ei kirjata joka päivä: välitunnit, koulumatkat, pihaleikit. Se lasketaan päivälle vain, jos sille ei ole kirjattu saman kategorian liikuntaa. Voit
             vahvistaa, muuttaa tai poistaa sen päiväkohtaisesti (päivän Arkiliikunta-rivi).
+          </>
+        ),
+      };
+    case 'intensity':
+      return {
+        title: 'Teho: kevyt, reipas, rasittava',
+        body: (
+          <>
+            <strong>Kevyt</strong>: liikettä ilman hengästymistä (kävely, rauhallinen leikki). <strong>Reipas</strong>: hengästyttää, mutta puhuminen onnistuu (pyöräily, pallopelit).{' '}
+            <strong>Rasittava</strong>: puhuminen on hankalaa (juoksu, kova peli). <strong>Paikallaanolo</strong> (tauot, ohjeet, vuoron odotus) ei kerrytä liikuntaa.
+            <span className="mt-1.5 block">
+              Sovellus ei mittaa tehoa vaan arvioi sen: kesto kerrotaan lajin tehoprofiililla (osuudet kestosta). "Kevyempi" tai "Kovempi" ponnistelu muuttaa reippaan ja rasittavan osuutta 25 %.
+              Pelissä peliaika lasketaan pelin teholla ja lämmittely treenin teholla. Teho voi olla myös "Enimmäkseen …" tai oma jako minuutteina.
+            </span>
           </>
         ),
       };

@@ -17,12 +17,15 @@ const TOPICS: { q: string; a: string[] }[] = [
       'Kevyt: ei hengästytä (esim. rauhallinen kävely).',
       'Reipas: hengästyttää, mutta puhuminen onnistuu (esim. pyöräily, pallopelit).',
       'Rasittava: puhuminen on hankalaa hengästymisen takia (esim. juoksu, kova peli).',
+      'Paikallaanolo (tauot, ohjeiden kuuntelu, vuoron odotus, vaihtopenkki) ei kerrytä liikuntaa.',
     ],
   },
   {
     q: 'Miksi luvut ovat arvioita (≈)?',
     a: [
       'Treenissä on myös taukoja, ohjeita ja kevyttä liikettä. Sovellus arvioi lajin tyypillisen tehon perusteella, kuinka suuri osa kestosta on reipasta tai rasittavaa. Esimerkiksi 60 minuutin jalkapallotreenistä noin 27 min.',
+      'Kirjauksessa "Kevyempi" tai "Kovempi" ponnistelu muuttaa reippaan ja rasittavan osuutta 25 %. Pelissä peliaika lasketaan pelin teholla ja lämmittely treenin teholla.',
+      'Jokaisella lajilla on lyhyt perustelu oletusjaolle: kirjauksessa "Miksi tämä jako?" ja kohdassa Asetukset → Tavoitteet ja lajit.',
       'Tehon voi valita itse kirjauksessa ("Enimmäkseen reipasta" jne.), ja lajien oletuksia voi muuttaa kohdassa Tavoitteet ja lajit.',
     ],
   },

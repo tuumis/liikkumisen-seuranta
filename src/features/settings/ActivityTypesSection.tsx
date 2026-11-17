@@ -17,6 +17,8 @@ import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { useFootballAnyProfile, withoutClubFootball } from '../football/useFootballEnabled';
 import { DateInput } from '../../ui/DateInput';
+import { TermInfo } from '../../ui/glossary';
+import { intensityNoteText } from '../week/IntensityPicker';
 import { TypeGlyph } from '../../ui/TypeGlyph';
 import { PhotoPicker } from '../../ui/Avatar';
 
@@ -49,8 +51,12 @@ export function ActivityTypesSection() {
     >
       <p className="text-sm text-slate-600">
         Tehoprofiili kertoo arviolta, kuinka suuri osa kestosta on kevyttä, reipasta ja rasittavaa; loput on paikallaanoloa. Arvot ovat sovelluksen lähtöoletuksia, eivät virallisia lukuja. Voit
-        korjata ne, luoda omia lajeja ja piilottaa lajeja, joita joku profiili ei tarvitse.
+        korjata ne, luoda omia lajeja ja piilottaa lajeja, joita joku profiili ei tarvitse.{' '}
+        <span className="inline-flex translate-y-1">
+          <TermInfo id="intensity" />
+        </span>
       </p>
+      <p className="mt-2 text-xs text-slate-500">Jokaisen lajin kohdalla on lyhyt perustelu sen oletusjaolle.</p>
       <div className="mt-3">
         <Button variant="secondary" onClick={() => setEditing('new')}>
           + Uusi laji
@@ -83,6 +89,7 @@ export function ActivityTypesSection() {
                       <span>lihas {STRENGTH_LABEL[t.muscleDefault]}</span>
                       <span>luusto {STRENGTH_LABEL[t.boneDefault]}</span>
                     </span>
+                    {intensityNoteText(t) && <span className="mt-1 block text-xs text-slate-500">{intensityNoteText(t)}</span>}
                     {hidden.length > 0 && <span className="mt-1 block text-xs font-medium text-amber-800">Piilotettu: {hidden.join(', ')}</span>}
                   </span>
                   <span className="pt-1 text-slate-400" aria-hidden>
@@ -259,7 +266,10 @@ function TypeEditor({
           </>
         )}
         <div>
-          <div className="mb-1 text-sm font-medium text-slate-700">Tehoprofiili (% kestosta)</div>
+          <div className="mb-1 flex items-center gap-1.5 text-sm font-medium text-slate-700">
+            Tehoprofiili (% kestosta) <TermInfo id="intensity" />
+          </div>
+          {existing && intensityNoteText(existing) && <p className="mb-2 rounded-xl bg-[var(--surface-sunk)] p-2.5 text-xs text-slate-600">{intensityNoteText(existing)}</p>}
           <div className="grid grid-cols-3 gap-2">
             {(['light', 'moderate', 'vigorous'] as const).map((k) => (
               <label key={k} className="block">

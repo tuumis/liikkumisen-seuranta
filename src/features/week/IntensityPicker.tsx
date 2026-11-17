@@ -6,6 +6,10 @@ import type { ActivityType, Effort, IntensityPreset, IntensityShares } from '../
 import { inputClass } from '../../ui/components';
 import { EFFORT_OPTIONS, Segmented, ToggleChip } from '../../ui/controls';
 import { pct } from '../../ui/labels';
+import { TermInfo } from '../../ui/glossary';
+import { InfoTip } from '../../ui/InfoTip';
+import { intensityNoteFor, sharesDiffer } from '../../domain/intensityNotes';
+import { BUILT_IN_ACTIVITY_TYPES } from '../../seed/activityTypes';
 
 export type IntensityMode = 'profile' | IntensityPreset | 'manual';
 export type ManualDraft = { light: string; moderate: string; vigorous: string };
@@ -23,6 +27,39 @@ export const isPreset = (m: IntensityMode): m is IntensityPreset => m === 'light
 function sharesText(s: IntensityShares) {
   const rest = Math.max(0, 1 - s.light - s.moderate - s.vigorous);
   return `kevyt ${pct(s.light)} · reipas ${pct(s.moderate)} · rasittava ${pct(s.vigorous)}${rest > 0.005 ? ` · paikallaan ${pct(rest)}` : ''}`;
+}
+
+/** Lajin tehoprofiilin perustelu selitteenä ("Miksi tämä jako?"); omalle lajille ei näytetä. */
+export function TypeIntensityNote({ type, align = 'right' }: { type: ActivityType; align?: 'left' | 'right' }) {
+  const text = intensityNoteText(type);
+  if (!text) return null;
+  return (
+    <>
+      {' '}
+      <InfoTip
+        align={align}
+        className="font-medium text-slate-600 underline decoration-dotted decoration-slate-400 underline-offset-[3px] hover:text-slate-900"
+        tip={
+          <>
+            <strong className="mb-1 block text-[13px]">{type.name}: miksi tämä jako?</strong>
+            {text}
+          </>
+        }
+      >
+        Miksi tämä jako?
+      </InfoTip>
+    </>
+  );
+}
+
+/** Perustelu tekstinä; jos oletusta on muutettu, kerrotaan että perustelu koskee oletusta. */
+export function intensityNoteText(type: ActivityType): string | undefined {
+  const note = intensityNoteFor(type);
+  if (!note) return undefined;
+  const seed = BUILT_IN_ACTIVITY_TYPES.find((t) => t.id === type.id);
+  if (seed && sharesDiffer(seed.shares, type.shares))
+    return `${note} (Tämä on perustelu oletukselle ${pct(seed.shares.light)} / ${pct(seed.shares.moderate)} / ${pct(seed.shares.vigorous)}; lajin tehoprofiilia on muutettu.)`;
+  return note;
 }
 
 export function IntensityPicker({
@@ -48,7 +85,9 @@ export function IntensityPicker({
   const shown = mode === 'profile' ? effectiveShares(shares, effort) : isPreset(mode) ? INTENSITY_PRESETS[mode] : undefined;
   return (
     <div className="space-y-2">
-      <div className="text-sm font-medium text-slate-700">Teho</div>
+      <div className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
+        Teho <TermInfo id="intensity" />
+      </div>
       <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Teho">
         {OPTIONS.map((o) => (
           <ToggleChip key={o.value} on={mode === o.value} onChange={() => onMode(o.value)}>
@@ -61,6 +100,7 @@ export function IntensityPicker({
         <p className="text-xs text-slate-600">
           <span className="rounded-full bg-amber-100 px-1.5 py-0.5 font-medium text-amber-900">arvio</span> {sharesText(shown)}
           {mode === 'profile' && <span className="text-slate-500"> ({type.name.toLowerCase()}{effort ? `, ${effort > 0 ? 'kovempi' : 'kevyempi'}` : ''})</span>}
+          {mode === 'profile' && <TypeIntensityNote type={type} />}
         </p>
       )}
       {mode === 'manual' && (
