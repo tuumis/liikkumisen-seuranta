@@ -2,15 +2,46 @@
 // Ottelu: logo – VS – logo, nimet, liput ja kotipaikkakunnat, aloitusaika, paikalla-aika ja paikka.
 // Turnaus: nimi, päivä, oma joukkue ja otteluohjelma (kellonaika, vastustaja, lippu, paikka).
 
-import type { PreviewCard } from '../../domain/previewCard';
-import { dateLabelOf, drawLogo, drawMatchup, drawOrigin, fit, infoBoxes, levelBadges, PAD, placeBox, rr, setup, spaced, W, wrap, type DrawOptions } from './drawResult';
+import { previewTimeBoxes, type PreviewBox, type PreviewCard } from '../../domain/previewCard';
+import { dateLabelOf, drawLogo, drawMatchup, drawOrigin, fit, heavyOf, infoBoxes, levelBadges, PAD, placeBox, rr, setup, spaced, W, wrap, type DrawOptions, type Palette } from './drawResult';
 
-type PreviewOptions = Omit<DrawOptions, 'player'>;
+type PreviewOptions = Omit<DrawOptions, 'player'> & {
+  /** Piilotetut laatikot (Paikalla, 1. peli / Peli alkaa, Pelit, Paikka). */
+  hidden?: ReadonlySet<PreviewBox>;
+};
+
+/** Kommentin korkeus (0 = ei kommenttia): enintään kolme riviä. */
+function commentLayout(ctx: CanvasRenderingContext2D, text: string | undefined, story: boolean, p: Palette): { lines: string[]; h: number; px: number } {
+  if (!text) return { lines: [], h: 0, px: 0 };
+  const px = story ? 40 : 34;
+  ctx.font = `500 ${px}px ${p.sans}`;
+  const lines = wrap(ctx, text, W - PAD * 2 - 90, 3);
+  return { lines, h: lines.length * px * 1.3 + (story ? 64 : 50), px };
+}
+
+/** Kommentti pelin alle: paneeli, korostusviiva vasemmalla. */
+function drawComment(ctx: CanvasRenderingContext2D, c: { lines: string[]; h: number; px: number }, y: number, p: Palette) {
+  const maxW = W - PAD * 2;
+  ctx.fillStyle = p.panel;
+  rr(ctx, PAD, y, maxW, c.h, 30);
+  ctx.fill();
+  ctx.fillStyle = p.accent;
+  rr(ctx, PAD + 24, y + 22, 8, c.h - 44, 4);
+  ctx.fill();
+  ctx.font = `500 ${c.px}px ${p.sans}`;
+  ctx.fillStyle = p.ink;
+  const top = y + (c.h - c.lines.length * c.px * 1.3) / 2 + c.px * 0.95;
+  c.lines.forEach((l, i) => ctx.fillText(l, PAD + 60, top + i * c.px * 1.3));
+}
 
 export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCanvasElement {
   const { canvas, ctx, p, H, story } = setup(opts);
   const maxW = W - PAD * 2;
-  const heavy = opts.style === 'sport' ? 800 : 600;
+  const heavy = heavyOf(opts.style);
+  const hidden = opts.hidden ?? new Set<PreviewBox>();
+  const place = hidden.has('place') ? undefined : card.location;
+  const comment = commentLayout(ctx, card.comment, story, p);
+  const commentGap = story ? 32 : 24;
   const display = (px: number) => `${heavy} ${px}px ${p.display}`;
   const origins = opts.origins;
   const bottom = H - (story ? 140 : 84);
@@ -23,9 +54,8 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
 
   const boxH = story ? 180 : 140;
   const placeH = story ? 190 : 150;
-  const times: [string, string][] = [];
-  if (card.arrival) times.push(['Paikalla', card.arrival]);
-  if (card.kickoff) times.push([card.kind === 'tournament' ? '1. peli' : 'Peli alkaa', card.kickoff]);
+  // Aikalaatikot (turnauksessa myös pelien määrä) käyttäjän valintojen mukaan.
+  const times = previewTimeBoxes(card, hidden);
 
   if (card.kind === 'tournament') {
     const titlePx = story ? 104 : 84;
@@ -44,13 +74,13 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
     if (bh) y += (story ? 30 : 22) + bh - (story ? 14 : 10);
     y += story ? 64 : 44;
 
-    // Laatikot alareunaan: ajat (ja pelien määrä) sekä paikka.
+    // Laatikot alareunaan: ajat (ja pelien määrä) sekä paikka; kommentti niiden yläpuolelle.
     const n = card.games.length;
-    const items: [string, string][] = [...times];
-    if (n > 0) items.push(['Pelit', String(n)]);
+    const items = times;
     let boxesTop = bottom;
-    if (card.location) boxesTop -= placeH;
-    if (items.length) boxesTop -= boxH + (card.location ? 20 : 0);
+    if (place) boxesTop -= placeH;
+    if (items.length) boxesTop -= boxH + (place ? 20 : 0);
+    const commentTop = comment.h ? boxesTop - comment.h - (items.length || place ? commentGap : 0) : boxesTop;
 
     // Oma joukkue
     const ls = story ? 112 : 92;
@@ -58,9 +88,9 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
     const listGap = story ? 48 : 32;
     const labelH = n ? (story ? 56 : 44) : 0;
     const gap = story ? 16 : 12;
-    const rowH = n ? Math.min(story ? 150 : 118, (boxesTop - listGap - y - ls - teamGap - labelH - gap * (n - 1)) / n) : 0;
+    const rowH = n ? Math.min(story ? 150 : 118, (commentTop - listGap - y - ls - teamGap - labelH - gap * (n - 1)) / n) : 0;
     const blockH = ls + teamGap + labelH + (n ? n * rowH + (n - 1) * gap : 0);
-    y += Math.max(0, (boxesTop - listGap - y - blockH) / 2);
+    y += Math.max(0, (commentTop - listGap - y - blockH) / 2);
 
     drawLogo(ctx, opts.logos.team, card.team, PAD, y, ls, p.sans);
     ctx.fillStyle = p.ink;
@@ -109,12 +139,13 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
       });
     }
 
+    if (comment.h) drawComment(ctx, comment, commentTop, p);
     let by = boxesTop;
     if (items.length) {
       infoBoxes(ctx, items, by, boxH, story, p, display);
       by += boxH + 20;
     }
-    if (card.location) placeBox(ctx, card.location, by, placeH, story, p);
+    if (place) placeBox(ctx, place, by, placeH, story, p);
     return canvas;
   }
 
@@ -128,10 +159,11 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
   if (bh) y += (story ? 34 : 24) + bh;
 
   let boxesTop = bottom;
-  if (card.location) boxesTop -= placeH;
-  if (times.length) boxesTop -= boxH + (card.location ? 20 : 0);
+  if (place) boxesTop -= placeH;
+  if (times.length) boxesTop -= boxH + (place ? 20 : 0);
+  const commentTop = comment.h ? boxesTop - comment.h - (times.length || place ? commentGap : 0) : boxesTop;
 
-  drawMatchup(ctx, { team: card.team, opponent: g.opponent, logos: opts.logos, origins, y, boxesTop, story, p }, (top, ls) => {
+  drawMatchup(ctx, { team: card.team, opponent: g.opponent, logos: opts.logos, origins, y, boxesTop: commentTop, story, p }, (top, ls) => {
     // VS logojen välissä
     ctx.textAlign = 'center';
     ctx.font = display(story ? 120 : 100);
@@ -140,11 +172,12 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
     ctx.textAlign = 'left';
   });
 
+  if (comment.h) drawComment(ctx, comment, commentTop, p);
   let by = boxesTop;
   if (times.length) {
     infoBoxes(ctx, times, by, boxH, story, p, display);
     by += boxH + 20;
   }
-  if (card.location) placeBox(ctx, card.location, by, placeH, story, p);
+  if (place) placeBox(ctx, place, by, placeH, story, p);
   return canvas;
 }

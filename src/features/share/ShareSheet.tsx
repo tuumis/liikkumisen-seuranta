@@ -13,15 +13,16 @@ import { Segmented } from '../../ui/controls';
 import { Sheet } from '../../ui/Sheet';
 import { clubFor, clubNameOf, useClubs } from '../../ui/TeamLogo';
 import { useToast } from '../../ui/Toast';
-import type { ShareSize, ShareStyle } from './drawResult';
+import { isShareStyle, SHARE_STYLE_LABEL, type ShareSize, type ShareStyle } from './drawResult';
 import { isHexColor, isLightColor, mix, SHARE_COLORS } from './shareColors';
 
 const PREFS = 'resultSharePrefs';
 type Prefs = { size: ShareSize; style: ShareStyle };
-function readPrefs(): Prefs {
+const DEFAULT_STYLES: readonly ShareStyle[] = ['theme', 'sport'];
+function readPrefs(key: string, styles: readonly ShareStyle[]): Prefs {
   try {
-    const p = JSON.parse(localStorage.getItem(PREFS) ?? '{}') as Partial<Prefs>;
-    return { size: p.size === 'post' ? 'post' : 'story', style: p.style === 'sport' ? 'sport' : 'theme' };
+    const p = JSON.parse(localStorage.getItem(key) ?? '{}') as Partial<Prefs>;
+    return { size: p.size === 'post' ? 'post' : 'story', style: isShareStyle(p.style) && styles.includes(p.style) ? p.style : 'theme' };
   } catch {
     return { size: 'story', style: 'theme' };
   }
@@ -41,6 +42,8 @@ export function ShareImageSheet({
   renderKey,
   fileName,
   children,
+  styles = DEFAULT_STYLES,
+  prefsKey = PREFS,
 }: {
   open: boolean;
   onClose: () => void;
@@ -55,10 +58,14 @@ export function ShareImageSheet({
   fileName: string;
   /** Lisävalinnat ja huomautukset (esim. lapsen nimi). */
   children?: ReactNode;
+  /** Tarjottavat tyylit (ennakkokuvassa enemmän kuin tuloskuvassa). */
+  styles?: readonly ShareStyle[];
+  /** Muodon ja tyylin muistipaikka laitteella. */
+  prefsKey?: string;
 }) {
   const toast = useToast();
   const clubs = useClubs();
-  const [prefs, setPrefs] = useState<Prefs>(readPrefs);
+  const [prefs, setPrefs] = useState<Prefs>(() => readPrefs(prefsKey, styles));
   const saved = clubFor(clubs, teamName)?.shareColor;
   const [color, setColor] = useState<string | undefined>(saved);
   const [src, setSrc] = useState<string>();
@@ -71,7 +78,7 @@ export function ShareImageSheet({
     setPrefs((p) => {
       const next = { ...p, ...patch };
       try {
-        localStorage.setItem(PREFS, JSON.stringify(next));
+        localStorage.setItem(prefsKey, JSON.stringify(next));
       } catch {
         /* ei muistia */
       }
@@ -150,26 +157,33 @@ export function ShareImageSheet({
               <div className={`${prefs.size === 'story' ? 'aspect-[9/16]' : 'aspect-[4/5]'} h-[40dvh] animate-pulse rounded-xl bg-slate-200`} />
             )}
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Segmented<ShareSize>
-              label="Kuvan muoto"
-              value={prefs.size}
-              onChange={(size) => setPref({ size })}
-              options={[
-                { value: 'story', label: 'Tarina 9:16' },
-                { value: 'post', label: 'Julkaisu 4:5' },
-              ]}
-            />
-            <Segmented<ShareStyle>
-              label="Kuvan tyyli"
-              value={prefs.style}
-              onChange={(style) => setPref({ style })}
-              options={[
-                { value: 'theme', label: 'Pehmeä' },
-                { value: 'sport', label: 'Urheilu' },
-              ]}
-            />
-          </div>
+          {styles.length > 2 ? (
+            <>
+              <Segmented<ShareSize>
+                label="Kuvan muoto"
+                value={prefs.size}
+                onChange={(size) => setPref({ size })}
+                options={[
+                  { value: 'story', label: 'Tarina 9:16' },
+                  { value: 'post', label: 'Julkaisu 4:5' },
+                ]}
+              />
+              <StylePicker styles={styles} value={prefs.style} onChange={(style) => setPref({ style })} />
+            </>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Segmented<ShareSize>
+                label="Kuvan muoto"
+                value={prefs.size}
+                onChange={(size) => setPref({ size })}
+                options={[
+                  { value: 'story', label: 'Tarina 9:16' },
+                  { value: 'post', label: 'Julkaisu 4:5' },
+                ]}
+              />
+              <Segmented<ShareStyle> label="Kuvan tyyli" value={prefs.style} onChange={(style) => setPref({ style })} options={styles.map((v) => ({ value: v, label: SHARE_STYLE_LABEL[v] }))} />
+            </div>
+          )}
           <ColorPicker value={color} onChange={pickColor} team={clubNameOf(teamName)} />
           {children}
           <div className="flex gap-2">
@@ -187,6 +201,39 @@ export function ShareImageSheet({
         children
       )}
     </Sheet>
+  );
+}
+
+/** Tyylit pieninä näytteinä (6 tyyliä ei mahdu yhteen segmenttiriviin puhelimella). */
+const STYLE_SAMPLE: Record<ShareStyle, string> = {
+  theme: 'linear-gradient(135deg,var(--hero-from),var(--hero-to))',
+  sport: 'repeating-linear-gradient(-24deg,#0b1220 0 9px,#141e33 9px 14px)',
+  field: 'repeating-linear-gradient(180deg,#2d6a31 0 7px,#367a3a 7px 14px)',
+  poster: 'linear-gradient(135deg,#b42318 0 58%,#facc15 58% 70%,#b42318 70%)',
+  clean: 'linear-gradient(180deg,#1f5137 0 5px,#f4f7f5 5px)',
+  scoreboard: 'radial-gradient(circle,#fbbf24 1.2px,transparent 1.6px) 0 0/7px 7px,#0b0b0c',
+};
+
+function StylePicker({ styles, value, onChange }: { styles: readonly ShareStyle[]; value: ShareStyle; onChange: (v: ShareStyle) => void }) {
+  return (
+    <div>
+      <div className="mb-1.5 text-sm font-medium text-slate-700">Kuvan tyyli</div>
+      <div role="radiogroup" aria-label="Kuvan tyyli" className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+        {styles.map((s) => (
+          <button
+            key={s}
+            type="button"
+            role="radio"
+            aria-checked={value === s}
+            onClick={() => onChange(s)}
+            className={`press flex min-h-11 flex-col items-center gap-1 rounded-xl p-1.5 text-xs font-semibold ${value === s ? 'bg-[var(--surface-raised)] text-slate-900 outline outline-2 outline-[var(--focus)]' : 'bg-[var(--surface-sunk)] text-slate-600 hover:text-slate-900'}`}
+          >
+            <span aria-hidden className="h-6 w-full rounded-md ring-1 ring-black/10" style={{ background: STYLE_SAMPLE[s] }} />
+            {SHARE_STYLE_LABEL[s]}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 

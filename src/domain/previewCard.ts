@@ -25,6 +25,31 @@ export interface PreviewCard {
   location?: string;
   /** Ottelu: yksi rivi; turnaus: otteluohjelma kellonajan mukaan (ajattomat lopussa). */
   games: PreviewGame[];
+  /** Valinnainen kommentti pelin alle (17.11.2026). */
+  comment?: string;
+}
+
+/** Ennakkokuvan laatikot, jotka käyttäjä voi piilottaa (17.11.2026). */
+export type PreviewBox = 'arrival' | 'kickoff' | 'games' | 'place';
+export const PREVIEW_BOXES: readonly PreviewBox[] = ['arrival', 'kickoff', 'games', 'place'];
+
+export function previewBoxLabel(box: PreviewBox, card: Pick<PreviewCard, 'kind'>): string {
+  return box === 'arrival' ? 'Paikalla' : box === 'kickoff' ? (card.kind === 'tournament' ? '1. peli' : 'Peli alkaa') : box === 'games' ? 'Pelit' : 'Paikka';
+}
+
+/** Laatikot, joille kortilla on tieto (vain nämä tarjotaan valittaviksi). */
+export function availableBoxes(card: PreviewCard): PreviewBox[] {
+  return PREVIEW_BOXES.filter((b) => (b === 'arrival' ? !!card.arrival : b === 'kickoff' ? !!card.kickoff : b === 'games' ? card.kind === 'tournament' && card.games.length > 0 : !!card.location));
+}
+
+/** Aikalaatikot (otsikko, arvo) piilotukset huomioiden; paikka piirretään omana laatikkonaan. */
+export function previewTimeBoxes(card: PreviewCard, hidden: ReadonlySet<PreviewBox> = new Set()): [string, string][] {
+  const out: [string, string][] = [];
+  for (const b of availableBoxes(card)) {
+    if (hidden.has(b) || b === 'place') continue;
+    out.push([previewBoxLabel(b, card), b === 'arrival' ? card.arrival! : b === 'kickoff' ? card.kickoff! : String(card.games.length)]);
+  }
+  return out;
 }
 
 const clean = (s: string | undefined) => s?.replace(/\s+/g, ' ').trim() || undefined;
@@ -39,6 +64,7 @@ export function previewCard(plan: Pick<PlannedSession, 'activityTypeId' | 'date'
     ...((f?.format ?? team?.format) ? { format: f?.format ?? team?.format } : {}),
     ...(clean(team?.name) ? { team: clean(team?.name) } : {}),
     ...(clean(f?.location) ? { location: clean(f?.location) } : {}),
+    ...(clean(f?.previewNote) ? { comment: clean(f?.previewNote) } : {}),
   };
   if (!tournament) {
     const kickoff = plan.startTime;

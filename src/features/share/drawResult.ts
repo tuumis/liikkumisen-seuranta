@@ -8,7 +8,24 @@ import { drawFlag } from '../../ui/flags';
 import { alpha, isLightColor, mix, resolveShareColor, type ShareColor } from './shareColors';
 
 export type ShareSize = 'story' | 'post';
-export type ShareStyle = 'theme' | 'sport';
+/**
+ * Kuvan tyyli. Tuloskuvassa Pehmeä ja Urheilu; ennakkokuvassa lisäksi Kenttä, Juliste, Selkeä ja
+ * Tulostaulu (käyttäjän lista 17.11.2026). Tyyli vaihtaa taustan, värit ja fontin; asettelu on sama.
+ */
+export type ShareStyle = 'theme' | 'sport' | 'field' | 'poster' | 'clean' | 'scoreboard';
+
+export const SHARE_STYLE_LABEL: Record<ShareStyle, string> = {
+  theme: 'Pehmeä',
+  sport: 'Urheilu',
+  field: 'Kenttä',
+  poster: 'Juliste',
+  clean: 'Selkeä',
+  scoreboard: 'Tulostaulu',
+};
+export const isShareStyle = (v: unknown): v is ShareStyle => typeof v === 'string' && v in SHARE_STYLE_LABEL;
+
+/** Otsikkofontin paksuus tyylin mukaan. */
+export const heavyOf = (style: ShareStyle) => (style === 'sport' || style === 'poster' || style === 'field' ? 800 : style === 'scoreboard' ? 700 : 600);
 
 export interface ShareLogos {
   team?: HTMLImageElement;
@@ -169,6 +186,10 @@ export function background(ctx: CanvasRenderingContext2D, H: number, style: Shar
     }
     return;
   }
+  if (style === 'field') return fieldBackground(ctx, H, color);
+  if (style === 'poster') return posterBackground(ctx, H, color);
+  if (style === 'clean') return cleanBackground(ctx, H, color);
+  if (style === 'scoreboard') return scoreboardBackground(ctx, H, color);
   // Urheilutyyli: tumma yönsininen, viistot raidat ja kirkas reunaviiva.
   const accent = sportAccent(color);
   const g = ctx.createLinearGradient(0, 0, 0, H);
@@ -191,6 +212,101 @@ export function background(ctx: CanvasRenderingContext2D, H: number, style: Shar
   ctx.fillRect(0, 0, 14, H);
 }
 
+/** Kenttä: nurmen leikkuuraidat, kentän valkoiset viivat himmeinä ja tummennus tekstin alle. */
+function fieldBackground(ctx: CanvasRenderingContext2D, H: number, color?: ShareColor) {
+  const grass = color && !isLightColor(color.base) && !isDark(color.base) ? mix('#2d6a31', color.base, 0.18) : '#2d6a31';
+  ctx.fillStyle = grass;
+  ctx.fillRect(0, 0, W, H);
+  const band = H / 12;
+  ctx.fillStyle = 'rgba(255,255,255,0.055)';
+  for (let i = 0; i < 12; i += 2) ctx.fillRect(0, i * band, W, band);
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+  ctx.lineWidth = 6;
+  const m = 36;
+  ctx.strokeRect(m, m, W - m * 2, H - m * 2);
+  ctx.beginPath();
+  ctx.moveTo(m, H / 2);
+  ctx.lineTo(W - m, H / 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(W / 2, H / 2, W * 0.17, 0, Math.PI * 2);
+  ctx.stroke();
+  const bw = W * 0.56;
+  const bh = H * 0.09;
+  ctx.strokeRect((W - bw) / 2, m, bw, bh);
+  ctx.strokeRect((W - bw) / 2, H - m - bh, bw, bh);
+  ctx.restore();
+  const shade = ctx.createLinearGradient(0, 0, 0, H);
+  shade.addColorStop(0, 'rgba(0,0,0,0.28)');
+  shade.addColorStop(0.5, 'rgba(0,0,0,0.12)');
+  shade.addColorStop(1, 'rgba(0,0,0,0.34)');
+  ctx.fillStyle = shade;
+  ctx.fillRect(0, 0, W, H);
+}
+
+/** Juliste: tasainen joukkueen väri, rasteripisteet ja leveät viistoraidat oikeassa yläkulmassa. */
+function posterBackground(ctx: CanvasRenderingContext2D, H: number, color?: ShareColor) {
+  const base = color?.base ?? '#b42318';
+  const light = isLightColor(base);
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, W, H);
+  const dot = light ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.10)';
+  ctx.fillStyle = dot;
+  for (let y = 0; y < H * 0.45; y += 30)
+    for (let x = W * 0.35; x < W; x += 30) {
+      const r = 9 * Math.max(0, 1 - Math.hypot(W - x, y) / (W * 0.85));
+      if (r < 0.6) continue;
+      ctx.beginPath();
+      ctx.arc(x + ((y / 30) % 2) * 15, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  // Viistoraidat oikeaan yläkulmaan (otsikon viereen, ei laatikoiden päälle).
+  ctx.fillStyle = alpha(posterAccent(color), 0.9);
+  for (const d of [60, 140, 220]) {
+    ctx.beginPath();
+    ctx.moveTo(W - d, 0);
+    ctx.lineTo(W - d - 44, 0);
+    ctx.lineTo(W, d + 44);
+    ctx.lineTo(W, d);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+const posterAccent = (color?: ShareColor) => color?.accent ?? (color && isLightColor(color.base) ? '#111827' : '#facc15');
+
+/** Selkeä: vaalea pohja, ohut värikaista ylhäällä; teksti tumma. */
+function cleanBackground(ctx: CanvasRenderingContext2D, H: number, color?: ShareColor) {
+  const base = color?.base ?? '#1f5137';
+  ctx.fillStyle = mix(base, '#ffffff', 0.95);
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, W, 22);
+  ctx.fillStyle = alpha(base, 0.35);
+  ctx.fillRect(0, H - 10, W, 10);
+}
+const cleanAccent = (color?: ShareColor) => {
+  const base = color?.base ?? '#1f5137';
+  return isLightColor(base) ? (color?.accent && !isLightColor(color.accent) ? color.accent : mix(base, '#000000', 0.6)) : base;
+};
+
+/** Tulostaulu: musta pohja, LED-pisteruudukko ja tumma kehys. */
+function scoreboardBackground(ctx: CanvasRenderingContext2D, H: number, color?: ShareColor) {
+  ctx.fillStyle = '#0b0b0c';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(255,255,255,0.045)';
+  for (let y = 9; y < H; y += 18) for (let x = 9; x < W; x += 18) ctx.fillRect(x - 2, y - 2, 4, 4);
+  ctx.lineWidth = 14;
+  ctx.strokeStyle = '#2a2a2e';
+  rr(ctx, 22, 22, W - 44, H - 44, 36);
+  ctx.stroke();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = alpha(scoreboardAccent(color), 0.5);
+  rr(ctx, 40, 40, W - 80, H - 80, 26);
+  ctx.stroke();
+}
+const scoreboardAccent = (color?: ShareColor) => (!color ? '#fbbf24' : isDark(color.base) ? (color.accent ?? '#fbbf24') : mix(color.base, '#ffffff', 0.2));
+
 /** Urheilutyylin korostus: valittu väri (liian tumma vaalennetaan) tai vihreä. */
 const sportAccent = (color?: ShareColor) => (!color ? '#4ade80' : color.id === 'black' && color.accent ? color.accent : isDark(color.base) ? mix(color.base, '#ffffff', 0.45) : mix(color.base, '#ffffff', 0.12));
 const isDark = (hex: string) => {
@@ -207,6 +323,17 @@ export function palette(style: ShareStyle, color?: ShareColor): Palette {
       return { ink: '#111827', soft: 'rgba(17,24,39,0.72)', accent: color.accent && !isLightColor(color.accent) ? color.accent : mix(color.base, '#000000', 0.6), panel: 'rgba(0,0,0,0.07)', display, sans, light: true };
     return { ink: '#ffffff', soft: 'rgba(255,255,255,0.76)', accent: color.accent ?? mix(color.base, '#ffffff', 0.7), panel: 'rgba(255,255,255,0.1)', display, sans };
   }
+  if (style === 'field')
+    return { ink: '#ffffff', soft: 'rgba(255,255,255,0.84)', accent: color && !isDark(color.base) ? (isLightColor(color.base) ? color.base : mix(color.base, '#ffffff', 0.4)) : '#fde047', panel: 'rgba(0,0,0,0.26)', display: sans, sans };
+  if (style === 'poster') {
+    const light = isLightColor(color?.base ?? '#b42318');
+    return light
+      ? { ink: '#111827', soft: 'rgba(17,24,39,0.74)', accent: posterAccent(color), panel: 'rgba(0,0,0,0.08)', display: sans, sans, light: true }
+      : { ink: '#ffffff', soft: 'rgba(255,255,255,0.82)', accent: posterAccent(color), panel: 'rgba(0,0,0,0.2)', display: sans, sans };
+  }
+  if (style === 'clean') return { ink: '#0f172a', soft: '#475569', accent: cleanAccent(color), panel: alpha(color?.base ?? '#1f5137', 0.07), display: sans, sans, light: true };
+  if (style === 'scoreboard')
+    return { ink: '#ffffff', soft: 'rgba(255,255,255,0.7)', accent: scoreboardAccent(color), panel: 'rgba(255,255,255,0.065)', display: 'ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace', sans };
   return { ink: '#ffffff', soft: 'rgba(226,232,240,0.78)', accent: sportAccent(color), panel: 'rgba(255,255,255,0.07)', display: sans, sans };
 }
 
@@ -287,7 +414,7 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
 
   if (card.kind === 'tournament') {
     const titlePx = story ? 104 : 84;
-    ctx.font = `${opts.style === 'sport' ? 800 : 600} ${titlePx}px ${p.display}`;
+    ctx.font = `${heavyOf(opts.style)} ${titlePx}px ${p.display}`;
     const lines = wrap(ctx, card.eventName ?? 'Turnaus', maxW, 2);
     ctx.fillStyle = p.ink;
     lines.forEach((l) => {
@@ -356,7 +483,7 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
         scoreRight = right - chipH - 24;
       }
       const score = g.outcome ? `${g.goalsFor}–${g.goalsAgainst}` : '–';
-      ctx.font = `${opts.style === 'sport' ? 800 : 600} ${Math.round(Math.min(rowH * 0.46, story ? 72 : 60))}px ${p.display}`;
+      ctx.font = `${heavyOf(opts.style)} ${Math.round(Math.min(rowH * 0.46, story ? 72 : 60))}px ${p.display}`;
       ctx.fillStyle = g.outcome ? p.ink : p.soft;
       const sw = ctx.measureText(score).width;
       ctx.fillText(score, scoreRight - sw, top + rowH / 2 + rowH * 0.15);
@@ -399,8 +526,8 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
       ctx.fillStyle = p.soft;
       ctx.fillText(spaced(label), x + 30, sumTop + (story ? 62 : 48));
       ctx.fillStyle = p.ink;
-      ctx.font = `${opts.style === 'sport' ? 800 : 600} ${story ? 80 : 62}px ${p.display}`;
-      ctx.fillText(fit(ctx, value, cw - 60, (px) => `${opts.style === 'sport' ? 800 : 600} ${px}px ${p.display}`, story ? 80 : 62, 40), x + 30, sumTop + sumH - (story ? 40 : 30));
+      ctx.font = `${heavyOf(opts.style)} ${story ? 80 : 62}px ${p.display}`;
+      ctx.fillText(fit(ctx, value, cw - 60, (px) => `${heavyOf(opts.style)} ${px}px ${p.display}`, story ? 80 : 62, 40), x + 30, sumTop + sumH - (story ? 40 : 30));
     });
     return canvas;
   }
@@ -408,7 +535,7 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
   // Yksittäinen ottelu: logo – tulos – logo yhtenä rivinä, nimet logojen alla; lohko keskitetään.
   const g = card.games[0];
   y += story ? 92 : 70;
-  ctx.font = `${opts.style === 'sport' ? 800 : 600} ${story ? 64 : 54}px ${p.display}`;
+  ctx.font = `${heavyOf(opts.style)} ${story ? 64 : 54}px ${p.display}`;
   ctx.fillStyle = p.ink;
   ctx.fillText(dateLabel, PAD, y);
   const bh = levelBadges(ctx, card.level, card.format, PAD, y + (story ? 34 : 24), story, p);
@@ -424,7 +551,7 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
   if (times.length) boxesTop -= boxH + (card.location ? 20 : 0);
   const playerTop = boxesTop - (playerH ? playerH + (times.length || card.location ? 28 : 0) : 0);
 
-  const heavy = opts.style === 'sport' ? 800 : 600;
+  const heavy = heavyOf(opts.style);
   const display = (px: number) => `${heavy} ${px}px ${p.display}`;
   drawMatchup(ctx, { team: card.team, opponent: g.opponent, logos: opts.logos, origins, y, boxesTop: playerTop, story, p }, (top, ls) => {
     // Tulos logojen välissä, tulossana sen alla.

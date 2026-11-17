@@ -1632,7 +1632,29 @@ export function createRepositories(db: AppDB = defaultDb) {
       delete next.startTime;
       if (input.startTime) next.startTime = input.startTime;
       await db.plannedSessions.put(next);
-      await db.fixtures.put(fixtureRow(planId, input, next.updatedBy, next.updatedAt));
+      const row = fixtureRow(planId, input, next.updatedBy, next.updatedAt);
+      // Ennakkokuvan kommentti ei ole kalenterilomakkeella: säilyy muokattaessa.
+      const old = await db.fixtures.get(planId);
+      if (old && !old.deletedAt && old.previewNote) row.previewNote = old.previewNote;
+      await db.fixtures.put(row);
+    });
+  }
+
+  /** Ennakkokuvan kommentti (tyhjä poistaa); synkronoituu tapahtuman mukana. */
+  async function setPreviewNote(planId: UUID, text: string): Promise<void> {
+    noteLocalChange();
+    await db.transaction('rw', [db.plannedSessions, db.fixtures, db.meta], async () => {
+      const plan = await db.plannedSessions.get(planId);
+      if (!plan || plan.deletedAt) throw new Error('Tapahtumaa ei löydy');
+      const old = await db.fixtures.get(planId);
+      const cur = old && !old.deletedAt ? old : undefined;
+      const note = text.replace(/\s+/g, ' ').trim().slice(0, 140);
+      if ((cur?.previewNote ?? '') === note) return;
+      const next: Fixture = await stamp({ ...(cur ?? { plannedSessionId: planId }) } as Fixture);
+      delete next.deletedAt;
+      delete next.previewNote;
+      if (note) next.previewNote = note;
+      await db.fixtures.put(next);
     });
   }
 
@@ -2034,6 +2056,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     updateSession,
     deleteSession,
     undoDelete,
+    setPreviewNote,
     getTrainingSelf,
     setTrainingSelf,
     trainingsWithoutSelf,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { previewCard, previewKicker } from './previewCard';
+import { availableBoxes, previewCard, previewKicker, previewTimeBoxes } from './previewCard';
 import type { Fixture } from './types';
 
 const fx = (f: Partial<Fixture>): Fixture => ({ plannedSessionId: 'p1', updatedAt: '2026-11-14T10:00:00.000Z', updatedBy: 'd', ...f }) as Fixture;
@@ -35,5 +35,24 @@ describe('otteluennakko', () => {
     const d = previewCard({ activityTypeId: 't:football_tournament', date: '2026-11-22', startTime: '09:00' }, fx({ gamesCount: 3 }));
     expect(d.games).toHaveLength(3);
     expect(d.arrival).toBe('09:00');
+  });
+});
+
+describe('ennakon laatikot ja kommentti (17.11.2026)', () => {
+  it('ottelu: Paikalla ja Peli alkaa, piilotus poistaa laatikon; kommentti siistitään', () => {
+    const c = previewCard({ activityTypeId: 't:football_game', date: '2026-11-21', startTime: '14:00' }, fx({ location: 'Tali', previewNote: '  Tervetuloa   kannustamaan! ' }));
+    expect(c.comment).toBe('Tervetuloa kannustamaan!');
+    expect(availableBoxes(c)).toEqual(['arrival', 'kickoff', 'place']);
+    expect(previewTimeBoxes(c)).toEqual([['Paikalla', '13:30'], ['Peli alkaa', '14:00']]);
+    expect(previewTimeBoxes(c, new Set(['arrival']))).toEqual([['Peli alkaa', '14:00']]);
+  });
+
+  it('turnaus: 1. peli ja Pelit; tuntemattomat laatikot puuttuvat', () => {
+    const c = previewCard({ activityTypeId: 't:football_tournament', date: '2026-11-22' }, fx({ games: [{ opponent: 'A', time: '09:00' }, { opponent: 'B' }] }));
+    expect(availableBoxes(c)).toEqual(['arrival', 'kickoff', 'games']);
+    expect(previewTimeBoxes(c, new Set(['kickoff']))).toEqual([['Paikalla', '08:30'], ['Pelit', '2']]);
+    const empty = previewCard({ activityTypeId: 't:football_game', date: '2026-11-21' }, undefined);
+    expect(availableBoxes(empty)).toEqual([]);
+    expect(empty.comment).toBeUndefined();
   });
 });

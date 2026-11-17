@@ -342,6 +342,8 @@ export interface Fixture extends SyncFields {
   infoMissing?: boolean;
   /** Mitä puuttuu (valinnainen lyhyt teksti). */
   missingNote?: string;
+  /** Ennakkokuvan valinnainen kommentti pelin alle (17.11.2026), enintään 140 merkkiä. */
+  previewNote?: string;
 }
 
 /** Seuralle tallennettu ryhmä ja ikäluokka (17.11.2026): valittavissa nimeä kirjoitettaessa. */

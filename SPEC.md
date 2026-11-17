@@ -1138,3 +1138,13 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
       - Verryttelykertaa voi muokata myös suoraan; uusi kesto jaetaan ennen- ja jälkeen-osiin.
     - **Menneet treenit:** Asetukset → Viikkorytmi -kohdan kortti "Omatoiminen verryttely menneille treeneille". Kortissa valitaan alkupäivä (oletus 4 viikkoa sitten) ja minuutit, joiden oletus tulee viikkorytmistä. Esikatselu näyttää treenien määrän ja aikavälin. Verryttely lisätään vain treeneille, joilla sitä ei vielä ole, ja lisäys on kumottavissa.
     - **Tilastot:** verryttely lasketaan liikuntaan omana omatoimisena kertanaan. Se ei kasvata treenien määrää (jalkapallon jaksoyhteenveto, kauden kooste, tarina) eikä näy "lisätiedot puuttuvat" -laskurissa. Päiväkirjassa se näkyy treenin rivillä, ei omana kirjauksenaan.
+  - **Otteluennakon tyylit, laatikot ja kommentti** (käyttäjän lista 17.11.2026, vaihe 5; `features/share/drawResult.ts`, `drawPreview.ts`, `ShareSheet.tsx`, `PreviewShare.tsx`, `domain/previewCard.ts`, `db/repositories.ts` `setPreviewNote`):
+    - Ennakkokuvalla on kuusi tyyliä. Pehmeän ja Urheilun lisäksi:
+      - **Kenttä:** nurmen leikkuuraidat ja himmeät kentän viivat.
+      - **Juliste:** tasainen joukkueen väri, rasteripisteet ja viistoraidat yläkulmassa.
+      - **Selkeä:** vaalea pohja, tumma teksti ja värikaista.
+      - **Tulostaulu:** musta LED-pisteruudukko, kehys ja tasalevyiset numerot.
+    - Tyyli vaihtaa taustan, värit ja fontin; asettelu on sama. Valittu väri (joukkueen väri) toimii kaikissa tyyleissä. Tyylit valitaan näytteinä (3 tai 6 rivissä). Valinta ja kuvan muoto muistetaan laitteelle erikseen tuloskuvasta (`previewSharePrefs`). Tuloskuvassa ovat edelleen vain Pehmeä ja Urheilu.
+    - **Laatikot kuvassa:** "Paikalla", "Peli alkaa" (turnauksessa "1. peli"), "Pelit" (turnaus) ja "Paikka" voi ottaa pois kuvasta. Valittavina ovat vain laatikot, joille on tieto. Valinta muistetaan laitteelle kaikille ennakoille (`previewHiddenBoxes`).
+    - **Kommentti pelin alle** (valinnainen, enintään 140 merkkiä): näkyy kuvassa paneelina ottelun (turnauksessa otteluohjelman) ja laatikoiden välissä, enintään kolmella rivillä. Tallentuu tapahtumalle (`Fixture.previewNote`), synkronoituu ja säilyy, kun tapahtumaa muokataan kalenterissa.
+    - Ennakkokuvaa ei tehdä harjoituspelille (ennallaan).

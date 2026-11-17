@@ -425,3 +425,18 @@ describe('harjoituspelit (17.11.2026)', () => {
     expect(sum.friendlies).toEqual({ count: 1, minutes: 90 });
   });
 });
+
+describe('ennakkokuvan kommentti (17.11.2026)', () => {
+  it('tallentuu tapahtumalle, säilyy kalenterimuokkauksessa ja tyhjä poistaa', async () => {
+    const { db, repo } = await device('previewnote');
+    const e = await repo.createFixture('p1', { kind: 'game', date: '2026-11-21', startTime: '14:00', durationMin: 60, opponent: 'HJK' });
+    await repo.setPreviewNote(e.plan.id, '  Tervetuloa   kannustamaan!  ');
+    expect((await db.fixtures.get(e.plan.id))!.previewNote).toBe('Tervetuloa kannustamaan!');
+    await repo.updateFixture(e.plan.id, { kind: 'game', date: '2026-11-21', startTime: '15:00', durationMin: 60, opponent: 'HJK' });
+    expect((await db.fixtures.get(e.plan.id))!.previewNote).toBe('Tervetuloa kannustamaan!');
+    await repo.setPreviewNote(e.plan.id, 'x'.repeat(200));
+    expect((await db.fixtures.get(e.plan.id))!.previewNote).toHaveLength(140);
+    await repo.setPreviewNote(e.plan.id, '   ');
+    expect((await db.fixtures.get(e.plan.id))!.previewNote).toBeUndefined();
+  });
+});
