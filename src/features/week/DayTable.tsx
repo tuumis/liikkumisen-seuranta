@@ -7,6 +7,7 @@
 import { TypeGlyph } from '../../ui/TypeGlyph';
 import { useEffect, useRef, useState } from 'react';
 import { footballBrief, shortName } from '../../domain/weekReport';
+import { foldTrainingSelves, trainingSelfText } from '../../domain/football';
 import type { DayHours } from '../../domain/hours';
 import { isEstimateConfirmation } from '../../domain/hours';
 import { earlyYearsDay } from '../../domain/aggregate';
@@ -144,7 +145,7 @@ export function DayTable({
   const extra = 'hidden lg:table-cell';
   const sum = rows.reduce(
     (a, r) => {
-      const listed = r.sessions.filter((s) => !isEstimateConfirmation(s));
+      const listed = foldTrainingSelves(r.sessions.filter((s) => !isEstimateConfirmation(s))).rows;
       const c = r.totals?.combined;
       return {
         count: a.count + listed.length,
@@ -277,7 +278,8 @@ export function DayTable({
           </thead>
           <tbody>
             {rows.map((r) => {
-              const listed = r.sessions.filter((s) => !isEstimateConfirmation(s));
+              // Treenin verryttely kuuluu treenin sirulle, ei omaksi sirukseen (17.11.2026).
+              const { rows: listed, selfOf } = foldTrainingSelves(r.sessions.filter((s) => !isEstimateConfirmation(s)));
               const confirmed = r.sessions.filter(isEstimateConfirmation);
               const pending = r.hours && !r.flag ? r.hours.pendingEstimateMin : 0;
               const confirmedMin = confirmed.reduce((a, s) => a + s.durationMin, 0);
@@ -321,8 +323,9 @@ export function DayTable({
                       {r.flag && <span className="rounded-lg bg-slate-200 px-1.5 py-1 text-xs font-semibold leading-none text-slate-700">{FLAG_LABEL[r.flag.reason]}</span>}
                       {listed.map((s) => {
                         const t = types.get(s.activityTypeId);
+                        const self = selfOf(s.id);
                         return (
-                          <button key={s.id} type="button" onClick={(e) => morphOpen(e.currentTarget, () => onEdit(s))} className={`${chip} bg-[var(--surface-sage)] text-slate-800 hover:brightness-95 ${isFresh(s.id) ? 'row-fresh' : ''}`} title={`${t?.name ?? ''} ${s.durationMin} min`}>
+                          <button key={s.id} type="button" onClick={(e) => morphOpen(e.currentTarget, () => onEdit(s))} className={`${chip} bg-[var(--surface-sage)] text-slate-800 hover:brightness-95 ${isFresh(s.id) ? 'row-fresh' : ''}`} title={`${t?.name ?? ''} ${s.durationMin} min${self ? ` · ${trainingSelfText(self)}` : ''}`}>
                             {isFresh(s.id) ? (
                               <span className="fresh-check flex size-4 items-center justify-center rounded-full bg-green-700 text-white" aria-hidden>
                                 <svg viewBox="0 0 16 16" className="size-2.5" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
@@ -334,6 +337,7 @@ export function DayTable({
                             )}
                             <span className="truncate">{shortName(s, t)}</span>
                             <span className="tabular-nums text-slate-500">{s.durationMin}</span>
+                            {self && <span aria-hidden>🥾</span>}
                           </button>
                         );
                       })}

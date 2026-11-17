@@ -34,7 +34,8 @@ export function ratingVerdict(avg: number | null): RatingVerdict | null {
 }
 
 export function highlights(sessions: Session[], details: Map<UUID, FootballDetails>, from: ISODate, to: ISODate): HighlightSummary {
-  const inRange = sessions.filter((s) => !s.deletedAt && s.date >= from && s.date <= to);
+  // Treenin verryttely ei ole oma kerta (17.11.2026).
+  const inRange = sessions.filter((s) => !s.deletedAt && !s.linkedTo && s.date >= from && s.date <= to);
   const comments: HighlightComment[] = [];
   const dist: [number, number, number, number, number] = [0, 0, 0, 0, 0];
   let ratingSum = 0;

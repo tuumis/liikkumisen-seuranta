@@ -1182,3 +1182,12 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
     - **Vuono ja Metsä** on piirretty uudelleen pehmeinä, kerroksellisina siluetteina. Kulmikkaat kolmiot on korvattu käyrillä (Catmull-Rom → Bézier).
     - Kaukaiset kerrokset ovat vaaleampia, ja niiden väliin on lisätty usvaa (ilmaperspektiivi). Metsän puut ovat pyöreäkärkisiä, ja kaukaiset puurivit ovat hieman sumeita.
     - Siluetit säilyttävät mittasuhteensa kaikilla näytön leveyksillä (`slice`).
+  - **Verryttely osaksi treeniä, Harjoituspeli-merkki ja vastustajan ryhmä talteen** (käyttäjän palaute 17.11.2026):
+    - **Verryttely** (`domain/football.ts` `foldTrainingSelves`, `DayRow`, `DayTable`, `Dashboard`, `highlights`, `SessionEditor`, `WeekView`):
+      - Alku- ja loppuverryttely ei ole enää oma tehtävä. Viikkonäkymän päivärivillä ja taulukossa se näkyy treenin rivillä (🥾 omatoiminen … min ennen/jälkeen), kuten päiväkirjassa.
+      - Verryttelyä ei pyydetä täydentämään ("+ tiedot"), arvioimaan eikä kommentoimaan. Se ei näy viimeisimmissä kerroissa eikä kohokohtien kertamäärässä.
+      - Minuutit lasketaan edelleen omalla tehojaollaan, joten päivän ja viikon summat eivät muutu. Minuutit muutetaan treenin muokkauksesta.
+    - **Kalenteri** (`GamesTab` `FixtureSummary`): harjoituspelin rivillä on korostettu HARJOITUSPELI-merkki ennen joukkueita.
+    - **Vastustaja talteen** (`repositories` `rememberOpponents`, `createFixture`/`updateFixture`):
+      - Kun kalenterin peli, harjoituspeli tai turnaus tallennetaan, vastustajaseura tulee Vastustajat-listaan ja uusi ryhmä/ikäluokka seuran valinnaksi heti, jo ennen pelin pelaamista.
+      - Tallennus kirjoittaa vain, jos jotain puuttuu. Virhe ei estä pelin tallennusta.

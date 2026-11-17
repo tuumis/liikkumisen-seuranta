@@ -147,3 +147,22 @@ describe('vastustajat käsin ja tallennetut ryhmät (17.11.2026)', () => {
     expect(entry.fixture?.missingNote).toBeUndefined();
   });
 });
+
+describe('kalenterin pelin vastustaja talteen (17.11.2026)', () => {
+  it('uusi ryhmä tallentuu seuralle heti, jo ennen pelin pelaamista; toinen tallennus ei kirjoita turhaan', async () => {
+    const { repo, db } = await device('remember');
+    const e = await repo.createFixture('p1', { kind: 'game', date: '2026-11-20', durationMin: 60, opponent: 'FC Honka · Punainen · 2018' });
+    const club = (await repo.listClubs()).find((c) => c.name === 'FC Honka')!;
+    expect(club.opponent).toBe(true);
+    expect(club.squads).toEqual([{ group: 'Punainen', age: '2018' }]);
+    const stamp = club.updatedAt;
+    await repo.updateFixture(e.plan.id, { kind: 'game', date: '2026-11-21', durationMin: 60, opponent: 'FC Honka · Punainen · 2018' });
+    expect((await db.clubs.get(club.id))!.updatedAt).toBe(stamp);
+    await repo.createFixture('p1', { kind: 'friendly', date: '2026-11-25', durationMin: 90, games: [{ opponent: 'FC Honka · Valkoinen' }, { opponent: 'PK-35' }] });
+    const after = (await repo.listClubs()).filter((c) => c.opponent).map((c) => [c.name, c.squads ?? []]);
+    expect(after).toEqual([
+      ['FC Honka', [{ group: 'Punainen', age: '2018' }, { group: 'Valkoinen' }]],
+      ['PK-35', []],
+    ]);
+  });
+});

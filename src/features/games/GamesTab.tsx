@@ -284,11 +284,12 @@ function FixtureSummary({ e, team, history }: { e: FixtureEntry; team?: Team; hi
     <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-2">
         <span aria-hidden>{tournament ? '🏆' : friendly ? '🤝' : '⚽'}</span>
+        {friendly && <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-sky-950 ring-1 ring-sky-200">Harjoituspeli</span>}
         <span className="truncate font-medium text-slate-900">
           {tournament
             ? f?.eventName ?? 'Turnaus'
             : friendly
-              ? `Harjoituspeli · ${team?.name ?? 'Oma joukkue'} – ${opponentsText || 'vastustaja ?'}`
+              ? `${team?.name ?? 'Oma joukkue'} – ${opponentsText || 'vastustaja ?'}`
               : `${team?.name ?? 'Oma joukkue'} – ${f?.opponent ?? 'vastustaja ?'}`}
         </span>
         <LevelBadge level={level} />

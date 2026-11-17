@@ -4,7 +4,7 @@ import 'fake-indexeddb/auto';
 import { afterEach, describe, expect, it } from 'vitest';
 import { AppDB } from './schema';
 import { createRepositories, type Repositories } from './repositories';
-import { footballPeriodSummary, trainingSelfStart } from '../domain/football';
+import { foldTrainingSelves, footballPeriodSummary, trainingSelfStart } from '../domain/football';
 import { sessionSchema, templateItemSchema } from '../domain/schemas';
 import { BUILT_IN_ACTIVITY_TYPES } from '../seed/activityTypes';
 
@@ -144,5 +144,15 @@ describe('omatoiminen verryttely', () => {
     await repo.removeTrainingSelves(added);
     expect(await repo.trainingsWithoutSelf('p1', '2026-11-05', TODAY)).toHaveLength(2);
     expect(await repo.addTrainingSelfFrom('p1', '2026-11-05', TODAY, { before: 0, after: 0 })).toEqual([]);
+  });
+});
+
+describe('verryttely treenin rivillä (17.11.2026)', () => {
+  it('verryttely pois listasta, kun treeni on samassa listassa; orpo jää näkyviin', () => {
+    const list = [{ id: 'a' }, { id: 'w:a', linkedTo: 'a' }, { id: 'b' }, { id: 'w:x', linkedTo: 'x' }];
+    const f = foldTrainingSelves(list);
+    expect(f.rows.map((s) => s.id)).toEqual(['a', 'b', 'w:x']);
+    expect(f.selfOf('a')?.id).toBe('w:a');
+    expect(f.selfOf('b')).toBeUndefined();
   });
 });

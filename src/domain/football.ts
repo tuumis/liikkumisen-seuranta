@@ -56,6 +56,17 @@ export function trainingSelfText(s: Pick<Session, 'selfBeforeMin' | 'selfAfterMi
   return `omatoiminen ${parts.join(' · ')}`;
 }
 
+/**
+ * Treenin omatoiminen verryttely näkyy treenin rivillä eikä omana kertanaan (käyttäjän palaute 17.11.2026):
+ * listasta pois verryttelyt, joiden treeni on samassa listassa; `selfOf(treeninId)` antaa treenin verryttelyn.
+ * Minuutit lasketaan edelleen omana kertanaan (oma tehojako), joten summat eivät muutu.
+ */
+export function foldTrainingSelves<T extends Pick<Session, 'id' | 'linkedTo'>>(list: readonly T[]): { rows: T[]; selfOf: (id: string) => T | undefined } {
+  const ids = new Set(list.map((s) => s.id));
+  const selves = new Map(list.filter((s) => s.linkedTo && ids.has(s.linkedTo)).map((s) => [s.linkedTo!, s]));
+  return { rows: list.filter((s) => !(s.linkedTo && ids.has(s.linkedTo))), selfOf: (id) => selves.get(id) };
+}
+
 /** Verryttelykerran nimi minuuttien mukaan. */
 export function trainingSelfLabel(before: number, after: number): string {
   return before > 0 && after > 0 ? 'Alku- ja loppuverryttely' : before > 0 ? 'Alkuverryttely' : 'Loppuverryttely';

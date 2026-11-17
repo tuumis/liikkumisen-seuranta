@@ -66,7 +66,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
   const footballOn = useFootballEnabled(profile);
   // Jalkapallon lisätietopaneeli yksittäisen kirjauksen tai kuittauksen jälkeen (vahvistettu tulkinta).
   const openFootballIfAny = (s: Session) => {
-    if (footballOn && typeMap.get(s.activityTypeId)?.sport === 'football') setFootball(s);
+    if (footballOn && !s.linkedTo && typeMap.get(s.activityTypeId)?.sport === 'football') setFootball(s);
   };
   const planActions = usePlanActions(setEditing, (s) => openFootballIfAny(s));
 

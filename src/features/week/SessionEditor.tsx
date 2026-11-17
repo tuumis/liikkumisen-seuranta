@@ -281,7 +281,7 @@ export function SessionEditor({
           )}
           {session.linkedTo && (
             <p className="card-sunk p-3 text-xs text-slate-600">
-              🥾 Treeniin liittyvä omatoiminen verryttely. Minuutit ennen ja jälkeen treenin voi muuttaa myös treenin muokkauksesta; poisto poistaa vain verryttelyn.
+              🥾 Treeniin kuuluva omatoiminen verryttely: näkyy treenin rivillä, eikä sitä arvioida tai kommentoida erikseen. Minuutit muutetaan treenin muokkauksesta; poisto poistaa vain verryttelyn.
             </p>
           )}
 
@@ -291,7 +291,7 @@ export function SessionEditor({
             <input className={inputClass} value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} />
           </Field>
 
-          {type?.sport === 'football' && onFootball && (
+          {type?.sport === 'football' && onFootball && !session.linkedTo && (
             <Button
               variant="secondary"
               className="w-full"

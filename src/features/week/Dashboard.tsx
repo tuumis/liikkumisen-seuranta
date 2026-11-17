@@ -377,7 +377,7 @@ export function RecentCard({ profile, today, types, onOpen }: { profile: Profile
   const from = addDays(today, -30);
   const sessions = useLiveQuery(() => repo.sessionsInRange(profile.id, from, today), [profile.id, from, today]);
   const [open, toggle] = useCollapsible('recent');
-  const list = [...(sessions ?? [])].filter((s) => s.durationMin > 0 && !isEstimateConfirmation(s)).sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
+  const list = [...(sessions ?? [])].filter((s) => s.durationMin > 0 && !isEstimateConfirmation(s) && !s.linkedTo).sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
 
   return (
     <section className="card anim-rise p-4 sm:p-5" style={{ ['--i' as string]: 5 }}>

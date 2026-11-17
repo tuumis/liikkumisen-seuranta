@@ -1341,6 +1341,28 @@ export function createRepositories(db: AppDB = defaultDb) {
     return next;
   }
 
+  /**
+   * Kalenterin pelin vastustajat talteen heti tallennettaessa (17.11.2026): seura Vastustajat-listaan ja
+   * uusi ryhmä/ikäluokka seuran valinnaksi, jo ennen kuin peli on pelattu. Kirjoittaa vain, jos jotain
+   * puuttuu; virhe ei estä pelin tallennusta.
+   */
+  async function rememberOpponents(names: (string | undefined)[]): Promise<void> {
+    for (const name of names) {
+      try {
+        const p = parseTeamName(name ?? '');
+        if (!p.club.trim()) continue;
+        const cur = await db.clubs.get(clubIdOf(p.club));
+        const squad = squadOf({ group: p.group, age: p.age });
+        const hasSquad = !(squad.group || squad.age) || !!cur?.squads?.some((q) => savedKey(q) === savedKey(squad));
+        if (cur && !cur.deletedAt && cur.opponent && hasSquad) continue;
+        await addOpponent(name!);
+      } catch {
+        /* nimi ei kelpaa seuraksi: ohitetaan */
+      }
+    }
+  }
+  const fixtureOpponents = (input: FixtureInput) => [input.opponent, ...(input.games ?? []).map((g) => g.opponent)];
+
   /** Käsin lisätyn vastustajan merkinnän poisto (seuran logo ja muut tiedot säilyvät). */
   async function removeOpponentMark(name: string): Promise<void> {
     const c = await db.clubs.get(clubIdOf(name));
@@ -1600,7 +1622,7 @@ export function createRepositories(db: AppDB = defaultDb) {
 
   /** Uusi peli tai turnaus kalenteriin: käsin lisätty suunnitelma + lisätiedot. */
   async function createFixture(profileId: UUID, input: FixtureInput): Promise<FixtureEntry> {
-    return db.transaction('rw', [db.plannedSessions, db.fixtures, db.meta], async () => {
+    const entry = await db.transaction('rw', [db.plannedSessions, db.fixtures, db.meta], async () => {
       const ts = nowTimestamp();
       const by = await deviceId();
       const plan: PlannedSession = {
@@ -1620,6 +1642,8 @@ export function createRepositories(db: AppDB = defaultDb) {
       await db.fixtures.put(fixture);
       return { plan, fixture };
     });
+    await rememberOpponents(fixtureOpponents(input));
+    return entry;
   }
 
   /** Muokkaus (vain kuittaamaton): päivä, aika, kesto ja lisätiedot. */
@@ -1638,6 +1662,7 @@ export function createRepositories(db: AppDB = defaultDb) {
       if (old && !old.deletedAt && old.previewNote) row.previewNote = old.previewNote;
       await db.fixtures.put(row);
     });
+    await rememberOpponents(fixtureOpponents(input));
   }
 
   /** Ennakkokuvan kommentti (tyhjä poistaa); synkronoituu tapahtuman mukana. */

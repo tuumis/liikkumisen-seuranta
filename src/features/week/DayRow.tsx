@@ -1,7 +1,7 @@
 import type { ActivityType, DayFlag, DayTotals, Fixture, FootballDetails, ISODate, PlannedSession, Session, UUID } from '../../domain/types';
 import type { DayHours } from '../../domain/hours';
 import { InfoTip } from '../../ui/InfoTip';
-import { LEVEL_LABEL, OUTCOME_LABEL, outcomeOf } from '../../domain/football';
+import { foldTrainingSelves, LEVEL_LABEL, OUTCOME_LABEL, outcomeOf, trainingSelfText } from '../../domain/football';
 
 /** "vs HJK · Elite · " tulevan pelin suunnitelmariville; "⚠ tietoja puuttuu" ensin (17.11.2026). */
 function fixtureText(f?: Fixture, typeId?: UUID): string {
@@ -98,7 +98,8 @@ export function DayRow({
   // Arkiliikunta näkyy jokaisella päivällä omana rivinään: arvio (ei sairas-/matkapäivinä) ja päiväkohtaisesti
   // vahvistetut. Tarkistus tehdään kyseisenä päivänä tai jälkikäteen; vahvistettu jää riville näkyviin.
   const confirmed = sessions.filter(isEstimateConfirmation);
-  const listed = sessions.filter((s) => !isEstimateConfirmation(s));
+  // Treenin verryttely näkyy treenin rivillä, ei omana kertanaan (17.11.2026).
+  const { rows: listed, selfOf } = foldTrainingSelves(sessions.filter((s) => !isEstimateConfirmation(s)));
   const pendingMin = hours && !flag ? hours.pendingEstimateMin : 0;
   const estimateRow =
     pendingMin > 0 || confirmed.length > 0
@@ -267,6 +268,7 @@ export function DayRow({
                       {s.intensitySource === 'manual' ? 'reipas+rasittava' : 'arvio: reipas+rasittava'} {mvpaOf(s.minutes)} min
                       {tags && ` · ${tags}`}
                       {s.note && ` · ${s.note}`}
+                      {selfOf(s.id) && ` · 🥾 ${trainingSelfText(selfOf(s.id)!)}`}
                     
                         </>
                       )}
