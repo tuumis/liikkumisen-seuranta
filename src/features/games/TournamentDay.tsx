@@ -11,6 +11,7 @@ import { displayTeamName } from '../../domain/opponent';
 import type { GameResult, ISODate, PlayedState, Profile, UUID } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { Button, inputClass } from '../../ui/components';
+import { InfoLink } from '../../ui/InfoLink';
 import { useToast } from '../../ui/Toast';
 import { logoFor, TeamLogo, useClubLogos } from '../../ui/TeamLogo';
 import { GoalStepper, PlayedChips } from '../football/FootballPanel';
@@ -26,6 +27,7 @@ interface Entry {
   name: string;
   games: GameResult[];
   playShare?: number;
+  link?: string;
 }
 
 /** Tämän päivän turnaukset: kuittaamattomat suunnitelmat (otteluohjelmasta) ja kirjatut kerrat. */
@@ -39,13 +41,13 @@ function useTodayTournaments(profileId: UUID, today: ISODate): Entry[] | undefin
       const fd = details.get(s.id);
       const n = Math.max(fd?.games?.length ?? 0, fd?.gamesCount ?? 0, 1);
       const games = Array.from({ length: n }, (_, i) => fd?.games?.[i] ?? {});
-      return { key: s.id, target: { sessionId: s.id }, name: fd?.eventName ?? s.label ?? 'Turnaus', games, playShare: s.playShare };
+      return { key: s.id, target: { sessionId: s.id }, name: fd?.eventName ?? s.label ?? 'Turnaus', games, playShare: s.playShare, link: fd?.link };
     });
     for (const { plan, fixture } of await repo.listFixtures(profileId, today, today)) {
       if (plan.activityTypeId !== TOURNAMENT || plan.status !== 'open') continue;
       const n = Math.max(fixture?.games?.length ?? 0, fixture?.gamesCount ?? 0, 1);
       const games = Array.from({ length: n }, (_, i) => ({ ...(fixture?.games?.[i] ?? {}) }) as GameResult);
-      out.push({ key: plan.id, target: { planId: plan.id }, name: fixture?.eventName ?? plan.label ?? 'Turnaus', games });
+      out.push({ key: plan.id, target: { planId: plan.id }, name: fixture?.eventName ?? plan.label ?? 'Turnaus', games, link: fixture?.link });
     }
     return out;
   }, [profileId, today]);
@@ -91,8 +93,9 @@ function TournamentEntry({ entry, profile, today }: { entry: Entry; profile: Pro
       <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Turnauspäivä · pikakirjaus</div>
       <div className="mt-0.5 flex flex-wrap items-baseline justify-between gap-x-3">
         <h2 className="font-display text-lg font-semibold leading-tight text-slate-900">{entry.name}</h2>
-        <span className="text-sm tabular-nums text-slate-600">
+        <span className="flex items-center gap-2 text-sm tabular-nums text-slate-600">
           {done}/{games.length} {games.length === 1 ? 'peli' : 'peliä'} kirjattu
+          {entry.link && <InfoLink href={entry.link} />}
         </span>
       </div>
       <ol className="mt-3 space-y-2">

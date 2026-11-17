@@ -291,6 +291,8 @@ export interface FootballDetails extends SyncFields {
   gameLengthMin?: number;
   /** Peli: pelasiko (ei / osan / koko pelin). */
   played?: PlayedState;
+  /** Linkki pelin tai turnauksen tietoihin (17.11.2026), esim. otteluohjelma tai tulospalvelu; https-osoite. */
+  link?: string;
 }
 
 // ---------- joukkueet ja pelikalenteri (skeema v2) ----------
@@ -344,6 +346,8 @@ export interface Fixture extends SyncFields {
   missingNote?: string;
   /** Ennakkokuvan valinnainen kommentti pelin alle (17.11.2026), enintään 140 merkkiä. */
   previewNote?: string;
+  /** Linkki pelin tai turnauksen tietoihin (17.11.2026), esim. otteluohjelma tai tulospalvelu; https-osoite. */
+  link?: string;
 }
 
 /** Seuralle tallennettu ryhmä ja ikäluokka (17.11.2026): valittavissa nimeä kirjoitettaessa. */

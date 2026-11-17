@@ -9,6 +9,7 @@ import { goalsLabel } from '../../ui/labels';
 import { GAME_FORMATS, LEVEL_LABEL, POSITION_LABEL, POSITIONS } from '../../domain/football';
 import { repo, type FootballDetailsInput } from '../../db/repositories';
 import { Button, Field, inputClass } from '../../ui/components';
+import { normalizeLink } from '../../domain/link';
 import { Segmented, ToggleChip } from '../../ui/controls';
 import { dayLabel } from '../../ui/format';
 import { ENJOYMENT_LABEL, FOCUS_TAG_LABEL, RATING_LABEL } from '../../ui/labels';
@@ -85,6 +86,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
   const [played, setPlayed] = useState('');
   const [gamePlayed, setGamePlayed] = useState<PlayedState | ''>('');
   const [eventName, setEventName] = useState('');
+  const [link, setLink] = useState('');
   const [gamesCount, setGamesCount] = useState('');
   const [games, setGames] = useState<GameDraft[]>([]);
   const [playerGoals, setPlayerGoals] = useState('');
@@ -112,6 +114,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
     setPlayed(d?.played ? '' : str(session.playedMin));
     setGamePlayed(d?.played ?? '');
     setEventName(d?.eventName ?? '');
+    setLink(d?.link ?? '');
     setGamesCount(str(d?.games?.length ? undefined : d?.gamesCount));
     setGames(
       (d?.games ?? []).map((g) => ({
@@ -163,6 +166,8 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
     const bad = [...Object.values(nums), ...rows.flatMap((r) => [r.goalsFor, r.goalsAgainst, r.playedMin, r.playerGoals])].some((n) => Number.isNaN(n));
     if (bad) return setError('Anna luvut kokonaislukuina');
     if (nums.played !== undefined && nums.played > session!.durationMin) return setError('Pelatut minuutit eivät voi ylittää kestoa');
+    const cleanLink = kind === 'training' ? undefined : normalizeLink(link);
+    if (cleanLink === null) return setError('Tarkista linkki, esim. https://tulospalvelu.fi/…');
     // Peli: tarkat minuutit, muuten Ei = 0, Koko pelin = kesto − lämmittely, Osan = peliaika-arvio (ei minuutteja).
     const gamePlayedMin =
       kind !== 'game'
@@ -189,6 +194,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
       playedMin: gamePlayedMin,
       played: kind === 'game' ? gamePlayed || undefined : undefined,
       eventName,
+      link: cleanLink,
       gamesCount: nums.count,
       games: rows,
       playerGoals: nums.own,
@@ -572,6 +578,22 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
               </p>
             )}
           </>
+        )}
+
+        {(kind === 'game' || kind === 'tournament' || kind === 'friendly') && (
+          <Field label="Linkki (valinnainen)" hint="Esim. turnauksen sivu, otteluohjelma tai tulospalvelu. Avautuu selaimeen tuloslistasta.">
+            <input
+              className={inputClass}
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+              inputMode="url"
+              autoComplete="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              maxLength={500}
+              placeholder="https://…"
+            />
+          </Field>
         )}
 
         <Field label="Kommentti (päiväkirja)" hint="Lyhyt muistiinpano treenistä tai pelistä; löytyy myöhemmin Jalkapallo → Päiväkirja.">

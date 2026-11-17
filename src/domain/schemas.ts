@@ -143,6 +143,7 @@ export const footballDetailsSchema = either(
     parentRating: z.number().int().min(1).max(5).optional(),
     enjoyment: z.number().int().min(1).max(3).optional(),
     games: z.array(z.looseObject({})).optional(),
+    link: z.string().max(600).optional(),
     ...sync,
   }),
   'sessionId',
@@ -170,7 +171,7 @@ export const teamSchema = either(
 );
 
 export const fixtureSchema = either(
-  z.looseObject({ plannedSessionId: z.string().min(1), level: level.optional(), infoMissing: z.boolean().optional(), missingNote: z.string().max(200).optional(), previewNote: z.string().max(200).optional(), ...sync }),
+  z.looseObject({ plannedSessionId: z.string().min(1), level: level.optional(), infoMissing: z.boolean().optional(), missingNote: z.string().max(200).optional(), previewNote: z.string().max(200).optional(), link: z.string().max(600).optional(), ...sync }),
   'plannedSessionId',
 );
 

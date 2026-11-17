@@ -10,6 +10,7 @@ import { ARRIVAL_LEAD_MIN, DEFAULT_COOLDOWN_MIN, DEFAULT_WARMUP_MIN, defaultGame
 import type { GameFormat, GameLevel, HHmm, Profile } from '../../domain/types';
 import { repo, type FixtureEntry, type FixtureInput } from '../../db/repositories';
 import { Button, Field, inputClass } from '../../ui/components';
+import { normalizeLink } from '../../domain/link';
 import { TimeField } from '../../ui/TimeField';
 import { Segmented, ToggleChip } from '../../ui/controls';
 import { Sheet } from '../../ui/Sheet';
@@ -61,6 +62,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
   const [note, setNote] = useState('');
   const [infoMissing, setInfoMissing] = useState(false);
   const [missingNote, setMissingNote] = useState('');
+  const [link, setLink] = useState('');
   const [schedule, setSchedule] = useState<ScheduleRow[]>([]);
   // Turnauksen kesto otteluohjelmasta (aktiivinen aika): pelit × (lämmittely + pelin pituus) + loppuverryttely.
   const [auto, setAuto] = useState(true);
@@ -91,6 +93,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
     setNote(f?.note ?? '');
     setInfoMissing(!!f?.infoMissing);
     setMissingNote(f?.missingNote ?? '');
+    setLink(f?.link ?? '');
     setSchedule(
       (f?.games ?? []).map((g) => ({
         time: g.time ?? '',
@@ -148,6 +151,8 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
     const rows = schedule.filter((g) => g.time || g.opponent.trim() || g.location.trim());
     const gc = rows.length ? rows.length : gamesCount.trim() === '' ? undefined : Number(gamesCount);
     if (gc !== undefined && (!Number.isInteger(gc) || gc < 1 || gc > 20)) return setError('Tarkista pelien määrä');
+    const cleanLink = normalizeLink(link);
+    if (cleanLink === null) return setError('Tarkista linkki, esim. https://tulospalvelu.fi/…');
     const input: FixtureInput = {
       kind,
       date,
@@ -177,6 +182,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
       note,
       infoMissing,
       missingNote: infoMissing ? missingNote : undefined,
+      link: cleanLink,
     };
     try {
       if (draft!.entry) await repo.updateFixture(draft!.entry.plan.id, input);
@@ -493,6 +499,19 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
 
         <Field label="Paikka (valinnainen)">
           <input className={inputClass} value={location} onChange={(e) => setLocation(e.target.value)} maxLength={80} placeholder="esim. Kenttä 2" />
+        </Field>
+        <Field label="Linkki (valinnainen)" hint="Esim. turnauksen sivu, otteluohjelma tai tulospalvelu. Avautuu selaimeen pelin kohdalta.">
+          <input
+            className={inputClass}
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            inputMode="url"
+            autoComplete="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            maxLength={500}
+            placeholder="https://…"
+          />
         </Field>
         <Field label="Muistiinpano">
           <input className={inputClass} value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} />

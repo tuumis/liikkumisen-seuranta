@@ -54,6 +54,7 @@ import { BUILT_IN_ACTIVITY_TYPES, BUILT_IN_RENAMES, ESTIMATE_DEFAULT_TYPE_KEY } 
 import { nowTimestamp } from './clock';
 import { createPlanner } from './ensurePlanned';
 import { noteLocalChange } from './localChange';
+import { normalizeLink } from '../domain/link';
 import { AppDB, db as defaultDb } from './schema';
 
 /** Seuran tietojen muutos (repo.saveClub): vain annetut kentät muuttuvat. */
@@ -119,6 +120,8 @@ export interface FootballDetailsInput {
   eventName?: string;
   gamesCount?: number;
   games?: GameResult[];
+  /** Linkki pelin tai turnauksen tietoihin (ei treenille). */
+  link?: string;
   /** Pelin tai turnauksen pelatut minuutit (laskentapohja); turnauksessa pelirivien summa voittaa. */
   playedMin?: number;
   /** Oma joukkue (linkki) ja taso; taso säätää ponnistelun (Elite kovempi, Haaste kevyempi). */
@@ -160,6 +163,8 @@ export interface FixtureInput {
   /** "Tietoja puuttuu" ja valinnainen kuvaus. */
   infoMissing?: boolean;
   missingNote?: string;
+  /** Linkki pelin tai turnauksen tietoihin; virheellinen jätetään pois (lomake tarkistaa). */
+  link?: string;
 }
 
 export interface FixtureEntry {
@@ -1045,6 +1050,7 @@ export function createRepositories(db: AppDB = defaultDb) {
           if (format) fd.format = format;
           if (fixture.opponent) fd.opponent = fixture.opponent;
           if (fixture.eventName) fd.eventName = fixture.eventName;
+          if (fixture.link) fd.link = fixture.link;
           if (fixture.gamesCount) fd.gamesCount = fixture.gamesCount;
           // Otteluohjelmasta valmiit pelirivit: tulos ja kommentti kirjataan pelien jälkeen.
           if (fixture.games?.length) {
@@ -1103,6 +1109,7 @@ export function createRepositories(db: AppDB = defaultDb) {
       enjoyment: fd?.enjoyment,
       ratingNote: fd?.ratingNote,
       eventName: fd?.eventName,
+      link: fd?.link,
       games,
     });
     return { sessionId, created };
@@ -1209,6 +1216,8 @@ export function createRepositories(db: AppDB = defaultDb) {
       }
       let warmupMin = session.warmupMin;
       if (type.footballKind !== 'training') {
+        const link = normalizeLink(input.link);
+        if (link) d.link = link;
         set('level', input.level);
         if (isGameFormat(input.format)) d.format = input.format;
         const positions = POSITIONS.filter((p) => input.positions?.includes(p));
@@ -1659,6 +1668,8 @@ export function createRepositories(db: AppDB = defaultDb) {
       const m = clean(input.missingNote);
       if (m) f.missingNote = m.slice(0, 120);
     }
+    const link = normalizeLink(input.link);
+    if (link) f.link = link;
     return f;
   }
 

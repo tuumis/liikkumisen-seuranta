@@ -191,6 +191,11 @@ export const IconTrophy = (p: IconProps) => (
     <path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v3.5M8.5 20h7M9.5 20l.5-3.5h4l.5 3.5" />
   </svg>
 );
+export const IconExternal = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M13.5 4.5h6v6M19.5 4.5 11 13M17.5 14v3.5a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2H10" />
+  </svg>
+);
 export const IconExpand = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M14 4h6v6M10 20H4v-6M20 4l-6.5 6.5M4 20l6.5-6.5" />

@@ -27,6 +27,7 @@ import { goalsLabel } from '../../ui/labels';
 import { resultLine } from './FootballSection';
 import { useFootball } from './useFootball';
 import { IconShare } from '../../ui/icons';
+import { InfoLink } from '../../ui/InfoLink';
 import { openResultShare } from '../share/ResultShare';
 
 const ALL = '';
@@ -167,6 +168,7 @@ export function GamesView({ profile, onBack }: { profile: Profile; onBack?: () =
               {g.title && (
                 <div className="mb-1 flex items-center gap-2">
                   <span className="min-w-0 flex-1 text-xs font-semibold uppercase tracking-wide text-slate-500">🏆 {g.title}</span>
+                  {g.rows[0].link && <InfoLink href={g.rows[0].link} compact />}
                   {g.rows.some((r) => r.outcome) && <ShareButton sessionId={g.rows[0].sessionId} />}
                 </div>
               )}
@@ -187,7 +189,10 @@ export function GamesView({ profile, onBack }: { profile: Profile; onBack?: () =
           <ul className="space-y-2">
             {friendlyGroups.map((g) => (
               <li key={g.key}>
-                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">🤝 Harjoituspeli · {dayLabel(g.rows[0].date)}</div>
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="min-w-0 flex-1 text-xs font-semibold uppercase tracking-wide text-slate-500">🤝 Harjoituspeli · {dayLabel(g.rows[0].date)}</span>
+                  {g.rows[0].link && <InfoLink href={g.rows[0].link} compact />}
+                </div>
                 <ul className="border-l-2 border-slate-200 pl-2">
                   {g.rows.map((r) => (
                     <GameLine key={`${r.sessionId}:${r.index ?? 0}`} r={r} showDate={false} />
@@ -246,6 +251,7 @@ function GameLine({ r, showDate }: { r: GameRow; showDate: boolean }) {
       </span>
       <span className={`shrink-0 text-sm tabular-nums ${r.outcome ? 'font-semibold text-slate-900' : 'text-slate-500'}`}>{res}</span>
       {r.outcome && !friendly && <span className="w-6 shrink-0 rounded bg-slate-100 text-center text-xs font-semibold text-slate-700">{OUTCOME_LABEL[r.outcome]}</span>}
+      {showDate && r.link && <InfoLink href={r.link} compact />}
       {showDate && r.outcome && !friendly && <ShareButton sessionId={r.sessionId} />}
     </li>
   );

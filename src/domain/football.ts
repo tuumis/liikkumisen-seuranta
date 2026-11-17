@@ -125,6 +125,8 @@ export interface GameRow {
   games: number;
   level?: GameLevel;
   teamId?: UUID;
+  /** Pelin tai turnauksen linkki (17.11.2026). */
+  link?: string;
   /** Turnauksen pelin kellonaika ja kommentti. */
   time?: string;
   note?: string;
@@ -190,6 +192,7 @@ export function gameRows(sessions: Session[], details: Map<UUID, FootballDetails
     const fd = d && !d.deletedAt ? d : undefined;
     const team = cleanName(fd?.team);
     const extra = {
+      ...(fd?.link ? { link: fd.link } : {}),
       ...(fd?.level ? { level: fd.level } : {}),
       ...(fd?.teamId ? { teamId: fd.teamId } : {}),
       ...(fd?.format ? { format: fd.format } : {}),
@@ -268,6 +271,7 @@ export function friendlyRows(sessions: Session[], details: Map<UUID, FootballDet
       date: s.date,
       kind: 'friendly' as const,
       team: cleanName(fd?.team),
+      ...(fd?.link ? { link: fd.link } : {}),
       ...(fd?.level ? { level: fd.level } : {}),
       ...(fd?.teamId ? { teamId: fd.teamId } : {}),
       ...(fd?.format ? { format: fd.format } : {}),

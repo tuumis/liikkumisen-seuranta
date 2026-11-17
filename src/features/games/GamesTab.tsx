@@ -27,6 +27,7 @@ import { OpponentLibrary } from './TeamLibrary';
 import { TeamNameFields, useTeamNameSuggestions } from './TeamNameFields';
 import { FootballHero } from './FootballHero';
 import { IconPlus, IconShare } from '../../ui/icons';
+import { InfoLink } from '../../ui/InfoLink';
 import { openPreviewShare } from '../share/PreviewShare';
 import { playSound } from '../../ui/sound';
 
@@ -221,10 +222,11 @@ function CalendarView({ profile, onEdit }: { profile: Profile; onEdit: (e: Fixtu
                       />
                     </div>
                   ) : (
-                    <div className="mt-2 flex gap-2">
+                    <div className="mt-2 flex items-center gap-2">
                       <Button className="flex-1" onClick={() => record(e)}>
                         Kirjaa tulos
                       </Button>
+                      {e.fixture?.link && <InfoLink href={e.fixture.link} compact />}
                       <Button variant="secondary" onClick={() => setSkipping(e.plan.id)}>
                         Ei pelattu
                       </Button>
@@ -347,14 +349,17 @@ function FixtureRow({ e, team, today, history, onClick }: { e: FixtureEntry; tea
         </div>
         <span className="shrink-0 self-start text-xs text-slate-500">{days === 0 ? 'tänään' : days === 1 ? 'huomenna' : `${days} pv`}</span>
       </button>
-      <button
-        type="button"
-        onClick={() => openPreviewShare(e.plan.id)}
-        className="press absolute bottom-2 right-2 inline-flex min-h-9 items-center gap-1.5 rounded-full bg-[var(--surface-raised)] px-3 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:text-slate-900"
-        title="Ennakko kuvana (esim. Instagram)"
-      >
-        <IconShare size="0.9rem" /> Ennakko
-      </button>
+      <div className="absolute bottom-2 right-2 flex items-center gap-2">
+        {e.fixture?.link && <InfoLink href={e.fixture.link} />}
+        <button
+          type="button"
+          onClick={() => openPreviewShare(e.plan.id)}
+          className="press inline-flex min-h-9 items-center gap-1.5 rounded-full bg-[var(--surface-raised)] px-3 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:text-slate-900"
+          title="Ennakko kuvana (esim. Instagram)"
+        >
+          <IconShare size="0.9rem" /> Ennakko
+        </button>
+      </div>
     </li>
   );
 }
