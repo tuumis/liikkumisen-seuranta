@@ -99,10 +99,11 @@ export function TeamNameFields({
     </label>
   );
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1fr)]">
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-end gap-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1fr)]">
       {field('club', 'Seura', compact ? 'Seura, esim. FC Honka' : 'esim. FC Honka', 40, suggestions?.clubs, 'col-span-2 sm:col-span-1')}
       {field('group', 'Ryhmä', compact ? 'Ryhmä' : 'esim. Musta', 30, suggestions?.groups.get(k))}
-      {field('age', 'Ikäluokka (syntymävuosi)', compact ? 'Syntymävuosi' : 'esim. 2018', 12, suggestions?.ages.get(k))}
+      {/* Lyhyt otsikko: pitkä "Ikäluokka (syntymävuosi)" rivittyi ja laski kentän muita alemmas (17.11.2026). */}
+      {field('age', 'Ikäluokka', compact ? 'Syntymävuosi' : 'syntymävuosi, esim. 2018', 12, suggestions?.ages.get(k))}
     </div>
   );
 }

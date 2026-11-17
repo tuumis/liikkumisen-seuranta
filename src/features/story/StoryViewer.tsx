@@ -137,7 +137,7 @@ function StoryViewer({ profile, onClose }: { profile: Profile; onClose: () => vo
     const file = new File([blob], fileName(), { type: 'image/png' });
     if (!navigator.canShare?.({ files: [file] })) return save();
     try {
-      await navigator.share({ files: [file], title: 'Kauden kooste' });
+      await navigator.share({ files: [file] }); // ei otsikkoa: iOS tallentaisi sen erilliseksi text-tiedostoksi
     } catch {
       /* peruttu */
     }

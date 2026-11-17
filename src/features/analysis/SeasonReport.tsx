@@ -15,6 +15,7 @@ import { formatDate } from '../../ui/format';
 import { FOCUS_TAG_LABEL, MOVEMENT_GROUP_LABEL } from '../../ui/labels';
 import { today as todayFn } from '../../ui/today';
 import { DAY_BAR_TARGET } from '../week/WeekView';
+import { currentReportPalette } from './reportPalette';
 
 const pct = (x: number | null | undefined) => (x === null || x === undefined ? '–' : `${Math.round(x * 100)} %`);
 const min = (x: number | null | undefined) => (x === null || x === undefined ? '–' : `${Math.round(x)} min/pv`);
@@ -52,6 +53,8 @@ export function SeasonReport({ profile, s, p, onClose }: { profile: Profile; s: 
   const maxBucket = Math.max(target, ...s.buckets.map((b) => b.mvpaCombined));
   const count = (x: LongTermSummary) => x.byType.reduce((a, t) => a + t.count, 0);
   const created = formatDate(todayFn(), 'd.M.yyyy');
+  // Aina vaalea paperi myös tummassa teemassa; kaaviovärit kuten sovelluksessa (17.11.2026).
+  const pal = useMemo(currentReportPalette, []);
 
   useEffect(() => {
     document.body.classList.add('print-report-open');
@@ -82,13 +85,13 @@ export function SeasonReport({ profile, s, p, onClose }: { profile: Profile; s: 
   const tags = fb ? (Object.entries(fb.tags.counts) as [keyof typeof FOCUS_TAG_LABEL, number][]).sort((a, b) => b[1] - a[1]).slice(0, 5) : [];
 
   return createPortal(
-    <div className="print-report fixed inset-0 z-[80] overflow-y-auto bg-[#d9d6cc]/95" role="dialog" aria-modal="true" aria-label={`Raportti ${name}`}>
-      <div className="print-hide sticky top-0 z-10 flex flex-wrap items-center gap-2 bg-[#26342e] px-4 py-3 text-white shadow-lg">
+    <div className="print-report fixed inset-0 z-[80] overflow-y-auto bg-[#d9d6cc]/95 [color-scheme:light]" role="dialog" aria-modal="true" aria-label={`Raportti ${name}`}>
+      <div className="print-hide sticky top-0 z-10 flex flex-wrap items-center gap-2 px-4 py-3 text-[#ffffff] shadow-lg" style={{ background: pal.header }}>
         <div className="min-w-0 flex-1 text-sm font-semibold">Raportti · {name}</div>
-        <button type="button" onClick={print} className="press min-h-10 rounded-xl bg-white px-4 text-sm font-bold text-[#26342e]">
+        <button type="button" onClick={print} className="press min-h-10 rounded-xl bg-[#ffffff] px-4 text-sm font-bold" style={{ color: pal.header }}>
           Tulosta / tallenna PDF
         </button>
-        <button type="button" onClick={onClose} className="min-h-10 rounded-xl px-3 text-sm font-semibold text-white/90 ring-1 ring-white/30 hover:bg-white/10">
+        <button type="button" onClick={onClose} className="min-h-10 rounded-xl px-3 text-sm font-semibold text-[#ffffff]/90 ring-1 ring-[#ffffff]/30 hover:bg-[#ffffff]/10">
           Sulje
         </button>
       </div>
@@ -96,7 +99,7 @@ export function SeasonReport({ profile, s, p, onClose }: { profile: Profile; s: 
         Valitse tulostusikkunassa kohteeksi ”Tallenna PDF-muodossa”, jos haluat tiedoston. Raportti muodostetaan tällä laitteella.
       </p>
 
-      <article className="report-paper mx-auto my-4 max-w-[210mm] bg-white px-6 py-7 text-[13px] leading-relaxed text-[#26342e] shadow-xl sm:px-10">
+      <article className="report-paper mx-auto my-4 max-w-[210mm] bg-[#ffffff] px-6 py-7 text-[13px] leading-relaxed text-[#26342e] shadow-xl sm:px-10">
         <header className="border-b-2 border-[#26342e] pb-3">
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#5a645d]">Liikkumisen seuranta · raportti</div>
           <h1 className="font-display text-2xl font-semibold">
@@ -136,8 +139,8 @@ export function SeasonReport({ profile, s, p, onClose }: { profile: Profile; s: 
                   <td className="py-1 pr-2">
                     {b.validDays > 0 && (
                       <div className="relative h-2.5 rounded-sm bg-[#efede6]">
-                        <div className="absolute inset-y-0 left-0 rounded-sm bg-[#e6c9a3]" style={{ width: `${(b.mvpaCombined / maxBucket) * 100}%` }} />
-                        <div className="absolute inset-y-0 left-0 rounded-sm bg-[#127a4e]" style={{ width: `${(b.mvpaLogged / maxBucket) * 100}%` }} />
+                        <div className="absolute inset-y-0 left-0 rounded-sm" style={{ background: pal.estimate, width: `${(b.mvpaCombined / maxBucket) * 100}%` }} />
+                        <div className="absolute inset-y-0 left-0 rounded-sm" style={{ background: pal.logged, width: `${(b.mvpaLogged / maxBucket) * 100}%` }} />
                         <div className="absolute inset-y-[-3px] w-px bg-[#26342e]" style={{ left: `${(target / maxBucket) * 100}%` }} />
                       </div>
                     )}
@@ -148,7 +151,7 @@ export function SeasonReport({ profile, s, p, onClose }: { profile: Profile; s: 
               ))}
             </tbody>
           </table>
-          <p className="mt-1 text-[11px] text-[#5a645d]">Tumma palkki kirjattu, vaalea arkiliikunnan arvio, pystyviiva suositus.</p>
+          <p className="mt-1 text-[11px] text-[#5a645d]">Teeman värinen palkki kirjattu, oranssi arkiliikunnan arvio, pystyviiva suositus.</p>
         </Section>
 
         <Section title={hasPrev ? `Vertailu: ${prevName}` : 'Vertailu'}>

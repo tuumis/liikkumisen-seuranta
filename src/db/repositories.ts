@@ -48,7 +48,7 @@ import type {
   UUID,
   Weekday, SessionPart } from '../domain/types';
 import { isClubFootball, isGameFormat, LEVEL_EFFORT, POSITIONS } from '../domain/football';
-import { BUILT_IN_ACTIVITY_TYPES } from '../seed/activityTypes';
+import { BUILT_IN_ACTIVITY_TYPES, BUILT_IN_RENAMES, ESTIMATE_DEFAULT_TYPE_KEY } from '../seed/activityTypes';
 import { nowTimestamp } from './clock';
 import { createPlanner } from './ensurePlanned';
 import { noteLocalChange } from './localChange';
@@ -235,6 +235,11 @@ export function createRepositories(db: AppDB = defaultDb) {
         shares: { ...t.shares },
       }));
       if (missing.length) await db.activityTypes.bulkAdd(missing);
+      // Nimimuutokset: vain jos nimi on yhä vanha (idempotentti; synkronoituu tavalliseen tapaan).
+      for (const t of existing) {
+        const name = t?.builtIn ? BUILT_IN_RENAMES[t.name] : undefined;
+        if (t && name) await db.activityTypes.put(await stamp({ ...t, name }));
+      }
     });
   }
 
@@ -1632,6 +1637,67 @@ export function createRepositories(db: AppDB = defaultDb) {
     else if (!e.validTo || e.validTo >= today) await db.estimates.put(await stamp({ ...e, validTo: addDays(today, -1) }));
   }
 
+  /**
+   * Arvion kategorian vaihto koko historiaan (SPEC 16, 17.11.2026): esim. "Muu"-kategoriaan tehty
+   * päiväkotiarvio siirretään Päiväkoti-kategoriaan. Jos kohdekategorialla on päällekkäinen arvio,
+   * uudempi alkamispäivä voittaa: siirretty päättyy uudemman alkua edeltävään päivään (tai väistää
+   * kokonaan), ja vanhempi kohdekategorian arvio päättyy siirretyn alkua edeltävään päivään.
+   * Siirretyn arvion vahvistukset siirtyvät mukaan kohdekategorian oletuslajiin minuutteineen; jos
+   * päivälle on jo kohdekategorian vahvistus, vanha (päällekkäinen) vahvistus poistetaan.
+   */
+  async function changeEstimateCategory(id: UUID, category: Category): Promise<{ moved: number; removed: number; validTo?: ISODate; dropped: boolean }> {
+    return db.transaction('rw', [db.estimates, db.sessions, db.activityTypes, db.meta], async () => {
+      const e = await db.estimates.get(id);
+      if (!e || e.deletedAt) throw new Error('Arviota ei löydy');
+      if (e.category === category) return { moved: 0, removed: 0, validTo: e.validTo, dropped: false };
+      const targetType = await db.activityTypes.get(activityTypeId(ESTIMATE_DEFAULT_TYPE_KEY[category]));
+      if (!targetType) throw new Error('Kohdekategorian lajia ei löydy');
+      // Alkuperäiset voimassaolot (vahvistusten kohdistus tehdään niillä).
+      const all = await listEstimates(e.profileId);
+      const fromCat = e.category;
+
+      // Päällekkäisyydet kohdekategorian kanssa: uudempi alkamispäivä voittaa.
+      let validTo = e.validTo;
+      let dropped = false;
+      for (const o of all) {
+        if (o.category !== category || o.id === e.id) continue;
+        const oEnd = o.validTo ?? '9999-12-31';
+        const eEnd = validTo ?? '9999-12-31';
+        if (o.validFrom > eEnd || e.validFrom > oEnd) continue; // ei päällekkäin
+        if (o.validFrom >= e.validFrom) {
+          if (o.validFrom === e.validFrom) dropped = true;
+          else validTo = addDays(o.validFrom, -1);
+        } else {
+          await db.estimates.put(await stamp({ ...o, validTo: addDays(e.validFrom, -1) }));
+        }
+      }
+      if (dropped) await softDelete(db.estimates, e.id);
+      else await db.estimates.put(await stamp({ ...e, category, ...(validTo ? { validTo } : {}) }));
+
+      // Vahvistukset: ne, jotka kohdistuivat juuri tähän arvioon.
+      const types = new Map((await db.activityTypes.toArray()).map((t) => [t.id, t]));
+      const sessions = live(await db.sessions.where('profileId').equals(e.profileId).toArray());
+      const targetConfirmed = new Set(
+        sessions.filter((s) => isEstimateConfirmation(s) && types.get(s.activityTypeId)?.category === category).map((s) => s.date),
+      );
+      let moved = 0;
+      let removed = 0;
+      for (const s of sessions) {
+        if (!isEstimateConfirmation(s) || types.get(s.activityTypeId)?.category !== fromCat) continue;
+        if (activeEstimate(all, fromCat, s.date)?.id !== e.id) continue;
+        if (targetConfirmed.has(s.date)) {
+          await softDelete(db.sessions, s.id);
+          removed++;
+        } else {
+          await db.sessions.put(await stamp({ ...s, activityTypeId: targetType.id, estimateConfirmed: true }));
+          targetConfirmed.add(s.date);
+          moved++;
+        }
+      }
+      return { moved, removed, validTo: dropped ? undefined : validTo, dropped };
+    });
+  }
+
   // ---------- päivämerkinnät ----------
 
   async function dayFlagsInRange(profileId: UUID, from: ISODate, to: ISODate): Promise<DayFlag[]> {
@@ -1767,6 +1833,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     saveEstimate,
     correctEstimate,
     endEstimate,
+    changeEstimateCategory,
     dayFlagsInRange,
     setDayFlag,
     clearDayFlag,

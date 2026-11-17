@@ -200,6 +200,7 @@ function EstimateForm({ profile, draft, onDone }: { profile: Profile; draft: Dra
           </select>
         </Field>
       )}
+      {e && <CategoryChange estimate={e} profileId={profile.id} onDone={onDone} />}
       {e && (
         <div>
           <div className="mb-1 text-sm font-medium text-slate-700">Muutos koskee</div>
@@ -257,6 +258,79 @@ function EstimateForm({ profile, draft, onDone }: { profile: Profile; draft: Dra
         )}
       </div>
     </form>
+  );
+}
+
+/**
+ * Kategorian vaihto koko historiaan (SPEC 16, 17.11.2026): esim. Muu-kategoriaan tehty päiväkotiarvio
+ * siirretään Päiväkoti-kategoriaan. Päällekkäisestä kohdekategorian arviosta uudempi voittaa, ja
+ * vahvistukset siirtyvät mukaan (saman päivän päällekkäinen vahvistus poistetaan).
+ */
+function CategoryChange({ estimate: e, profileId, onDone }: { estimate: Estimate; profileId: string; onDone: () => void }) {
+  const today = todayFn();
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [target, setTarget] = useState<Category | ''>('');
+  const [error, setError] = useState<string>();
+  const others = useLiveQuery(() => repo.activeEstimates(profileId, today), [profileId, today]);
+  const clash = target ? others?.find((o) => o.category === target && o.id !== e.id) : undefined;
+
+  async function apply() {
+    if (!target) return setError('Valitse kategoria');
+    try {
+      const r = await repo.changeEstimateCategory(e.id, target);
+      const parts = [`Arvio siirretty: ${CATEGORY_LABEL[target]}`];
+      if (r.moved) parts.push(`${r.moved} vahvistusta siirretty`);
+      if (r.removed) parts.push(`${r.removed} päällekkäistä poistettu`);
+      toast(parts.join(' · '));
+      onDone();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  if (!open) {
+    return (
+      <p className="flex flex-wrap items-center gap-x-2 text-sm text-slate-700">
+        <span>
+          Kategoria: <strong>{CATEGORY_LABEL[e.category]}</strong>
+        </span>
+        <button type="button" className="min-h-11 font-medium text-green-800 underline underline-offset-2" onClick={() => setOpen(true)}>
+          Vaihda kategoria (koko historia)
+        </button>
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-2 rounded-xl bg-[var(--surface-sunk)] p-3 ring-1 ring-slate-200">
+      <Field label={`Siirrä kategoriasta ${CATEGORY_LABEL[e.category]}`} hint="Koskee koko arviota alkamispäivästä lähtien, myös aiempia päiviä ja niiden vahvistuksia.">
+        <select className={inputClass} value={target} onChange={(ev) => (setTarget(ev.target.value as Category), setError(undefined))}>
+          <option value="">Valitse kategoria</option>
+          {(Object.keys(CATEGORY_LABEL) as Category[])
+            .filter((c) => c !== e.category)
+            .map((c) => (
+              <option key={c} value={c}>
+                {CATEGORY_LABEL[c]}
+              </option>
+            ))}
+        </select>
+      </Field>
+      {clash && (
+        <p className="text-xs leading-relaxed text-slate-700">
+          Kategoriassa on jo arvio <strong>{clash.label}</strong> ({formatDate(clash.validFrom, 'd.M.yyyy')} alkaen). Arviot yhdistetään: uudempi on voimassa omasta
+          alkamispäivästään, vanhempi päättyy sitä edeltävään päivään, eikä sama liikkuminen enää näy kahdesti. Saman päivän päällekkäiset vahvistukset poistetaan.
+        </p>
+      )}
+      {error && <p className="text-sm text-red-700">{error}</p>}
+      <div className="flex gap-2">
+        <Button className="flex-1" onClick={() => void apply()}>
+          Siirrä
+        </Button>
+        <Button variant="secondary" onClick={() => setOpen(false)}>
+          Peruuta
+        </Button>
+      </div>
+    </div>
   );
 }
 

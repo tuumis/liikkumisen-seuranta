@@ -6,7 +6,7 @@ import { weekPeriod } from './dates';
 import { activityTypeId } from './ids';
 import { DEFAULT_SETTINGS } from './recommendations';
 import { estimate, planned, profile, session, typesMap } from './test-helpers';
-import { aboutMinutes, num1, percent, statusSentence } from '../ui/statusText';
+import { aboutMinutes, num1, percent, statusSentence, statusShort } from '../ui/statusText';
 import { measure } from './aggregate';
 
 const WEEK = weekPeriod('2026-11-11'); // ma 9.11. – su 15.11.
@@ -106,6 +106,16 @@ describe('tilan sanoitus (7.7)', () => {
     expect(statusSentence(near, aboutMinutes(near, 'min/pv'))).toBe('Lähellä suositusta – puuttui noin 8 min/pv');
     expect(statusSentence(measure(30, 60), '')).toBe('Tällä viikolla vähemmän kuin suositus');
     expect(statusSentence(measure(30, 60), '', 'month')).toBe('Tässä kuussa vähemmän kuin suositus');
+  });
+
+  it('kesken oleva viikko kertoo tahdin, ei täyttymistä (17.11.2026)', () => {
+    expect(statusSentence(measure(60, 60), '', 'week', true)).toBe('Tahdissa suositukseen');
+    const near = measure(52, 60);
+    expect(statusSentence(near, aboutMinutes(near, 'min/pv'), 'week', true)).toBe('Lähellä tahtia – puuttuu noin 8 min/pv');
+    expect(statusSentence(measure(30, 60), '', 'week', true)).toBe('Alle suosituksen tahdin');
+    expect(statusShort(measure(60, 60), true)).toBe('Tahdissa');
+    expect(statusShort(measure(60, 60), false)).toBe('Suositus täyttyi');
+    expect(statusShort(measure(30, 60), true)).toBe('Alle tahdin');
   });
 
   it('luvut', () => {

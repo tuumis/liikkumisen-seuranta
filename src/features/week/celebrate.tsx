@@ -48,7 +48,8 @@ export function useMetStreak(profile: Profile, weekStart: ISODate, enabled: bool
   }, [enabled, data, profile, weekStart, today]);
 }
 
-const KEY = 'celebratedWeeks';
+// Uusi avain 17.11.2026: juhlistus vasta täydestä viikosta (vanha avain on voinut kuluttaa kuluvan viikon kesken viikon).
+const KEY = 'celebratedFullWeeks';
 
 function readCelebrated(): Record<string, ISODate> {
   try {

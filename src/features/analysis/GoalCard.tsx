@@ -12,10 +12,11 @@ import { DEFAULT_SETTINGS } from '../../domain/recommendations';
 import { EstimateBadge, EmptyState } from '../../ui/components';
 import { formatDate } from '../../ui/format';
 import { GROUP_LABEL } from '../../ui/labels';
+import { today as todayFn } from '../../ui/today';
 import { aboutMinutes, num1, percent, STATUS_CLASS, statusSentence } from '../../ui/statusText';
 
-function StatusChip({ m, shortfall, kind }: { m: Measure; shortfall: string; kind: PeriodReport['period']['kind'] }) {
-  return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASS[m.status]}`}>{statusSentence(m, shortfall, kind)}</span>;
+function StatusChip({ m, shortfall, kind, inProgress }: { m: Measure; shortfall: string; kind: PeriodReport['period']['kind']; inProgress: boolean }) {
+  return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASS[m.status]}`}>{statusSentence(m, shortfall, kind, inProgress)}</span>;
 }
 
 const pick = (d: DualMeasure, s: Settings) => (s.primaryView === 'logged' ? d.logged : d.combined);
@@ -25,6 +26,8 @@ export function GoalCard({ report, variant }: { report: PeriodReport; variant: '
   const { evaluation: ev, group, period } = report;
   const full = variant === 'full';
   const kind = period.kind;
+  // Kesken oleva jakso: tila kertoo tahdin, "täyttyi" vasta kun kaikki päivät ovat mukana.
+  const inProgress = period.end > todayFn();
   const q = ev.quality;
   const hasEstimate = report.days.some((d) => d.estimateAvailable);
   const primaryLabel = settings.primaryView === 'logged' ? 'kirjattu' : hasEstimate ? 'kirjattu + perusarvio' : 'kirjattu';
@@ -75,7 +78,7 @@ export function GoalCard({ report, variant }: { report: PeriodReport; variant: '
           <span className="text-sm text-slate-700">min/pv</span>
           <EstimateBadge />
         </div>
-        <StatusChip m={main} shortfall={aboutMinutes(main, 'min/pv')} kind={kind} />
+        <StatusChip m={main} shortfall={aboutMinutes(main, 'min/pv')} kind={kind} inProgress={inProgress} />
         {both(s.mvpaAvg, 'min/pv')}
         <p className="text-sm text-slate-800">
           Rasittava (≥ {report.vigorousDay.min} min) {s.vigorousDays.actual}/{r.vigorousDaysPerWeek.value} · Lihas {s.muscleDays.actual}/{r.muscleDaysPerWeek.value} · Luusto {s.boneDays.actual}/
@@ -111,7 +114,7 @@ export function GoalCard({ report, variant }: { report: PeriodReport; variant: '
           <span className="text-sm text-slate-700">päivänä</span>
           <EstimateBadge />
         </div>
-        <StatusChip m={main} shortfall={`${missing} ${missing === 1 ? 'päivä' : 'päivää'}`} kind={kind} />
+        <StatusChip m={main} shortfall={`${missing} ${missing === 1 ? 'päivä' : 'päivää'}`} kind={kind} inProgress={inProgress} />
         <p className="text-sm text-slate-800">
           Liikkumista ka. {num1(pick(e.totalAvg, settings).actual)} / {r.totalMinPerDay.value} min/pv · vauhdikasta ka. {num1(pick(e.mvpaAvg, settings).actual)} /{' '}
           {r.mvpaMinPerDay.value} min/pv
@@ -157,7 +160,7 @@ export function GoalCard({ report, variant }: { report: PeriodReport; variant: '
             Tavoite tähän mennessä ({ev.n}/7 pv); koko viikolla {r.weightedMinPerWeek.value} min.
           </p>
         )}
-        <StatusChip m={main} shortfall={aboutMinutes(main, 'min')} kind={kind} />
+        <StatusChip m={main} shortfall={aboutMinutes(main, 'min')} kind={kind} inProgress={inProgress} />
         {both(a.weighted, 'min')}
         <p className="text-sm text-slate-800">
           Lihaskunto ja liikehallinta {a.muscleDays.actual}/{r.muscleDaysPerWeek.value} päivää

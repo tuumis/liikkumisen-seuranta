@@ -25,7 +25,8 @@ export function GoalSound({ profile }: { profile: Profile }) {
   const prev = useRef<{ key: string; days: number; week: boolean } | null>(null);
 
   const days = report ? report.allDays.filter((d) => d.date <= today && dayGoalMet(report.group.group, d)).length : -1;
-  const week = !!report && report.evaluation.evaluable && weekModel(report, settings).main?.m.status === 'met';
+  // Viikon suositus soi vasta täydestä viikosta (sunnuntaina), ei kesken viikon tahdista.
+  const week = !!report && period.end <= today && report.evaluation.evaluable && weekModel(report, settings).main?.m.status === 'met';
   const key = `${profile.id}|${period.start}`;
 
   useEffect(() => {

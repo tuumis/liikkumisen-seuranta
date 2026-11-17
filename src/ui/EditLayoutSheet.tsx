@@ -17,6 +17,7 @@ export function EditLayoutSheet<Id extends string>({
   intro,
   api,
   columns = false,
+  unavailable,
 }: {
   open: boolean;
   onClose: () => void;
@@ -25,6 +26,8 @@ export function EditLayoutSheet<Id extends string>({
   api: CardLayoutApi<Id>;
   /** Näytä PC:llä valinta pää- tai sivupalstasta. */
   columns?: boolean;
+  /** Kortit, jotka eivät koske valittua profiilia: näytetään himmennettyinä syyn kanssa, ei valittavissa. */
+  unavailable?: Partial<Record<Id, string>>;
 }) {
   const { cards, layout, toggle, move, setSide, reset } = api;
   return (
@@ -33,17 +36,19 @@ export function EditLayoutSheet<Id extends string>({
       <ul className="space-y-2">
         {layout.order.map((id, i) => {
           const c = cards.find((x) => x.id === id)!;
-          const on = c.locked || !layout.hidden.includes(id);
+          const reason = unavailable?.[id];
+          const on = !reason && (c.locked || !layout.hidden.includes(id));
           const side = layout.side.includes(id);
           return (
             <li key={id} className={`flex flex-wrap items-center gap-2 rounded-2xl p-2 pl-3 ${on ? 'card' : 'card-sunk opacity-70'}`}>
-              <label className={`flex min-w-0 flex-1 items-center gap-3 ${c.locked ? '' : 'cursor-pointer'}`}>
-                <input type="checkbox" className="size-5 shrink-0 accent-green-700 disabled:opacity-50" checked={on} disabled={c.locked} onChange={() => toggle(id)} />
+              <label className={`flex min-w-0 flex-1 items-center gap-3 ${c.locked || reason ? '' : 'cursor-pointer'}`}>
+                <input type="checkbox" className="size-5 shrink-0 accent-green-700 disabled:opacity-50" checked={on} disabled={c.locked || !!reason} onChange={() => toggle(id)} />
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold text-slate-900">{c.title}</span>
                   <span className="block text-xs leading-snug text-slate-500">
                     {c.text}
                     {c.locked && ' · aina näkyvissä'}
+                    {reason && <span className="block font-semibold text-slate-600">{reason}</span>}
                   </span>
                 </span>
               </label>

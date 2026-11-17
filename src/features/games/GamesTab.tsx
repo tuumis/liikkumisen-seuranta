@@ -68,7 +68,7 @@ export function GamesTab({ profile }: { profile?: Profile }) {
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           {(
             [
-              ['game', '🥅', 'Tuleva peli', 'Yksi ottelu: päivä, kellonaika, vastustaja ja taso.'],
+              ['game', '⚽', 'Tuleva peli', 'Yksi ottelu: päivä, kellonaika, vastustaja ja taso.'],
               ['tournament', '🏆', 'Tuleva turnaus', 'Useita pelejä: otteluohjelma valmiiksi, tulokset pelien jälkeen.'],
             ] as const
           ).map(([kind, icon, title, text]) => (

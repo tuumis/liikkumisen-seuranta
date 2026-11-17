@@ -8,7 +8,8 @@ import type { PeriodReport } from '../../domain/report';
 import type { DualMeasure, Measure, Profile, Settings } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { GROUP_LABEL } from '../../ui/labels';
-import { aboutMinutes, num1, statusSentence } from '../../ui/statusText';
+import { aboutMinutes, num1, statusShort, statusSentence } from '../../ui/statusText';
+import { today as todayFn } from '../../ui/today';
 import { useCountUp } from '../../ui/motion';
 import { ProgressRing } from '../../ui/ProgressRing';
 import { IconPlus } from '../../ui/icons';
@@ -98,7 +99,10 @@ export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: Pe
   const ev = report.evaluation;
   const shown = useCountUp(main ? main.value : 0);
   const decimals = main && main.unit.startsWith('min / päivä') ? 0 : 0;
-  const met = !!main && ev.evaluable && main.m.status === 'met';
+  // Viikko on täysi, kun sen kaikki päivät ovat mukana (sunnuntaina ja sen jälkeen). Kesken viikon
+  // tila kertoo tahdin; "Suositus täyttyi", putki ja juhlistus vasta täydestä viikosta (17.11.2026).
+  const inProgress = report.period.end > todayFn();
+  const met = !!main && ev.evaluable && main.m.status === 'met' && !inProgress;
   const streak = useMetStreak(profile, report.period.start, met);
   const party = useCelebrateOnce(profile.id, report.period.start, met && isCurrentWeek);
 
@@ -111,7 +115,7 @@ export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: Pe
           </div>
           {main && ev.evaluable && (
             <span className={`anim-pop shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${PILL[main.m.status]}`} style={{ animationDelay: '0.9s' }}>
-              {ICON[main.m.status]} {main.m.status === 'met' ? 'Suositus täyttyi' : main.m.status === 'near' ? 'Lähellä' : 'Alle suosituksen'}
+              {ICON[main.m.status]} {statusShort(main.m, inProgress)}
               {met && streak >= 2 && <span className="font-semibold opacity-80"> · {streak} vk putkeen</span>}
             </span>
           )}
@@ -147,7 +151,7 @@ export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: Pe
               <div className="min-w-0 sm:hidden">
                 <div className="text-sm font-semibold leading-snug">{main.label}</div>
                 <div className="mt-1 text-xs text-[var(--hero-ink-soft)]">{main.target}</div>
-                <div className="mt-2 text-xs leading-snug text-[var(--hero-ink-soft)]">{statusSentence(main.m, main.shortfall, report.period.kind)}</div>
+                <div className="mt-2 text-xs leading-snug text-[var(--hero-ink-soft)]">{statusSentence(main.m, main.shortfall, report.period.kind, inProgress)}</div>
               </div>
             </div>
 
@@ -155,7 +159,7 @@ export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: Pe
               <div className="hidden sm:block">
                 <div className="font-display text-xl font-semibold leading-snug lg:text-2xl">{main.label}</div>
                 <div className="mt-1 text-sm text-[var(--hero-ink-soft)]">
-                  {statusSentence(main.m, main.shortfall, report.period.kind)} · {main.target}
+                  {statusSentence(main.m, main.shortfall, report.period.kind, inProgress)} · {main.target}
                 </div>
               </div>
               <dl className="grid grid-cols-3 gap-2 sm:mt-5 sm:gap-3">

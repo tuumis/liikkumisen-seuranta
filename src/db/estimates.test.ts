@@ -124,3 +124,59 @@ describe('välitunnit kirjattavina (14.11.2026)', () => {
     expect(d.sessionCount).toBe(1);
   });
 });
+
+describe('arvion kategorian vaihto koko historiaan (17.11.2026)', () => {
+  const daycare = (over: Partial<EstimateInput> = {}) => recess({ category: 'daycare', label: 'Päiväkoti', weekdayMin: 120, ...over });
+
+  it('Muu-arvio siirtyy Päiväkotiin, päättyy uudemman alkuun ja vahvistukset siirtyvät; päiväkoti ei näy kahdesti', async () => {
+    const old = await repo.saveEstimate('p1', daycare({ category: 'other', label: 'Päiväkotipäivä' }), '2026-11-17', '2026-09-01');
+    const fresh = await repo.saveEstimate('p1', daycare(), '2026-11-17', '2026-10-15');
+    const base = { profileId: 'p1', durationMin: 120, effort: 0 as const, muscle: false, bone: false, estimateConfirmed: true };
+    const sep = await repo.createSession({ ...base, activityTypeId: 't:other', date: '2026-09-10' });
+    const dupOld = await repo.createSession({ ...base, activityTypeId: 't:other', date: '2026-10-20' });
+    const dupNew = await repo.createSession({ ...base, activityTypeId: 't:daycare_day', date: '2026-10-20' });
+    const lone = await repo.createSession({ ...base, activityTypeId: 't:other', date: '2026-10-21' });
+    const plain = await repo.createSession({ ...base, estimateConfirmed: undefined, effort: 1 as const, activityTypeId: 't:other', date: '2026-09-11' });
+
+    // Ennen: lokakuun 22. päivänä kaksi arviota (Muu + Päiväkoti).
+    const before = dayTotals('2026-10-22', [], await repo.listEstimates('p1'), types);
+    expect(before.estimatedCategories.sort()).toEqual(['daycare', 'other']);
+
+    const r = await repo.changeEstimateCategory(old.id, 'daycare');
+    expect(r).toMatchObject({ moved: 2, removed: 1, validTo: '2026-10-14', dropped: false });
+    expect(await db.estimates.get(old.id)).toMatchObject({ category: 'daycare', validTo: '2026-10-14' });
+    expect((await db.estimates.get(fresh.id))!.validTo).toBeUndefined();
+    expect((await db.sessions.get(sep.id))!.activityTypeId).toBe('t:daycare_day');
+    expect((await db.sessions.get(lone.id))!.activityTypeId).toBe('t:daycare_day');
+    expect((await db.sessions.get(dupOld.id))!.deletedAt).toBeTruthy();
+    expect((await db.sessions.get(dupNew.id))!.deletedAt).toBeUndefined();
+    expect((await db.sessions.get(plain.id))!.activityTypeId).toBe('t:other'); // tavallinen kerta ei siirry
+
+    const all = await repo.listEstimates('p1');
+    expect(dayTotals('2026-10-22', [], all, types).estimatedCategories).toEqual(['daycare']);
+    expect(dayTotals('2026-09-15', [], all, types).estimatedCategories).toEqual(['daycare']);
+  });
+
+  it('siirretty uudempi arvio päättää vanhemman kohdekategorian arvion; sama alkupäivä väistyy kokonaan', async () => {
+    const older = await repo.saveEstimate('p1', daycare(), '2026-11-17', '2026-09-01');
+    const moved = await repo.saveEstimate('p1', daycare({ category: 'other', label: 'Pk' }), '2026-11-17', '2026-10-01');
+    await repo.changeEstimateCategory(moved.id, 'daycare');
+    expect((await db.estimates.get(older.id))!.validTo).toBe('2026-09-30');
+    expect(await db.estimates.get(moved.id)).toMatchObject({ category: 'daycare' });
+
+    const same = await repo.saveEstimate('p1', daycare({ category: 'commute', label: 'X' }), '2026-11-17', '2026-10-01');
+    const r = await repo.changeEstimateCategory(same.id, 'daycare');
+    expect(r.dropped).toBe(true);
+    expect((await db.estimates.get(same.id))!.deletedAt).toBeTruthy();
+  });
+});
+
+describe('sisäänrakennettujen lajien uudelleennimeäminen (17.11.2026)', () => {
+  it('vanha nimi "Liikuntapuisto (esim. Superpark)" muuttuu käynnistyksessä, muokattua nimeä ei kosketa', async () => {
+    await db.activityTypes.update('t:activity_park', { name: 'Liikuntapuisto (esim. Superpark)' });
+    await db.activityTypes.update('t:other', { name: 'Liikuntapuisto (esim. Superpark)', builtIn: false } as never);
+    await repo.initialize();
+    expect((await db.activityTypes.get('t:activity_park'))!.name).toBe('Liikuntapuisto');
+    expect((await db.activityTypes.get('t:other'))!.name).toBe('Liikuntapuisto (esim. Superpark)');
+  });
+});

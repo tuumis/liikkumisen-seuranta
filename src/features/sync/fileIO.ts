@@ -23,18 +23,57 @@ export function downloadText(filename: string, text: string, mime = 'application
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
-/** Avaa tiedostonvalitsimen; null, jos käyttäjä peruu. */
+/**
+ * Avaa tiedostonvalitsimen; null, jos käyttäjä peruu.
+ * iOS: valitsin kiinnitetään sivuun koko valinnan ajaksi (irrallinen elementti voi kadota muistista ennen
+ * valintaa, jolloin valinta ei tule perille ja toiminto piti yrittää uudelleen). Peruutus tunnistetaan
+ * cancel-tapahtumasta tai, jos selain ei sitä lähetä, siitä että sivu saa kohdistuksen takaisin ilman
+ * valittua tiedostoa (odotetaan hetki, koska iCloud-tiedoston lataus voi viivästyttää valintaa).
+ */
 // iOS voi jättää .json-tiedostot valitsematta tarkalla accept-arvolla, joten hyväksytään myös teksti.
 export function pickTextFile(accept = '.json,application/json,text/json,text/plain'): Promise<{ name: string; text: string } | null> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = accept;
-    input.onchange = async () => {
-      const f = input.files?.[0];
-      resolve(f ? { name: f.name, text: await f.text() } : null);
+    input.setAttribute('aria-hidden', 'true');
+    input.tabIndex = -1;
+    input.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none';
+    document.body.appendChild(input);
+    let settled = false;
+    const timers: number[] = [];
+    const cleanup = () => {
+      settled = true;
+      timers.forEach((t) => window.clearTimeout(t));
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
+      input.remove();
     };
-    input.addEventListener('cancel', () => resolve(null));
+    const take = () => {
+      const f = input.files?.[0];
+      if (!f || settled) return false;
+      cleanup();
+      f.text().then((text) => resolve({ name: f.name, text }), reject);
+      return true;
+    };
+    const cancel = () => {
+      if (settled) return;
+      cleanup();
+      resolve(null);
+    };
+    // Kohdistus palasi: tiedosto heti, hetken päästä tai peruutus.
+    const onFocus = () => {
+      timers.push(window.setTimeout(() => void (take() || timers.push(window.setTimeout(() => void (take() || cancel()), 3000))), 1200));
+    };
+    const onVisible = () => document.visibilityState === 'visible' && onFocus();
+    input.addEventListener('change', () => void (take() || cancel()));
+    input.addEventListener('cancel', cancel);
+    // Kuuntelijat vasta valitsimen auettua (avauksen hetken kohdistusmuutos ei ole peruutus).
+    window.setTimeout(() => {
+      if (settled) return;
+      window.addEventListener('focus', onFocus);
+      document.addEventListener('visibilitychange', onVisible);
+    }, 400);
     input.click();
   });
 }
@@ -47,7 +86,8 @@ export async function shareOrDownload(filename: string, text: string, mime = 'ap
   const file = new File([text], filename, { type: mime });
   if (navigator.canShare?.({ files: [file] }) && navigator.share) {
     try {
-      await navigator.share({ files: [file], title: filename });
+      // Ei otsikkoa: iOS tallentaa jaetun otsikon Tiedostoihin omaksi "text"-tiedostokseen tiedoston viereen.
+      await navigator.share({ files: [file] });
       return 'shared';
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return 'cancelled';

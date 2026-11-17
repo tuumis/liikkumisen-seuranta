@@ -54,7 +54,7 @@ const ROWS: Row[] = [
   // Lisätty 14.11.2026: päiväkotipäivän liikkuminen (Liikkuva varhaiskasvatus: 2 h, josta 40 min reipasta).
   ['daycare_day', 'Päiväkotipäivä', '🧸', 'daycare', 'play', 0.67, 0.25, 0.08, 'no', 'ask'],
   // Lisätty 14.11.2026 (käyttäjän pyyntö): lisää tehoprofiileja. Sovelluksen lähtöarvioita, muokattavissa.
-  ['activity_park', 'Liikuntapuisto (esim. Superpark)', '🎢', 'self_directed', 'play', 0.35, 0.35, 0.15, 'ask', 'yes'],
+  ['activity_park', 'Liikuntapuisto', '🎢', 'self_directed', 'play', 0.35, 0.35, 0.15, 'ask', 'yes'],
   ['playground', 'Leikkipuisto', '🎠', 'self_directed', 'play', 0.5, 0.3, 0.1, 'ask', 'ask'],
   ['daycare_outdoor', 'Päiväkodin ulkoilu', '🧤', 'daycare', 'play', 0.5, 0.35, 0.1, 'no', 'ask'],
   ['cycling', 'Pyöräily', '🚴', 'self_directed', 'wheels', 0.3, 0.55, 0.1, 'no', 'no'],
@@ -67,6 +67,15 @@ const ROWS: Row[] = [
   ['ice_hockey', 'Jääkiekko', '🏒', 'hobby', 'winter', 0.3, 0.4, 0.2, 'ask', 'no'],
   ['hiking', 'Retkeily ja metsäretki', '🌲', 'family', 'endurance', 0.65, 0.3, 0.05, 'no', 'no'],
 ];
+
+/**
+ * Sisäänrakennettujen lajien nimimuutokset (vanha nimi → nykyinen): käynnistys päivittää nimen, jos se on
+ * yhä vanha (sisäänrakennetun lajin nimeä ei voi muokata). 17.11.2026: liikuntapuiston nimi kerrotaan
+ * kerran tarkenteessa ("Mikä liikuntapuisto?").
+ */
+export const BUILT_IN_RENAMES: Readonly<Record<string, string>> = Object.freeze({
+  'Liikuntapuisto (esim. Superpark)': 'Liikuntapuisto',
+});
 
 /** Myöhemmin lisättyjen lajien järjestys, jotta aiemmat lajit säilyttävät sortOrder-arvonsa. */
 const SORT_ORDER: Record<string, number> = {

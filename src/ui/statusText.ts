@@ -11,8 +11,11 @@ const PERIOD_WORD: Record<PeriodKind, string> = {
 
 /**
  * @param shortfallText puuttuvan määrän kuvaus near-tilassa, esim. "noin 8 min/pv".
+ * @param inProgress jakso on kesken (viimeinen päivä ei ole vielä alkanut): tila kertoo tahdin, ei
+ *   täyttymistä – "Suositus täyttyi" vasta, kun jakson kaikki päivät ovat mukana (käyttäjän toive 17.11.2026).
  */
-export function statusSentence(m: Measure, shortfallText: string, period: PeriodKind = 'week'): string {
+export function statusSentence(m: Measure, shortfallText: string, period: PeriodKind = 'week', inProgress = false): string {
+  if (inProgress) return paceSentence(m, shortfallText);
   switch (m.status) {
     case 'met':
       return 'Suositus täyttyi';
@@ -21,6 +24,19 @@ export function statusSentence(m: Measure, shortfallText: string, period: Period
     case 'below':
       return `${PERIOD_WORD[period]} vähemmän kuin suositus`;
   }
+}
+
+/** Kesken olevan jakson tila: tahti suhteessa suositukseen. */
+export function paceSentence(m: Measure, shortfallText: string): string {
+  if (m.status === 'met') return 'Tahdissa suositukseen';
+  if (m.status === 'near') return `Lähellä tahtia – puuttuu ${shortfallText}`;
+  return 'Alle suosituksen tahdin';
+}
+
+/** Lyhyt tila merkkiin: valmis jakso "Suositus täyttyi", kesken oleva tahtina. */
+export function statusShort(m: Measure, inProgress: boolean): string {
+  if (inProgress) return m.status === 'met' ? 'Tahdissa' : m.status === 'near' ? 'Lähellä tahtia' : 'Alle tahdin';
+  return m.status === 'met' ? 'Suositus täyttyi' : m.status === 'near' ? 'Lähellä' : 'Alle suosituksen';
 }
 
 /** "noin 8 min/pv" – pyöristetään ylöspäin kokonaisiin minuutteihin. */

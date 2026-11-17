@@ -3,8 +3,11 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 
-const GREEN = [21, 128, 61];
-const WHITE = [255, 255, 255];
+// Vuono-väriteema (oletusteema, 17.11.2026): tumma sinivihreä pohja, persikka kaari (vrt. App.tsx BrandMark).
+const BG = [31, 74, 91]; // #1f4a5b
+const ARC = [239, 191, 148]; // #efbf94
+const DOT = [246, 245, 240]; // #f6f5f0
+const TRACK_ALPHA = 0.22;
 
 const crcTable = Array.from({ length: 256 }, (_, n) => {
   let c = n;
@@ -51,26 +54,58 @@ function png(size, pixel) {
   ]);
 }
 
-// Kuvio: valkoinen rengas (juoksurata) ja täysi ympyrä keskellä, vihreällä pohjalla.
-function icon({ rounded, scale }) {
+// Merkki 40 × 40 -ruudukossa (sama kuin favicon.svg ja BrandMark): rengas r = 10,5, viiva 3,2, kaari
+// ylhäältä myötäpäivään pisteeseen (10,1; 23,5) pyöreillä päillä, keskellä piste r = 3,4.
+const R = 10.5 / 40;
+const HALF_W = 3.2 / 80;
+const DOT_R = 3.4 / 40;
+const A0 = -Math.PI / 2;
+const A1 = Math.atan2(23.5 - 20, 10.1 - 20); // ≈ 160,5°
+const SWEEP = (A1 - A0 + 2 * Math.PI) % (2 * Math.PI);
+const END = [Math.cos(A1) * R, Math.sin(A1) * R];
+const START = [0, -R];
+
+function sample(u, v, { rounded, scale }) {
+  if (rounded) {
+    const r = 0.3;
+    const ax = Math.max(Math.abs(u) - (0.5 - r), 0);
+    const ay = Math.max(Math.abs(v) - (0.5 - r), 0);
+    if (Math.hypot(ax, ay) > r) return null;
+  }
+  const x = u / scale;
+  const y = v / scale;
+  const d = Math.hypot(x, y);
+  if (d < DOT_R) return DOT;
+  const onRing = Math.abs(d - R) < HALF_W;
+  const ang = (Math.atan2(y, x) - A0 + 2 * Math.PI) % (2 * Math.PI);
+  const cap = Math.hypot(x - START[0], y - START[1]) < HALF_W || Math.hypot(x - END[0], y - END[1]) < HALF_W;
+  if ((onRing && ang <= SWEEP) || cap) return ARC;
+  if (onRing) return BG.map((c) => Math.round(c + (255 - c) * TRACK_ALPHA));
+  return BG;
+}
+
+// Reunanpehmennys: 4 × 4 näytettä pikseliä kohden.
+function icon(opts) {
   return (x, y, s) => {
-    const u = x / s - 0.5;
-    const v = y / s - 0.5;
-    if (rounded) {
-      const r = 0.22;
-      const ax = Math.max(Math.abs(u) - (0.5 - r), 0);
-      const ay = Math.max(Math.abs(v) - (0.5 - r), 0);
-      if (Math.hypot(ax, ay) > r) return [0, 0, 0, 0];
-    }
-    const d = Math.hypot(u, v) / scale;
-    const white = (d > 0.26 && d < 0.36) || d < 0.12;
-    return [...(white ? WHITE : GREEN), 255];
+    let r = 0, g = 0, b = 0, a = 0;
+    const N = 4;
+    for (let i = 0; i < N; i++)
+      for (let j = 0; j < N; j++) {
+        const c = sample((x - 0.5 + (i + 0.5) / N) / s - 0.5, (y - 0.5 + (j + 0.5) / N) / s - 0.5, opts);
+        if (!c) continue;
+        r += c[0];
+        g += c[1];
+        b += c[2];
+        a++;
+      }
+    if (!a) return [0, 0, 0, 0];
+    return [Math.round(r / a), Math.round(g / a), Math.round(b / a), Math.round((a / (N * N)) * 255)];
   };
 }
 
 mkdirSync('public', { recursive: true });
 writeFileSync('public/pwa-192.png', png(192, icon({ rounded: true, scale: 1 })));
 writeFileSync('public/pwa-512.png', png(512, icon({ rounded: true, scale: 1 })));
-writeFileSync('public/pwa-maskable-512.png', png(512, icon({ rounded: false, scale: 0.8 })));
-writeFileSync('public/apple-touch-icon.png', png(180, icon({ rounded: false, scale: 0.9 })));
+writeFileSync('public/pwa-maskable-512.png', png(512, icon({ rounded: false, scale: 0.95 })));
+writeFileSync('public/apple-touch-icon.png', png(180, icon({ rounded: false, scale: 1 })));
 console.log('Kuvakkeet luotu public/-kansioon');

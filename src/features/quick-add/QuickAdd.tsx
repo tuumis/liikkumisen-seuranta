@@ -406,11 +406,11 @@ export function QuickAdd({
             </label>
           )}
 
+          <LabelField profileId={profile.id} activityTypeId={type.id} value={label} onChange={setLabel} />
+
           {supportsParts(type) && (
             <PartsEditor types={partCandidates(types)} drafts={parts} onChange={setParts} durationMin={Number(duration) > 0 ? Number(duration) : undefined} />
           )}
-
-          <LabelField profileId={profile.id} activityTypeId={type.id} value={label} onChange={setLabel} />
 
           <CompanionsPicker
             mainProfileId={profile.id}

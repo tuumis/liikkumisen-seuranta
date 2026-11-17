@@ -152,7 +152,13 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
   const layoutApi = useWeekLayout();
   const [editingLayout, setEditingLayout] = useState(false);
   const isLg = useMediaQuery('(min-width: 1024px)');
-  const cardIds: WeekCardId[] = simple ? ['hero', 'days'] : layoutApi.visible;
+  // Kortit, jotka eivät koske profiilin suositusryhmää (näkymän muokkauksessa himmennettyinä syineen).
+  const group = report?.group.group;
+  const unavailable: Partial<Record<WeekCardId, string>> = {
+    ...(group && group !== 'school_age' ? { gauge: 'Ei käytössä: luokittelu koskee kouluikäisiä' } : {}),
+    ...(group === 'early_years' ? { rhythm: 'Ei käytössä: alle kouluikäisen suositus on päivittäinen (3 h, josta 1 h vauhdikasta), ei rasittavia eikä vahvistavia päiviä' } : {}),
+  };
+  const cardIds: WeekCardId[] = (simple ? (['hero', 'days'] as WeekCardId[]) : layoutApi.visible).filter((id) => !unavailable[id]);
   const sideIds: WeekCardId[] = isLg && !simple ? cardIds.filter((id) => layoutApi.layout.side.includes(id)) : [];
   // Päivät kahdessa sarakkeessa, kun pääpalsta on PC:llä koko levyinen.
   const wideDays = sideIds.length === 0;
@@ -502,6 +508,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             intro="Valitse näytettävät kortit ja niiden järjestys. PC:llä voit lisäksi valita, onko kortti pää- vai sivupalstassa. Päivät ovat aina näkyvissä."
             api={layoutApi}
             columns
+            unavailable={unavailable}
           />
           <QuickAdd open={!!quickAdd} onClose={() => setQuickAdd(null)} profile={profile} initialDate={quickAdd?.date} onSaved={openFootballIfAny} />
           <PlanSheet
