@@ -1207,3 +1207,10 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
     - Kun päivän Arkiliikunta-ikkunassa on sekä Päiväkoti-arvio että muun kategorian päiväkotiarvio, ikkunassa näkyy ilmoitus "Päiväkoti on tällä päivällä kahdesti" ja painike **Yhdistä Päiväkotiin**. Se tekee saman yhdistämisen kuin Asetukset → Arkiliikunta.
     - Tuplalle tehty "ei tänä päivänä" (0 min) poistetaan päivinä, joille Päiväkoti-arvio on voimassa. Sitä ei siirretä Päiväkotiin, joten Päiväkoti-arvio ei nollaudu. Sama sääntö koskee kategorian vaihtoa koko historiaan.
     - Päiväkotinimen tunnistus ei riipu siitä, miten ä-kirjain on tallennettu (NFC-normalisointi).
+  - **Tehoarvion selkeämpi asettelu kerran muokkauksessa** (käyttäjän palaute 17.11.2026; `features/week/IntensityPicker.tsx`, `SessionEditor.tsx`):
+    - Ponnistelun valinnan alla on yksi arviolaatikko kahden erillisen "arvio"-rivin sijaan:
+      - otsikkorivillä "arvio"-merkki, laji (ja kovempi/kevyempi) sekä "Miksi tämä jako?"
+      - minuutit kolmena lukuna (Kevyt / Reipas / Rasittava), kun kesto on tiedossa
+      - "Reipasta ja rasittavaa yhteensä N min"
+      - lajin prosenttijako pienellä.
+    - Pikakirjauksessa laatikossa näkyy otsikkorivi ja jako.

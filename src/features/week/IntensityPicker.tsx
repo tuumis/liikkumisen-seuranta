@@ -2,8 +2,9 @@
 // tai oma jako minuutteina. Kaikki muut kuin oma jako ovat sovelluksen arvioita.
 
 import { effectiveShares, INTENSITY_PRESETS } from '../../domain/intensity';
-import type { ActivityType, Effort, IntensityPreset, IntensityShares } from '../../domain/types';
-import { inputClass } from '../../ui/components';
+import { mvpaOf } from '../../domain/intensity';
+import type { ActivityType, Effort, IntensityMinutes, IntensityPreset, IntensityShares } from '../../domain/types';
+import { EstimateBadge, inputClass } from '../../ui/components';
 import { EFFORT_OPTIONS, Segmented, ToggleChip } from '../../ui/controls';
 import { pct } from '../../ui/labels';
 import { TermInfo } from '../../ui/glossary';
@@ -71,6 +72,7 @@ export function IntensityPicker({
   onEffort,
   manual,
   onManual,
+  minutes,
 }: {
   type: ActivityType;
   /** Lajin arviossa käytettävä profiili (muokkauksessa kerran oma). */
@@ -81,6 +83,8 @@ export function IntensityPicker({
   onEffort: (e: Effort) => void;
   manual: ManualDraft;
   onManual: (m: ManualDraft) => void;
+  /** Kerran arvioidut minuutit (kesto tiedossa); näytetään arvion pääasiana (17.11.2026). */
+  minutes?: IntensityMinutes;
 }) {
   const shown = mode === 'profile' ? effectiveShares(shares, effort) : isPreset(mode) ? INTENSITY_PRESETS[mode] : undefined;
   return (
@@ -97,11 +101,40 @@ export function IntensityPicker({
       </div>
       {mode === 'profile' && <Segmented label="Ponnistelu" value={effort} options={EFFORT_OPTIONS} onChange={onEffort} />}
       {shown && (
-        <p className="text-xs text-slate-600">
-          <span className="rounded-full bg-amber-100 px-1.5 py-0.5 font-medium text-amber-900">arvio</span> {sharesText(shown)}
-          {mode === 'profile' && <span className="text-slate-500"> ({type.name.toLowerCase()}{effort ? `, ${effort > 0 ? 'kovempi' : 'kevyempi'}` : ''})</span>}
-          {mode === 'profile' && <TypeIntensityNote type={type} />}
-        </p>
+        // Yksi arviolaatikko (käyttäjän palaute 17.11.2026): otsikkorivi, minuutit ja jako pienellä.
+        <div className="card-sunk space-y-2 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+            <span className="flex items-center gap-2 text-sm font-medium text-slate-800">
+              <EstimateBadge />
+              {mode === 'profile' ? `${type.name}${effort ? (effort > 0 ? ', kovempi' : ', kevyempi') : ''}` : OPTIONS.find((o) => o.value === mode)?.label}
+            </span>
+            {mode === 'profile' && <TypeIntensityNote type={type} align="right" />}
+          </div>
+          {minutes && (
+            <>
+              <dl className="grid grid-cols-3 gap-2 text-center">
+                {(
+                  [
+                    ['Kevyt', minutes.light],
+                    ['Reipas', minutes.moderate],
+                    ['Rasittava', minutes.vigorous],
+                  ] as const
+                ).map(([label, v]) => (
+                  <div key={label} className="rounded-lg bg-[var(--surface)] px-2 py-1.5">
+                    <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{label}</dt>
+                    <dd className="text-base font-semibold tabular-nums text-slate-900">
+                      {v} <span className="text-xs font-medium text-slate-500">min</span>
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="text-sm text-slate-700">
+                Reipasta ja rasittavaa yhteensä <strong className="tabular-nums">{mvpaOf(minutes)} min</strong>
+              </p>
+            </>
+          )}
+          <p className="text-xs text-slate-500">Jako: {sharesText(shown)}</p>
+        </div>
       )}
       {mode === 'manual' && (
         <div className="grid grid-cols-3 gap-2">

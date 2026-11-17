@@ -5,10 +5,10 @@ import { partsShares, supportsParts } from '../../domain/intensity';
 import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { activityTypeId } from '../../domain/ids';
-import { computeSessionMinutes, INTENSITY_PRESETS, mvpaOf } from '../../domain/intensity';
+import { computeSessionMinutes, INTENSITY_PRESETS } from '../../domain/intensity';
 import type { Effort, IntensityMinutes, Session } from '../../domain/types';
 import { repo } from '../../db/repositories';
-import { Button, EstimateBadge, Field, inputClass } from '../../ui/components';
+import { Button, Field, inputClass } from '../../ui/components';
 import { ToggleChip } from '../../ui/controls';
 import { IntensityPicker, isPreset, type IntensityMode } from './IntensityPicker';
 import { Sheet } from '../../ui/Sheet';
@@ -259,13 +259,8 @@ export function SessionEditor({
                 onEffort={setEffort}
                 manual={manual}
                 onManual={setManual}
+                minutes={preview}
               />
-              {preview && (
-                <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-700">
-                  <EstimateBadge />
-                  kevyt {preview.light} · reipas {preview.moderate} · rasittava {preview.vigorous} min (reipasta ja rasittavaa arviolta {mvpaOf(preview)} min)
-                </p>
-              )}
               {errors.manual && <p className="mt-1 text-sm text-red-700">{errors.manual}</p>}
             </div>
           )}
