@@ -464,6 +464,8 @@ export interface DayTotals {
   sessionCount: number;
   /** Päivän arkiliikunnan vahvistukset (myös "ei tänä päivänä"). */
   confirmations: number;
+  /** Kertojen rasittava (min) ilman arkiliikunnan vahvistuksia: rasittavan päivän peruste (isVigorousDay). */
+  sessionVigorous: number;
   /** Kategoriat, joille perusarviota käytettiin. */
   estimatedCategories: Category[];
   /** Päiväkohtaisesti vahvistetun arkiliikunnan reipas+rasittava (sisältyy mvpa-lukuun). */

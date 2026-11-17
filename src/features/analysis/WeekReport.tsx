@@ -51,7 +51,7 @@ function useWeekReport(profile: Profile, weekStart: ISODate): { data: WeekReport
 
 function targetText(group: RecommendationGroup): string {
   if (group === 'early_years') return 'vähintään 3 h liikettä, josta 1 h vauhdikasta';
-  if (group === 'adult') return `reipas + rasittava ${Math.round(DAY_TARGET.adult)} min/pv (150 min/vko)`;
+  if (group === 'adult') return `reipas + 2 × rasittava ${Math.round(DAY_TARGET.adult)} min/pv (150 min/vko)`;
   return `reipas + rasittava vähintään ${DAY_TARGET[group]} min`;
 }
 

@@ -120,6 +120,7 @@ export function dayTotals(
   let sessionCount = 0;
   let confirmations = 0;
   let confirmedMvpa = 0;
+  let sessionVigorous = 0;
   let moving = 0;
   // Kategoriat, joiden arvion kirjaus korvaa (lajiharjoittelu ei korvaa, vaan tulee päälle).
   const replaced = new Set<Category>();
@@ -141,7 +142,10 @@ export function dayTotals(
     bone ||= s.bone;
     // Kerta = oma liikuntakerta: arkiliikunnan vahvistus ei ole kerta, treenin verryttely kuuluu treeniin (17.11.2026).
     if (isEstimateConfirmation(s)) confirmations++;
-    else if (!s.linkedTo) sessionCount++;
+    else {
+      sessionVigorous += s.minutes.vigorous;
+      if (!s.linkedTo) sessionCount++;
+    }
   }
 
   let estimate: IntensityMinutes = { ...ZERO_MINUTES };
@@ -179,6 +183,7 @@ export function dayTotals(
     bone,
     sessionCount,
     confirmations,
+    sessionVigorous,
     estimatedCategories,
     confirmedMvpa,
     estimateAvailable: validEstimates.length > 0,
@@ -237,6 +242,12 @@ export function estimateShare(mvpaLogged: number, mvpaCombined: number): number 
   return mvpaCombined > 0 ? (mvpaCombined - mvpaLogged) / mvpaCombined : 0;
 }
 
+/**
+ * Rasittava päivä: kertojen rasittava ≥ raja. Arkiliikunta ei tuota rasittavaa päivää, ei myöskään
+ * vahvistettuna (17.11.2026), koska vahvistus on arvion vahvistus eikä erillinen liikuntakerta.
+ */
+export const isVigorousDay = (d: Pick<DayTotals, 'sessionVigorous'>, min: number): boolean => d.sessionVigorous >= min;
+
 /** Onko päivälle kirjattu jotain: kerta tai arkiliikunnan vahvistus (kattavuus 7.8). */
 export const hasLoggedData = (d: Pick<DayTotals, 'sessionCount' | 'confirmations'>): boolean => d.sessionCount > 0 || d.confirmations > 0;
 
@@ -270,7 +281,7 @@ function evaluateSchoolAge(days: DayTotals[], settings: Settings): SchoolAgeEval
     },
     // Päivämäärämittarit vain kirjatuista.
     vigorousDays: measure(
-      days.filter((d) => d.logged.vigorous >= settings.vigorousDayMin).length,
+      days.filter((d) => isVigorousDay(d, settings.vigorousDayMin)).length,
       r.vigorousDaysPerWeek.value,
     ),
     muscleDays: measure(days.filter((d) => d.muscle).length, r.muscleDaysPerWeek.value),

@@ -39,7 +39,7 @@ describe('jakson raportti', () => {
       minutes: { light: 20, moderate: 10, vigorous: 2 },
       intensitySource: 'profile',
     });
-    const r = periodReport(input({ sessions: [thuRecess], estimates: [recess] }));
+    const r = periodReport(input({ sessions: [thuRecess], estimates: [recess], today: '2026-11-16' }));
     expect(r.evaluation.n).toBe(7);
     expect(r.days.map((d) => d.estimate.moderate)).toEqual([15, 15, 15, 0, 15, 0, 0]);
     expect(r.days[3].logged.moderate).toBe(10);
@@ -59,10 +59,19 @@ describe('jakson raportti', () => {
         flags: [{ id: 'f', profileId: 'p1', date: '2026-11-11', reason: 'sick', updatedAt: 'x', updatedBy: 'd' }],
       }),
     );
-    expect(r.validDates).toEqual(['2026-11-10', '2026-11-12', '2026-11-13']);
-    expect(r.excluded).toEqual({ future: 2, beforeTracking: 1, flagged: 1 });
+    // Kuluva päivä ilman kirjauksia ei ole vielä mukana (17.11.2026).
+    expect(r.validDates).toEqual(['2026-11-10', '2026-11-12']);
+    expect(r.excluded).toEqual({ future: 2, beforeTracking: 1, flagged: 1, today: 1 });
     expect(r.trackingStart).toBe('2026-11-10');
     expect(r.allDays).toHaveLength(7);
+  });
+
+  it('kuluva päivä tulee mukaan, kun sille on kirjattu kerta tai arkiliikunnan vahvistus', () => {
+    const base = { profile: profile({ createdAt: '2026-11-10T10:00:00.000Z' }), today: '2026-11-13' };
+    const walk = session({ date: '2026-11-13', minutes: { light: 10, moderate: 10, vigorous: 0 } });
+    expect(periodReport(input({ ...base, sessions: [walk] })).validDates).toContain('2026-11-13');
+    const conf = session({ date: '2026-11-13', durationMin: 0, minutes: { light: 0, moderate: 0, vigorous: 0 }, estimateConfirmed: true });
+    expect(periodReport(input({ ...base, sessions: [conf] })).validDates).toContain('2026-11-13');
   });
 
   it('N = 0 → ei vertailua', () => {

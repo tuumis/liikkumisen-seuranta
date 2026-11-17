@@ -47,7 +47,8 @@ function HowCounted({ isCurrentWeek }: { isCurrentWeek: boolean }) {
           <strong className="block text-[13px]">Miten tunnit lasketaan</strong>
           Kesto kellotunteina, kaikki liikunta (myös kevyt). Toteuma = kirjatut kerrat + arkiliikunta: vahvistettu tai perusarvio päiville, joilta saman kategorian kirjaus puuttuu
           {isCurrentWeek ? ' (tähän päivään asti)' : ''}. Arvio koko viikolle = toteuma + tulevat ja kuittaamattomat suunnitellut kerrat + arkiliikunnan arvio tuleville päiville. "Ei tehty" tai
-          poistettu kerta putoaa pois. Suunnitelmat eivät vaikuta suositusvertailuun.
+          poistettu kerta putoaa pois. Sairas- ja matkapäiviltä ja ennen seurannan alkua mukana ovat vain kirjatut kerrat, ei arkiliikunnan arviota. Tunnit kertovat liikunnan
+          määrän; suositusvertailu jättää sairas- ja matkapäivät kokonaan pois. Suunnitelmat eivät vaikuta suositusvertailuun.
         </>
       }
     >
@@ -205,6 +206,8 @@ export function HoursDetailCard({ report, isCurrentWeek }: { report: PeriodRepor
   const anyArki = h.days.some((d) => d.confirmedMin > 0);
   const anyEst = h.days.some((d) => d.actualMin > d.actualLoggedMin);
   const empty = h.forecastMin === 0 && h.actualMin === 0;
+  // Päättyneellä viikolla arvio koko viikolle = toteuma, joten näytetään vain toteutunut (17.11.2026).
+  const pastWeek = h.days.every((d) => !d.future);
 
   return (
     <section className="card p-4 sm:p-5 lg:p-6">
@@ -251,7 +254,7 @@ export function HoursDetailCard({ report, isCurrentWeek }: { report: PeriodRepor
               <Legend
                 items={[
                   { label: 'Kerrat', bg: C.logged },
-                  ...(anyArki ? [{ label: 'Arkiliikunta', bg: C.arki }] : []),
+                  ...(anyArki ? [{ label: 'Arkiliikunta (vahvistettu)', bg: C.arki }] : []),
                   ...(anyEst ? [{ label: 'Arkiliikunta (arvio)', bg: C.estimate }] : []),
                   { label: 'Arvio päivälle', bg: '', dashed: true },
                 ]}
@@ -261,7 +264,10 @@ export function HoursDetailCard({ report, isCurrentWeek }: { report: PeriodRepor
             {h.byCategory.length > 0 && (
               <div className="mt-4 border-t border-slate-100 pt-3">
                 {/* Kategorian rivi avautuu: mistä tunnit koostuvat (17.11.2026). */}
-                <p className="mb-2 text-xs text-slate-500">Avaa kategoria nähdäksesi, mistä tunnit koostuvat.</p>
+                <div className="mb-2 flex items-baseline justify-between gap-3 text-xs text-slate-500">
+                  <span>Avaa kategoria nähdäksesi, mistä tunnit koostuvat.</span>
+                  <span className="shrink-0 text-right">{pastWeek ? 'toteutunut' : 'toteutunut / arvio koko viikolle'}</span>
+                </div>
                 <ul className="space-y-2.5">
                   {h.byCategory.map((c) => {
                     const act = c.actual.sessions + c.actual.estimate;
@@ -283,7 +289,8 @@ export function HoursDetailCard({ report, isCurrentWeek }: { report: PeriodRepor
                               </svg>
                             </span>
                             <span className="tabular-nums text-slate-600">
-                              <strong className="font-semibold text-slate-900">{formatHours(act)}</strong> / {formatHours(c.forecast)}
+                              <strong className="font-semibold text-slate-900">{formatHours(act)}</strong>
+                              {!pastWeek && ` / ${formatHours(c.forecast)}`}
                             </span>
                           </span>
                           {/* Osat kuten päiväpylväissä: kerrat, vahvistettu arkiliikunta, arvio (17.11.2026). */}

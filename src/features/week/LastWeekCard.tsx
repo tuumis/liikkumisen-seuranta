@@ -7,9 +7,9 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { addDays, isoWeek, weekPeriod } from '../../domain/dates';
 import { footballPeriodSummary } from '../../domain/football';
 import { formatHours } from '../../domain/hours';
-import { DAY_TARGET, dayGoalMet } from '../../domain/dayTarget';
+import { DAY_TARGET, dayGoalMet, dayGoalValue } from '../../domain/dayTarget';
 import { DEFAULT_SETTINGS } from '../../domain/recommendations';
-import type { DayTotals, ISODate, Profile } from '../../domain/types';
+import type { DayTotals, ISODate, Profile, RecommendationGroup } from '../../domain/types';
 import { previousWeekStart, shouldShowDigest } from '../../domain/weekDigest';
 import { repo } from '../../db/repositories';
 import { formatDate } from '../../ui/format';
@@ -45,18 +45,22 @@ const STATUS_CLASS = {
 
 const WD = ['ma', 'ti', 'ke', 'to', 'pe', 'la', 'su'];
 
-/** Viikon päivät minipylväinä: reipas ja rasittava, katkoviiva = päivän tavoite. */
-function DayBars({ days, valid, target }: { days: DayTotals[]; valid: Set<ISODate>; target: number }) {
-  const max = Math.max(target * 1.5, ...days.map((d) => d.mvpaCombined));
+/**
+ * Viikon päivät minipylväinä: reipas ja rasittava (aikuisella reipas + 2 × rasittava), katkoviiva = päivän
+ * tavoite. Vihreä = päivän tavoite täyttyi samalla säännöllä kuin muualla (dayGoalMet).
+ */
+function DayBars({ days, valid, target, group }: { days: DayTotals[]; valid: Set<ISODate>; target: number; group: RecommendationGroup }) {
+  const value = (d: DayTotals) => dayGoalValue(group, d.combined);
+  const max = Math.max(target * 1.5, ...days.map(value));
   const H = 44;
-  const label = days.map((d, i) => `${WD[i]} ${Math.round(d.mvpaCombined)} min`).join(', ');
+  const label = days.map((d, i) => `${WD[i]} ${Math.round(value(d))} min`).join(', ');
   return (
-    <div className="w-full max-w-[13rem] shrink-0" role="img" aria-label={`Reipas ja rasittava päivittäin: ${label}. Tavoite ${Math.round(target)} min.`}>
+    <div className="w-full max-w-[13rem] shrink-0" role="img" aria-label={`${group === 'adult' ? 'Reipas + 2 × rasittava' : 'Reipas ja rasittava'} päivittäin: ${label}. Tavoite ${Math.round(target)} min.`}>
       <div className="relative flex items-end gap-1.5" style={{ height: H }}>
         <div className="absolute inset-x-0 border-t border-dashed border-slate-400/70" style={{ bottom: (target / max) * H }} aria-hidden />
         {days.map((d) => {
-          const v = d.mvpaCombined;
-          const met = v >= target;
+          const v = value(d);
+          const met = dayGoalMet(group, d);
           return (
             <div
               key={d.date}
@@ -177,7 +181,7 @@ export function LastWeekCard({ profile, today, onOpenWeek }: { profile: Profile;
         )}
 
         <div className="flex min-w-0 flex-col gap-1">
-          <DayBars days={report.allDays} valid={valid} target={target} />
+          <DayBars days={report.allDays} valid={valid} target={target} group={report.group.group} />
           {best && best.mvpaCombined > 0 && (
             <div className="text-[11px] leading-tight text-slate-500">
               {metDays}/7 päivää tavoitteessa · paras {formatDate(best.date, 'EEEEEE')} {Math.round(best.mvpaCombined)} min

@@ -107,6 +107,8 @@ export function weeklyHours(input: {
   today: ISODate;
   /** Lomapäivät: perusarvio viikonlopun arvoilla, lomalla ohitetut suunnitelmat eivät ole arviossa. */
   holidays?: ReadonlySet<ISODate>;
+  /** Seurannan alku: sitä edeltäville päiville ei arkiliikunnan arviota, kuten suositusarviossa (17.11.2026). */
+  trackingStart?: ISODate;
 }): WeeklyHours {
   const { period, today } = input;
   const catOf = (typeId: UUID): Category => input.types.get(typeId)?.category ?? 'other';
@@ -135,7 +137,8 @@ export function weeklyHours(input: {
     const isFlagged = flagged.has(d);
     const holiday = input.holidays?.has(d) ?? false;
     const estimateDuration = (e: Estimate) => estimateBaseMin(e, d, holiday);
-    const estimates = input.estimates.filter((e) => isEstimateValidOn(e, d));
+    const beforeTracking = input.trackingStart !== undefined && d < input.trackingStart;
+    const estimates = beforeTracking ? [] : input.estimates.filter((e) => isEstimateValidOn(e, d));
     const estCats = [...new Set(estimates.map((e) => e.category))];
 
     // Arvio: suunnitellut kerrat (kaikki tilat: suunnitelma oli olemassa) + perusarvio muille kategorioille.

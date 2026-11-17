@@ -77,7 +77,7 @@ export function LongTermView({ profile, kind }: { profile: Profile; kind: LongKi
         );
       case 'context':
         return (
-          <Card title="Ohjattu ja omaehtoinen" eyebrow="Mistä reipas ja rasittava kertyy">
+          <Card title="Ohjattu ja omaehtoinen" eyebrow="Kirjattu reipas ja rasittava">
             <ContextBars s={s} p={p} prevName={periodName(prev)} />
           </Card>
         );
@@ -414,7 +414,10 @@ function ContextBars({ s, p, prevName }: { s: LongTermSummary; p?: LongTermSumma
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-xs text-slate-500">Osuudet kirjatusta reippaasta ja rasittavasta liikunnasta; arkiliikunnan arvio ei ole mukana.</p>
+      <p className="mt-2 text-xs text-slate-500">
+        Osuudet kirjatusta reippaasta ja rasittavasta liikunnasta: kerrat ja vahvistettu arkiliikunta. Vahvistamaton arkiliikunnan arvio ei ole mukana, joten välitunnit ja
+        leikki voivat näkyä todellista pienempinä.
+      </p>
     </div>
   );
 }

@@ -158,8 +158,9 @@ export function weekReport(input: {
     const arkiMvpa = Math.max(0, mvpaOf(c) - sum((e) => e.mvpa));
     const confirmed = daySessions.some(isEstimateConfirmation);
     const arki = arkiDur > 0 || arkiMvpa > 0.5 ? { durationMin: arkiDur, mvpa: arkiMvpa, vigorous: Math.max(0, c.vigorous - sum((e) => e.vigorous)), confirmed } : undefined;
-    if (t.muscle) muscleDays++;
-    if (t.bone) boneDays++;
+    // Lihas- ja luustopäivät kuten suositusarviossa: sairas- ja matkapäivät eivät ole mukana (17.11.2026).
+    if (t.muscle && !flag) muscleDays++;
+    if (t.bone && !flag) boneDays++;
     return {
       date: t.date,
       future,

@@ -190,7 +190,7 @@ export function SeasonReport({ profile, s, p, onClose }: { profile: Profile; s: 
         </Section>
 
         <div className="grid gap-x-8 sm:grid-cols-2">
-          <Section title="Mistä liikunta kertyy">
+          <Section title="Mistä kirjattu liikunta kertyy">
             {s.context ? (
               <ul className="space-y-1">
                 {(['organized', 'self_directed', 'everyday'] as Context[]).map((k) => (
@@ -205,7 +205,7 @@ export function SeasonReport({ profile, s, p, onClose }: { profile: Profile; s: 
             ) : (
               <p className="text-[#5a645d]">Ei kirjattua reipasta tai rasittavaa.</p>
             )}
-            <p className="mt-1 text-[11px] text-[#5a645d]">Osuudet kirjatusta reippaasta ja rasittavasta.</p>
+            <p className="mt-1 text-[11px] text-[#5a645d]">Osuudet kirjatusta reippaasta ja rasittavasta (kerrat ja vahvistettu arkiliikunta); arkiliikunnan arvio ei ole mukana.</p>
           </Section>
           <Section title="Suositukset viikoittain">
             {s.weeks.evaluated ? (

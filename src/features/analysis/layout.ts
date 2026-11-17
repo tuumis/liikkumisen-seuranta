@@ -26,7 +26,7 @@ export type LongCardId = 'trend' | 'compare' | 'context' | 'variety' | 'weeklyGo
 export const LONG_CARDS: CardDef<LongCardId>[] = [
   { id: 'trend', title: 'Reipas ja rasittava', text: 'Kehitys viikoittain tai kuukausittain' },
   { id: 'compare', title: 'Vertailu', text: 'Valittu jakso ja edellinen samanlainen jakso' },
-  { id: 'context', title: 'Ohjattu ja omaehtoinen', text: 'Mistä reipas ja rasittava kertyy' },
+  { id: 'context', title: 'Ohjattu ja omaehtoinen', text: 'Mistä kirjattu reipas ja rasittava kertyy' },
   { id: 'variety', title: 'Monipuolisuus ja lajit', text: 'Liikuntaryhmät ja lajit kirjatuista kerroista' },
   { id: 'weeklyGoals', title: 'Suositusten toteutuminen viikoittain', text: 'Viikkotavoitteet' },
   { id: 'quality', title: 'Datan laatu', text: 'Kattavuus ja arvion osuus' },

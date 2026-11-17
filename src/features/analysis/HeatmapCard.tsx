@@ -8,12 +8,12 @@ import { repo } from '../../db/repositories';
 import { dayTotals, isEstimateConfirmation, trackingStart } from '../../domain/aggregate';
 import { parseISODate, toISODate } from '../../domain/dates';
 import { computeSessionMinutes } from '../../domain/intensity';
-import { DAY_TARGET } from '../../domain/dayTarget';
+import { DAY_TARGET, dayGoalValue } from '../../domain/dayTarget';
 import { RECOMMENDATIONS } from '../../domain/recommendations';
 import { recommendationGroup } from '../../domain/groups';
 import { futureRange, heatColumns, heatLevel, heatRange, heatStats, last12Months, LEVEL_LABELS, monthLabels, type HeatDay, type HeatLevel, type HeatMeasure } from '../../domain/heatmap';
 import { holidayDates } from '../../domain/holidays';
-import type { ActivityType, DayFlagReason, ISODate, Profile, Session } from '../../domain/types';
+import type { ActivityType, DayFlagReason, IntensityMinutes, ISODate, Profile, Session } from '../../domain/types';
 import { Card } from '../../ui/components';
 import { Segmented } from '../../ui/controls';
 import { formatDate } from '../../ui/format';
@@ -109,7 +109,7 @@ function useHeatData(profile: Profile, start: ISODate, end: ISODate, withEstimat
         total: withEstimates ? t.movingCombined : t.moving,
         sessions: t.sessionCount,
         logged: list.filter((s) => !isEstimateConfirmation(s)).reduce((a, s) => a + Math.max(0, s.durationMin), 0),
-        ...dayTargets(profile, date, withEstimates ? t.movingCombined : t.moving),
+        ...dayTargets(profile, date, withEstimates ? t.movingCombined : t.moving, withEstimates ? t.combined : t.logged),
       };
     });
     // Tulevat päivät: avoimet suunnitellut kerrat kirjausten tapaan (lajin tyypillinen teho, tavallinen ponnistelu).
@@ -141,7 +141,7 @@ function useHeatData(profile: Profile, start: ISODate, end: ISODate, withEstimat
         mvpa: withEstimates ? t.mvpaCombined : t.mvpa,
         total: withEstimates ? t.movingCombined : t.moving,
         sessions: list.length,
-        ...dayTargets(profile, date, withEstimates ? t.movingCombined : t.moving),
+        ...dayTargets(profile, date, withEstimates ? t.movingCombined : t.moving, withEstimates ? t.combined : t.logged),
         planned: true,
       };
     });
@@ -150,12 +150,15 @@ function useHeatData(profile: Profile, start: ISODate, end: ISODate, withEstimat
   }, [raw, withEstimates, profile, pid, start, end, today]);
 }
 
-/** Päivän tavoite kartalle: reipas + rasittava; alle kouluikäisellä lisäksi 3 h liikkumista kestona. */
-function dayTargets(profile: Profile, date: ISODate, moving: number): Pick<HeatDay, 'target' | 'moving' | 'movingTarget'> {
+/**
+ * Päivän tavoite kartalle: reipas + rasittava; alle kouluikäisellä lisäksi 3 h liikkumista kestona;
+ * aikuisella reipas + 2 × rasittava kuten viikon suosituksessa (17.11.2026).
+ */
+function dayTargets(profile: Profile, date: ISODate, moving: number, m: IntensityMinutes): Pick<HeatDay, 'target' | 'moving' | 'movingTarget' | 'goal'> {
   const g = recommendationGroup(profile, date);
-  return g === 'early_years'
-    ? { target: DAY_TARGET[g], moving, movingTarget: RECOMMENDATIONS.early_years.totalMinPerDay.value }
-    : { target: DAY_TARGET[g] };
+  if (g === 'early_years') return { target: DAY_TARGET[g], moving, movingTarget: RECOMMENDATIONS.early_years.totalMinPerDay.value };
+  if (g === 'adult') return { target: DAY_TARGET[g], goal: dayGoalValue(g, m) };
+  return { target: DAY_TARGET[g] };
 }
 
 /** Pitkän aikavälin näkymän valittu jakso: vuosi näyttää sen vuoden, kuukausi ja kausi korostetaan kartalla. */
@@ -342,6 +345,8 @@ function HeatBody({
   const dayTarget = (data.days.at(-1) ?? data.future[0])?.target ?? 60;
   // Alle kouluikäinen: tavoite on kaksiosainen (3 h liikkumista kestona, josta 1 h vauhdikasta).
   const early = !!(data.days.at(-1) ?? data.future[0])?.movingTarget;
+  // Aikuinen: päivän tavoite painotettuna (reipas + 2 × rasittava).
+  const adult = (data.days.at(-1) ?? data.future[0])?.goal !== undefined;
   // Tulevien päivien suunniteltu määrä erikseen (ei toteumaa).
   const planned = useMemo(() => {
     const hours = data.future.reduce((a, d) => a + d.total, 0) / 60;
@@ -376,7 +381,7 @@ function HeatBody({
     return m;
   }, [all, measure]);
 
-  const pct = (d: HeatDay) => (d.target > 0 ? Math.round((Math.round(d.mvpa) / d.target) * 100) : 0);
+  const pct = (d: HeatDay) => (d.target > 0 ? Math.round((Math.round(d.goal ?? d.mvpa) / d.target) * 100) : 0);
   const detail = (date: ISODate) => {
     const d = byDate.get(date);
     const extras = [data.flags.has(date) ? FLAG_LABEL[data.flags.get(date)!] : '', data.holidays.has(date) ? 'loma' : ''].filter(Boolean);
@@ -385,7 +390,9 @@ function HeatBody({
     if (d.planned && d.total <= 0) return `${when} · ei suunniteltuja kertoja`;
     const parts = [
       d.planned ? `${when} · suunniteltu` : `${when}`,
-      `reipas ja rasittava ${Math.round(d.mvpa)} min (${pct(d)} % suosituksesta)`,
+      d.goal !== undefined
+        ? `reipas + 2 × rasittava ${Math.round(d.goal)} min (${pct(d)} % suosituksesta)`
+        : `reipas ja rasittava ${Math.round(d.mvpa)} min (${pct(d)} % suosituksesta)`,
       `kaikki liikunta ${Math.round(d.total)} min`,
       d.planned ? (d.sessions === 1 ? '1 suunniteltu kerta' : `${d.sessions} suunniteltua kertaa`) : d.sessions === 1 ? '1 kerta' : `${d.sessions} kertaa`,
       ...extras,
@@ -496,7 +503,7 @@ function HeatBody({
         />
         <Stat label="Aktiivisia päiviä" value={String(stats.activeDays)} sub={`/ ${stats.days} päivää`} big={big} />
         <Stat label="Pisin putki" value={`${stats.longestStreak} pv`} sub="aktiivisia päiviä peräkkäin" big={big} />
-        <Stat label="Suositus täyttyi" value={`${stats.targetDays} pv`} sub={early ? '3 h liikkumista, josta 1 h vauhdikasta' : `reipas ja rasittava ≥ ${Math.round(dayTarget)} min/pv`} big={big} />
+        <Stat label="Suositus täyttyi" value={`${stats.targetDays} pv`} sub={early ? '3 h liikkumista, josta 1 h vauhdikasta' : `${adult ? 'reipas + 2 × rasittava' : 'reipas ja rasittava'} ≥ ${Math.round(dayTarget)} min/pv`} big={big} />
         {planned && (
           <Stat
             label={`Suunniteltu ${futureLabel}`}
@@ -512,14 +519,15 @@ function HeatBody({
           ? `Laskettu ${formatDate(data.days[0].date, 'd.M.')}–${formatDate(data.days.at(-1)!.date, 'd.M.yyyy')} (${stats.days} päivää seurannan alusta tähän päivään)${data.future.length > 0 ? '; suunnitellut päivät vain Suunniteltu-luvussa' : ''}.`
           : 'Jaksolla ei ole vielä toteutuneita päiviä; tunnusluvut lasketaan toteutuneista päivistä.'}
       </p>
-      <Explain measure={measure} withEstimates={withEstimates} dayTarget={dayTarget} hasFuture={data.future.length > 0} early={early} />
+      <Explain measure={measure} withEstimates={withEstimates} dayTarget={dayTarget} hasFuture={data.future.length > 0} early={early} adult={adult} />
     </div>
   );
 }
 
 /** "Mistä luvut tulevat?": avattava selitys tunnusluvuille ja ruutujen väreille valittujen asetusten mukaan. */
-function Explain({ measure, withEstimates, dayTarget, hasFuture, early }: { measure: HeatMeasure; withEstimates: boolean; dayTarget: number; hasFuture: boolean; early?: boolean }) {
+function Explain({ measure, withEstimates, dayTarget, hasFuture, early, adult }: { measure: HeatMeasure; withEstimates: boolean; dayTarget: number; hasFuture: boolean; early?: boolean; adult?: boolean }) {
   const t = Math.round(dayTarget);
+  const what = adult ? 'reipasta ja rasittavaa liikuntaa (rasittava kahdesti, kuten viikon 150 minuutin suosituksessa)' : 'reipasta ja rasittavaa liikuntaa';
   const active =
     measure === 'sessions'
       ? 'päivä, jolle on kirjattu vähintään yksi liikuntakerta'
@@ -555,14 +563,14 @@ function Explain({ measure, withEstimates, dayTarget, hasFuture, early }: { meas
           <strong>Suositus täyttyi:</strong>{' '}
           {early
             ? 'päivät, joina liikkumista oli vähintään 3 tuntia (kirjattujen kertojen ja arkiliikunnan kesto) ja siitä vähintään 1 tunti vauhdikasta (reipasta tai rasittavaa).'
-            : `päivät, joina reipasta ja rasittavaa liikuntaa oli vähintään päivän suosituksen verran (${t} min).`}
+            : `päivät, joina ${what} oli vähintään päivän suosituksen verran (${t} min).`}
         </li>
         <li>
           <strong>Ruutujen värit:</strong>{' '}
           {measure === 'target'
             ? early
               ? 'heikompi kahdesta: vauhdikas suhteessa 60 minuuttiin tai liikkuminen suhteessa 3 tuntiin – alle puolet, 50–99 %, suositus täyttyi, 150 % tai enemmän.'
-              : `reipas ja rasittava liikunta suhteessa ${t} minuuttiin: alle puolet, 50–99 %, suositus täyttyi, 150 % tai enemmän.`
+              : `${adult ? 'reipas + 2 × rasittava' : 'reipas ja rasittava liikunta'} suhteessa ${t} minuuttiin: alle puolet, 50–99 %, suositus täyttyi, 150 % tai enemmän.`
             : measure === 'minutes'
               ? 'kaikki liikunta kestona minuutteina: 1–30, 31–60, 61–90, yli 90.'
               : 'liikuntakertojen määrä: 1, 2, 3, 4 tai enemmän. Arkiliikunta ei ole kerta, eikä treenin verryttely ole oma kerta.'}{' '}

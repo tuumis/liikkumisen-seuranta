@@ -10,7 +10,7 @@ import { footballBrief, shortName } from '../../domain/weekReport';
 import { foldTrainingSelves, trainingSelfText } from '../../domain/football';
 import type { DayHours } from '../../domain/hours';
 import { isEstimateConfirmation } from '../../domain/hours';
-import { earlyYearsDay } from '../../domain/aggregate';
+import { earlyYearsDay, isVigorousDay } from '../../domain/aggregate';
 import { DAY_TARGET, dayGoalMet } from '../../domain/dayTarget';
 import type { ActivityType, Category, DayFlag, DayTotals, FootballDetails, ISODate, PlannedSession, RecommendationGroup, Session, UUID } from '../../domain/types';
 import { dayLabel } from '../../ui/format';
@@ -135,7 +135,7 @@ export function DayTable({
 
   // Suositusmerkit ryhmän mukaan (kuten Viikon rytmi).
   const marks = [
-    ...(group === 'school_age' ? [{ key: 'vig', label: `Rasittava päivä (≥ ${vigorousMin} min)`, short: 'R', Icon: IconBolt, on: (t?: DayTotals) => (t?.logged.vigorous ?? 0) >= vigorousMin, target: 3 }] : []),
+    ...(group === 'school_age' ? [{ key: 'vig', label: `Rasittava päivä (≥ ${vigorousMin} min)`, short: 'R', Icon: IconBolt, on: (t?: DayTotals) => !!t && isVigorousDay(t, vigorousMin), target: 3 }] : []),
     ...(group !== 'early_years' ? [{ key: 'mus', label: 'Lihaksia vahvistava', short: 'L', Icon: IconLeaf, on: (t?: DayTotals) => !!t?.muscle, target: group === 'adult' ? 2 : 3 }] : []),
     ...(group === 'school_age' ? [{ key: 'bone', label: 'Luustoa vahvistava', short: 'Lu', Icon: IconBone, on: (t?: DayTotals) => !!t?.bone, target: 3 }] : []),
     ...(group === 'early_years'

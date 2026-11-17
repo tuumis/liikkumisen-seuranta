@@ -183,6 +183,7 @@ export function GoalCard({ report, variant }: { report: PeriodReport; variant: '
           Vertailussa {ev.n}/7 päivää
           {report.excluded.beforeTracking > 0 && ` · seuranta alkoi ${formatDate(report.trackingStart, 'd.M.')}`}
           {report.excluded.flagged > 0 && ` · ${report.excluded.flagged} sairas-/matkapäivää pois`}
+          {report.excluded.today > 0 && ' · tämä päivä tulee mukaan, kun sille on kirjattu jotain'}
         </p>
       )}
       {q.lowData && <p className="text-sm font-medium text-slate-700">Liian vähän kirjauksia luotettavaan vertailuun</p>}

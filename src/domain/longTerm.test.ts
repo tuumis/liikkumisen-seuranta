@@ -44,7 +44,7 @@ describe('pitkän aikavälin kooste', () => {
     expect(s.buckets[3].validDays).toBe(0); // tulevat päivät eivät ole vertailussa
     expect(s.buckets[0].validDays).toBe(30);
     expect(s.buckets[0].mvpaLogged).toBeCloseTo((60 * 2) / 30);
-    expect(s.validDays).toBe(91);
+    expect(s.validDays).toBe(90); // 1.9.–29.11.; kuluva päivä 30.11. ilman kirjauksia ei ole vielä mukana
     // Ohjattu: 3 treeniä × 60 MVPA = 180; omaehtoinen pyöräily 2 × 20 = 40 (kategoria tyypin mukaan).
     expect(s.context!.organized).toBeCloseTo(180 / 220);
     expect(s.vigorousShare).toBeCloseTo(60 / 220);

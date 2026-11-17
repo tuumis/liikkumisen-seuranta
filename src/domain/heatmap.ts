@@ -22,6 +22,8 @@ export interface HeatDay {
   logged?: number;
   /** Päivän tavoite (reipas + rasittava, min). */
   target: number;
+  /** Tavoitteeseen verrattava luku, jos eri kuin mvpa (aikuinen: reipas + 2 × rasittava, 17.11.2026). */
+  goal?: number;
   /** Alle kouluikäinen: liikuttu kesto (min) ja sen tavoite (180); tavoite täyttyy vasta, kun molemmat ehdot täyttyvät. */
   moving?: number;
   movingTarget?: number;
@@ -36,7 +38,7 @@ export const LEVEL_LABELS: Record<HeatMeasure, [string, string, string, string]>
   sessions: ['1 kerta', '2 kertaa', '3 kertaa', '4+ kertaa'],
 };
 
-type LevelInput = Pick<HeatDay, 'mvpa' | 'total' | 'sessions' | 'target'> & Partial<Pick<HeatDay, 'moving' | 'movingTarget'>>;
+type LevelInput = Pick<HeatDay, 'mvpa' | 'total' | 'sessions' | 'target'> & Partial<Pick<HeatDay, 'moving' | 'movingTarget' | 'goal'>>;
 
 export function heatLevel(measure: HeatMeasure, d: LevelInput): HeatLevel {
   if (measure === 'sessions') return Math.min(4, Math.max(0, Math.floor(d.sessions))) as HeatLevel;
@@ -44,7 +46,7 @@ export function heatLevel(measure: HeatMeasure, d: LevelInput): HeatLevel {
     const m = Math.round(d.total);
     return m <= 0 ? 0 : m <= 30 ? 1 : m <= 60 ? 2 : m <= 90 ? 3 : 4;
   }
-  const m = Math.round(d.mvpa);
+  const m = Math.round(d.goal ?? d.mvpa);
   const mov = d.movingTarget ? Math.round(d.moving ?? 0) : 0;
   if (m <= 0 && mov <= 0) return 0;
   let r = d.target > 0 ? m / d.target : 1;

@@ -5,7 +5,7 @@
 import { planAdherence } from './adherence';
 import { weeklyHours, type WeeklyHours } from './hours';
 import { vigorousDayThreshold, type VigorousThreshold } from './vigorous';
-import { dayTotals, evaluatePeriod, trackingStart, validDays } from './aggregate';
+import { dayTotals, evaluatePeriod, hasLoggedData, trackingStart, validDays } from './aggregate';
 import { datesBetween } from './dates';
 import { holidayDates } from './holidays';
 import { periodGroup, type PeriodGroupInfo } from './groups';
@@ -49,7 +49,8 @@ export interface PeriodReport {
   days: DayTotals[];
   evaluation: PeriodEvaluation;
   /** Miksi päiviä jäi pois vertailusta. */
-  excluded: { future: number; beforeTracking: number; flagged: number };
+  /** today = kuluva päivä, jolle ei vielä ole kirjattu mitään (ei mukana arviossa, 17.11.2026). */
+  excluded: { future: number; beforeTracking: number; flagged: number; today: number };
   trackingStart: ISODate;
   /** Jakauma kategorioittain kelvollisilta päiviltä (7.10). */
   byCategory: CategoryBreakdown[];
@@ -85,17 +86,21 @@ export function periodReport(input: ReportInput): PeriodReport {
   const dates = datesBetween(period.start, period.end);
   const holidays = holidayDates(input.settings.holidays, profile.id, period.start, period.end);
   const allDays = dates.map((d) => dayTotals(d, sessions, estimates, input.types, holidays.has(d)));
-  const validDates = validDays(period, profile, flags, today);
+  // Kesken oleva päivä (17.11.2026): tänään tulee suositusarvioon vasta, kun sille on kirjattu jotain
+  // (kerta tai arkiliikunnan vahvistus), ettei aamun tyhjä päivä laske viikon keskiarvoa.
+  const todayOpen = (d: ISODate) => d === today && !hasLoggedData(allDays[dates.indexOf(d)]);
+  const validDates = validDays(period, profile, flags, today).filter((d) => !todayOpen(d));
   const valid = new Set(validDates);
   const days = allDays.filter((d) => valid.has(d.date));
 
   const start = trackingStart(profile);
   const flagged = new Set(flags.filter((f) => !f.deletedAt).map((f) => f.date));
-  const excluded = { future: 0, beforeTracking: 0, flagged: 0 };
+  const excluded = { future: 0, beforeTracking: 0, flagged: 0, today: 0 };
   for (const d of dates) {
     if (d > today) excluded.future++;
     else if (d < start) excluded.beforeTracking++;
     else if (flagged.has(d)) excluded.flagged++;
+    else if (todayOpen(d)) excluded.today++;
   }
 
   const group = periodGroup(profile, period);
@@ -125,7 +130,7 @@ export function periodReport(input: ReportInput): PeriodReport {
   const inPeriod = <T extends { date: ISODate }>(rows: T[]) => rows.filter((r) => r.date >= period.start && r.date <= period.end);
   const adherence = planAdherence(inPeriod(own(input.planned)), inPeriod(sessions), today);
 
-  const hours = weeklyHours({ period, sessions, planned: own(input.planned), estimates, flags, types: input.types, today, holidays });
+  const hours = weeklyHours({ period, sessions, planned: own(input.planned), estimates, flags, types: input.types, today, holidays, trackingStart: start });
 
   return { period, group, allDays, validDates, days, evaluation, excluded, trackingStart: start, byCategory, adherence, hours, vigorousDay };
 }

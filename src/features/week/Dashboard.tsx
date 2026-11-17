@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { addDays, isoWeekday } from '../../domain/dates';
 import { mvpaOf } from '../../domain/intensity';
-import { earlyYearsDay } from '../../domain/aggregate';
+import { earlyYearsDay, isVigorousDay } from '../../domain/aggregate';
 import { RECOMMENDATIONS } from '../../domain/recommendations';
 import type { PeriodReport } from '../../domain/report';
 import type { ActivityType, ISODate, PlannedSession, Profile, Session, UUID } from '../../domain/types';
@@ -241,7 +241,7 @@ export function RhythmCard({ report, today }: { report: PeriodReport; today: ISO
   const min = report.vigorousDay.min;
   const rows = [
     ...(group === 'school_age'
-      ? [{ key: 'vig', term: 'vigorous_day' as const, label: 'Rasittava päivä', sub: `≥ ${min} min`, Icon: IconBolt, on: (i: number) => report.allDays[i].logged.vigorous >= min, target: 3 }]
+      ? [{ key: 'vig', term: 'vigorous_day' as const, label: 'Rasittava päivä', sub: `≥ ${min} min`, Icon: IconBolt, on: (i: number) => isVigorousDay(report.allDays[i], min), target: 3 }]
       : []),
     { key: 'mus', term: 'muscle' as const, label: 'Lihaksia vahvistava', sub: 'kirjattu kerta', Icon: IconLeaf, on: (i: number) => report.allDays[i].muscle, target: group === 'adult' ? 2 : 3 },
     ...(group === 'school_age' ? [{ key: 'bone', term: 'bone' as const, label: 'Luustoa vahvistava', sub: 'kirjattu kerta', Icon: IconBone, on: (i: number) => report.allDays[i].bone, target: 3 }] : []),
