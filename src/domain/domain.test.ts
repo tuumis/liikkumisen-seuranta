@@ -160,8 +160,8 @@ describe('tunnisteet ja siemendata', () => {
     expect(newId()).toMatch(/^[0-9a-f-]{36}$/);
   });
 
-  it('sisäänrakennetut lajit (31), pysyvät avaimet, kelvolliset profiilit', () => {
-    expect(BUILT_IN_ACTIVITY_TYPES).toHaveLength(31);
+  it('sisäänrakennetut lajit (32), pysyvät avaimet, kelvolliset profiilit', () => {
+    expect(BUILT_IN_ACTIVITY_TYPES).toHaveLength(32);
     const ids = BUILT_IN_ACTIVITY_TYPES.map((t) => t.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const t of BUILT_IN_ACTIVITY_TYPES) {
@@ -174,6 +174,7 @@ describe('tunnisteet ja siemendata', () => {
       ['game', true],
       ['tournament', true],
       ['training', false], // omatoiminen
+      ['friendly', false], // harjoituspeli: koko varattu aika, ei peliaikalaskentaa
     ]);
     const self = BUILT_IN_ACTIVITY_TYPES.find((t) => t.key === 'football_self')!;
     expect(self).toMatchObject({ id: 't:football_self', category: 'self_directed', sortOrder: 2.5, shares: { light: 0.5, moderate: 0.35, vigorous: 0.05 } });

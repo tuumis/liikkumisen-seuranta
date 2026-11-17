@@ -51,6 +51,9 @@ const ROWS: Row[] = [
   // Lisätty 12.11.2026 (käyttäjän pyyntö): omatoiminen pallottelu, pääosin kevyttä ja reipasta.
   // Lasketaan jalkapallon harjoitusmäärään, mutta kategoria on omaehtoinen (ei ohjattu).
   ['football_self', 'Jalkapallo – omatoiminen', '🥾', 'self_directed', 'ball_games', 0.5, 0.35, 0.05, 'ask', 'yes', 'training'],
+  // Lisätty 17.11.2026 (käyttäjän pyyntö): harjoituspeli eli "pelitälli" yhtä tai useampaa joukkuetta vastaan.
+  // Koko varattu aika (alku–loppu) lasketaan; teho pelin ja treenin väliltä (sovelluksen lähtöarvio).
+  ['football_friendly', 'Jalkapallo – harjoituspeli', '🤝', 'hobby', 'ball_games', 0.25, 0.4, 0.25, 'ask', 'yes', 'friendly'],
   // Lisätty 14.11.2026: päiväkotipäivän liikkuminen (Liikkuva varhaiskasvatus: 2 h, josta 40 min reipasta).
   ['daycare_day', 'Päiväkotipäivä', '🧸', 'daycare', 'play', 0.67, 0.25, 0.08, 'no', 'ask'],
   // Lisätty 14.11.2026 (käyttäjän pyyntö): lisää tehoprofiileja. Sovelluksen lähtöarvioita, muokattavissa.
@@ -80,6 +83,7 @@ export const BUILT_IN_RENAMES: Readonly<Record<string, string>> = Object.freeze(
 /** Myöhemmin lisättyjen lajien järjestys, jotta aiemmat lajit säilyttävät sortOrder-arvonsa. */
 const SORT_ORDER: Record<string, number> = {
   football_self: 2.5,
+  football_friendly: 2.2,
   daycare_day: 4.5,
   daycare_outdoor: 4.6,
   activity_park: 8.5,

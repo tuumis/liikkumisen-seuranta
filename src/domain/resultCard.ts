@@ -41,7 +41,8 @@ export interface ResultCard {
  * ei ole tulosta: tuloskuvassa ei olisi mitään jaettavaa.
  */
 export function resultCard(rows: GameRow[]): ResultCard | undefined {
-  const sorted = [...rows].sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+  // Harjoituspelit eivät ole tuloskuvan pelejä (17.11.2026).
+  const sorted = rows.filter((r): r is GameRow & { kind: 'game' | 'tournament' } => r.kind !== 'friendly').sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
   if (!sorted.some((r) => r.outcome)) return undefined;
   const first = sorted[0];
   const games: ResultCardGame[] = sorted.map((r) => ({

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { AppDB } from './schema';
 import { createRepositories, type Repositories } from './repositories';
 import { buildSyncFile, mergeSyncFile, purgeProfile, toJson } from './backup';
-import { footballEnabled, gameRows, isClubFootball, summarizeBy, summarizeByPosition, summarizeGames, LEVEL_LABEL } from '../domain/football';
+import { footballEnabled, footballPeriodSummary, friendlyRows, gameRows, isClubFootball, summarizeBy, summarizeByPosition, summarizeGames, LEVEL_LABEL } from '../domain/football';
 import { BUILT_IN_ACTIVITY_TYPES } from '../seed/activityTypes';
 
 let n = 0;
@@ -374,5 +374,54 @@ describe('Dexie-päivitys v1 → v2 olemassa olevalla tietokannalla', () => {
     expect(await db.teams.count()).toBe(0);
     expect(await repo.getMeta('schemaVersion')).toBe(3);
     expect(await db.activityTypes.get('t:football_self')).toBeDefined();
+  });
+});
+
+describe('harjoituspelit (17.11.2026)', () => {
+  it('kalenterista kuittaukseen: vastustajat tulosriveiksi, tulos valinnainen eikä V–T–H-tilastossa', async () => {
+    const { repo, db } = await device('friendly');
+    const team = await repo.saveTeam('p1', { name: 'P2018' });
+    const e = await repo.createFixture('p1', {
+      kind: 'friendly',
+      date: '2026-11-10',
+      startTime: '17:00',
+      durationMin: 90,
+      teamId: team.id,
+      games: [{ opponent: ' HJK · Musta ' }, { opponent: '' }, { opponent: 'PK-35' }],
+      location: 'Tali',
+      level: 'haaste',
+    });
+    expect(e.plan.activityTypeId).toBe('t:football_friendly');
+    expect(e.fixture).toMatchObject({ games: [{ opponent: 'HJK · Musta' }, { opponent: 'PK-35' }], gamesCount: 2, location: 'Tali', level: 'haaste' });
+
+    const r = await repo.confirmPlanned(e.plan.id, TODAY);
+    expect(r.session).toMatchObject({ durationMin: 90, effort: -1 }); // haaste = kevyempi
+    expect(r.session.playedMin).toBeUndefined();
+    expect((await repo.getFootballDetails(r.session.id))!.games).toEqual([{ opponent: 'HJK · Musta' }, { opponent: 'PK-35' }]);
+
+    await repo.saveFootballDetails(r.session.id, {
+      attendance: 'full',
+      focusTags: [],
+      teamId: team.id,
+      level: 'haaste',
+      games: [{ opponent: 'HJK · Musta', goalsFor: 3, goalsAgainst: 1, playerGoals: 2, played: 'part', playedMin: 30 }, { opponent: 'PK-35' }],
+    });
+    const fd = (await repo.getFootballDetails(r.session.id))!;
+    expect(fd.games).toEqual([{ opponent: 'HJK · Musta', goalsFor: 3, goalsAgainst: 1, playerGoals: 2 }, { opponent: 'PK-35' }]);
+    expect(fd.playerGoals).toBe(2);
+
+    const types = new Map(BUILT_IN_ACTIVITY_TYPES.map((t) => [t.id, t]));
+    const sessions = [(await db.sessions.get(r.session.id))!];
+    const details = new Map([[fd.sessionId, fd]]);
+    expect(gameRows(sessions, details, types)).toEqual([]);
+    const fr = friendlyRows(sessions, details, types);
+    expect(fr.map((x) => [x.kind, x.opponent, x.outcome])).toEqual([
+      ['friendly', 'HJK · Musta', 'W'],
+      ['friendly', 'PK-35', undefined],
+    ]);
+    expect(summarizeGames(fr)).toMatchObject({ games: 0, wins: 0, noResult: 0 });
+    const sum = footballPeriodSummary({ sessions, details, types, planned: [], today: TODAY }, { start: '2026-11-01', end: '2026-11-30' } as never);
+    expect(sum.games.games).toBe(0);
+    expect(sum.friendlies).toEqual({ count: 1, minutes: 90 });
   });
 });

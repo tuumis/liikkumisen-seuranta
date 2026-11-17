@@ -84,6 +84,15 @@ export function footballBrief(s: Session, t: ActivityType | undefined, d: Footba
     const res = games.map((g) => outcomeOf(g.goalsFor, g.goalsAgainst)).filter(Boolean);
     parts.push(res.length ? `${res.filter((r) => r === 'W').length}–${res.filter((r) => r === 'D').length}–${res.filter((r) => r === 'L').length}` : `${games.length || d.gamesCount || '?'} peliä`);
   }
+  // Harjoituspeli: vastustajat ja tulokset ilman V–T–H-merkintää (17.11.2026).
+  if (t?.footballKind === 'friendly' && d?.games?.length) {
+    parts.push(
+      d.games
+        .map((g) => [g.opponent, g.goalsFor !== undefined && g.goalsAgainst !== undefined ? `${g.goalsFor}–${g.goalsAgainst}` : undefined].filter(Boolean).join(' '))
+        .filter(Boolean)
+        .join(', '),
+    );
+  }
   if (s.playedMin !== undefined) parts.push(`pelasi ${s.playedMin} min`);
   if (d?.playerGoals) parts.push(`⚽ ${d.playerGoals}`);
   return parts.join(' · ');

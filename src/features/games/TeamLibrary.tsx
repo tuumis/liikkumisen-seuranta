@@ -6,7 +6,7 @@
 
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { gameRows, OUTCOME_LABEL, type GameOutcome, type GameRow, type GameSummary } from '../../domain/football';
+import { friendlyRows, gameRows, OUTCOME_LABEL, type GameOutcome, type GameRow, type GameSummary } from '../../domain/football';
 import { clubKey, displayTeamName, formatTeamName, parseTeamName, squadLabel } from '../../domain/opponent';
 import { buildOpponentLibrary, type ClubEntry, type SquadEntry, type UpcomingGame } from '../../domain/opponentLibrary';
 import type { Club, Profile } from '../../domain/types';
@@ -39,7 +39,8 @@ function useLibrary(profile: Profile) {
   }, [data]);
   const library = useMemo(() => {
     if (!data) return undefined;
-    const rows = gameRows(data.sessions, data.details, data.types);
+    // Harjoituspelit mukana historiana; seuran V–T–H ja pelimäärä lasketaan ilman niitä (summarizeGames).
+    const rows = [...gameRows(data.sessions, data.details, data.types), ...friendlyRows(data.sessions, data.details, data.types)];
     const upcoming: UpcomingGame[] = [];
     for (const e of fixtures ?? []) {
       if (e.plan.status !== 'open' || !e.fixture) continue;
@@ -51,6 +52,7 @@ function useLibrary(profile: Profile) {
   return { library, notes };
 }
 
+const friendliesOf = (c: ClubEntry) => c.squads.reduce((a, s) => a + s.rows.filter((r) => r.kind === 'friendly').length, 0);
 const record = (s: GameSummary) => `${s.wins}–${s.draws}–${s.losses}`;
 const hasResults = (s: GameSummary) => s.wins + s.draws + s.losses > 0;
 const gamesText = (n: number) => `${n} ${n === 1 ? 'peli' : 'peliä'}`;
@@ -172,7 +174,8 @@ export function OpponentLibrary({ profile }: { profile: Profile }) {
                   {c.squads.map((s) => squadLabel(s.parts)).join(', ')}
                 </span>
                 <span className="mt-0.5 block text-xs tabular-nums text-slate-500">
-                  {c.summary.games === 0 && c.upcoming === 0 ? 'Ei vielä pelejä' : gamesText(c.summary.games)}
+                  {c.summary.games === 0 && c.upcoming === 0 && !friendliesOf(c) ? 'Ei vielä pelejä' : gamesText(c.summary.games)}
+                  {friendliesOf(c) > 0 && ` · harjoituspelejä ${friendliesOf(c)}`}
                   {hasResults(c.summary) && ` · V–T–H ${record(c.summary)}`}
                   {c.upcoming > 0 && ` · tulossa ${c.upcoming}`}
                 </span>
@@ -513,7 +516,7 @@ function GameLine({ r, note, profile }: { r: GameRow; note?: string; profile: Pr
       <div className="flex items-center gap-3">
         <span className="w-20 shrink-0 text-sm tabular-nums text-slate-600">{formatDate(r.date, 'EEEEEE d.M.yy')}</span>
         <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
-          {r.kind === 'tournament' ? `${r.eventName ?? 'Turnaus'}${r.index ? ` · peli ${r.index}` : ''}` : 'Peli'}
+          {r.kind === 'tournament' ? `${r.eventName ?? 'Turnaus'}${r.index ? ` · peli ${r.index}` : ''}` : r.kind === 'friendly' ? 'Harjoituspeli' : 'Peli'}
           {r.team && <span className="text-slate-500"> · {displayTeamName(r.team)}</span>}
         </span>
         {r.playerGoals ? (
@@ -522,7 +525,7 @@ function GameLine({ r, note, profile }: { r: GameRow; note?: string; profile: Pr
           </span>
         ) : null}
         <span className={`shrink-0 text-sm tabular-nums ${r.outcome ? 'font-semibold text-slate-900' : 'text-slate-500'}`}>{r.outcome ? `${r.goalsFor}–${r.goalsAgainst}` : 'ei tulosta'}</span>
-        {r.outcome && <span className={`w-6 shrink-0 rounded text-center text-xs font-bold ${OUTCOME_CLASS[r.outcome]}`}>{OUTCOME_LABEL[r.outcome]}</span>}
+        {r.outcome && r.kind !== 'friendly' && <span className={`w-6 shrink-0 rounded text-center text-xs font-bold ${OUTCOME_CLASS[r.outcome]}`}>{OUTCOME_LABEL[r.outcome]}</span>}
       </div>
       {editing ? (
         <form

@@ -135,7 +135,7 @@ export function QuickAdd({
   }, [types, recentIds, footballOn]);
   // Järjestys: treeni, omatoiminen, peli, turnaus.
   const football = useMemo(() => {
-    const rank = (t: ActivityType) => (t.footballKind === 'training' ? (t.category === 'hobby' ? 0 : 1) : t.footballKind === 'game' ? 2 : t.footballKind === 'tournament' ? 3 : 4);
+    const rank = (t: ActivityType) => (t.footballKind === 'training' ? (t.category === 'hobby' ? 0 : 1) : t.footballKind === 'game' ? 2 : t.footballKind === 'friendly' ? 2.5 : t.footballKind === 'tournament' ? 3 : 4);
     return (types ?? []).filter(inFootballGroup).sort((a, b) => rank(a) - rank(b));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [types, footballOn]);

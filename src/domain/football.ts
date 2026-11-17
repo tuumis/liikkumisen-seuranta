@@ -49,7 +49,8 @@ export const isGameFormat = (s: unknown): s is GameFormat => typeof s === 'strin
 export interface GameRow {
   sessionId: UUID;
   date: ISODate;
-  kind: 'game' | 'tournament';
+  /** 'friendly' = harjoituspeli: vain friendlyRows tuottaa, eikä summarizeGames laske niitä (17.11.2026). */
+  kind: 'game' | 'tournament' | 'friendly';
   /** Turnauksen nimi. */
   eventName?: string;
   /** Pelin järjestysnumero turnauksessa (1…); puuttuu yksittäiseltä peliltä. */
@@ -193,7 +194,49 @@ export function gameRows(sessions: Session[], details: Map<UUID, FootballDetails
   return rows.sort((a, b) => a.date.localeCompare(b.date) || a.sessionId.localeCompare(b.sessionId) || (a.index ?? 0) - (b.index ?? 0));
 }
 
-/** V–T–H ja maalit vain peleistä, joissa molemmat maalimäärät on kirjattu (SPEC 8). */
+/**
+ * Harjoituspelit (17.11.2026): yksi rivi per vastustaja (tai yksi rivi ilman vastustajia). Tulos on
+ * valinnainen eikä tule V–T–H-tilastoon (summarizeGames ohittaa nämä rivit).
+ */
+export function friendlyRows(sessions: Session[], details: Map<UUID, FootballDetails>, types: Map<UUID, ActivityType>): GameRow[] {
+  const rows: GameRow[] = [];
+  for (const s of sessions) {
+    if (s.deletedAt || footballKindOf(s, types) !== 'friendly') continue;
+    const d = details.get(s.id);
+    const fd = d && !d.deletedAt ? d : undefined;
+    const base = {
+      sessionId: s.id,
+      date: s.date,
+      kind: 'friendly' as const,
+      team: cleanName(fd?.team),
+      ...(fd?.level ? { level: fd.level } : {}),
+      ...(fd?.teamId ? { teamId: fd.teamId } : {}),
+      ...(fd?.format ? { format: fd.format } : {}),
+      ...(fd?.positions?.length ? { positions: fd.positions } : {}),
+      games: 1,
+    };
+    const games = fd?.games ?? [];
+    if (!games.length) {
+      rows.push({ ...base, ...(fd?.playerGoals !== undefined ? { playerGoals: fd.playerGoals } : {}) });
+      continue;
+    }
+    games.forEach((g, i) =>
+      rows.push({
+        ...base,
+        index: i + 1,
+        opponent: cleanName(g.opponent),
+        goalsFor: g.goalsFor,
+        goalsAgainst: g.goalsAgainst,
+        outcome: outcomeOf(g.goalsFor, g.goalsAgainst),
+        ...(g.note ? { note: g.note } : {}),
+        ...(g.playerGoals !== undefined ? { playerGoals: g.playerGoals } : {}),
+      }),
+    );
+  }
+  return rows.sort((a, b) => a.date.localeCompare(b.date) || a.sessionId.localeCompare(b.sessionId) || (a.index ?? 0) - (b.index ?? 0));
+}
+
+/** V–T–H ja maalit vain peleistä, joissa molemmat maalimäärät on kirjattu (SPEC 8). Harjoituspelit eivät ole mukana. */
 export function summarizeGames(rows: GameRow[]): GameSummary {
   let games = 0;
   let wins = 0;
@@ -207,6 +250,7 @@ export function summarizeGames(rows: GameRow[]): GameSummary {
   let pg = 0;
   let pgGames = 0;
   for (const r of rows) {
+    if (r.kind === 'friendly') continue;
     games += r.games;
     if (r.playerGoals !== undefined && r.playerGoals !== null) {
       pg += r.playerGoals;
@@ -344,8 +388,10 @@ export function seasonKey(d: ISODate): string {
 export interface FootballPeriodSummary {
   /** Treenien määrä ja minuutit. */
   training: { count: number; minutes: number };
-  /** Pelit ja peliaika (turnaukset mukana). */
+  /** Pelit ja peliaika (turnaukset mukana, harjoituspelit eivät). */
   games: GameSummary;
+  /** Harjoituspelit omana rivinään (17.11.2026): kerrat ja minuutit, ei tuloksia. */
+  friendlies: { count: number; minutes: number };
   /** Osallistumisaste suunnitelmista: tehdyt / (tehdyt + väliin jääneet), perutut pois. */
   participation: AdherenceSummary;
   /** Osallistuminen kokonaan / osittain (kirjatuista lisätiedoista). */
@@ -372,6 +418,7 @@ export function footballPeriodSummary(input: FootballInput, period: Period): Foo
   const within = inPeriod(period);
   const sessions = input.sessions.filter((s) => !s.deletedAt && within(s.date) && footballKindOf(s, input.types));
   const training = sessions.filter((s) => footballKindOf(s, input.types) === 'training');
+  const friendlies = sessions.filter((s) => footballKindOf(s, input.types) === 'friendly');
   const det = (s: Session) => {
     const d = input.details.get(s.id);
     return d && !d.deletedAt ? d : undefined;
@@ -400,6 +447,7 @@ export function footballPeriodSummary(input: FootballInput, period: Period): Foo
   return {
     training: { count: training.length, minutes: training.reduce((a, s) => a + s.durationMin, 0) },
     games: summarizeGames(gameRows(sessions, input.details, input.types)),
+    friendlies: { count: friendlies.length, minutes: friendlies.reduce((a, s) => a + s.durationMin, 0) },
     participation: planAdherence(plans, sessions, input.today),
     attendance,
     tags: { tagged, counts },
@@ -470,7 +518,7 @@ export function gamesCsv(rows: GameRow[]): string {
     const [y, m, d] = r.date.split('-');
     return [
       `${Number(d)}.${Number(m)}.${y}`,
-      r.kind === 'tournament' ? r.eventName ?? 'Turnaus' : 'Peli',
+      r.kind === 'tournament' ? r.eventName ?? 'Turnaus' : r.kind === 'friendly' ? 'Harjoituspeli' : 'Peli',
       r.index,
       r.team,
       r.opponent,

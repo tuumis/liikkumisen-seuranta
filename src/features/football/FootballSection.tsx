@@ -69,6 +69,14 @@ export function FootballSection({ profileId, week, onOpenGames }: { profileId: s
             </dd>
             <dt className="text-slate-600">Pelit</dt>
             <dd className="text-right tabular-nums">{sum.games.games} kpl</dd>
+            {sum.friendlies.count > 0 && (
+              <>
+                <dt className="text-slate-600">Harjoituspelit (ei tilastoissa)</dt>
+                <dd className="text-right tabular-nums">
+                  {sum.friendlies.count} kpl · {sum.friendlies.minutes} min
+                </dd>
+              </>
+            )}
             <dt className="text-slate-600">Pelatut minuutit</dt>
             <dd className="text-right tabular-nums">
               {sum.games.playedMinTotal} min{sum.games.playedMinAvg !== null && ` · ka. ${num1(Math.round(sum.games.playedMinAvg * 10) / 10)}/peli`}

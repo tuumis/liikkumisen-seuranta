@@ -1,4 +1,6 @@
-// Tulevan pelin tai turnauksen lisäys ja muokkaus (pelikalenteri).
+// Tulevan pelin, turnauksen tai harjoituspelin lisäys ja muokkaus (pelikalenteri).
+// Harjoituspeli (17.11.2026): yksi tai useampi vastustaja, alku ja loppu, paikka, taso ja muistiinpano;
+// tulos kirjataan halutessa kuittauksen jälkeen eikä se tule V–T–H-tilastoon.
 
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -17,12 +19,23 @@ import { TeamNameFields, useTeamNameSuggestions } from './TeamNameFields';
 import { OpponentHistoryCard } from './OpponentHistory';
 import { DateInput } from '../../ui/DateInput';
 
+export type FixtureKind = 'game' | 'tournament' | 'friendly';
+
 export type FixtureDraft = {
-  kind: 'game' | 'tournament';
+  kind: FixtureKind;
   entry?: FixtureEntry;
 };
 
+/** Suunnitelman laji → kalenterin tyyppi. */
+export const fixtureKindOf = (activityTypeId: string): FixtureKind =>
+  activityTypeId === 't:football_tournament' ? 'tournament' : activityTypeId === 't:football_friendly' ? 'friendly' : 'game';
+
+const DEFAULT_DURATION: Record<FixtureKind, number> = { game: 60, tournament: 300, friendly: 90 };
+const toMin = (t: string) => (/^\d{2}:\d{2}$/.test(t) ? Number(t.slice(0, 2)) * 60 + Number(t.slice(3)) : undefined);
+const fromMin = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+
 const LEVELS: GameLevel[] = ['elite', 'kilpa', 'haaste'];
+const KIND_LABEL: Record<FixtureKind, string> = { game: 'Peli', tournament: 'Turnaus', friendly: 'Harjoituspeli' };
 
 type ScheduleRow = { time: string; opponent: string; location: string };
 const emptyRow = (): ScheduleRow => ({ time: '', opponent: '', location: '' });
@@ -32,7 +45,9 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
   const teams = useLiveQuery(() => repo.listTeams(profile.id), [profile.id]);
   const names = useLiveQuery(() => repo.footballNameSuggestions(profile.id), [profile.id]);
   const teamNames = useTeamNameSuggestions(profile.id);
-  const [kind, setKind] = useState<'game' | 'tournament'>('game');
+  const [kind, setKind] = useState<FixtureKind>('game');
+  const [endTime, setEndTime] = useState('');
+  const [opponents, setOpponents] = useState<string[]>(['']);
   const [date, setDate] = useState(todayFn());
   const [time, setTime] = useState('');
   const [duration, setDuration] = useState('60');
@@ -58,11 +73,14 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
   useEffect(() => {
     if (!draft) return;
     const { plan, fixture: f } = draft.entry ?? {};
-    const k = plan ? (plan.activityTypeId === 't:football_tournament' ? 'tournament' : 'game') : draft.kind;
+    const k = plan ? fixtureKindOf(plan.activityTypeId) : draft.kind;
     setKind(k);
     setDate(plan?.date ?? todayFn());
     setTime(plan?.startTime ?? '');
-    setDuration(String(plan?.durationMin ?? (k === 'tournament' ? 300 : 60)));
+    setDuration(String(plan?.durationMin ?? DEFAULT_DURATION[k]));
+    const start = plan?.startTime ? toMin(plan.startTime) : undefined;
+    setEndTime(start !== undefined && plan ? fromMin(start + plan.durationMin) : '');
+    setOpponents(k === 'friendly' && f?.games?.length ? f.games.map((g) => g.opponent ?? '') : ['']);
     setTeamId(f?.teamId ?? '');
     setOpponent(f?.opponent ?? '');
     setEventName(f?.eventName ?? '');
@@ -117,8 +135,14 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
   const kickoff = kind === 'game' ? (/^\d{2}:\d{2}$/.test(time) ? (time as HHmm) : undefined) : firstMin !== undefined ? (hhmm(firstMin) as HHmm) : undefined;
   const gameDay = kickoff ? gameDaySchedule(kickoff, timing.warmupMin) : undefined;
 
+  // Harjoituspeli: kesto alusta ja lopusta (yli puolenyön ei sallita).
+  const startMin = toMin(time);
+  const endMin = toMin(endTime);
+  const friendlyDuration = kind === 'friendly' && startMin !== undefined && endMin !== undefined ? endMin - startMin : undefined;
+
   async function save() {
-    const dur = autoOn ? autoDuration : Number(duration);
+    if (friendlyDuration !== undefined && friendlyDuration <= 0) return setError('Loppu on ennen alkua');
+    const dur = autoOn ? autoDuration : (friendlyDuration ?? Number(duration));
     if (!isISODate(date)) return setError('Valitse päivä');
     if (!Number.isInteger(dur) || dur < 1 || dur > 1440) return setError('Tarkista kesto (min)');
     const rows = schedule.filter((g) => g.time || g.opponent.trim() || g.location.trim());
@@ -144,7 +168,9 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
               opponent: g.opponent,
               location: g.location,
             }))
-          : undefined,
+          : kind === 'friendly'
+            ? opponents.map((o) => ({ opponent: o }))
+            : undefined,
       level: level || undefined,
       format: format || undefined,
       location,
@@ -155,7 +181,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
     try {
       if (draft!.entry) await repo.updateFixture(draft!.entry.plan.id, input);
       else await repo.createFixture(profile.id, input);
-      toast(editing ? 'Muutokset tallennettu' : kind === 'game' ? 'Peli lisätty kalenteriin' : 'Turnaus lisätty kalenteriin');
+      toast(editing ? 'Muutokset tallennettu' : `${KIND_LABEL[kind]} lisätty kalenteriin`);
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -176,7 +202,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
   }
 
   return (
-    <Sheet open onClose={onClose} title={editing ? 'Muokkaa' : kind === 'game' ? 'Uusi peli' : 'Uusi turnaus'}>
+    <Sheet open onClose={onClose} title={editing ? 'Muokkaa' : `Uusi ${KIND_LABEL[kind].toLocaleLowerCase('fi')}`}>
       <form
         className="space-y-4"
         noValidate
@@ -190,10 +216,14 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
           value={kind}
           onChange={(k) => {
             setKind(k);
-            if (!editing) setDuration(k === 'tournament' ? '300' : '60');
+            if (!editing) setDuration(String(DEFAULT_DURATION[k]));
+            // Vastustaja siirtyy tyypistä toiseen (peli ↔ harjoituspeli).
+            if (k === 'friendly' && opponent.trim() && !opponents.some((o) => o.trim())) setOpponents([opponent]);
+            if (k === 'game' && !opponent.trim() && opponents[0]?.trim()) setOpponent(opponents[0]);
           }}
           options={[
             { value: 'game', label: '⚽ Peli' },
+            { value: 'friendly', label: '🤝 Harjoituspeli' },
             { value: 'tournament', label: '🏆 Turnaus' },
           ]}
         />
@@ -203,6 +233,28 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
               <DateInput className={inputClass} value={date} onChange={setDate} aria-label="Päivä" />
             </Field>
           </div>
+          {kind === 'friendly' ? (
+            <>
+              <Field label="Alku">
+                <TimeField label="Alku" value={time} onChange={setTime} />
+              </Field>
+              <Field label="Loppu">
+                <TimeField label="Loppu" value={endTime} onChange={setEndTime} />
+              </Field>
+              <div className="col-span-2">
+                {friendlyDuration !== undefined ? (
+                  <p className={`text-sm tabular-nums ${friendlyDuration > 0 ? 'text-slate-600' : 'text-red-700'}`}>
+                    {friendlyDuration > 0 ? `Kesto ${friendlyDuration} min (koko varattu aika lasketaan liikunnaksi)` : 'Loppu on ennen alkua'}
+                  </p>
+                ) : (
+                  <Field label="Kesto (min)" hint="Anna alku ja loppu, niin kesto lasketaan.">
+                    <input className={inputClass} inputMode="numeric" value={duration} onChange={(e) => setDuration(e.target.value)} />
+                  </Field>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
           <Field label={autoStart ? 'Saapuminen' : kind === 'game' ? 'Pelin alku' : 'Kello'}>
             {autoStart ? (
               <div className="field-shell flex min-h-11 items-center justify-center text-base tabular-nums text-slate-700" title={`1. peli − ${ARRIVAL_LEAD_MIN} min`}>
@@ -221,6 +273,8 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
               <input className={inputClass} inputMode="numeric" value={duration} onChange={(e) => setDuration(e.target.value)} />
             )}
           </Field>
+            </>
+          )}
         </div>
         {gameDay && kickoff && (
           <p className="-mt-2 text-sm tabular-nums text-slate-600">
@@ -239,7 +293,36 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
           </select>
         </Field>
 
-        {kind === 'game' ? (
+        {kind === 'friendly' ? (
+          <div className="space-y-2">
+            <div className="text-[13px] font-semibold text-slate-700">Vastustajat</div>
+            {opponents.map((o, i) => (
+              <div key={i} className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+                <TeamNameFields
+                  compact={opponents.length > 1}
+                  value={o}
+                  suggestions={teamNames}
+                  label={`Vastustaja ${i + 1}`}
+                  onChange={(v) => setOpponents((cur) => cur.map((x, j) => (j === i ? v : x)))}
+                />
+                {opponents.length > 1 && (
+                  <button
+                    type="button"
+                    className="min-h-11 min-w-11 self-end rounded-xl text-slate-500 ring-1 ring-slate-300"
+                    aria-label={`Poista vastustaja ${i + 1}`}
+                    onClick={() => setOpponents((cur) => cur.filter((_, j) => j !== i))}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))}
+            <Button variant="ghost" onClick={() => setOpponents((cur) => [...cur, ''])}>
+              + vastustaja
+            </Button>
+            <p className="text-xs text-slate-500">Esim. pelitälli kahta joukkuetta vastaan. Tulokset kirjataan halutessa pelin jälkeen; ne eivät tule V–T–H-tilastoon.</p>
+          </div>
+        ) : kind === 'game' ? (
           <div>
             <div className="mb-1.5 text-[13px] font-semibold text-slate-700">Vastustaja</div>
             <TeamNameFields value={opponent} onChange={setOpponent} suggestions={teamNames} label="Vastustaja" />

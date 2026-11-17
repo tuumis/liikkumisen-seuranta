@@ -89,7 +89,8 @@ export interface Profile extends SyncFields {
 }
 
 // ---------- liikkumismuoto ----------
-export type FootballKind = 'training' | 'game' | 'tournament';
+/** 'friendly' = harjoituspeli (17.11.2026): tulos valinnainen, ei mukana V–T–H-tilastossa. */
+export type FootballKind = 'training' | 'game' | 'tournament' | 'friendly';
 /** Sarja- tai turnaustaso: Elite = kovatempoinen, Kilpa = reipas, Haaste = kevyempi. */
 export type GameLevel = 'elite' | 'kilpa' | 'haaste';
 

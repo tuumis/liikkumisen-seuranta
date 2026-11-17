@@ -4,11 +4,12 @@ import { InfoTip } from '../../ui/InfoTip';
 import { LEVEL_LABEL, OUTCOME_LABEL, outcomeOf } from '../../domain/football';
 
 /** "vs HJK · Elite · " tulevan pelin suunnitelmariville; "⚠ tietoja puuttuu" ensin (17.11.2026). */
-function fixtureText(f?: Fixture): string {
+function fixtureText(f?: Fixture, typeId?: UUID): string {
+  const friendly = typeId === 't:football_friendly';
   if (!f) return '';
   const parts = [
     f.infoMissing ? `⚠ tietoja puuttuu${f.missingNote ? ` (${f.missingNote})` : ''}` : undefined,
-    f.opponent ? `vs ${f.opponent}` : f.eventName,
+    f.opponent ? `vs ${f.opponent}` : f.eventName ?? (friendly && f.games?.some((g) => g.opponent) ? `vs ${f.games.map((g) => g.opponent).filter(Boolean).join(', ')}` : undefined),
     f.level ? LEVEL_LABEL[f.level] : undefined,
     f.location,
   ].filter(Boolean);
@@ -351,7 +352,7 @@ export function DayRow({
                     <span className="block truncate text-xs text-slate-500">
                       {skipped
                         ? `Ei tehty${p.skipReason ? ` · ${SKIP_REASON_LABEL[p.skipReason].toLowerCase()}` : ''}`
-                        : fixtureText(fixtures?.get(p.id)) + `Suunniteltu${p.startTime ? ` klo ${p.startTime}` : ''} · ${p.durationMin} min`}
+                        : fixtureText(fixtures?.get(p.id), p.activityTypeId) + `Suunniteltu${p.startTime ? ` klo ${p.startTime}` : ''} · ${p.durationMin} min`}
                     </span>
                   </span>
                 </button>
@@ -384,6 +385,13 @@ function footballSummary(kind: string | undefined, d: FootballDetails): string {
     parts.push(`${d.goalsFor}–${d.goalsAgainst} ${OUTCOME_LABEL[o]}${d.opponent ? ` vs ${d.opponent}` : ''}`);
   } else if (kind === 'game' && d.opponent) parts.push(`vs ${d.opponent}`);
   if (kind === 'tournament') parts.push(`${d.eventName ?? 'Turnaus'} · ${d.games?.length ?? d.gamesCount ?? '?'} peliä`);
+  if (kind === 'friendly' && d.games?.length)
+    parts.push(
+      d.games
+        .map((g) => [g.opponent ? `vs ${g.opponent}` : undefined, g.goalsFor !== undefined && g.goalsAgainst !== undefined ? `${g.goalsFor}–${g.goalsAgainst}` : undefined].filter(Boolean).join(' '))
+        .filter(Boolean)
+        .join(' · '),
+    );
   if (d.attendance === 'partial') parts.push('osittain');
   if (d.enjoyment) parts.push(['', '🙁', '🙂', '😄'][d.enjoyment]);
   if (d.parentRating) parts.push('★'.repeat(d.parentRating));

@@ -21,7 +21,7 @@ import { today as todayFn } from '../../ui/today';
 import { FootballPanel } from '../football/FootballPanel';
 import { GamesView } from '../football/GamesView';
 import { SkipReasons } from '../review/SkipReasons';
-import { FixtureSheet, type FixtureDraft } from './FixtureSheet';
+import { FixtureSheet, fixtureKindOf, type FixtureDraft } from './FixtureSheet';
 import { DiaryView } from './DiaryView';
 import { OpponentLibrary } from './TeamLibrary';
 import { TeamNameFields, useTeamNameSuggestions } from './TeamNameFields';
@@ -65,10 +65,11 @@ export function GamesTab({ profile }: { profile?: Profile }) {
           </h2>
           <span className="text-xs text-slate-500">Tulevat pelit näkyvät myös Viikko-näkymässä</span>
         </div>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {(
             [
               ['game', '⚽', 'Tuleva peli', 'Yksi ottelu: päivä, kellonaika, vastustaja ja taso.'],
+              ['friendly', '🤝', 'Tuleva harjoituspeli', 'Pelitälli yhtä tai useampaa joukkuetta vastaan; tulos ei tilastoihin.'],
               ['tournament', '🏆', 'Tuleva turnaus', 'Useita pelejä: otteluohjelma valmiiksi, tulokset pelien jälkeen.'],
             ] as const
           ).map(([kind, icon, title, text]) => (
@@ -236,7 +237,10 @@ function CalendarView({ profile, onEdit }: { profile: Profile; onEdit: (e: Fixtu
               {skipped.map((e) => (
                 <li key={e.plan.id} className="flex justify-between gap-2 py-2">
                   <span className="truncate text-slate-700">
-                    {dayLabel(e.plan.date)} · {e.fixture?.opponent ?? e.fixture?.eventName ?? (e.plan.activityTypeId.includes('tournament') ? 'Turnaus' : 'Peli')}
+                    {dayLabel(e.plan.date)} ·{' '}
+                    {e.fixture?.opponent ??
+                      e.fixture?.eventName ??
+                      (fixtureKindOf(e.plan.activityTypeId) === 'tournament' ? 'Turnaus' : fixtureKindOf(e.plan.activityTypeId) === 'friendly' ? 'Harjoituspeli' : 'Peli')}
                   </span>
                   <span className="shrink-0 text-slate-500">{e.plan.skipReason ? SKIP_REASON_LABEL[e.plan.skipReason] : 'ei syytä'}</span>
                 </li>
@@ -251,6 +255,12 @@ function CalendarView({ profile, onEdit }: { profile: Profile; onEdit: (e: Fixtu
   );
 }
 
+/** Loppuaika alusta ja kestosta (harjoituspeli). */
+function endOf(start: string, durationMin: number): string {
+  const m = Number(start.slice(0, 2)) * 60 + Number(start.slice(3, 5)) + durationMin;
+  return `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+}
+
 /** "Tietoja puuttuu" -merkki (17.11.2026); kuvaus näkyy merkissä ja vihjeenä. */
 export function MissingBadge({ f }: { f?: { infoMissing?: boolean; missingNote?: string } }) {
   if (!f?.infoMissing) return null;
@@ -263,15 +273,23 @@ export function MissingBadge({ f }: { f?: { infoMissing?: boolean; missingNote?:
 }
 
 function FixtureSummary({ e, team, history }: { e: FixtureEntry; team?: Team; history?: (opponent: string | undefined) => string | undefined }) {
-  const tournament = e.plan.activityTypeId === 't:football_tournament';
+  const kind = fixtureKindOf(e.plan.activityTypeId);
+  const tournament = kind === 'tournament';
+  const friendly = kind === 'friendly';
   const f = e.fixture;
   const level = f?.level;
+  const opponentsText = (f?.games ?? []).map((g) => g.opponent).filter(Boolean).join(', ');
+  const endText = e.plan.startTime ? endOf(e.plan.startTime, e.plan.durationMin) : undefined;
   return (
     <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-2">
-        <span aria-hidden>{tournament ? '🏆' : '⚽'}</span>
+        <span aria-hidden>{tournament ? '🏆' : friendly ? '🤝' : '⚽'}</span>
         <span className="truncate font-medium text-slate-900">
-          {tournament ? f?.eventName ?? 'Turnaus' : `${team?.name ?? 'Oma joukkue'} – ${f?.opponent ?? 'vastustaja ?'}`}
+          {tournament
+            ? f?.eventName ?? 'Turnaus'
+            : friendly
+              ? `Harjoituspeli · ${team?.name ?? 'Oma joukkue'} – ${opponentsText || 'vastustaja ?'}`
+              : `${team?.name ?? 'Oma joukkue'} – ${f?.opponent ?? 'vastustaja ?'}`}
         </span>
         <LevelBadge level={level} />
         <MissingBadge f={f} />
@@ -283,14 +301,16 @@ function FixtureSummary({ e, team, history }: { e: FixtureEntry; team?: Team; hi
             ? f?.games?.some((g) => g.time) && !f.durationManual
               ? ` · paikalla ${e.plan.startTime}`
               : ` klo ${e.plan.startTime}`
-            : ` klo ${e.plan.startTime} (paikalla ${gameDaySchedule(e.plan.startTime, f?.warmupMin).arrival})`)}{' '}
+            : friendly
+              ? ` klo ${e.plan.startTime}–${endText}`
+              : ` klo ${e.plan.startTime} (paikalla ${gameDaySchedule(e.plan.startTime, f?.warmupMin).arrival})`)}{' '}
         · {e.plan.durationMin} min
         {tournament && team && ` · ${team.name}`}
         {tournament && f?.gamesCount && ` · ${f.gamesCount} peliä`}
         {(f?.format ?? team?.format) && ` · ${f?.format ?? team?.format}`}
         {f?.location && ` · ${f.location}`}
       </div>
-      {!tournament && history?.(f?.opponent) && <div className="mt-0.5 text-xs text-slate-500">{history(f?.opponent)}</div>}
+      {!tournament && !friendly && history?.(f?.opponent) && <div className="mt-0.5 text-xs text-slate-500">{history(f?.opponent)}</div>}
       {tournament && f?.games && f.games.length > 0 && (
         <ol className="mt-1 space-y-0.5 text-xs text-slate-600">
           {f.games.map((g, i) => (
@@ -312,7 +332,7 @@ function FixtureRow({ e, team, today, history, onClick }: { e: FixtureEntry; tea
   const days = Math.round((Date.parse(e.plan.date) - Date.parse(today)) / 86_400_000);
   return (
     <li className="relative">
-      <button type="button" onClick={onClick} className="press card-sunk flex w-full items-center gap-3 p-3 pb-12 text-left hover:bg-slate-100">
+      <button type="button" onClick={onClick} className={`press card-sunk flex w-full items-center gap-3 p-3 text-left hover:bg-slate-100 ${fixtureKindOf(e.plan.activityTypeId) === 'friendly' ? '' : 'pb-12'}`}>
         <div className="w-12 shrink-0 text-center">
           <div className="text-lg font-semibold leading-none text-slate-900">{Number(e.plan.date.slice(8, 10))}</div>
           <div className="text-[11px] uppercase text-slate-500">{formatDate(e.plan.date, 'EEEEEE')}</div>
@@ -322,6 +342,7 @@ function FixtureRow({ e, team, today, history, onClick }: { e: FixtureEntry; tea
         </div>
         <span className="shrink-0 self-start text-xs text-slate-500">{days === 0 ? 'tänään' : days === 1 ? 'huomenna' : `${days} pv`}</span>
       </button>
+      {fixtureKindOf(e.plan.activityTypeId) !== 'friendly' && (
       <button
         type="button"
         onClick={() => openPreviewShare(e.plan.id)}
@@ -330,6 +351,7 @@ function FixtureRow({ e, team, today, history, onClick }: { e: FixtureEntry; tea
       >
         <IconShare size="0.9rem" /> Ennakko
       </button>
+      )}
     </li>
   );
 }

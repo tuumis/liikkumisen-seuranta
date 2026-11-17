@@ -48,7 +48,7 @@ export function DiaryView({ profile }: { profile: Profile }) {
     return data.sessions
       .filter((s) => !s.deletedAt)
       .map((s) => ({ s, t: data.types.get(s.activityTypeId), d: data.details.get(s.id), kind: footballKindOf(s, data.types) }))
-      .filter(({ kind }) => (filter === 'all' ? true : filter === 'training' ? kind === 'training' : kind === 'game' || kind === 'tournament'))
+      .filter(({ kind }) => (filter === 'all' ? true : filter === 'training' ? kind === 'training' : kind === 'game' || kind === 'tournament' || kind === 'friendly'))
       .filter(({ d, s }) => !onlyCommented || hasComment(s, d))
       .filter(({ s, t, d }) => {
         if (!q) return true;
@@ -183,6 +183,24 @@ function tableRows(entries: Entry[]): TableRow[] {
     const rating = [d?.parentRating ? '★'.repeat(d.parentRating) : '', d?.enjoyment ? ['', '🙁', '🙂', '😄'][d.enjoyment] : ''].filter(Boolean).join(' ') || undefined;
     const comment = [d?.ratingNote, s.note].filter(Boolean).join(' · ') || undefined;
     const kind = t?.footballKind;
+    // Harjoituspeli: rivi per vastustaja; tulos näkyy, mutta ilman V–T–H-merkkiä (17.11.2026).
+    if (kind === 'friendly' && d?.games?.length) {
+      d.games.forEach((g, i) => {
+        const scored = g.goalsFor !== undefined && g.goalsAgainst !== undefined;
+        out.push({
+          key: `${s.id}-${i}`,
+          s,
+          event: `Harjoituspeli${d.games!.length > 1 ? ` · ${i + 1}/${d.games!.length}` : ''}`,
+          opponent: g.opponent,
+          result: scored ? `${g.goalsFor}–${g.goalsAgainst}` : undefined,
+          goals: g.playerGoals,
+          time: i === 0 ? `${s.durationMin} min` : undefined,
+          rating: i === 0 ? rating : undefined,
+          comment: [g.note, i === 0 ? comment : undefined].filter(Boolean).join(' · ') || undefined,
+        });
+      });
+      continue;
+    }
     if (kind === 'tournament' && d?.games?.length) {
       d.games.forEach((g, i) => {
         const o = outcomeOf(g.goalsFor, g.goalsAgainst);
@@ -343,7 +361,13 @@ function DiaryEntry({ s, t, d, onDetails }: { s: Session; t?: ActivityType; d?: 
                 return (
                   <li key={i}>
                     <span className="text-slate-500">{i + 1}.</span> {g.opponent ?? 'vastustaja ?'}
-                    {o && <span className="font-medium"> {g.goalsFor}–{g.goalsAgainst} {OUTCOME_LABEL[o]}</span>}
+                    {o && (
+                      <span className="font-medium">
+                        {' '}
+                        {g.goalsFor}–{g.goalsAgainst}
+                        {t?.footballKind === 'friendly' ? '' : ` ${OUTCOME_LABEL[o]}`}
+                      </span>
+                    )}
                     {g.note && <span className="italic text-slate-600"> – {g.note}</span>}
                   </li>
                 );

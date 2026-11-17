@@ -126,9 +126,10 @@ export interface FootballDetailsInput {
   played?: PlayedState;
 }
 
-/** Tulevan pelin tai turnauksen tiedot (pelikalenteri). */
+/** Tulevan pelin, turnauksen tai harjoituspelin tiedot (pelikalenteri). */
 export interface FixtureInput {
-  kind: 'game' | 'tournament';
+  /** 'friendly' = harjoituspeli (17.11.2026): vastustajat `games`-riveinä, aika alku + kesto. */
+  kind: 'game' | 'tournament' | 'friendly';
   date: ISODate;
   startTime?: HHmm;
   durationMin: number;
@@ -1011,6 +1012,26 @@ export function createRepositories(db: AppDB = defaultDb) {
         set('playerGoals', num(input.playerGoals));
         if (input.played) d.played = input.played;
       }
+      // Harjoituspeli (17.11.2026): vastustajat ja valinnaiset tulokset; ei peliaikalaskentaa eikä V–T–H-tilastoa.
+      if (type.footballKind === 'friendly') {
+        const games = (input.games ?? [])
+          .map((g) => {
+            const r: GameResult = {};
+            if (clean(g.opponent)) r.opponent = clean(g.opponent);
+            if (num(g.goalsFor) !== undefined) r.goalsFor = g.goalsFor;
+            if (num(g.goalsAgainst) !== undefined) r.goalsAgainst = g.goalsAgainst;
+            if (num(g.playerGoals) !== undefined) r.playerGoals = g.playerGoals;
+            if (g.note?.trim()) r.note = g.note.trim().slice(0, 500);
+            return r;
+          })
+          .filter((g) => Object.keys(g).length > 0);
+        if (games.length) {
+          d.games = games;
+          d.gamesCount = games.length;
+          const withGoals = games.filter((g) => g.playerGoals !== undefined);
+          if (withGoals.length) d.playerGoals = withGoals.reduce((a, g) => a + g.playerGoals!, 0);
+        } else set('playerGoals', num(input.playerGoals));
+      }
       if (type.footballKind === 'tournament') {
         set('eventName', clean(input.eventName));
         const games = (input.games ?? []).map((g) => {
@@ -1343,7 +1364,7 @@ export function createRepositories(db: AppDB = defaultDb) {
 
   // ---------- pelikalenteri: tulevat pelit ja turnaukset (skeema v2) ----------
 
-  const FIXTURE_TYPE = { game: 't:football_game', tournament: 't:football_tournament' } as const;
+  const FIXTURE_TYPE = { game: 't:football_game', tournament: 't:football_tournament', friendly: 't:football_friendly' } as const;
 
   /** Pelien ja turnausten suunnitelmat lisätietoineen aikaväliltä (oletus: kaikki). */
   async function listFixtures(profileId: UUID, from: ISODate = '0000-01-01', to: ISODate = '9999-12-31'): Promise<FixtureEntry[]> {
@@ -1378,6 +1399,14 @@ export function createRepositories(db: AppDB = defaultDb) {
     if (input.kind === 'tournament' && games.length) {
       f.games = games;
       f.gamesCount = games.length;
+    }
+    // Harjoituspeli: vastustajat (1…n) ilman kellonaikoja; kuittaus tekee niistä tulosrivit.
+    if (input.kind === 'friendly') {
+      const opponents = games.filter((g) => g.opponent).map((g) => ({ opponent: g.opponent }));
+      if (opponents.length) {
+        f.games = opponents;
+        f.gamesCount = opponents.length;
+      } else delete f.gamesCount;
     }
     if (input.kind === 'tournament') {
       const n = (v?: number) => (v !== undefined && Number.isInteger(v) && v >= 0 && v <= 240 ? v : undefined);

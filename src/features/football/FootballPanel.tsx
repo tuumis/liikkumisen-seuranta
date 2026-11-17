@@ -287,7 +287,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
           />
         </div>
 
-        {(kind === 'game' || kind === 'tournament') && (
+        {(kind === 'game' || kind === 'tournament' || kind === 'friendly') && (
           <>
             {teams && teams.length > 0 ? (
               <Field label="Oma joukkue">
@@ -412,6 +412,69 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
               <div className="mb-1 text-sm font-medium text-slate-700">{goals} ⚽</div>
               <GoalStepper value={playerGoals} onChange={setPlayerGoals} label={goals} />
             </div>
+          </>
+        )}
+
+        {kind === 'friendly' && (
+          <>
+            <div className="text-sm font-medium text-slate-700">Vastustajat ja tulokset (valinnainen)</div>
+            {games.map((g, i) => (
+              <div key={i} className="space-y-2 card-sunk p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-800">Vastustaja {i + 1}</span>
+                  <button type="button" className="min-h-9 px-2 text-sm text-red-700" onClick={() => setGames((cur) => cur.filter((_, j) => j !== i))}>
+                    Poista
+                  </button>
+                </div>
+                <TeamNameFields
+                  compact
+                  value={g.opponent}
+                  suggestions={teamNames}
+                  label={`Vastustaja ${i + 1}`}
+                  onChange={(v) => setGames((cur) => cur.map((x, j) => (j === i ? { ...x, opponent: v } : x)))}
+                />
+                <div className="flex items-center gap-2">
+                  {(['goalsFor', 'goalsAgainst'] as const).map((k, idx) => (
+                    <span key={k} className="contents">
+                      {idx === 1 && <span className="text-slate-500">–</span>}
+                      <input
+                        className={`${inputClass} w-14 px-1 text-center`}
+                        inputMode="numeric"
+                        value={g[k]}
+                        aria-label={`Vastustaja ${i + 1}: ${k === 'goalsFor' ? 'tehdyt' : 'päästetyt'}`}
+                        onChange={(e) => setGames((cur) => cur.map((x, j) => (j === i ? { ...x, [k]: e.target.value } : x)))}
+                      />
+                    </span>
+                  ))}
+                  <input
+                    className={`${inputClass} ml-auto w-20 px-1 text-center`}
+                    inputMode="numeric"
+                    value={g.playerGoals}
+                    placeholder="⚽ maalit"
+                    aria-label={`Vastustaja ${i + 1}: ${goals}`}
+                    onChange={(e) => setGames((cur) => cur.map((x, j) => (j === i ? { ...x, playerGoals: e.target.value } : x)))}
+                  />
+                </div>
+                <input
+                  className={inputClass}
+                  value={g.note}
+                  maxLength={500}
+                  placeholder="Kommentti"
+                  aria-label={`Vastustaja ${i + 1}: kommentti`}
+                  onChange={(e) => setGames((cur) => cur.map((x, j) => (j === i ? { ...x, note: e.target.value } : x)))}
+                />
+              </div>
+            ))}
+            <Button variant="secondary" className="w-full" onClick={() => setGames((cur) => [...cur, { opponent: '', goalsFor: '', goalsAgainst: '', playedMin: '', played: '', playerGoals: '', note: '' }])}>
+              + vastustaja
+            </Button>
+            {games.length === 0 && (
+              <div>
+                <div className="mb-1 text-sm font-medium text-slate-700">{goals} ⚽</div>
+                <GoalStepper value={playerGoals} onChange={setPlayerGoals} label={goals} />
+              </div>
+            )}
+            <p className="text-xs text-slate-500">Harjoituspelin tulos ei tule V–T–H-tilastoon eikä otteluiden määrään; se näkyy päiväkirjassa ja Tulokset-kohdan harjoituspeleissä.</p>
           </>
         )}
 

@@ -3,7 +3,7 @@
 
 import { useMemo, useState } from 'react';
 import {
-  gameRows,
+  friendlyRows, gameRows,
   gamesCsv,
   LEVEL_LABEL,
   normalizeName,
@@ -39,6 +39,8 @@ export function GamesView({ profile, onBack }: { profile: Profile; onBack?: () =
   const [opponent, setOpponent] = useState(ALL);
 
   const all = useMemo(() => (data ? gameRows(data.sessions, data.details, data.types) : []), [data]);
+  // Harjoituspelit (17.11.2026): omana listanaan, eivät V–T–H-tilastossa eivätkä pelien määrässä.
+  const allFriendly = useMemo(() => (data ? friendlyRows(data.sessions, data.details, data.types) : []), [data]);
   const options = useMemo(() => {
     const uniq = (xs: (string | undefined)[]): [string, string][] => {
       const m = new Map<string, string[]>();
@@ -61,6 +63,20 @@ export function GamesView({ profile, onBack }: { profile: Profile; onBack?: () =
       (opponent === ALL || normalizeName(r.opponent) === opponent),
   );
   const total = summarizeGames(rows);
+  const friendlies = allFriendly.filter(
+    (r) =>
+      (season === ALL || seasonKey(r.date) === season) &&
+      (year === ALL || r.date.startsWith(year)) &&
+      (team === ALL || normalizeName(r.team) === team) &&
+      (opponent === ALL || normalizeName(r.opponent) === opponent),
+  );
+  const friendlyGroups: { key: string; rows: GameRow[] }[] = [];
+  for (const r of [...friendlies].reverse()) {
+    const last = friendlyGroups.at(-1);
+    if (last && last.key === r.sessionId) last.rows.push(r);
+    else friendlyGroups.push({ key: r.sessionId, rows: [r] });
+  }
+  for (const g of friendlyGroups) g.rows.sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
   const byTeam = summarizeBy(rows, (r) => r.team);
   const byOpponent = summarizeBy(rows, (r) => r.opponent);
   const byEvent = summarizeBy(
@@ -165,6 +181,24 @@ export function GamesView({ profile, onBack }: { profile: Profile; onBack?: () =
         {rows.length > 0 && <p className="mt-2 text-xs text-slate-500">CSV: yksi rivi per peli, puolipiste-erotin; avautuu suomenkielisessä Excelissä. Tiedosto sisältää lapsen tietoja.</p>}
       </Card>
 
+      {friendlyGroups.length > 0 && (
+        <Card title={`Harjoituspelit (${friendlyGroups.length})`}>
+          <p className="-mt-1 mb-2 text-xs text-slate-500">Harjoituspelien tulokset eivät ole mukana V–T–H-tilastossa eivätkä pelien määrässä.</p>
+          <ul className="space-y-2">
+            {friendlyGroups.map((g) => (
+              <li key={g.key}>
+                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">🤝 Harjoituspeli · {dayLabel(g.rows[0].date)}</div>
+                <ul className="border-l-2 border-slate-200 pl-2">
+                  {g.rows.map((r) => (
+                    <GameLine key={`${r.sessionId}:${r.index ?? 0}`} r={r} showDate={false} />
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
       <div className="space-y-4 xl:grid xl:grid-cols-2 xl:items-start xl:gap-4 xl:space-y-0">
       {byTeam.length > 1 && <GroupCard title="Oma joukkue" groups={byTeam} />}
       {byOpponent.length > 0 && <GroupCard title="Vastustajat" groups={byOpponent} />}
@@ -186,10 +220,11 @@ export function GamesView({ profile, onBack }: { profile: Profile; onBack?: () =
 }
 
 function GameLine({ r, showDate }: { r: GameRow; showDate: boolean }) {
+  const friendly = r.kind === 'friendly';
   const res = r.outcome ? `${r.goalsFor}–${r.goalsAgainst}` : r.games > 1 ? `${r.games} peliä` : 'ei tulosta';
   return (
     <li className="flex items-center gap-2 border-b border-slate-100 py-2 last:border-0">
-      <span className="w-14 shrink-0 text-xs text-slate-600">{showDate ? dayLabel(r.date) : `Peli ${r.index ?? ''}`}</span>
+      <span className="w-14 shrink-0 text-xs text-slate-600">{showDate ? dayLabel(r.date) : friendly ? (r.index ? `${r.index}.` : '') : `Peli ${r.index ?? ''}`}</span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm text-slate-900">
           {r.team ?? 'Oma joukkue'} – {r.opponent ?? 'vastustaja ?'}
@@ -210,8 +245,8 @@ function GameLine({ r, showDate }: { r: GameRow; showDate: boolean }) {
         {r.note && <span className="block text-xs italic text-slate-600">“{r.note}”</span>}
       </span>
       <span className={`shrink-0 text-sm tabular-nums ${r.outcome ? 'font-semibold text-slate-900' : 'text-slate-500'}`}>{res}</span>
-      {r.outcome && <span className="w-6 shrink-0 rounded bg-slate-100 text-center text-xs font-semibold text-slate-700">{OUTCOME_LABEL[r.outcome]}</span>}
-      {showDate && r.outcome && <ShareButton sessionId={r.sessionId} />}
+      {r.outcome && !friendly && <span className="w-6 shrink-0 rounded bg-slate-100 text-center text-xs font-semibold text-slate-700">{OUTCOME_LABEL[r.outcome]}</span>}
+      {showDate && r.outcome && !friendly && <ShareButton sessionId={r.sessionId} />}
     </li>
   );
 }
