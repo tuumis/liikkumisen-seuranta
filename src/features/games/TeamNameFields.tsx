@@ -2,17 +2,28 @@
 // ("FC Honka · Musta · 2018"), joten kentät sopivat sekä vastustajalle että omalle joukkueelle.
 // Ehdotukset tulevat aiemmista peleistä, omista joukkueista ja seurakirjastosta. Seuran tunnetut
 // ryhmät (peleistä ja seuralle tallennetut, 17.11.2026) näkyvät valintasiruina: napautus täyttää
-// ryhmän ja ikäluokan, joten niitä ei tarvitse kirjoittaa uudelleen.
+// ryhmän ja ikäluokan, joten niitä ei tarvitse kirjoittaa uudelleen. Seurakenttä ehdottaa lisäksi
+// Palloliiton jäsenseurat (domain/finnishClubs, 17.11.2026): oman kotikunnan ja alueen seurat ensin.
 
 import { useEffect, useId, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ageLabel, clubKey, formatTeamName, parseTeamName, squadKey, type TeamParts } from '../../domain/opponent';
+import { clubLabel, findFinnishClub, homeOf, rankedFinnishClubs } from '../../domain/finnishClubs';
 import type { UUID } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { inputClass } from '../../ui/components';
 
+export interface ClubOption {
+  value: string;
+  /** Selite ehdotuslistassa, esim. "Kuopion Palloseura · Kuopio". */
+  label?: string;
+}
+
 export interface TeamNameSuggestions {
+  /** Omat ja peleistä tutut seurat. */
   clubs: string[];
+  /** Seurakentän ehdotukset: tutut seurat ja Palloliiton jäsenseurat (oma alue ensin). */
+  clubOptions: ClubOption[];
   /** Seuran avain → ryhmät ja ikäluokat. */
   groups: Map<string, string[]>;
   ages: Map<string, string[]>;
@@ -25,6 +36,7 @@ export function useTeamNameSuggestions(profileId: UUID | undefined): TeamNameSug
     if (!profileId) return undefined;
     const [names, clubs, teams] = await Promise.all([repo.footballNameSuggestions(profileId), repo.listClubs(), repo.listTeams(profileId, { includeArchived: true })]);
     return {
+      own: [...names.teams, ...teams.map((t) => t.name)],
       names: [...names.opponents, ...names.teams, ...teams.map((t) => t.name)],
       clubs: clubs.map((c) => c.name),
       saved: clubs.flatMap((c) => (c.squads ?? []).map((q) => ({ club: c.name, ...q }))),
@@ -60,8 +72,19 @@ export function useTeamNameSuggestions(profileId: UUID | undefined): TeamNameSug
       addSquad(k, p);
     }
     const sorted = (m: Map<string, Set<string>>) => new Map([...m].map(([k, v]) => [k, [...v].sort((a, b) => a.localeCompare(b, 'fi'))]));
+    const known = [...clubs.values()].sort((a, b) => a.localeCompare(b, 'fi'));
+    const labelOf = (name: string) => {
+      const c = findFinnishClub(name);
+      return c ? clubLabel(c) : undefined;
+    };
+    const home = homeOf(data.own.map((n) => parseTeamName(n).club).filter(Boolean));
+    const clubOptions: ClubOption[] = [
+      ...known.map((value) => ({ value, label: labelOf(value) })),
+      ...rankedFinnishClubs(home, new Set(clubs.keys())).map((c) => ({ value: c.name, label: clubLabel(c) })),
+    ];
     return {
-      clubs: [...clubs.values()].sort((a, b) => a.localeCompare(b, 'fi')),
+      clubs: known,
+      clubOptions,
       groups: sorted(groups),
       ages: sorted(ages),
       squads: new Map([...squads].map(([k, m]) => [k, [...m.values()]])),
@@ -104,7 +127,7 @@ export function TeamNameFields({
     onChange(formatTeamName(next));
   };
   const k = clubKey(parts.club);
-  const field = (key: keyof TeamParts, text: string, placeholder: string, max: number, list?: string[], extra = '') => (
+  const field = (key: keyof TeamParts, text: string, placeholder: string, max: number, list?: (string | ClubOption)[], extra = '') => (
     <label className={`block min-w-0 ${extra}`}>
       {!compact && <span className="mb-1 block text-xs font-semibold text-slate-600">{text}</span>}
       <input
@@ -118,9 +141,9 @@ export function TeamNameFields({
       />
       {list && list.length > 0 && (
         <datalist id={`${id}-${key}`}>
-          {list.map((o) => (
-            <option key={o} value={o} />
-          ))}
+          {list.map((o, i) =>
+            typeof o === 'string' ? <option key={o} value={o} /> : <option key={`${o.value}-${i}`} value={o.value} label={o.label} />,
+          )}
         </datalist>
       )}
     </label>
@@ -131,7 +154,7 @@ export function TeamNameFields({
   const chips = compact && (parts.group || parts.age) ? [] : known.slice(0, compact ? 6 : 12);
   const fields = (
     <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-end gap-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1fr)]">
-      {field('club', 'Seura', compact ? 'Seura, esim. FC Honka' : 'esim. FC Honka', 40, suggestions?.clubs, 'col-span-2 sm:col-span-1')}
+      {field('club', 'Seura', compact ? 'Seura, esim. FC Honka' : 'esim. FC Honka', 40, suggestions?.clubOptions, 'col-span-2 sm:col-span-1')}
       {field('group', 'Ryhmä', compact ? 'Ryhmä' : 'esim. Musta', 30, suggestions?.groups.get(k))}
       {/* Lyhyt otsikko: pitkä "Ikäluokka (syntymävuosi)" rivittyi ja laski kentän muita alemmas (17.11.2026). */}
       {field('age', 'Ikäluokka', compact ? 'Syntymävuosi' : 'syntymävuosi, esim. 2018', 12, suggestions?.ages.get(k))}

@@ -109,7 +109,8 @@ describe('vastustajat käsin ja tallennetut ryhmät (17.11.2026)', () => {
   it('vastustajan lisäys merkitsee seuran ja tallentaa ryhmän; ryhmät yhdistyvät ja poistuvat', async () => {
     const { repo } = await device('opp');
     const c = await repo.addOpponent('PK-35 · Vihreä · 2018');
-    expect(c).toMatchObject({ name: 'PK-35', opponent: true, squads: [{ group: 'Vihreä', age: '2018' }] });
+    // Kotikunta Palloliiton seuraluettelosta (17.11.2026).
+    expect(c).toMatchObject({ name: 'PK-35', opponent: true, squads: [{ group: 'Vihreä', age: '2018' }], city: 'Helsinki' });
     await repo.saveClubSquad('pk-35', { group: ' vihreä ', age: '2018' }); // sama ryhmä toisella kirjoitusasulla
     await repo.saveClubSquad('PK-35', { group: 'Musta' });
     expect((await repo.listClubs())[0].squads).toEqual([{ group: 'Vihreä', age: '2018' }, { group: 'Musta' }]);

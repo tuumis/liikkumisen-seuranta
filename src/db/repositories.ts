@@ -2,6 +2,7 @@
 // suoraan: poistomerkityt tietueet suodatetaan aina pois, ja jokainen muutos
 // päivittää synkronointikentät (updatedAt, updatedBy). Poisto on poistomerkintä.
 
+import { findFinnishClub } from '../domain/finnishClubs';
 import { Dexie, type Table } from 'dexie';
 import { CURRENT_SCHEMA_VERSION } from '../domain/migrations';
 import { activityTypeId, dayFlagId, newId, sessionIdFromPlanned, SETTINGS_ID, trainingSelfId } from '../domain/ids';
@@ -1333,7 +1334,10 @@ export function createRepositories(db: AppDB = defaultDb) {
   async function addOpponent(text: string): Promise<Club> {
     const p = parseTeamName(text);
     if (!p.club.trim()) throw new Error('Anna seuran nimi');
-    const club = await saveClub(p.club, {});
+    const before = await db.clubs.get(clubIdOf(p.club));
+    // Palloliiton seuraluettelosta kotikunta, jos sitä ei ole vielä annettu (17.11.2026).
+    const known = before?.city ? undefined : findFinnishClub(p.club);
+    const club = await saveClub(p.club, known ? { city: known.city } : {});
     const squad = squadOf({ group: p.group, age: p.age });
     const next: Club = await stamp({ ...club, opponent: true, squads: mergeSquads(club.squads, [squad]) });
     if (!next.squads?.length) delete next.squads;

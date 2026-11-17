@@ -1239,3 +1239,11 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
     - Päivän nimi katkesi kolmella pisteellä ("Sunnuntai…"), kun oikealla oli pitkä "min yhteensä" -teksti ja rivillä ✓ Suositus -merkki.
     - Nimi näkyy aina kokonaan (käyttäjän tarkennus: nimi ei saa jäädä pois). Jos tila ei riitä, oikean reunan yhteismäärä ja mittari siirtyvät nimen alle omalle rivilleen (flex-wrap). Nimi näkyy myös puhelimessa (käyttäjän valinta 17.11.2026). Kapealla näytöllä mittarit rivittyvät tarvittaessa nimen alle.
     - Nimi on perusmuodossa ("Sunnuntai"), ei taivutettuna ("Sunnuntaina").
+  - **Suomalaiset jalkapalloseurat valmiina** (käyttäjän toive 17.11.2026; `seed/finnishClubsData.ts`, `domain/finnishClubs.ts`, `TeamNameFields`, `repositories` `addOpponent`):
+    - Sovelluksen mukana on Palloliiton jäsenseurojen luettelo, 955 seuraa. Lähde on Palloliiton tulospalvelu (Seurat ja Kunnat), haettu kerran 17.11.2026. Kultakin seuralta: lyhenne, virallinen nimi, kotikunta, Palloliiton alue (Eteläinen, Läntinen, Itäinen, Pohjoinen, Åland) ja tieto juniorijoukkueista.
+    - Mukana ovat seurat, joilla on kotikunta. Erotuomarikerhot puuttuvat. Luettelo päivitetään käsin aina välillä.
+    - Sovellus ei hae luetteloa verkosta. Luetteloa ei myöskään tallenneta tietokantaan eikä synkronoida. Seura tallentuu käyttäjän tiedoksi vasta, kun se valitaan peliin tai vastustajaksi.
+    - Seurakentän ehdotuksissa ovat ensin omat ja peleistä tutut seurat. Sen jälkeen tulevat luettelon seurat tässä järjestyksessä: oman joukkueen kotikunnan seurat, oman alueen seurat ja muut. Kunkin ryhmän sisällä juniorijoukkueelliset tulevat ensin. Ehdotuksen selitteenä on virallinen nimi ja kotikunta, ja hakuun käy kumpi tahansa (esim. "Kuopion" → KuPS).
+    - Näytettävä nimi on lyhenne (esim. KuPS, HJK, FC Lahti), jos se on virallista nimeä lyhyempi.
+    - Uudelle vastustajalle tallentuu kotikunta luettelosta, jos seuralla ei ole sitä vielä.
+    - Logoja ei tuoda valmiiksi, koska ne ovat seurojen omaisuutta. Käyttäjä lisää logon itse.
