@@ -1214,3 +1214,8 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
       - "Reipasta ja rasittavaa yhteensä N min"
       - lajin prosenttijako pienellä.
     - Pikakirjauksessa laatikossa näkyy otsikkorivi ja jako.
+  - **✓ Suositus -merkki myös kouluikäisille** (käyttäjän toive 17.11.2026; `DayRow` `schoolAge`, `WeekView`, `DayTable`, `domain/dayTarget.ts` `dayGoalMet`):
+    - Viikkonäkymän päivärivillä näkyy kouluikäiselle **✓ Suositus**, kun päivän reipas + rasittava (kirjatut kerrat ja arkiliikunnan arvio) on vähintään 60 min.
+    - Merkki ei näy tulevilla päivillä eikä sairas- tai matkapäivillä. Selite kertoo ehdon.
+    - Päivätaulukossa kouluikäisellä on vastaava ✓-sarake (x/7).
+    - Viikon suositus (keskimäärin 60 min/pv) ja sen juhlinta pysyvät ennallaan.

@@ -11,6 +11,7 @@ import { foldTrainingSelves, trainingSelfText } from '../../domain/football';
 import type { DayHours } from '../../domain/hours';
 import { isEstimateConfirmation } from '../../domain/hours';
 import { earlyYearsDay } from '../../domain/aggregate';
+import { DAY_TARGET, dayGoalMet } from '../../domain/dayTarget';
 import type { ActivityType, Category, DayFlag, DayTotals, FootballDetails, ISODate, PlannedSession, RecommendationGroup, Session, UUID } from '../../domain/types';
 import { dayLabel } from '../../ui/format';
 import { IconBolt, IconBone, IconCheck, IconLeaf, IconPlus } from '../../ui/icons';
@@ -139,6 +140,10 @@ export function DayTable({
     ...(group === 'school_age' ? [{ key: 'bone', label: 'Luustoa vahvistava', short: 'Lu', Icon: IconBone, on: (t?: DayTotals) => !!t?.bone, target: 3 }] : []),
     ...(group === 'early_years'
       ? [{ key: 'eyd', label: 'Päiväsuositus täyttyi (3 h liikkumista, josta 1 h vauhdikasta)', short: '✓', Icon: IconCheck, on: (t?: DayTotals) => !!t && earlyYearsDay(t).met, target: 7 }]
+      : []),
+    // Kouluikäinen (17.11.2026): päivän suositus 60 min reipasta ja rasittavaa.
+    ...(group === 'school_age'
+      ? [{ key: 'sad', label: `Päiväsuositus täyttyi (${DAY_TARGET.school_age} min reipasta ja rasittavaa)`, short: '✓', Icon: IconCheck, on: (t?: DayTotals) => !!t && dayGoalMet('school_age', t), target: 7 }]
       : []),
   ];
 

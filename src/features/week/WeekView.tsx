@@ -379,6 +379,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             flag={flagByDate.get(d)}
             barTarget={DAY_BAR_TARGET[info?.group ?? 'school_age']}
             earlyYears={info?.group === 'early_years'}
+            schoolAge={info?.group === 'school_age'}
             onOpenMenu={() => setDayMenu(d)}
             onAdd={() => setQuickAdd({ date: d })}
             onPlan={() => setPlanOnce(d)}

@@ -28,6 +28,7 @@ import { morphOpen } from '../../ui/morph';
 import { CATEGORY_LABEL } from '../../ui/labels';
 import { isEstimateConfirmation } from '../../domain/hours';
 import { earlyYearsDay } from '../../domain/aggregate';
+import { DAY_TARGET, dayGoalMet } from '../../domain/dayTarget';
 
 export function DayRow({
   index = 0,
@@ -46,6 +47,7 @@ export function DayRow({
   flag,
   barTarget,
   earlyYears,
+  schoolAge,
   onOpenMenu,
   onAdd,
   onPlan,
@@ -77,6 +79,8 @@ export function DayRow({
   barTarget: number;
   /** Alle kouluikäinen: päivän ✓, kun 3 h liikkumista (kesto) ja 1 h vauhdikasta täyttyvät. */
   earlyYears?: boolean;
+  /** Kouluikäinen: ✓ Suositus, kun päivän reipas + rasittava ≥ 60 min (17.11.2026). */
+  schoolAge?: boolean;
   onOpenMenu: () => void;
   /** Uusi kerta tälle päivälle; tulevalle päivälle "+" lisää suunnitellun kerran (`onPlan`). */
   onAdd?: () => void;
@@ -139,6 +143,14 @@ export function DayRow({
           {flag && <span className="mt-0.5 whitespace-nowrap inline-block rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700">{FLAG_LABEL[flag.reason]}</span>}
           {earlyYears && totals && !isFuture && !flag && earlyYearsDay(totals).met && (
             <span className="mt-0.5 whitespace-nowrap inline-flex items-center gap-1 rounded-full bg-green-700 px-2 py-0.5 text-[11px] font-bold text-white" title="Päiväsuositus täyttyi: vähintään 3 h liikkumista, josta 1 h vauhdikasta">
+              ✓ Suositus
+            </span>
+          )}
+          {schoolAge && totals && !isFuture && !flag && dayGoalMet('school_age', totals) && (
+            <span
+              className="mt-0.5 whitespace-nowrap inline-flex items-center gap-1 rounded-full bg-green-700 px-2 py-0.5 text-[11px] font-bold text-white"
+              title={`Päivän suositus täyttyi: vähintään ${DAY_TARGET.school_age} min reipasta ja rasittavaa (kirjatut kerrat ja arkiliikunnan arvio)`}
+            >
               ✓ Suositus
             </span>
           )}
