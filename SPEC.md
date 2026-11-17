@@ -1177,3 +1177,8 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
     - Harjoituspelin ennakkokuvan tunniste on "Harjoituspeli". Laatikot ovat **Alkaa**, **Päättyy** (alku + kesto, vain saman päivän puolella) ja **Paikka**. Paikalla-aikaa ei ole.
     - Yksi vastustaja: sama VS-asettelu kuin ottelulla. Useampi vastustaja: otsikko "Pelitälli", oma joukkue ja lista **Vastustajat** kalenterin järjestyksessä. Kommentti, tyylit, värit ja laatikoiden valinta toimivat kuten ottelun ennakossa.
     - Harjoituspeli ei edelleenkään tule tuloskuvaan, koska tulos ei mene tilastoihin.
+  - **Taustojen hienosäätö** (käyttäjän palaute 17.11.2026; `index.css` "taustat"):
+    - **Nurmi:** kentän viivat poistettu, koska ne häiritsivät. Jäljellä ovat vain hennot, pehmeäreunaiset leikkuuraidat ja valo ylhäältä.
+    - **Vuono ja Metsä** on piirretty uudelleen pehmeinä, kerroksellisina siluetteina. Kulmikkaat kolmiot on korvattu käyrillä (Catmull-Rom → Bézier).
+    - Kaukaiset kerrokset ovat vaaleampia, ja niiden väliin on lisätty usvaa (ilmaperspektiivi). Metsän puut ovat pyöreäkärkisiä, ja kaukaiset puurivit ovat hieman sumeita.
+    - Siluetit säilyttävät mittasuhteensa kaikilla näytön leveyksillä (`slice`).
