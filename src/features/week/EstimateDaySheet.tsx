@@ -66,7 +66,7 @@ export function EstimateDaySheet({ date, profile, onClose }: { date: ISODate | n
   // Treenin verryttely (linkedTo) kuuluu Harrastukseen, ei korvaa omaehtoisen arviota (17.11.2026).
   const typeMap = new Map((data?.types ?? []).map((t) => [t.id, t]));
   const catOf = (s: Session): Category => sessionCategory(s, typeMap);
-  const rows = (data?.estimates ?? []).map((e) => {
+  const allRows = (data?.estimates ?? []).map((e) => {
     const same = (data?.sessions ?? []).filter((s) => catOf(s) === e.category);
     return {
       e,
@@ -77,6 +77,9 @@ export function EstimateDaySheet({ date, profile, onClose }: { date: ISODate | n
       extra: same.filter((s) => addsToEstimate(s, typeMap)),
     };
   });
+  // Arvio, jonka päivän minuutit ovat 0 (esim. koulumatkat viikonloppuna), ei koske tätä päivää:
+  // piilotetaan, ellei sille ole jo merkintää (17.11.2026).
+  const rows = allRows.filter((r) => r.est > 0 || r.conf || r.manual.length > 0);
 
   useEffect(() => {
     if (!date || !data) return;
@@ -123,7 +126,13 @@ export function EstimateDaySheet({ date, profile, onClose }: { date: ISODate | n
           Arkiliikunta on <strong>arvio</strong> tavallisesta liikkumisesta (esim. välitunnit, koulumatkat), jota ei kirjata joka päivä. Voit vahvistaa arvion, muuttaa minuutteja tai merkitä, ettei sitä
           tänä päivänä ollut. Vahvistettu jää näkyviin päivän arkiliikuntariville.
         </p>
-        {data && rows.length === 0 && <p className="text-sm text-slate-500">Tälle päivälle ei ole voimassa olevaa arkiliikunnan arviota.</p>}
+        {data && rows.length === 0 && (
+          <p className="text-sm text-slate-500">
+            {allRows.length > 0
+              ? 'Tälle päivälle ei ole arkiliikunnan arviota: arvioiden minuutit ovat tänä päivänä 0 (esim. koulumatkat vain arkipäivinä).'
+              : 'Tälle päivälle ei ole voimassa olevaa arkiliikunnan arviota.'}
+          </p>
+        )}
         {rows.some((r) => r.e.category === 'daycare') && rows.some((r) => r.e.category !== 'daycare' && isDaycareLabel(r.e.label)) && (
           <div className="rounded-xl bg-amber-50 p-3 ring-1 ring-amber-200">
             <p className="text-sm font-semibold text-amber-900">Päiväkoti on tällä päivällä kahdesti</p>

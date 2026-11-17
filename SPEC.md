@@ -1232,3 +1232,6 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
     - Sama sääntö koskee viikon tunteja: arvio, toteuma, ennuste ja arkiliikuntarivi. Suunniteltu lajiharjoittelu ei korvaa arviota viikon arviossa.
     - Päiväkoosteessa kategoriaan tallentuu tällöin kirjattu osuus ja `addedEstimate` (arvion osuus). Jakson raportti laskee ne kirjattuun ja arvioon erikseen.
     - Arkiliikunta-ikkunassa arvio pysyy muokattavana. Lisäksi ikkuna kertoo, että lajiharjoittelua on kirjattu N min arvion päälle.
+  - **Arkiliikunta-ikkunasta pois päivät, joille arvio on 0 min** (käyttäjän kysymys 17.11.2026; `EstimateDaySheet`):
+    - Arvio on voimassa koko jakson. Koulumatkojen ja välituntien viikonlopun minuutit ovat 0, joten ikkuna näytti viikonloppuisin turhat 0 min rivit "Vahvista"- ja "Ei tänä päivänä" -painikkeineen.
+    - Nyt rivi näkyy vain, jos arvion päivän minuutit ovat yli 0 tai rivillä on jo merkintä (vahvistus tai erillinen kirjaus). Päivän arkiliikuntarivi ja pikavahvistus ohittivat 0 min arviot jo aiemmin.
