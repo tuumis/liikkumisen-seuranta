@@ -1248,4 +1248,12 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
     - Uudelle vastustajalle tallentuu luettelosta maa (Suomi) ja kotikunta, jos niitä ei ole vielä annettu (käyttäjän valinta 17.11.2026). Näin jakokuvan lippu ja kotikunta ovat valmiina.
     - Jo tallennetut luettelon seurat täydennetään samoin kerran kullakin laitteella käynnistyksessä (`fillClubOrigins`, laitekohtainen merkintä `clubOriginsFilled`). Kirjoitus tehdään vain puuttuviin kenttiin, joten muutokset synkronoituvat tavalliseen tapaan.
     - Seuraa, jolle on valittu muu maa kuin Suomi, ei muuteta, eikä annettua maata tai kotikuntaa korvata. Käyttäjän myöhemmin poistama maa ei palaa.
+  - **Erittelykortin kategoriat avautuvat: mistä tunnit koostuvat** (käyttäjän kysymys 17.11.2026, esim. "mitä on 8 h omaehtoinen"; `domain/hours.ts` `CategoryItem`, `features/week/HoursCard.tsx`):
+    - "Tunnit päivittäin ja lajeittain" -kortin kategoriarivit ovat painikkeita (aria-expanded). Avattu rivi listaa toteuman sisällön suurin ensin:
+      - kirjatut kerrat lajeittain (kuvake, laji, kertojen määrä, kesto)
+      - treenin verryttely omana rivinään
+      - vahvistettu arkiliikunta arvion nimellä (päiviä)
+      - arkiliikunnan arvio arvion nimellä (päiviä, esim. "Leikki ja oma liikkuminen · arkiliikunnan arvio · 6 pv").
+    - Sisältö lasketaan samassa silmukassa kuin toteuma, joten rivien summa on aina kategorian toteuma. Korvausperiaate ja lajiharjoittelun poikkeus pätevät.
+    - Kesto alle tunnin näytetään minuutteina, muuten tunteina.
     - Logoja ei tuoda valmiiksi, koska ne ovat seurojen omaisuutta. Käyttäjä lisää logon itse.

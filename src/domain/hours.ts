@@ -21,12 +21,30 @@ export interface HoursSplit {
   estimate: number;
 }
 
+/**
+ * Kategorian toteuman sisältö (17.11.2026, käyttäjän toive "mitä 8 h omaehtoinen sisältää"):
+ * kirjatut kerrat lajeittain, vahvistettu arkiliikunta ja perusarvio arvioittain.
+ */
+export interface CategoryItem {
+  key: string;
+  /** Lajin tai arvion nimi. */
+  label: string;
+  /** session = kirjattu kerta, warmup = treenin verryttely, confirmed = vahvistettu arkiliikunta, estimate = perusarvio. */
+  kind: 'session' | 'warmup' | 'confirmed' | 'estimate';
+  /** Kertoja (kerrat) tai päiviä (arkiliikunta). */
+  count: number;
+  minutes: number;
+  icon?: string;
+}
+
 export interface CategoryHours {
   category: Category;
   expected: HoursSplit;
   actual: HoursSplit;
   /** Ennuste koko viikolle (min). */
   forecast: number;
+  /** Toteuman sisältö, suurin ensin (summa = actual.sessions + actual.estimate). */
+  items: CategoryItem[];
 }
 
 export interface DayHours {
@@ -94,9 +112,18 @@ export function weeklyHours(input: {
   const acc = new Map<Category, CategoryHours>();
   const cat = (c: Category) => {
     let v = acc.get(c);
-    if (!v) acc.set(c, (v = { category: c, expected: { sessions: 0, estimate: 0 }, actual: { sessions: 0, estimate: 0 }, forecast: 0 }));
+    if (!v) acc.set(c, (v = { category: c, expected: { sessions: 0, estimate: 0 }, actual: { sessions: 0, estimate: 0 }, forecast: 0, items: [] }));
     return v;
   };
+  const items = new Map<Category, Map<string, CategoryItem>>();
+  const addItem = (c: Category, it: Omit<CategoryItem, 'count' | 'minutes'>, minutes: number) => {
+    const m = items.get(c) ?? items.set(c, new Map()).get(c)!;
+    const cur = m.get(it.key) ?? m.set(it.key, { ...it, count: 0, minutes: 0 }).get(it.key)!;
+    cur.count++;
+    cur.minutes += minutes;
+  };
+  /** Vahvistuksen nimi: arvion nimi ilman ": N min" -päätettä. */
+  const confirmedLabel = (s: Session) => (s.label ?? '').replace(/:\s*(\d+ min|ei tänä päivänä)$/i, '').trim() || 'Arkiliikunta';
 
   const days: DayHours[] = [];
   let expectedToDateMin = 0;
@@ -139,6 +166,13 @@ export function weeklyHours(input: {
       const c = sessionCategory(s, input.types);
       logByCat.set(c, (logByCat.get(c) ?? 0) + s.durationMin);
       if (!addsToEstimate(s, input.types)) logReplaces.add(c);
+      if (s.durationMin <= 0) continue;
+      const t = input.types.get(s.activityTypeId);
+      if (isEstimateConfirmation(s)) {
+        const label = confirmedLabel(s);
+        addItem(c, { key: `c:${label.toLocaleLowerCase('fi')}`, label, kind: 'confirmed' }, s.durationMin);
+      } else if (s.linkedTo) addItem(c, { key: `w:${s.activityTypeId}`, label: t?.name ?? 'Verryttely', kind: 'warmup', icon: t?.icon }, s.durationMin);
+      else addItem(c, { key: `s:${s.activityTypeId}`, label: t?.name ?? 'Muu', kind: 'session', icon: t?.icon }, s.durationMin);
     }
     let actualMin = 0;
     let actualLoggedMin = 0;
@@ -154,12 +188,14 @@ export function weeklyHours(input: {
     if (!future && !isFlagged) {
       for (const c of estCats) {
         if (logReplaces.has(c)) continue;
-        const m = estimateDuration(activeEstimate(estimates, c, d)!);
+        const e = activeEstimate(estimates, c, d)!;
+        const m = estimateDuration(e);
         if (!m) continue;
         cat(c).actual.estimate += m;
         actualMin += m;
         estimateMin += m;
         estimateCategories.push(c);
+        addItem(c, { key: `e:${e.label.toLocaleLowerCase('fi')}`, label: e.label, kind: 'estimate' }, m);
       }
     }
 
@@ -243,7 +279,10 @@ export function weeklyHours(input: {
     });
   }
 
-  const byCategory = CATEGORY_ORDER.filter((c) => acc.has(c)).map((c) => acc.get(c)!);
+  const byCategory = CATEGORY_ORDER.filter((c) => acc.has(c)).map((c) => ({
+    ...acc.get(c)!,
+    items: [...(items.get(c)?.values() ?? [])].sort((a, b) => b.minutes - a.minutes || a.label.localeCompare(b.label, 'fi')),
+  }));
   const sum = (f: (c: CategoryHours) => number) => byCategory.reduce((a, c) => a + f(c), 0);
   const expected = { sessions: sum((c) => c.expected.sessions), estimate: sum((c) => c.expected.estimate) };
   const actual = { sessions: sum((c) => c.actual.sessions), estimate: sum((c) => c.actual.estimate) };

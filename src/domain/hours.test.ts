@@ -228,3 +228,27 @@ describe('treenin verryttely Harrastukseen (17.11.2026)', () => {
     expect(h.byCategory.find((c) => c.category === 'self_directed')!.expected).toEqual({ sessions: 30, estimate: 7 * 60 });
   });
 });
+
+describe('kategorian sisältö (17.11.2026)', () => {
+  it('kerrat lajeittain, verryttely, vahvistettu ja arvio; summa täsmää', () => {
+    const play = estimate({ label: 'Leikki ja oma liikkuminen', category: 'self_directed', weekdayMin: 60, weekendMin: 60, validFrom: '2026-01-01' });
+    const training = session({ id: 's1', date: '2026-11-10', activityTypeId: TRAINING, durationMin: 90, minutes: M });
+    const warmup = session({ id: 'w:s1', linkedTo: 's1', date: '2026-11-10', activityTypeId: activityTypeId('football_self'), durationMin: 15, minutes: M });
+    const own = session({ id: 's2', date: '2026-11-11', activityTypeId: activityTypeId('football_self'), durationMin: 20, minutes: M });
+    const conf = session({ id: 's3', date: '2026-11-12', activityTypeId: activityTypeId('outdoor_play'), durationMin: 45, minutes: M, estimateConfirmed: true, label: 'Leikki ja oma liikkuminen' });
+    const h = weeklyHours({ ...base, sessions: [training, warmup, own, conf], estimates: [play] });
+    const hobby = h.byCategory.find((c) => c.category === 'hobby')!;
+    expect(hobby.items.map((i) => [i.kind, i.count, i.minutes])).toEqual([
+      ['session', 1, 90],
+      ['warmup', 1, 15],
+    ]);
+    const self = h.byCategory.find((c) => c.category === 'self_directed')!;
+    // Arvio 6 päivältä (12.11. vahvistettu 45), lajiharjoittelu arvion päälle.
+    expect(self.items.map((i) => [i.kind, i.label, i.count, i.minutes])).toEqual([
+      ['estimate', 'Leikki ja oma liikkuminen', 6, 360],
+      ['confirmed', 'Leikki ja oma liikkuminen', 1, 45],
+      ['session', 'Jalkapallo – omatoiminen', 1, 20],
+    ]);
+    for (const c of h.byCategory) expect(c.items.reduce((a, i) => a + i.minutes, 0)).toBe(c.actual.sessions + c.actual.estimate);
+  });
+});

@@ -3,8 +3,10 @@
 // mistä toteuma koostuu (kerrat, arkiliikunta) ja mitä on vielä tulossa.
 // HoursDetailCard: erittely päivittäin ja lajeittain omana korttinaan (valittavissa näkymään).
 
+import { useState } from 'react';
 import type { PeriodReport } from '../../domain/report';
-import { formatHours } from '../../domain/hours';
+import { formatHours, type CategoryItem } from '../../domain/hours';
+import type { Category } from '../../domain/types';
 import { Collapse, CollapseToggle, useCollapsible } from '../../ui/Collapse';
 import { isoWeekday } from '../../domain/dates';
 import { CATEGORY_LABEL } from '../../ui/labels';
@@ -155,9 +157,48 @@ export function HoursCard({ report, isCurrentWeek }: { report: PeriodReport; isC
 }
 
 /** Erittely: tunnit päivittäin (toteuma ja arvio) ja lajeittain. */
+/** Kesto lyhyesti: alle tunti minuutteina, muuten tunteina. */
+const fmtMin = (m: number) => (m < 60 ? `${Math.round(m)} min` : formatHours(m));
+
+const ITEM_KIND: Record<CategoryItem['kind'], (n: number) => string> = {
+  session: (n) => `${n} ${n === 1 ? 'kerta' : 'kertaa'}`,
+  warmup: (n) => `treenin verryttely · ${n} ${n === 1 ? 'kerta' : 'kertaa'}`,
+  confirmed: (n) => `arkiliikunta, vahvistettu · ${n} pv`,
+  estimate: (n) => `arkiliikunnan arvio · ${n} pv`,
+};
+
+/** Kategorian sisältö (17.11.2026): kerrat lajeittain, vahvistettu arkiliikunta ja arvio. */
+function CategoryItems({ items }: { items: CategoryItem[] }) {
+  if (!items.length) return <p className="mt-2 text-xs text-slate-500">Ei toteumaa vielä.</p>;
+  return (
+    <ul className="mt-2 space-y-1.5 rounded-xl bg-[var(--surface-sunk)] p-2.5">
+      {items.map((it) => (
+        <li key={it.key} className="flex items-center gap-2.5 text-sm">
+          <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-[var(--surface)] text-sm" aria-hidden>
+            {it.icon ?? (it.kind === 'estimate' ? '≈' : '✓')}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-slate-800">{it.label}</span>
+            <span className={`block text-[11px] ${it.kind === 'estimate' ? 'text-amber-800' : 'text-slate-500'}`}>{ITEM_KIND[it.kind](it.count)}</span>
+          </span>
+          <span className="shrink-0 tabular-nums font-semibold text-slate-900">{fmtMin(it.minutes)}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function HoursDetailCard({ report, isCurrentWeek }: { report: PeriodReport; isCurrentWeek: boolean }) {
   const h = report.hours;
   const [open, toggle] = useCollapsible('hoursDetail');
+  const [shown, setShown] = useState<ReadonlySet<Category>>(new Set());
+  const toggleCat = (c: Category) =>
+    setShown((cur) => {
+      const next = new Set(cur);
+      if (next.has(c)) next.delete(c);
+      else next.add(c);
+      return next;
+    });
   const dayMax = Math.max(1, ...h.days.map((d) => Math.max(d.forecastMin, d.actualMin)));
   const catMax = Math.max(1, ...h.byCategory.map((c) => Math.max(c.forecast, c.actual.sessions + c.actual.estimate)));
   const mvpa = report.days.reduce((a, d) => a + d.mvpaCombined, 0);
@@ -218,25 +259,48 @@ export function HoursDetailCard({ report, isCurrentWeek }: { report: PeriodRepor
             </div>
 
             {h.byCategory.length > 0 && (
-              <ul className="mt-4 space-y-2.5 border-t border-slate-100 pt-3">
-                {h.byCategory.map((c) => {
-                  const act = c.actual.sessions + c.actual.estimate;
-                  return (
-                    <li key={c.category}>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-800">{CATEGORY_LABEL[c.category]}</span>
-                        <span className="tabular-nums text-slate-600">
-                          <strong className="font-semibold text-slate-900">{formatHours(act)}</strong> / {formatHours(c.forecast)}
-                        </span>
-                      </div>
-                      <div className="relative mt-1 h-2 rounded-full" style={{ background: C.track }} aria-hidden>
-                        <div className="absolute inset-y-0 left-0 rounded-full border border-dashed" style={{ width: `${(c.forecast / catMax) * 100}%`, borderColor: C.trackLine }} />
-                        <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${(act / catMax) * 100}%`, background: c.actual.sessions >= c.actual.estimate ? C.logged : C.estimate }} />
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+              <div className="mt-4 border-t border-slate-100 pt-3">
+                {/* Kategorian rivi avautuu: mistä tunnit koostuvat (17.11.2026). */}
+                <p className="mb-2 text-xs text-slate-500">Avaa kategoria nähdäksesi, mistä tunnit koostuvat.</p>
+                <ul className="space-y-2.5">
+                  {h.byCategory.map((c) => {
+                    const act = c.actual.sessions + c.actual.estimate;
+                    const isOpen = shown.has(c.category);
+                    return (
+                      <li key={c.category}>
+                        <button
+                          type="button"
+                          className="press block w-full rounded-lg text-left"
+                          aria-expanded={isOpen}
+                          aria-controls={`hours-cat-${c.category}`}
+                          onClick={() => toggleCat(c.category)}
+                        >
+                          <span className="flex items-center justify-between gap-2 text-sm">
+                            <span className="flex items-center gap-1.5 text-slate-800">
+                              {CATEGORY_LABEL[c.category]}
+                              <svg viewBox="0 0 20 20" className={`size-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden>
+                                <path d="M5 7.5l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            </span>
+                            <span className="tabular-nums text-slate-600">
+                              <strong className="font-semibold text-slate-900">{formatHours(act)}</strong> / {formatHours(c.forecast)}
+                            </span>
+                          </span>
+                          <span className="relative mt-1 block h-2 rounded-full" style={{ background: C.track }} aria-hidden>
+                            <span className="absolute inset-y-0 left-0 rounded-full border border-dashed" style={{ width: `${(c.forecast / catMax) * 100}%`, borderColor: C.trackLine }} />
+                            <span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${(act / catMax) * 100}%`, background: c.actual.sessions >= c.actual.estimate ? C.logged : C.estimate }} />
+                          </span>
+                        </button>
+                        {isOpen && (
+                          <div id={`hours-cat-${c.category}`}>
+                            <CategoryItems items={c.items} />
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             )}
 
             <div className="mt-3 space-y-0.5 border-t border-slate-100 pt-3 text-xs text-slate-500">
