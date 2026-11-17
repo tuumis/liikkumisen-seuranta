@@ -1245,5 +1245,7 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
     - Sovellus ei hae luetteloa verkosta. Luetteloa ei myöskään tallenneta tietokantaan eikä synkronoida. Seura tallentuu käyttäjän tiedoksi vasta, kun se valitaan peliin tai vastustajaksi.
     - Seurakentän ehdotuksissa ovat ensin omat ja peleistä tutut seurat. Sen jälkeen tulevat luettelon seurat tässä järjestyksessä: oman joukkueen kotikunnan seurat, oman alueen seurat ja muut. Kunkin ryhmän sisällä juniorijoukkueelliset tulevat ensin. Ehdotuksen selitteenä on virallinen nimi ja kotikunta, ja hakuun käy kumpi tahansa (esim. "Kuopion" → KuPS).
     - Näytettävä nimi on lyhenne (esim. KuPS, HJK, FC Lahti), jos se on virallista nimeä lyhyempi.
-    - Uudelle vastustajalle tallentuu kotikunta luettelosta, jos seuralla ei ole sitä vielä.
+    - Uudelle vastustajalle tallentuu luettelosta maa (Suomi) ja kotikunta, jos niitä ei ole vielä annettu (käyttäjän valinta 17.11.2026). Näin jakokuvan lippu ja kotikunta ovat valmiina.
+    - Jo tallennetut luettelon seurat täydennetään samoin kerran kullakin laitteella käynnistyksessä (`fillClubOrigins`, laitekohtainen merkintä `clubOriginsFilled`). Kirjoitus tehdään vain puuttuviin kenttiin, joten muutokset synkronoituvat tavalliseen tapaan.
+    - Seuraa, jolle on valittu muu maa kuin Suomi, ei muuteta, eikä annettua maata tai kotikuntaa korvata. Käyttäjän myöhemmin poistama maa ei palaa.
     - Logoja ei tuoda valmiiksi, koska ne ovat seurojen omaisuutta. Käyttäjä lisää logon itse.

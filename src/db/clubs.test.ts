@@ -110,7 +110,7 @@ describe('vastustajat käsin ja tallennetut ryhmät (17.11.2026)', () => {
     const { repo } = await device('opp');
     const c = await repo.addOpponent('PK-35 · Vihreä · 2018');
     // Kotikunta Palloliiton seuraluettelosta (17.11.2026).
-    expect(c).toMatchObject({ name: 'PK-35', opponent: true, squads: [{ group: 'Vihreä', age: '2018' }], city: 'Helsinki' });
+    expect(c).toMatchObject({ name: 'PK-35', opponent: true, squads: [{ group: 'Vihreä', age: '2018' }], city: 'Helsinki', country: 'FI' });
     await repo.saveClubSquad('pk-35', { group: ' vihreä ', age: '2018' }); // sama ryhmä toisella kirjoitusasulla
     await repo.saveClubSquad('PK-35', { group: 'Musta' });
     expect((await repo.listClubs())[0].squads).toEqual([{ group: 'Vihreä', age: '2018' }, { group: 'Musta' }]);
@@ -165,5 +165,29 @@ describe('kalenterin pelin vastustaja talteen (17.11.2026)', () => {
       ['FC Honka', [{ group: 'Punainen', age: '2018' }, { group: 'Valkoinen' }]],
       ['PK-35', []],
     ]);
+  });
+});
+
+describe('seuraluettelon maa ja kotikunta vanhoille seuroille (17.11.2026)', () => {
+  it('täydentää kerran puuttuvat; muuta maata tai annettua kuntaa ei muuteta', async () => {
+    const { db, repo } = await device('origin');
+    const base = { createdAt: '2026-11-01T00:00:00.000Z', updatedAt: '2026-11-01T00:00:00.000Z', updatedBy: 'x' };
+    await db.clubs.bulkPut([
+      { id: 'club:kups', name: 'KuPS', ...base },
+      { id: 'club:fc lahti', name: 'FC Lahti', city: 'Nastola', ...base },
+      { id: 'club:ajax', name: 'Ajax', country: 'NL', ...base },
+      { id: 'club:oma kerho', name: 'Oma Kerho', ...base },
+    ]);
+    await db.meta.delete('clubOriginsFilled');
+    await repo.initialize();
+    const by = new Map((await repo.listClubs()).map((c) => [c.name, [c.country, c.city]]));
+    expect(by.get('KuPS')).toEqual(['FI', 'Kuopio']);
+    expect(by.get('FC Lahti')).toEqual(['FI', 'Nastola']);
+    expect(by.get('Ajax')).toEqual(['NL', undefined]);
+    expect(by.get('Oma Kerho')).toEqual([undefined, undefined]);
+    // Toinen käynnistys ei kirjoita uudelleen (käyttäjän poistama maa ei palaa).
+    await repo.saveClub('KuPS', { country: undefined });
+    await repo.initialize();
+    expect((await repo.listClubs()).find((c) => c.name === 'KuPS')!.country).toBeUndefined();
   });
 });

@@ -258,6 +258,35 @@ export function createRepositories(db: AppDB = defaultDb) {
         if (t && name) await db.activityTypes.put(await stamp({ ...t, name }));
       }
     });
+    await fillClubOrigins();
+  }
+
+  /**
+   * Palloliiton seuraluettelon seura: puuttuva maa (Suomi) ja kotikunta (17.11.2026). Ei koske seuraa,
+   * jolle on valittu muu maa; annettua maata tai kuntaa ei muuteta. Palauttaa täydennettävät kentät.
+   */
+  function directoryOrigin(c: Pick<Club, 'name' | 'country' | 'city'>): Pick<Club, 'country' | 'city'> | undefined {
+    if (c.country && c.country !== 'FI') return undefined;
+    const known = findFinnishClub(c.name);
+    if (!known) return undefined;
+    const patch: Pick<Club, 'country' | 'city'> = {};
+    if (!c.country) patch.country = 'FI';
+    if (!c.city) patch.city = known.city;
+    return Object.keys(patch).length ? patch : undefined;
+  }
+
+  /** Kerran laitteella: jo tallennetuille luettelon seuroille maa ja kotikunta (17.11.2026). */
+  async function fillClubOrigins(): Promise<number> {
+    if (await getMeta<boolean>('clubOriginsFilled')) return 0;
+    let n = 0;
+    for (const c of live(await db.clubs.toArray())) {
+      const patch = directoryOrigin(c);
+      if (!patch) continue;
+      await db.clubs.put(await stamp({ ...c, ...patch }));
+      n++;
+    }
+    await setMeta('clubOriginsFilled', true);
+    return n;
   }
 
   // ---------- profiilit ----------
@@ -1335,9 +1364,9 @@ export function createRepositories(db: AppDB = defaultDb) {
     const p = parseTeamName(text);
     if (!p.club.trim()) throw new Error('Anna seuran nimi');
     const before = await db.clubs.get(clubIdOf(p.club));
-    // Palloliiton seuraluettelosta kotikunta, jos sitä ei ole vielä annettu (17.11.2026).
-    const known = before?.city ? undefined : findFinnishClub(p.club);
-    const club = await saveClub(p.club, known ? { city: known.city } : {});
+    // Palloliiton seuraluettelosta maa (Suomi) ja kotikunta, jos niitä ei ole vielä annettu (17.11.2026).
+    const live0 = before && !before.deletedAt ? before : undefined;
+    const club = await saveClub(p.club, directoryOrigin({ name: p.club, country: live0?.country, city: live0?.city }) ?? {});
     const squad = squadOf({ group: p.group, age: p.age });
     const next: Club = await stamp({ ...club, opponent: true, squads: mergeSquads(club.squads, [squad]) });
     if (!next.squads?.length) delete next.squads;
