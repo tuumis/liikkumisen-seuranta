@@ -1171,3 +1171,9 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
     - **Oma kuva:** valitaan laitteelta, pienennetään (pisin sivu 1600 px, JPEG) ja tallennetaan vain tälle laitteelle (localStorage). Kuva ei siirry synkronoinnissa eikä varmuuskopiossa, eikä sitä lähetetä minnekään.
     - Kuva himmennetään taustavärillä: **Himmennys** 30–90 %, oletus 65 %, tummassa teemassa tummalla. Kuvan voi vaihtaa tai poistaa. Jos laitteen tila ei riitä, sovellus ilmoittaa siitä.
     - Valinta on laitekohtainen kuten teema. `theme-init.js` asettaa taustan ennen käynnistystä (ei välähdystä).
+  - **Tuloskuvaan kaikki tyylit ja ennakkokuva harjoituspelille** (käyttäjän pyyntö 17.11.2026; `features/share/drawResult.ts` `ALL_SHARE_STYLES`, `ResultShare.tsx`, `domain/previewCard.ts`, `features/share/drawPreview.ts`, `PreviewShare.tsx`, `features/games/GamesTab.tsx`):
+    - Tuloskuvassa on nyt samat kuusi tyyliä kuin ennakkokuvassa: Pehmeä, Urheilu, Kenttä, Juliste, Selkeä ja Tulostaulu. Valinta muistetaan laitteella kuten ennenkin (`resultSharePrefs`).
+    - Kalenterin harjoituspelillä on nyt **Ennakko**-painike. Arkin otsikko kertoo lajin (harjoituspelin, ottelun tai turnauksen ennakko).
+    - Harjoituspelin ennakkokuvan tunniste on "Harjoituspeli". Laatikot ovat **Alkaa**, **Päättyy** (alku + kesto, vain saman päivän puolella) ja **Paikka**. Paikalla-aikaa ei ole.
+    - Yksi vastustaja: sama VS-asettelu kuin ottelulla. Useampi vastustaja: otsikko "Pelitälli", oma joukkue ja lista **Vastustajat** kalenterin järjestyksessä. Kommentti, tyylit, värit ja laatikoiden valinta toimivat kuten ottelun ennakossa.
+    - Harjoituspeli ei edelleenkään tule tuloskuvaan, koska tulos ei mene tilastoihin.

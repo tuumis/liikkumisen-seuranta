@@ -56,3 +56,24 @@ describe('ennakon laatikot ja kommentti (17.11.2026)', () => {
     expect(empty.comment).toBeUndefined();
   });
 });
+
+describe('harjoituspelin ennakko (17.11.2026)', () => {
+  it('vastustajat, alku ja loppu; ei paikalla-aikaa eikä pelien määrää', () => {
+    const c = previewCard(
+      { activityTypeId: 't:football_friendly', date: '2026-11-25', startTime: '17:30', durationMin: 90 },
+      fx({ games: [{ opponent: ' HJK  · Musta ' }, { opponent: '' }, { opponent: 'PK-35' }], location: 'Tali', level: 'haaste' }),
+    );
+    expect(c).toMatchObject({ kind: 'friendly', kickoff: '17:30', end: '19:00', location: 'Tali', games: [{ opponent: 'HJK · Musta' }, { opponent: 'PK-35' }] });
+    expect(c.arrival).toBeUndefined();
+    expect(previewKicker(c)).toBe('Harjoituspeli · Haaste');
+    expect(availableBoxes(c)).toEqual(['kickoff', 'end', 'place']);
+    expect(previewTimeBoxes(c)).toEqual([['Alkaa', '17:30'], ['Päättyy', '19:00']]);
+  });
+
+  it('ilman vastustajia ja aikaa yksi tyhjä rivi; yli puolenyön ei loppuaikaa', () => {
+    const c = previewCard({ activityTypeId: 't:football_friendly', date: '2026-11-25' }, undefined);
+    expect(c.games).toEqual([{}]);
+    expect(availableBoxes(c)).toEqual([]);
+    expect(previewCard({ activityTypeId: 't:football_friendly', date: '2026-11-25', startTime: '23:30', durationMin: 60 }, undefined).end).toBeUndefined();
+  });
+});

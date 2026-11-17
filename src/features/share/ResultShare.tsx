@@ -10,7 +10,7 @@ import { repo } from '../../db/repositories';
 import { db } from '../../db/schema';
 import { clubFor, logoFor, useClubLogos, useClubs } from '../../ui/TeamLogo';
 import { Switch } from '../settings/DesktopSection';
-import { drawResultCard, loadImage } from './drawResult';
+import { drawResultCard, loadImage, ALL_SHARE_STYLES } from './drawResult';
 import { findOwnTeam, MissingTeamInfo, ShareImageSheet, type RenderOptions } from './ShareSheet';
 
 const EVENT = 'result-share-open';
@@ -103,7 +103,17 @@ export function ResultShareSheet({ sessionId, onClose }: { sessionId: UUID | nul
   const opponentsMissing = card ? card.games.filter((g) => g.opponent && (!logoFor(logos, g.opponent) || !originOf(clubs, g.opponent))).length : 0;
 
   return (
-    <ShareImageSheet open={!!sessionId} onClose={onClose} title="Jaa tulos" alt="Tuloskuvan esikatselu" teamName={card?.team} render={render} renderKey={renderKey} fileName={fileName}>
+    <ShareImageSheet
+      open={!!sessionId}
+      onClose={onClose}
+      title="Jaa tulos"
+      alt="Tuloskuvan esikatselu"
+      teamName={card?.team}
+      render={render}
+      renderKey={renderKey}
+      fileName={fileName}
+      styles={ALL_SHARE_STYLES}
+    >
       {data === null && <p className="text-sm text-slate-600">Tälle kerralle ei ole vielä kirjattu tulosta.</p>}
       {card && card.playerGoals > 0 && (
         <Switch

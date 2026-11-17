@@ -12,7 +12,8 @@ export interface PreviewGame {
 }
 
 export interface PreviewCard {
-  kind: 'game' | 'tournament';
+  /** 'friendly' = harjoituspeli (17.11.2026): vastustajat 1…n, alku ja loppu. */
+  kind: 'game' | 'tournament' | 'friendly';
   date: ISODate;
   eventName?: string;
   level?: string;
@@ -22,6 +23,8 @@ export interface PreviewCard {
   kickoff?: HHmm;
   /** Paikalla (30 min ennen, vähintään lämmittelyn verran). */
   arrival?: HHmm;
+  /** Harjoituspelin loppu (alku + kesto). */
+  end?: HHmm;
   location?: string;
   /** Ottelu: yksi rivi; turnaus: otteluohjelma kellonajan mukaan (ajattomat lopussa). */
   games: PreviewGame[];
@@ -30,16 +33,19 @@ export interface PreviewCard {
 }
 
 /** Ennakkokuvan laatikot, jotka käyttäjä voi piilottaa (17.11.2026). */
-export type PreviewBox = 'arrival' | 'kickoff' | 'games' | 'place';
-export const PREVIEW_BOXES: readonly PreviewBox[] = ['arrival', 'kickoff', 'games', 'place'];
+export type PreviewBox = 'arrival' | 'kickoff' | 'end' | 'games' | 'place';
+export const PREVIEW_BOXES: readonly PreviewBox[] = ['arrival', 'kickoff', 'end', 'games', 'place'];
 
 export function previewBoxLabel(box: PreviewBox, card: Pick<PreviewCard, 'kind'>): string {
-  return box === 'arrival' ? 'Paikalla' : box === 'kickoff' ? (card.kind === 'tournament' ? '1. peli' : 'Peli alkaa') : box === 'games' ? 'Pelit' : 'Paikka';
+  if (box === 'kickoff') return card.kind === 'tournament' ? '1. peli' : card.kind === 'friendly' ? 'Alkaa' : 'Peli alkaa';
+  return box === 'arrival' ? 'Paikalla' : box === 'end' ? 'Päättyy' : box === 'games' ? 'Pelit' : 'Paikka';
 }
 
 /** Laatikot, joille kortilla on tieto (vain nämä tarjotaan valittaviksi). */
 export function availableBoxes(card: PreviewCard): PreviewBox[] {
-  return PREVIEW_BOXES.filter((b) => (b === 'arrival' ? !!card.arrival : b === 'kickoff' ? !!card.kickoff : b === 'games' ? card.kind === 'tournament' && card.games.length > 0 : !!card.location));
+  return PREVIEW_BOXES.filter((b) =>
+    b === 'arrival' ? !!card.arrival : b === 'kickoff' ? !!card.kickoff : b === 'end' ? !!card.end : b === 'games' ? card.kind === 'tournament' && card.games.length > 0 : !!card.location,
+  );
 }
 
 /** Aikalaatikot (otsikko, arvo) piilotukset huomioiden; paikka piirretään omana laatikkonaan. */
@@ -47,15 +53,28 @@ export function previewTimeBoxes(card: PreviewCard, hidden: ReadonlySet<PreviewB
   const out: [string, string][] = [];
   for (const b of availableBoxes(card)) {
     if (hidden.has(b) || b === 'place') continue;
-    out.push([previewBoxLabel(b, card), b === 'arrival' ? card.arrival! : b === 'kickoff' ? card.kickoff! : String(card.games.length)]);
+    out.push([previewBoxLabel(b, card), b === 'arrival' ? card.arrival! : b === 'kickoff' ? card.kickoff! : b === 'end' ? card.end! : String(card.games.length)]);
   }
   return out;
 }
 
 const clean = (s: string | undefined) => s?.replace(/\s+/g, ' ').trim() || undefined;
 
-export function previewCard(plan: Pick<PlannedSession, 'activityTypeId' | 'date' | 'startTime'>, fixture: Fixture | undefined, team?: { name: string; format?: GameFormat }): PreviewCard {
+/** Kellonaika + minuutit (saman päivän sisällä; muuten ei loppuaikaa). */
+function addMin(t: HHmm, min: number): HHmm | undefined {
+  const [h, m] = t.split(':').map(Number);
+  const x = h * 60 + m + Math.round(min);
+  if (!(min > 0) || x >= 24 * 60) return undefined;
+  return `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}` as HHmm;
+}
+
+export function previewCard(
+  plan: Pick<PlannedSession, 'activityTypeId' | 'date' | 'startTime'> & { durationMin?: number },
+  fixture: Fixture | undefined,
+  team?: { name: string; format?: GameFormat },
+): PreviewCard {
   const tournament = plan.activityTypeId === 't:football_tournament';
+  const friendly = plan.activityTypeId === 't:football_friendly';
   const f = fixture;
   const base = {
     date: plan.date,
@@ -66,6 +85,18 @@ export function previewCard(plan: Pick<PlannedSession, 'activityTypeId' | 'date'
     ...(clean(f?.location) ? { location: clean(f?.location) } : {}),
     ...(clean(f?.previewNote) ? { comment: clean(f?.previewNote) } : {}),
   };
+  if (friendly) {
+    // Harjoituspeli: vastustajat kalenterin järjestyksessä, alku ja loppu (ei paikalla-aikaa).
+    const opponents = (f?.games ?? []).map((g) => clean(g.opponent)).filter((o): o is string => !!o);
+    const end = plan.startTime && plan.durationMin ? addMin(plan.startTime, plan.durationMin) : undefined;
+    return {
+      kind: 'friendly',
+      ...base,
+      ...(plan.startTime ? { kickoff: plan.startTime } : {}),
+      ...(end ? { end } : {}),
+      games: opponents.length ? opponents.map((opponent) => ({ opponent })) : [{}],
+    };
+  }
   if (!tournament) {
     const kickoff = plan.startTime;
     return {
@@ -103,5 +134,10 @@ export function previewCard(plan: Pick<PlannedSession, 'activityTypeId' | 'date'
 
 /** Kuvan yläotsikko: "Otteluennakko · Elite · 8v8". */
 export function previewKicker(card: PreviewCard): string {
-  return [card.kind === 'tournament' ? 'Turnausennakko' : 'Otteluennakko', card.level, card.format].filter(Boolean).join(' · ');
+  return [previewTitleOf(card), card.level, card.format].filter(Boolean).join(' · ');
+}
+
+/** Kuvan yläreunan tunniste. */
+export function previewTitleOf(card: Pick<PreviewCard, 'kind'>): string {
+  return card.kind === 'tournament' ? 'Turnausennakko' : card.kind === 'friendly' ? 'Harjoituspeli' : 'Otteluennakko';
 }

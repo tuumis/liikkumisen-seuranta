@@ -9,8 +9,8 @@ import { alpha, isLightColor, mix, resolveShareColor, type ShareColor } from './
 
 export type ShareSize = 'story' | 'post';
 /**
- * Kuvan tyyli. Tuloskuvassa Pehmeä ja Urheilu; ennakkokuvassa lisäksi Kenttä, Juliste, Selkeä ja
- * Tulostaulu (käyttäjän lista 17.11.2026). Tyyli vaihtaa taustan, värit ja fontin; asettelu on sama.
+ * Kuvan tyyli: Pehmeä, Urheilu, Kenttä, Juliste, Selkeä ja Tulostaulu (käyttäjän lista 17.11.2026; kaikki
+ * sekä tulos- että ennakkokuvassa). Tyyli vaihtaa taustan, värit ja fontin; asettelu on sama.
  */
 export type ShareStyle = 'theme' | 'sport' | 'field' | 'poster' | 'clean' | 'scoreboard';
 
@@ -22,6 +22,8 @@ export const SHARE_STYLE_LABEL: Record<ShareStyle, string> = {
   clean: 'Selkeä',
   scoreboard: 'Tulostaulu',
 };
+/** Kaikki tyylit (tulos- ja ennakkokuva, 17.11.2026). */
+export const ALL_SHARE_STYLES: readonly ShareStyle[] = ['theme', 'sport', 'field', 'poster', 'clean', 'scoreboard'];
 export const isShareStyle = (v: unknown): v is ShareStyle => typeof v === 'string' && v in SHARE_STYLE_LABEL;
 
 /** Otsikkofontin paksuus tyylin mukaan. */

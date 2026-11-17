@@ -2,7 +2,7 @@
 // Ottelu: logo – VS – logo, nimet, liput ja kotipaikkakunnat, aloitusaika, paikalla-aika ja paikka.
 // Turnaus: nimi, päivä, oma joukkue ja otteluohjelma (kellonaika, vastustaja, lippu, paikka).
 
-import { previewTimeBoxes, type PreviewBox, type PreviewCard } from '../../domain/previewCard';
+import { previewTimeBoxes, previewTitleOf, type PreviewBox, type PreviewCard } from '../../domain/previewCard';
 import { dateLabelOf, drawLogo, drawMatchup, drawOrigin, fit, heavyOf, infoBoxes, levelBadges, PAD, placeBox, rr, setup, spaced, W, wrap, type DrawOptions, type Palette } from './drawResult';
 
 type PreviewOptions = Omit<DrawOptions, 'player'> & {
@@ -49,7 +49,7 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
   let y = story ? 170 : 104;
   ctx.font = `700 ${story ? 32 : 28}px ${p.sans}`;
   ctx.fillStyle = p.accent;
-  ctx.fillText(spaced(card.kind === 'tournament' ? 'Turnausennakko' : 'Otteluennakko'), PAD, y);
+  ctx.fillText(spaced(previewTitleOf(card)), PAD, y);
   y += story ? 34 : 26;
 
   const boxH = story ? 180 : 140;
@@ -57,10 +57,12 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
   // Aikalaatikot (turnauksessa myös pelien määrä) käyttäjän valintojen mukaan.
   const times = previewTimeBoxes(card, hidden);
 
-  if (card.kind === 'tournament') {
+  // Turnaus ja usean vastustajan harjoituspeli ("pelitälli"): joukkue ja lista; muuten VS-asettelu.
+  const list = card.kind === 'tournament' || (card.kind === 'friendly' && card.games.length > 1);
+  if (list) {
     const titlePx = story ? 104 : 84;
     ctx.font = display(titlePx);
-    const lines = wrap(ctx, card.eventName ?? 'Turnaus', maxW, 2);
+    const lines = wrap(ctx, card.kind === 'friendly' ? 'Pelitälli' : (card.eventName ?? 'Turnaus'), maxW, 2);
     ctx.fillStyle = p.ink;
     lines.forEach((l) => {
       y += titlePx * 1.04;
@@ -103,7 +105,7 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
     if (n) {
       ctx.font = `700 ${story ? 28 : 24}px ${p.sans}`;
       ctx.fillStyle = p.accent;
-      ctx.fillText(spaced('Otteluohjelma'), PAD, y + (story ? 30 : 24));
+      ctx.fillText(spaced(card.kind === 'friendly' ? 'Vastustajat' : 'Otteluohjelma'), PAD, y + (story ? 30 : 24));
       y += labelH;
       const timeW = story ? 190 : 160;
       card.games.forEach((g, k) => {

@@ -9,13 +9,11 @@ import { repo } from '../../db/repositories';
 import { db } from '../../db/schema';
 import { logoFor, useClubLogos, useClubs } from '../../ui/TeamLogo';
 import { drawPreviewCard } from './drawPreview';
-import { loadImage, type ShareStyle } from './drawResult';
+import { ALL_SHARE_STYLES, loadImage } from './drawResult';
 import { ToggleChip } from '../../ui/controls';
 import { inputClass } from '../../ui/components';
 import { useToast } from '../../ui/Toast';
 
-/** Ennakkokuvan tyylit (17.11.2026): tuloskuvan kaksi ja neljä uutta. */
-const PREVIEW_STYLES: readonly ShareStyle[] = ['theme', 'sport', 'field', 'poster', 'clean', 'scoreboard'];
 
 /** Piilotetut laatikot muistetaan laitteelle (kaikille ennakoille). */
 const HIDDEN_KEY = 'previewHiddenBoxes';
@@ -131,7 +129,7 @@ export function PreviewShareSheet({ planId, onClose }: { planId: UUID | null; on
         });
       }
     : undefined;
-  const base = card?.kind === 'tournament' ? (card.eventName ?? 'turnaus') : 'ottelu';
+  const base = card?.kind === 'tournament' ? (card.eventName ?? 'turnaus') : card?.kind === 'friendly' ? 'harjoituspeli' : 'ottelu';
   const fileName = `ennakko-${base.toLocaleLowerCase('fi').replace(/[^\p{L}\p{N}]+/gu, '-')}-${card?.date ?? ''}.png`;
   const opponentsMissing = card ? card.games.filter((g) => g.opponent && (!logoFor(logos, g.opponent) || !originOf(clubs, g.opponent))).length : 0;
 
@@ -139,13 +137,13 @@ export function PreviewShareSheet({ planId, onClose }: { planId: UUID | null; on
     <ShareImageSheet
       open={!!planId}
       onClose={onClose}
-      title="Jaa otteluennakko"
+      title={card?.kind === 'friendly' ? 'Jaa harjoituspelin ennakko' : card?.kind === 'tournament' ? 'Jaa turnausennakko' : 'Jaa otteluennakko'}
       alt="Otteluennakon esikatselu"
       teamName={card?.team}
       render={render}
       renderKey={renderKey}
       fileName={fileName}
-      styles={PREVIEW_STYLES}
+      styles={ALL_SHARE_STYLES}
       prefsKey="previewSharePrefs"
     >
       {data === null && <p className="text-sm text-slate-600">Tapahtumaa ei löytynyt.</p>}
