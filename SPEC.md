@@ -1222,6 +1222,13 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
   - **Treenin verryttely lasketaan Harrastukseen** (käyttäjän kysymys ja valinta 17.11.2026; `domain/aggregate.ts` `sessionCategory`, `dayTotals`, `domain/hours.ts`):
     - Treeniin linkitetty alku- ja loppuverryttely (`linkedTo`, "Jalkapallo – omatoiminen") kuuluu treeniin, joten se lasketaan kategoriassa **Harrastus** treenin kanssa.
     - Aiemmin se laskettiin Omaehtoiseen. Silloin korvausperiaate pyyhki treenipäivinä päivän "Leikki ja oma liikkuminen" -arvion, ja viikon omaehtoinen liikunta näytti liian pientä.
-    - Erillinen "Jalkapallo – omatoiminen" -kerta (ei linkitetty treeniin) pysyy Omaehtoisena ja korvaa päivän arvion tavalliseen tapaan.
+    - Erillinen "Jalkapallo – omatoiminen" -kerta (ei linkitetty treeniin) pysyy Omaehtoisena. Se ei kuitenkaan korvaa arviota, katso alla.
     - Laji, tehot ja jalkapallon omatoimisen harjoittelun yhteenveto eivät muutu. Muutos koskee vain kategoriaa, eli päiväkoostetta, viikon tunteja ja kontekstijakoa.
     - Päivän Arkiliikunta-ikkuna käyttää samaa kategoriaa: treenipäivän verryttely ei näytä Leikki ja oma liikkuminen -arviota "kirjattuna" (korjattu käyttäjän kuvakaappauksesta 17.11.2026).
+  - **Omatoiminen lajiharjoittelu tulee leikkiarvion päälle** (käyttäjän valinta 17.11.2026; `domain/aggregate.ts` `addsToEstimate`, `dayTotals`, `domain/hours.ts`, `domain/report.ts`, `EstimateDaySheet`):
+    - Lajiharjoittelu on omaehtoinen laji, jolla on urheilulaji (nyt "Jalkapallo – omatoiminen", kun sitä ei ole linkitetty treeniin). Se on eri asia kuin leikki ja oma liikkuminen.
+    - Poikkeus korvausperiaatteeseen: lajiharjoittelu ei korvaa päivän omaehtoisen arviota. Päivälle lasketaan kirjattu lajiharjoittelu ja arvio. Esimerkki: 20 min pallottelua ja 60 min leikkiarvio tekevät Omaehtoiseen 80 min.
+    - Muut omaehtoiset kerrat (esim. vapaa leikki, trampoliini, pyöräily) korvaavat arvion kuten ennenkin. Jos päivälle on kirjattu sekä lajiharjoittelua että muuta omaehtoista, arvio väistyy.
+    - Sama sääntö koskee viikon tunteja: arvio, toteuma, ennuste ja arkiliikuntarivi. Suunniteltu lajiharjoittelu ei korvaa arviota viikon arviossa.
+    - Päiväkoosteessa kategoriaan tallentuu tällöin kirjattu osuus ja `addedEstimate` (arvion osuus). Jakson raportti laskee ne kirjattuun ja arvioon erikseen.
+    - Arkiliikunta-ikkunassa arvio pysyy muokattavana. Lisäksi ikkuna kertoo, että lajiharjoittelua on kirjattu N min arvion päälle.

@@ -45,6 +45,17 @@ export function sessionCategory(s: Pick<Session, 'activityTypeId' | 'linkedTo'>,
   return s.linkedTo ? 'hobby' : (types.get(s.activityTypeId)?.category ?? 'other');
 }
 
+/**
+ * Omatoiminen lajiharjoittelu (omaehtoinen laji, jolla on urheilulaji, esim. "Jalkapallo – omatoiminen")
+ * on eri asia kuin leikki: se lisätään päivän omaehtoisen arvion päälle eikä korvaa sitä (17.11.2026).
+ * Treenin verryttely (linkedTo) kuuluu Harrastukseen, joten se ei ole tällainen.
+ */
+export function addsToEstimate(s: { activityTypeId: UUID; linkedTo?: UUID }, types: ReadonlyMap<UUID, ActivityType>): boolean {
+  if (s.linkedTo) return false;
+  const t = types.get(s.activityTypeId);
+  return !!t && t.category === 'self_directed' && !!t.sport;
+}
+
 export function isEstimateValidOn(e: Estimate, d: ISODate): boolean {
   return !e.deletedAt && e.validFrom <= d && (e.validTo === undefined || d <= e.validTo);
 }
@@ -109,11 +120,14 @@ export function dayTotals(
   let sessionCount = 0;
   let confirmedMvpa = 0;
   let moving = 0;
+  // Kategoriat, joiden arvion kirjaus korvaa (lajiharjoittelu ei korvaa, vaan tulee päälle).
+  const replaced = new Set<Category>();
 
   for (const s of sessions) {
     if (s.date !== date || s.deletedAt) continue;
     if (isEstimateConfirmation(s)) confirmedMvpa += mvpaOf(s.minutes);
     const category = sessionCategory(s, types);
+    if (!addsToEstimate(s, types)) replaced.add(category);
     logged = addMinutes(logged, s.minutes);
     moving += Math.max(0, s.durationMin);
     const prev = byCategory[category];
@@ -133,14 +147,16 @@ export function dayTotals(
   const validEstimates = estimates.filter((e) => isEstimateValidOn(e, date));
   const categories = [...new Set(validEstimates.map((e) => e.category))];
   for (const c of categories) {
-    if (byCategory[c]) continue; // kirjaukset korvaavat arvion
+    if (replaced.has(c)) continue; // kirjaukset korvaavat arvion
     const e = activeEstimate(validEstimates, c, date);
     if (!e) continue;
     const m = estimateMinutes(e, date, holiday);
     const base = Math.max(0, estimateBaseMin(e, date, holiday));
     estimate = addMinutes(estimate, m);
     estimateMoving += base;
-    byCategory[c] = { source: 'estimate', minutes: m, durationMin: base };
+    const prev = byCategory[c];
+    // Lajiharjoittelu kirjattu samaan kategoriaan: kirjattu ja arvio rinnakkain.
+    byCategory[c] = prev ? { ...prev, addedEstimate: { minutes: m, durationMin: base } } : { source: 'estimate', minutes: m, durationMin: base };
     estimatedCategories.push(c);
   }
 

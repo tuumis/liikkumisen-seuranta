@@ -425,6 +425,8 @@ export interface CategoryTotals {
   minutes: IntensityMinutes;
   /** Liikuttu kesto (min): kirjattujen kertojen kesto tai arvion päivän minuutit. */
   durationMin: number;
+  /** Kirjattu lajiharjoittelu ei korvannut arviota: arvion osuus kirjatun lisäksi (17.11.2026). */
+  addedEstimate?: { minutes: IntensityMinutes; durationMin: number };
 }
 
 /** Päiväkooste (7.1). */

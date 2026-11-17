@@ -109,6 +109,7 @@ export function periodReport(input: ReportInput): PeriodReport {
       const cur = acc.get(c) ?? { logged: { ...ZERO_MINUTES }, estimate: { ...ZERO_MINUTES } };
       if (v.source === 'logged') cur.logged = addMinutes(cur.logged, v.minutes);
       else cur.estimate = addMinutes(cur.estimate, v.minutes);
+      if (v.addedEstimate) cur.estimate = addMinutes(cur.estimate, v.addedEstimate.minutes);
       acc.set(c, cur);
     }
   }

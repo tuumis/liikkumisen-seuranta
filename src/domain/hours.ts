@@ -8,7 +8,7 @@
 // Tämä on kestovertailu; suositusvertailu (reipas ja rasittava) on erillinen (osio 7),
 // eikä suunnitelma koskaan näy liikuntamäärissä.
 
-import { activeEstimate, isEstimateConfirmation, isEstimateValidOn, sessionCategory } from './aggregate';
+import { activeEstimate, addsToEstimate, isEstimateConfirmation, isEstimateValidOn, sessionCategory } from './aggregate';
 import { datesBetween } from './dates';
 import { estimateBaseMin } from './holidays';
 import { computeSessionMinutes, mvpaOf } from './intensity';
@@ -111,9 +111,12 @@ export function weeklyHours(input: {
 
     // Arvio: suunnitellut kerrat (kaikki tilat: suunnitelma oli olemassa) + perusarvio muille kategorioille.
     const planByCat = new Map<Category, number>();
+    // Kategoriat, joiden perusarvion suunnitelma/kirjaus korvaa (lajiharjoittelu tulee arvion päälle, 17.11.2026).
+    const planReplaces = new Set<Category>();
     for (const p of input.planned) {
       if (p.deletedAt || p.date !== d || p.skipReason === 'holiday') continue;
       planByCat.set(catOf(p.activityTypeId), (planByCat.get(catOf(p.activityTypeId)) ?? 0) + p.durationMin);
+      if (!addsToEstimate(p, input.types)) planReplaces.add(catOf(p.activityTypeId));
     }
     let expectedMin = 0;
     for (const [c, m] of planByCat) {
@@ -121,7 +124,7 @@ export function weeklyHours(input: {
       expectedMin += m;
     }
     for (const c of estCats) {
-      if (planByCat.has(c)) continue;
+      if (planReplaces.has(c)) continue;
       const m = estimateDuration(activeEstimate(estimates, c, d)!);
       if (!m) continue;
       cat(c).expected.estimate += m;
@@ -130,10 +133,12 @@ export function weeklyHours(input: {
 
     // Toteuma: kirjatut kerrat + perusarvio muille kategorioille (vain menneet/tämä päivä, ei sairas-/matkapäivinä).
     const logByCat = new Map<Category, number>();
+    const logReplaces = new Set<Category>();
     for (const s of input.sessions) {
       if (s.deletedAt || s.date !== d) continue;
       const c = sessionCategory(s, input.types);
       logByCat.set(c, (logByCat.get(c) ?? 0) + s.durationMin);
+      if (!addsToEstimate(s, input.types)) logReplaces.add(c);
     }
     let actualMin = 0;
     let actualLoggedMin = 0;
@@ -148,7 +153,7 @@ export function weeklyHours(input: {
     }
     if (!future && !isFlagged) {
       for (const c of estCats) {
-        if (logByCat.has(c)) continue;
+        if (logReplaces.has(c)) continue;
         const m = estimateDuration(activeEstimate(estimates, c, d)!);
         if (!m) continue;
         cat(c).actual.estimate += m;
@@ -161,12 +166,14 @@ export function weeklyHours(input: {
     // Ennuste: avoimet suunnitelmat (ei kuitatut, ei ohitetut) kategorioittain; jos kategorialle on jo
     // kirjaus, kuittaamatonta suunnitelmaa ei lasketa toiseen kertaan.
     const openByCat = new Map<Category, number>();
+    const openReplaces = new Set<Category>();
     let openPlanMvpa = 0;
     for (const p of input.planned) {
       if (p.deletedAt || p.date !== d || p.status !== 'open') continue;
       const c = catOf(p.activityTypeId);
       if (logByCat.has(c)) continue;
       openByCat.set(c, (openByCat.get(c) ?? 0) + p.durationMin);
+      if (!addsToEstimate(p, input.types)) openReplaces.add(c);
       const type = input.types.get(p.activityTypeId);
       if (type) openPlanMvpa += mvpaOf(computeSessionMinutes(type, { durationMin: p.durationMin, effort: 0 }).minutes);
     }
@@ -178,7 +185,7 @@ export function weeklyHours(input: {
       fc.actual += actualLoggedMin;
       if (!isFlagged) {
         for (const c of estCats) {
-          if (logByCat.has(c) || openByCat.has(c)) continue;
+          if (logReplaces.has(c) || openReplaces.has(c)) continue;
           const m = estimateDuration(activeEstimate(estimates, c, d)!);
           if (!m) continue;
           cat(c).forecast += m;
@@ -188,7 +195,7 @@ export function weeklyHours(input: {
       }
     } else if (!isFlagged) {
       for (const c of estCats) {
-        if (openByCat.has(c)) continue;
+        if (openReplaces.has(c)) continue;
         const m = estimateDuration(activeEstimate(estimates, c, d)!);
         if (!m) continue;
         cat(c).forecast += m;
@@ -209,7 +216,7 @@ export function weeklyHours(input: {
     const pendingEstimateCategories: Category[] = [];
     if (!isFlagged) {
       for (const c of estCats) {
-        if (logByCat.has(c)) continue;
+        if (logReplaces.has(c)) continue;
         const m = estimateDuration(activeEstimate(estimates, c, d)!);
         if (!m) continue;
         pendingEstimateMin += m;

@@ -206,8 +206,25 @@ describe('treenin verryttely Harrastukseen (17.11.2026)', () => {
     expect(h.byCategory.find((c) => c.category === 'self_directed')!.actual).toEqual({ sessions: 0, estimate: 7 * 60 });
   });
 
-  it('erillinen omatoiminen kerta pysyy omaehtoisena ja korvaa arvion', () => {
+  it('erillinen omatoiminen lajiharjoittelu on omaehtoista ja tulee leikkiarvion päälle', () => {
     const t = dayTotals('2026-11-10', [training, own], [play], typesMap());
-    expect(t.byCategory.self_directed).toMatchObject({ source: 'logged', durationMin: 20 });
+    expect(t.byCategory.self_directed).toMatchObject({ source: 'logged', durationMin: 20, addedEstimate: { durationMin: 60 } });
+    expect(t.estimatedCategories).toEqual(['self_directed']);
+    expect(t.movingCombined).toBe(90 + 20 + 60);
+    const h = weeklyHours({ ...base, sessions: [training, own], estimates: [play] });
+    expect(h.byCategory.find((c) => c.category === 'self_directed')!.actual).toEqual({ sessions: 20, estimate: 7 * 60 });
+  });
+
+  it('muu omaehtoinen kerta (leikki) korvaa arvion edelleen', () => {
+    const leikki = session({ id: 's3', date: '2026-11-10', activityTypeId: activityTypeId('outdoor_play'), durationMin: 30, minutes: { light: 15, moderate: 10, vigorous: 5 } });
+    const t = dayTotals('2026-11-10', [own, leikki], [play], typesMap());
+    expect(t.byCategory.self_directed).toEqual({ source: 'logged', minutes: { light: 20, moderate: 25, vigorous: 5 }, durationMin: 50 });
+    expect(t.estimatedCategories).toEqual([]);
+  });
+
+  it('suunniteltu lajiharjoittelu ei korvaa arviota viikon arviossa', () => {
+    const p = planned({ date: '2026-11-11', activityTypeId: activityTypeId('football_self'), durationMin: 30 });
+    const h = weeklyHours({ ...base, planned: [p], estimates: [play] });
+    expect(h.byCategory.find((c) => c.category === 'self_directed')!.expected).toEqual({ sessions: 30, estimate: 7 * 60 });
   });
 });

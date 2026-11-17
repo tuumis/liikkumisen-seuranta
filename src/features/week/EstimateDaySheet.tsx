@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { estimateBaseMin, holidayOn, weekendLike } from '../../domain/holidays';
 import { isEstimateConfirmation } from '../../domain/hours';
-import { isDaycareLabel, sessionCategory } from '../../domain/aggregate';
+import { addsToEstimate, isDaycareLabel, sessionCategory } from '../../domain/aggregate';
 import { activityTypeId } from '../../domain/ids';
 import type { ActivityType, Category, Estimate, ISODate, Profile, Session } from '../../domain/types';
 import { repo } from '../../db/repositories';
@@ -68,7 +68,14 @@ export function EstimateDaySheet({ date, profile, onClose }: { date: ISODate | n
   const catOf = (s: Session): Category => sessionCategory(s, typeMap);
   const rows = (data?.estimates ?? []).map((e) => {
     const same = (data?.sessions ?? []).filter((s) => catOf(s) === e.category);
-    return { e, est: minutesOf(e), conf: same.find(isEstimateConfirmation), manual: same.filter((s) => !isEstimateConfirmation(s)) };
+    return {
+      e,
+      est: minutesOf(e),
+      conf: same.find(isEstimateConfirmation),
+      manual: same.filter((s) => !isEstimateConfirmation(s) && !addsToEstimate(s, typeMap)),
+      // Lajiharjoittelu tulee arvion päälle (17.11.2026): näytetään tietona.
+      extra: same.filter((s) => addsToEstimate(s, typeMap)),
+    };
   });
 
   useEffect(() => {
@@ -138,7 +145,7 @@ export function EstimateDaySheet({ date, profile, onClose }: { date: ISODate | n
           </div>
         )}
         <ul className="space-y-3">
-          {rows.map(({ e, est, conf, manual }) => {
+          {rows.map(({ e, est, conf, manual, extra }) => {
             const v = values[e.category] ?? String(conf ? conf.durationMin : est);
             const n = Number(v);
             const valid = v.trim() !== '' && Number.isInteger(n) && n >= 0 && n <= 600;
@@ -155,6 +162,11 @@ export function EstimateDaySheet({ date, profile, onClose }: { date: ISODate | n
                   </div>
                   <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${status === 'arvio' ? 'bg-amber-100 text-amber-900' : 'bg-green-100 text-green-800'}`}>{status}</span>
                 </div>
+                {extra.length > 0 && manual.length === 0 && (
+                  <p className="text-xs text-slate-600">
+                    Lisäksi omatoimista lajiharjoittelua {extra.reduce((a, s) => a + s.durationMin, 0)} min. Se lasketaan tämän arvion päälle.
+                  </p>
+                )}
                 {manual.length > 0 && !conf ? (
                   <p className="text-sm text-slate-600">
                     Kirjattu erikseen {manual.reduce((a, s) => a + s.durationMin, 0)} min, joten arviota ei tälle päivälle käytetä. Kirjausta muokataan päivän kerroista.
