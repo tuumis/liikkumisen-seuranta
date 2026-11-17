@@ -137,8 +137,8 @@ export function DayRow({
           <span className="stat text-[17px] font-semibold">{dayNo}</span>
         </div>
         {/* Päivän nimi näkyy aina kokonaan (17.11.2026): jos tila ei riitä, oikean reunan mittarit siirtyvät omalle rivilleen. */}
-        <div className="min-w-0 flex-1 sm:flex-[1_0_auto]">
-          <div className={`${isToday ? '' : 'hidden sm:block'} whitespace-nowrap text-sm font-bold ${isToday ? 'text-green-800' : isFuture ? 'text-slate-500' : 'text-slate-900'}`}>
+        <div className="min-w-0 flex-[1_0_auto]">
+          <div className={`whitespace-nowrap text-sm font-bold ${isToday ? 'text-green-800' : isFuture ? 'text-slate-500' : 'text-slate-900'}`}>
             {isToday ? 'Tänään' : weekdayName}
             {isToday && <span className="sr-only"> ({dayLabel(date)})</span>}
           </div>

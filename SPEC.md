@@ -1237,5 +1237,5 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
     - Nyt rivi näkyy vain, jos arvion päivän minuutit ovat yli 0 tai rivillä on jo merkintä (vahvistus tai erillinen kirjaus). Päivän arkiliikuntarivi ja pikavahvistus ohittivat 0 min arviot jo aiemmin.
   - **Viikkonäkymän päivän nimi ilman katkaisua** (käyttäjän kysymys 17.11.2026; `DayRow`):
     - Päivän nimi katkesi kolmella pisteellä ("Sunnuntai…"), kun oikealla oli pitkä "min yhteensä" -teksti ja rivillä ✓ Suositus -merkki.
-    - Nimi näkyy aina kokonaan (käyttäjän tarkennus: nimi ei saa jäädä pois). Jos tila ei riitä, oikean reunan yhteismäärä ja mittari siirtyvät nimen alle omalle rivilleen (flex-wrap). Mobiilissa nimi on piilossa kuten ennenkin, ja Tänään-otsikko näkyy aina.
+    - Nimi näkyy aina kokonaan (käyttäjän tarkennus: nimi ei saa jäädä pois). Jos tila ei riitä, oikean reunan yhteismäärä ja mittari siirtyvät nimen alle omalle rivilleen (flex-wrap). Nimi näkyy myös puhelimessa (käyttäjän valinta 17.11.2026). Kapealla näytöllä mittarit rivittyvät tarvittaessa nimen alle.
     - Nimi on perusmuodossa ("Sunnuntai"), ei taivutettuna ("Sunnuntaina").
