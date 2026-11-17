@@ -203,7 +203,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
       eventName,
       link: cleanLink,
       series,
-      homeAway: kind === 'game' ? homeAway || undefined : undefined,
+      homeAway: kind === 'game' || kind === 'friendly' ? homeAway || undefined : undefined,
       gamesCount: nums.count,
       games: rows,
       playerGoals: nums.own,
@@ -374,7 +374,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
             {list('fb-series', names?.series)}
           </Field>
         )}
-        {kind === 'game' && (
+        {(kind === 'game' || kind === 'friendly') && (
           <div>
             <div className="mb-1 text-sm font-medium text-slate-700">Koti vai vieras</div>
             <HomeAwayChips value={homeAway} onChange={setHomeAway} label="Koti- vai vieraspeli" />

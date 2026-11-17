@@ -1317,3 +1317,7 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
         - turnauslistassa merkintä kentän vieressä (ennakko) tai kellonajan jälkeen (tulos).
     - Kuvavalinnat (kommentin tausta, koti/vieras) muistetaan laitteelle, ja ne ovat yhteiset ennakko- ja tuloskuville.
   - **Korjaus: viikkovalitsimen painikkeet puhelimella** (käyttäjän havainto 18.11.2026; `features/week/WeekView.tsx`): kun puhelimella selasi muuta kuin kuluvaa viikkoa, "Tämä viikko" -painike työnsi Muokkaa näkymää -painikkeen ruudun ulkopuolelle. Kapealla näytöllä (alle 640 px) viikon valitsin on nyt koko levyinen omalla rivillään. Sen alla ovat "Tämä viikko" vasemmalla sekä raportti ja Muokkaa näkymää oikealla. Nuolet pysyvät paikallaan viikkoa vaihdettaessa. Leveämmillä näytöillä asettelu on ennallaan.
+  - **Harjoituspelin koti/vieras ja kommentin väli** (käyttäjän toive 18.11.2026; `repositories.ts`, `domain/football.ts` `friendlyRows`, `previewCard.ts`, `FixtureSheet.tsx`, `FootballPanel.tsx`, `drawPreview.ts`, `drawResult.ts`):
+    - Harjoituspelillekin voi valita Koti tai Vieras vastustajien alla, sekä tulevalle että kirjatulle pelille. Valinta koskee koko tapahtumaa ja siirtyy kuittauksessa.
+    - Ennakkokuvassa yhden vastustajan harjoituspelissä KOTI ja VIERAS näkyvät nimien alla. Pelitällissä merkintä on jokaisella vastustajarivillä.
+    - Pelkkänä tekstinä näytettävä kommentti (ilman harmaata taustaa) on nyt kauempana joukkuetiedoista: väli on 60 px (tarina 76 px), aiemmin 24 px (tarina 32 px).

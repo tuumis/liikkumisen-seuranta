@@ -20,6 +20,8 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
   // Kommentti: harmaa paneeli laatikoiden yläpuolella tai pelkkä teksti heti pelin alla (18.11.2026).
   const comment = commentLayout(ctx, card.comment, story, p, opts.commentPanel !== false);
   const commentGap = story ? 32 : 24;
+  // Pelkkä teksti tarvitsee enemmän ilmaa joukkuetietojen alle kuin paneeli (18.11.2026).
+  const plainGap = story ? 76 : 60;
   const display = (px: number) => `${heavy} ${px}px ${p.display}`;
   const origins = opts.origins;
   const bottom = H - (story ? 140 : 84);
@@ -61,7 +63,7 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
     if (place) boxesTop -= placeH;
     if (items.length) boxesTop -= boxH + (place ? 20 : 0);
     const commentTop = comment.h && comment.panel ? boxesTop - comment.h - (items.length || place ? commentGap : 0) : boxesTop;
-    const plainH = comment.h && !comment.panel ? comment.h + commentGap : 0;
+    const plainH = comment.h && !comment.panel ? comment.h + plainGap : 0;
 
     // Oma joukkue
     const ls = story ? 112 : 92;
@@ -123,7 +125,7 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
       });
     }
 
-    if (comment.h) drawComment(ctx, comment, comment.panel ? commentTop : y + (n ? n * rowH + (n - 1) * gap : 0) + commentGap, p);
+    if (comment.h) drawComment(ctx, comment, comment.panel ? commentTop : y + (n ? n * rowH + (n - 1) * gap : 0) + plainGap, p);
     let by = boxesTop;
     if (items.length) {
       infoBoxes(ctx, items, by, boxH, story, p, display);
@@ -146,7 +148,7 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
   if (place) boxesTop -= placeH;
   if (times.length) boxesTop -= boxH + (place ? 20 : 0);
   const commentTop = comment.h && comment.panel ? boxesTop - comment.h - (times.length || place ? commentGap : 0) : boxesTop;
-  const below = comment.h && !comment.panel ? comment.h + commentGap : 0;
+  const below = comment.h && !comment.panel ? comment.h + plainGap : 0;
 
   const nameBottom = drawMatchup(ctx, { team: card.team, opponent: g.opponent, logos: opts.logos, origins, y, boxesTop: commentTop, story, p, tags: homeAwayTags(g.homeAway, opts.homeAway), belowH: below }, (top, ls) => {
     // VS logojen välissä
@@ -157,7 +159,7 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
     ctx.textAlign = 'left';
   });
 
-  if (comment.h) drawComment(ctx, comment, comment.panel ? commentTop : nameBottom + commentGap, p, comment.panel ? 'left' : 'center');
+  if (comment.h) drawComment(ctx, comment, comment.panel ? commentTop : nameBottom + plainGap, p, comment.panel ? 'left' : 'center');
   let by = boxesTop;
   if (times.length) {
     infoBoxes(ctx, times, by, boxH, story, p, display);

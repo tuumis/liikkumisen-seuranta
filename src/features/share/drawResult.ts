@@ -483,7 +483,7 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
 
     // Oma joukkue, pelirivit, (kommentti), (lapsen maalit) ja yhteenveto yhtenä lohkona, joka keskitetään otsikon alle.
     const comment = commentLayout(ctx, card.comment, story, p, opts.commentPanel !== false);
-    const commentGap = story ? 32 : 24;
+    const commentGap = comment.panel ? (story ? 32 : 24) : story ? 76 : 60;
     const commentH = comment.h ? comment.h + commentGap : 0;
     y += story ? 64 : 44;
     const ls = story ? 112 : 92;
@@ -611,12 +611,13 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
   // Kommentti: paneeli laatikoiden yläpuolelle tai pelkkä teksti heti ottelun alle.
   const comment = commentLayout(ctx, card.comment, story, p, opts.commentPanel !== false);
   const commentGap = story ? 32 : 24;
+  const plainGap = story ? 76 : 60;
   const commentTop = comment.h && comment.panel ? playerTop - comment.h - (playerH || times.length || card.location ? commentGap : 0) : playerTop;
 
   const heavy = heavyOf(opts.style);
   const display = (px: number) => `${heavy} ${px}px ${p.display}`;
   const tags = homeAwayTags(g.homeAway, opts.homeAway);
-  const below = comment.h && !comment.panel ? comment.h + commentGap : 0;
+  const below = comment.h && !comment.panel ? comment.h + plainGap : 0;
   const nameBottom = drawMatchup(ctx, { team: card.team, opponent: g.opponent, logos: opts.logos, origins, y, boxesTop: commentTop, story, p, tags, belowH: below }, (top, ls) => {
     // Tulos logojen välissä, tulossana sen alla.
     const midW = W - PAD * 2 - ls * 2 - 70;
@@ -635,7 +636,7 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
     ctx.textAlign = 'left';
     if (g.outcome) chip(ctx, OUTCOME_WORD[g.outcome].toUpperCase(), OUTCOME_COLOR[g.outcome], W / 2, scoreBase + (story ? 34 : 28), chipH, p, 'center');
   });
-  if (comment.h) drawComment(ctx, comment, comment.panel ? commentTop : nameBottom + commentGap, p, comment.panel ? 'left' : 'center');
+  if (comment.h) drawComment(ctx, comment, comment.panel ? commentTop : nameBottom + plainGap, p, comment.panel ? 'left' : 'center');
 
   if (playerH) drawPlayer(ctx, opts.player!, card.playerGoals, PAD, playerTop, playerH, p);
   let by = boxesTop;

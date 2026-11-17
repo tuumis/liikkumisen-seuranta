@@ -288,6 +288,7 @@ export function friendlyRows(sessions: Session[], details: Map<UUID, FootballDet
       date: s.date,
       kind: 'friendly' as const,
       team: cleanName(fd?.team),
+      ...(fd?.homeAway ? { homeAway: fd.homeAway } : {}),
       ...(fd?.link ? { link: fd.link } : {}),
       ...(fd?.series ? { series: fd.series } : {}),
       ...(fd?.level ? { level: fd.level } : {}),

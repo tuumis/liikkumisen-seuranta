@@ -191,7 +191,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
       missingNote: infoMissing ? missingNote : undefined,
       link: cleanLink,
       series,
-      homeAway: kind === 'game' ? homeAway || undefined : undefined,
+      homeAway: kind === 'game' || kind === 'friendly' ? homeAway || undefined : undefined,
     };
     try {
       if (draft!.entry) await repo.updateFixture(draft!.entry.plan.id, input);
@@ -332,6 +332,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
                 )}
               </div>
             ))}
+            <HomeAwayChips value={homeAway} onChange={setHomeAway} label="Koti- vai vieraspeli" />
             <Button variant="ghost" onClick={() => setOpponents((cur) => [...cur, ''])}>
               + vastustaja
             </Button>

@@ -82,3 +82,16 @@ describe('tuloskuvan kommentti', () => {
     expect((await repo.getFootballDetails(session.id))!.shareNote).toBeUndefined();
   });
 });
+
+describe('harjoituspelin koti/vieras', () => {
+  it('koskee koko tapahtumaa: ennakon kaikilla vastustajilla, siirtyy kuittauksessa', async () => {
+    const e = await repo.createFixture('p1', { kind: 'friendly', date: DAY, durationMin: 90, startTime: '16:30', games: [{ opponent: 'Ilves' }, { opponent: 'TPV' }], homeAway: 'home' });
+    expect(e.fixture?.homeAway).toBe('home');
+    expect(previewCard(e.plan, e.fixture).games.map((g) => g.homeAway)).toEqual(['home', 'home']);
+    const { session } = await repo.confirmPlanned(e.plan.id, DAY);
+    expect((await repo.getFootballDetails(session.id))!.homeAway).toBe('home');
+    expect((await rowsFor(session.id)).every((r) => r.homeAway === 'home')).toBe(true);
+    await repo.saveFootballDetails(session.id, { attendance: 'full', focusTags: [], games: [{ opponent: 'Ilves' }], homeAway: 'away' });
+    expect((await repo.getFootballDetails(session.id))!.homeAway).toBe('away');
+  });
+});

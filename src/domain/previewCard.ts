@@ -99,7 +99,8 @@ export function previewCard(
       ...base,
       ...(plan.startTime ? { kickoff: plan.startTime } : {}),
       ...(end ? { end } : {}),
-      games: opponents.length ? opponents.map((opponent) => ({ opponent })) : [{}],
+      // Koti/vieras koskee koko harjoituspeliä, joten se on jokaisella vastustajarivillä.
+      games: (opponents.length ? opponents.map((opponent) => ({ opponent })) : [{}]).map((g) => (f?.homeAway ? { ...g, homeAway: f.homeAway } : g)),
     };
   }
   if (!tournament) {

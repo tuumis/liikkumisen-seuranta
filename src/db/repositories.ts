@@ -1060,7 +1060,7 @@ export function createRepositories(db: AppDB = defaultDb) {
           if (fixture.eventName) fd.eventName = fixture.eventName;
           if (fixture.link) fd.link = fixture.link;
           if (fixture.series) fd.series = fixture.series;
-          if (fixture.homeAway && type.footballKind === 'game') fd.homeAway = fixture.homeAway;
+          if (fixture.homeAway && (type.footballKind === 'game' || type.footballKind === 'friendly')) fd.homeAway = fixture.homeAway;
           if (fixture.gamesCount) fd.gamesCount = fixture.gamesCount;
           // Otteluohjelmasta valmiit pelirivit: tulos ja kommentti kirjataan pelien jälkeen.
           if (fixture.games?.length) {
@@ -1232,7 +1232,7 @@ export function createRepositories(db: AppDB = defaultDb) {
         const link = normalizeLink(input.link);
         if (link) d.link = link;
         set('series', cleanSeries(input.series));
-        if (type.footballKind === 'game' && isHomeAway(input.homeAway)) d.homeAway = input.homeAway;
+        if ((type.footballKind === 'game' || type.footballKind === 'friendly') && isHomeAway(input.homeAway)) d.homeAway = input.homeAway;
         set('level', input.level);
         if (isGameFormat(input.format)) d.format = input.format;
         const positions = POSITIONS.filter((p) => input.positions?.includes(p));
@@ -1707,7 +1707,8 @@ export function createRepositories(db: AppDB = defaultDb) {
     if (link) f.link = link;
     const series = cleanSeries(input.series);
     if (series) f.series = series;
-    if (input.kind === 'game' && isHomeAway(input.homeAway)) f.homeAway = input.homeAway;
+    // Ottelu ja harjoituspeli (18.11.2026): koko tapahtuman koti/vieras; turnauksessa rivikohtainen.
+    if ((input.kind === 'game' || input.kind === 'friendly') && isHomeAway(input.homeAway)) f.homeAway = input.homeAway;
     return f;
   }
 
