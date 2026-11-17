@@ -261,8 +261,10 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
   );
 
   const weekSwitcher = (
-    <div className="anim-fade flex items-center gap-2">
-      <div className="flex flex-1 items-center gap-1 rounded-2xl bg-[var(--surface)] p-1 shadow-sm lg:flex-none">
+    // Puhelimella (18.11.2026) viikon valitsin on omalla rivillään ja painikkeet sen alla: muuten "Tämä viikko"
+    // työnsi Muokkaa näkymää -painikkeen ruudun ulkopuolelle, ja nuolet siirtyivät viikkoa vaihdettaessa.
+    <div className="anim-fade flex flex-wrap items-center gap-2 sm:flex-nowrap">
+      <div className="flex flex-1 basis-full items-center gap-1 rounded-2xl bg-[var(--surface)] p-1 shadow-sm sm:basis-auto lg:flex-none">
         <button type="button" onClick={() => go(-1)} className="press flex size-10 items-center justify-center rounded-xl text-slate-600 hover:bg-[var(--surface-sunk)] hover:text-slate-900" aria-label="Edellinen viikko">
           <IconChevronLeft />
         </button>
@@ -277,12 +279,12 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
         </button>
       </div>
       {!isCurrent && (
-        <Button variant="secondary" onClick={() => setWeekStart(startOfIsoWeek(today))}>
+        <Button variant="secondary" className="shrink-0 whitespace-nowrap" onClick={() => setWeekStart(startOfIsoWeek(today))}>
           Tämä viikko
         </Button>
       )}
       {profile && (
-        <span className={simple ? 'ml-auto' : 'lg:ml-auto'}>
+        <span className={`ml-auto shrink-0 ${simple ? '' : 'sm:ml-0 lg:ml-auto'}`}>
           <WeekReportButton profile={profile} weekStart={weekStart} fullOnly compact />
         </span>
       )}

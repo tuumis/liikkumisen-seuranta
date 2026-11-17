@@ -1316,3 +1316,4 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
         - ottelussa KOTI ja VIERAS nimien alla samalla rivillä, oma joukkue pysyy vasemmalla
         - turnauslistassa merkintä kentän vieressä (ennakko) tai kellonajan jälkeen (tulos).
     - Kuvavalinnat (kommentin tausta, koti/vieras) muistetaan laitteelle, ja ne ovat yhteiset ennakko- ja tuloskuville.
+  - **Korjaus: viikkovalitsimen painikkeet puhelimella** (käyttäjän havainto 18.11.2026; `features/week/WeekView.tsx`): kun puhelimella selasi muuta kuin kuluvaa viikkoa, "Tämä viikko" -painike työnsi Muokkaa näkymää -painikkeen ruudun ulkopuolelle. Kapealla näytöllä (alle 640 px) viikon valitsin on nyt koko levyinen omalla rivillään. Sen alla ovat "Tämä viikko" vasemmalla sekä raportti ja Muokkaa näkymää oikealla. Nuolet pysyvät paikallaan viikkoa vaihdettaessa. Leveämmillä näytöillä asettelu on ennallaan.
