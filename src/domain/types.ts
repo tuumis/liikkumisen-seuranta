@@ -241,6 +241,9 @@ export type FieldPosition = 'gk' | 'def' | 'mid' | 'fwd';
 
 export type PlayedState = 'none' | 'part' | 'full';
 
+/** Koti- tai vieraspeli (18.11.2026). */
+export type HomeAway = 'home' | 'away';
+
 export interface GameResult {
   // yksi turnauksen peli
   opponent?: string;
@@ -256,6 +259,8 @@ export interface GameResult {
   location?: string;
   /** Pelikohtainen kommentti (päiväkirja). */
   note?: string;
+  /** Koti- vai vieraspeli (valinnainen, 18.11.2026); näkyy halutessa ennakko- ja tuloskuvassa. */
+  homeAway?: HomeAway;
 }
 
 /** Turnauksen otteluohjelman rivi (ennen pelejä). */
@@ -263,6 +268,8 @@ export interface ScheduledGame {
   opponent?: string;
   time?: HHmm;
   location?: string;
+  /** Koti- vai vieraspeli (valinnainen, 18.11.2026); näkyy halutessa ennakko- ja tuloskuvassa. */
+  homeAway?: HomeAway;
 }
 
 export interface FootballDetails extends SyncFields {
@@ -291,6 +298,12 @@ export interface FootballDetails extends SyncFields {
   gameLengthMin?: number;
   /** Peli: pelasiko (ei / osan / koko pelin). */
   played?: PlayedState;
+  /** Sarja, esim. P9 (valinnainen, 18.11.2026); näkyy ennakko- ja tuloskuvassa merkkinä. */
+  series?: string;
+  /** Koti- vai vieraspeli (valinnainen, 18.11.2026); näkyy halutessa ennakko- ja tuloskuvassa. */
+  homeAway?: HomeAway;
+  /** Tuloskuvan valinnainen kommentti (18.11.2026), enintään 140 merkkiä. */
+  shareNote?: string;
   /** Linkki pelin tai turnauksen tietoihin (17.11.2026), esim. otteluohjelma tai tulospalvelu; https-osoite. */
   link?: string;
 }
@@ -346,6 +359,10 @@ export interface Fixture extends SyncFields {
   missingNote?: string;
   /** Ennakkokuvan valinnainen kommentti pelin alle (17.11.2026), enintään 140 merkkiä. */
   previewNote?: string;
+  /** Sarja, esim. P9 (valinnainen, 18.11.2026); näkyy ennakko- ja tuloskuvassa merkkinä. */
+  series?: string;
+  /** Koti- vai vieraspeli (valinnainen, 18.11.2026); näkyy halutessa ennakko- ja tuloskuvassa. */
+  homeAway?: HomeAway;
   /** Linkki pelin tai turnauksen tietoihin (17.11.2026), esim. otteluohjelma tai tulospalvelu; https-osoite. */
   link?: string;
 }

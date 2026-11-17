@@ -6,6 +6,7 @@ import { planAdherence } from './adherence';
 import { seasonPeriod, minDate } from './dates';
 import type {
   ActivityType,
+  HomeAway,
   AdherenceSummary,
   Effort,
   FieldPosition,
@@ -102,6 +103,15 @@ export const LEVEL_LABEL: Readonly<Record<GameLevel, string>> = Object.freeze({ 
 export const GAME_FORMATS: readonly GameFormat[] = Object.freeze(['3v3', '5v5', '7v7', '8v8', '9v9', '11v11']);
 export const POSITION_LABEL: Readonly<Record<FieldPosition, string>> = Object.freeze({ gk: 'Maalivahti', def: 'Puolustus', mid: 'Keskikenttä', fwd: 'Hyökkäys' });
 export const POSITIONS: readonly FieldPosition[] = Object.freeze(['gk', 'def', 'mid', 'fwd']);
+
+/** Koti- tai vieraspeli (18.11.2026). */
+export const HOME_AWAY_LABEL: Readonly<Record<HomeAway, string>> = Object.freeze({ home: 'Koti', away: 'Vieras' });
+export const isHomeAway = (v: unknown): v is HomeAway => v === 'home' || v === 'away';
+
+/** Sarja (esim. P9, T12, P2016): siistitty, enintään 20 merkkiä; tyhjä = undefined. */
+export function cleanSeries(s: string | undefined): string | undefined {
+  return s?.replace(/\s+/g, ' ').trim().slice(0, 20) || undefined;
+}
 export const isGameFormat = (s: unknown): s is GameFormat => typeof s === 'string' && (GAME_FORMATS as readonly string[]).includes(s);
 
 /** Yksi pelilistan rivi (SPEC 8 "Pelilista"). */
@@ -127,6 +137,10 @@ export interface GameRow {
   teamId?: UUID;
   /** Pelin tai turnauksen linkki (17.11.2026). */
   link?: string;
+  /** Sarja, esim. P9 (18.11.2026). */
+  series?: string;
+  /** Koti- vai vieraspeli (18.11.2026). */
+  homeAway?: HomeAway;
   /** Turnauksen pelin kellonaika ja kommentti. */
   time?: string;
   note?: string;
@@ -193,6 +207,7 @@ export function gameRows(sessions: Session[], details: Map<UUID, FootballDetails
     const team = cleanName(fd?.team);
     const extra = {
       ...(fd?.link ? { link: fd.link } : {}),
+      ...(fd?.series ? { series: fd.series } : {}),
       ...(fd?.level ? { level: fd.level } : {}),
       ...(fd?.teamId ? { teamId: fd.teamId } : {}),
       ...(fd?.format ? { format: fd.format } : {}),
@@ -214,6 +229,7 @@ export function gameRows(sessions: Session[], details: Map<UUID, FootballDetails
         playedMin: s.playedMin,
         games: 1,
         ...(fd?.playerGoals !== undefined ? { playerGoals: fd.playerGoals } : {}),
+        ...(fd?.homeAway ? { homeAway: fd.homeAway } : {}),
       });
     } else if (fd?.games && fd.games.length > 0) {
       fd.games.forEach((g, i) =>
@@ -236,6 +252,7 @@ export function gameRows(sessions: Session[], details: Map<UUID, FootballDetails
           ...(g.time ? { time: g.time } : {}),
           ...(g.note ? { note: g.note } : {}),
           ...(g.playerGoals !== undefined ? { playerGoals: g.playerGoals } : {}),
+          ...(g.homeAway ? { homeAway: g.homeAway } : {}),
         }),
       );
     } else {
@@ -272,6 +289,7 @@ export function friendlyRows(sessions: Session[], details: Map<UUID, FootballDet
       kind: 'friendly' as const,
       team: cleanName(fd?.team),
       ...(fd?.link ? { link: fd.link } : {}),
+      ...(fd?.series ? { series: fd.series } : {}),
       ...(fd?.level ? { level: fd.level } : {}),
       ...(fd?.teamId ? { teamId: fd.teamId } : {}),
       ...(fd?.format ? { format: fd.format } : {}),

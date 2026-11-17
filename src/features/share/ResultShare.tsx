@@ -1,7 +1,7 @@
 // Jaettava tuloskuva (SPEC 16): pelin tai turnauksen tulokset kuvaksi. Paneelin yhteiset valinnat
 // (muoto, tyyli, väri, jako) ovat ShareSheetissä; täällä kortin tiedot ja lapsen maalit (oletus pois).
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { gameRows } from '../../domain/football';
 import { resultCard } from '../../domain/resultCard';
@@ -11,7 +11,9 @@ import { db } from '../../db/schema';
 import { clubFor, logoFor, useClubLogos, useClubs } from '../../ui/TeamLogo';
 import { Switch } from '../settings/DesktopSection';
 import { drawResultCard, loadImage, ALL_SHARE_STYLES } from './drawResult';
-import { findOwnTeam, MissingTeamInfo, ShareImageSheet, TeamDetailChips, useTeamDetailPrefs, type RenderOptions } from './ShareSheet';
+import { findOwnTeam, MissingTeamInfo, ShareExtrasChips, ShareImageSheet, TeamDetailChips, useStoredFlag, useTeamDetailPrefs, type RenderOptions } from './ShareSheet';
+import { inputClass } from '../../ui/components';
+import { useToast } from '../../ui/Toast';
 import { applyTeamDetails } from '../../domain/shareNames';
 
 const EVENT = 'result-share-open';
@@ -58,7 +60,8 @@ export function useResultCard(sessionId: UUID | null) {
     const fixture = plan ? await db.fixtures.get(plan.id) : undefined;
     const location = fixture && !fixture.deletedAt ? fixture.location?.replace(/\s+/g, ' ').trim() : undefined;
     const kickoff = card.kind === 'game' ? (session.startTime ?? plan?.startTime) : undefined;
-    return { card: { ...card, ...(kickoff ? { kickoff } : {}), ...(location ? { location } : {}) }, profileName: profile?.name ?? '', teamPhoto: team?.photo };
+    const comment = details.get(session.id)?.shareNote;
+    return { card: { ...card, ...(kickoff ? { kickoff } : {}), ...(location ? { location } : {}), ...(comment ? { comment } : {}) }, profileName: profile?.name ?? '', teamPhoto: team?.photo };
   }, [sessionId]);
 }
 
@@ -78,16 +81,41 @@ export function ResultShareSheet({ sessionId, onClose }: { sessionId: UUID | nul
     if (sessionId) setShowPlayer(false); // lapsen tiedot aina oletuksena pois
   }, [sessionId]);
 
-  const card = data?.card;
+  const toast = useToast();
+  // Kommentti (18.11.2026): luonnos piirretään heti, tallennus kerralle hetken tauon jälkeen (synkronoituu).
+  const [draft, setDraft] = useState<string | null>(null);
+  useEffect(() => setDraft(null), [sessionId]);
+  const saveTimer = useRef<number | undefined>(undefined);
+  const editComment = (text: string) => {
+    setDraft(text);
+    const id = sessionId;
+    window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => {
+      if (id) repo.setResultNote(id, text).catch((e: unknown) => toast(e instanceof Error ? e.message : String(e)));
+    }, 600);
+  };
+  useEffect(() => () => window.clearTimeout(saveTimer.current), []);
+  const stored = data?.card;
+  const comment = draft ?? stored?.comment ?? '';
+  const card = useMemo(() => {
+    if (!stored) return stored;
+    const c = { ...stored };
+    const t = comment.replace(/\s+/g, ' ').trim().slice(0, 140);
+    if (t) c.comment = t;
+    else delete c.comment;
+    return c;
+  }, [stored, comment]);
   // Ryhmä ja ikäluokka kuvassa (17.11.2026): logot ja seuran tiedot haetaan alkuperäisillä nimillä.
   const [details, setDetails] = useTeamDetailPrefs();
   const drawn = useMemo(() => (card ? applyTeamDetails(card, details) : card), [card, details]);
+  const [panel, setPanel] = useStoredFlag('shareCommentPanel', true);
+  const [showHomeAway, setShowHomeAway] = useStoredFlag('shareHomeAway', true);
   const teamLogo = card ? (logoFor(logos, card.team) ?? data?.teamPhoto) : undefined;
   const names = card ? [card.team, ...card.games.map((g) => g.opponent)] : [];
   const renderKey = useMemo(
-    () => JSON.stringify([drawn, (teamLogo ?? '').length, names.map((n) => (logoFor(logos, n) ?? '').length), names.map((n) => originOf(clubs, n)), showPlayer, data?.profileName]),
+    () => JSON.stringify([drawn, panel, showHomeAway, (teamLogo ?? '').length, names.map((n) => (logoFor(logos, n) ?? '').length), names.map((n) => originOf(clubs, n)), showPlayer, data?.profileName]),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [drawn, logos, clubs, teamLogo, showPlayer, data?.profileName],
+    [drawn, logos, clubs, teamLogo, showPlayer, data?.profileName, panel, showHomeAway],
   );
 
   const render = card && drawn
@@ -98,6 +126,8 @@ export function ResultShareSheet({ sessionId, onClose }: { sessionId: UUID | nul
           logos: { team, opponents },
           origins: { team: originOf(clubs, card.team), opponents: card.games.map((g) => originOf(clubs, g.opponent)) },
           player: showPlayer ? data?.profileName : undefined,
+          commentPanel: panel,
+          homeAway: showHomeAway,
         });
       }
     : undefined;
@@ -120,6 +150,23 @@ export function ResultShareSheet({ sessionId, onClose }: { sessionId: UUID | nul
     >
       {data === null && <p className="text-sm text-slate-600">Tälle kerralle ei ole vielä kirjattu tulosta.</p>}
       {card && <TeamDetailChips team={card.team} opponents={card.games.map((g) => g.opponent)} prefs={details} onChange={setDetails} />}
+      {card && (
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-medium text-slate-700">Kommentti kuvaan (valinnainen)</span>
+          <input className={inputClass} value={comment} maxLength={140} onChange={(e) => editComment(e.target.value)} placeholder="esim. Hieno turnaus, kiitos kannustuksesta!" aria-label="Kommentti kuvaan" />
+          <span className="mt-1 block text-xs text-slate-500">Tallentuu tälle pelille. {comment.length}/140</span>
+        </label>
+      )}
+      {card && (
+        <ShareExtrasChips
+          hasComment={!!card.comment}
+          hasHomeAway={card.games.some((g) => g.homeAway)}
+          panel={panel}
+          onPanel={setPanel}
+          homeAway={showHomeAway}
+          onHomeAway={setShowHomeAway}
+        />
+      )}
       {card && card.playerGoals > 0 && (
         <Switch
           on={showPlayer}

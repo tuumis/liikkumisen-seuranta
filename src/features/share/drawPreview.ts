@@ -3,36 +3,13 @@
 // Turnaus: nimi, päivä, oma joukkue ja otteluohjelma (kellonaika, vastustaja, lippu, paikka).
 
 import { previewTimeBoxes, previewTitleOf, type PreviewBox, type PreviewCard } from '../../domain/previewCard';
-import { dateLabelOf, drawLogo, drawMatchup, drawOrigin, fit, heavyOf, infoBoxes, levelBadges, PAD, placeBox, rr, setup, spaced, W, wrap, type DrawOptions, type Palette } from './drawResult';
+import { HOME_AWAY_LABEL } from '../../domain/football';
+import { commentLayout, dateLabelOf, drawComment, drawLogo, drawMatchup, drawOrigin, fit, heavyOf, homeAwayTags, infoBoxes, levelBadges, PAD, placeBox, rr, setup, spaced, W, wrap, type DrawOptions } from './drawResult';
 
 type PreviewOptions = Omit<DrawOptions, 'player'> & {
   /** Piilotetut laatikot (Paikalla, 1. peli / Peli alkaa, Pelit, Paikka). */
   hidden?: ReadonlySet<PreviewBox>;
 };
-
-/** Kommentin korkeus (0 = ei kommenttia): enintään kolme riviä. */
-function commentLayout(ctx: CanvasRenderingContext2D, text: string | undefined, story: boolean, p: Palette): { lines: string[]; h: number; px: number } {
-  if (!text) return { lines: [], h: 0, px: 0 };
-  const px = story ? 40 : 34;
-  ctx.font = `500 ${px}px ${p.sans}`;
-  const lines = wrap(ctx, text, W - PAD * 2 - 90, 3);
-  return { lines, h: lines.length * px * 1.3 + (story ? 64 : 50), px };
-}
-
-/** Kommentti pelin alle: paneeli, korostusviiva vasemmalla. */
-function drawComment(ctx: CanvasRenderingContext2D, c: { lines: string[]; h: number; px: number }, y: number, p: Palette) {
-  const maxW = W - PAD * 2;
-  ctx.fillStyle = p.panel;
-  rr(ctx, PAD, y, maxW, c.h, 30);
-  ctx.fill();
-  ctx.fillStyle = p.accent;
-  rr(ctx, PAD + 24, y + 22, 8, c.h - 44, 4);
-  ctx.fill();
-  ctx.font = `500 ${c.px}px ${p.sans}`;
-  ctx.fillStyle = p.ink;
-  const top = y + (c.h - c.lines.length * c.px * 1.3) / 2 + c.px * 0.95;
-  c.lines.forEach((l, i) => ctx.fillText(l, PAD + 60, top + i * c.px * 1.3));
-}
 
 export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCanvasElement {
   const { canvas, ctx, p, H, story } = setup(opts);
@@ -40,7 +17,8 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
   const heavy = heavyOf(opts.style);
   const hidden = opts.hidden ?? new Set<PreviewBox>();
   const place = hidden.has('place') ? undefined : card.location;
-  const comment = commentLayout(ctx, card.comment, story, p);
+  // Kommentti: harmaa paneeli laatikoiden yläpuolella tai pelkkä teksti heti pelin alla (18.11.2026).
+  const comment = commentLayout(ctx, card.comment, story, p, opts.commentPanel !== false);
   const commentGap = story ? 32 : 24;
   const display = (px: number) => `${heavy} ${px}px ${p.display}`;
   const origins = opts.origins;
@@ -72,7 +50,7 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
     ctx.font = `500 ${story ? 40 : 34}px ${p.sans}`;
     ctx.fillStyle = p.soft;
     ctx.fillText(dateLabelOf(card.date), PAD, y);
-    const bh = levelBadges(ctx, card.level, card.format, PAD, y + (story ? 30 : 22), story, p);
+    const bh = levelBadges(ctx, card.level, card.format, PAD, y + (story ? 30 : 22), story, p, card.series);
     if (bh) y += (story ? 30 : 22) + bh - (story ? 14 : 10);
     y += story ? 64 : 44;
 
@@ -82,7 +60,8 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
     let boxesTop = bottom;
     if (place) boxesTop -= placeH;
     if (items.length) boxesTop -= boxH + (place ? 20 : 0);
-    const commentTop = comment.h ? boxesTop - comment.h - (items.length || place ? commentGap : 0) : boxesTop;
+    const commentTop = comment.h && comment.panel ? boxesTop - comment.h - (items.length || place ? commentGap : 0) : boxesTop;
+    const plainH = comment.h && !comment.panel ? comment.h + commentGap : 0;
 
     // Oma joukkue
     const ls = story ? 112 : 92;
@@ -90,8 +69,8 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
     const listGap = story ? 48 : 32;
     const labelH = n ? (story ? 56 : 44) : 0;
     const gap = story ? 16 : 12;
-    const rowH = n ? Math.min(story ? 150 : 118, (commentTop - listGap - y - ls - teamGap - labelH - gap * (n - 1)) / n) : 0;
-    const blockH = ls + teamGap + labelH + (n ? n * rowH + (n - 1) * gap : 0);
+    const rowH = n ? Math.min(story ? 150 : 118, (commentTop - listGap - y - ls - teamGap - labelH - plainH - gap * (n - 1)) / n) : 0;
+    const blockH = ls + teamGap + labelH + (n ? n * rowH + (n - 1) * gap : 0) + plainH;
     y += Math.max(0, (commentTop - listGap - y - blockH) / 2);
 
     drawLogo(ctx, opts.logos.team, card.team, PAD, y, ls, p.sans);
@@ -127,21 +106,24 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
         const namePx = Math.round(Math.min(42, rowH * 0.3));
         const name = fit(ctx, g.opponent ?? 'Vastustaja selviää', tw, (px) => `700 ${px}px ${p.sans}`, namePx, 22);
         const o = origins?.opponents[k];
-        const hasSub = !!(o?.country || o?.city || g.location);
+        // Kentän vieressä koti/vieras (18.11.2026).
+        const ha = opts.homeAway !== false && g.homeAway ? HOME_AWAY_LABEL[g.homeAway] : undefined;
+        const extra = [ha, g.location].filter(Boolean).join(' · ');
+        const hasSub = !!(o?.country || o?.city || extra);
         ctx.fillText(name, tx, hasSub ? top + rowH / 2 - 2 : top + rowH / 2 + namePx * 0.35);
         const subPx = Math.round(Math.min(29, rowH * 0.21));
         const subY = top + rowH / 2 + Math.min(38, rowH * 0.3);
         let x = tx;
         if (o?.country || o?.city) x += drawOrigin(ctx, o, tx, subY, subPx, p, 'left', tw) + subPx * 0.4;
-        if (g.location && x < tx + tw - 40) {
+        if (extra && x < tx + tw - 40) {
           ctx.font = `500 ${subPx}px ${p.sans}`;
           ctx.fillStyle = p.soft;
-          ctx.fillText(fit(ctx, (x > tx ? '· ' : '') + g.location, tx + tw - x, (px) => `500 ${px}px ${p.sans}`, subPx, 16), x, subY);
+          ctx.fillText(fit(ctx, (x > tx ? '· ' : '') + extra, tx + tw - x, (px) => `500 ${px}px ${p.sans}`, subPx, 16), x, subY);
         }
       });
     }
 
-    if (comment.h) drawComment(ctx, comment, commentTop, p);
+    if (comment.h) drawComment(ctx, comment, comment.panel ? commentTop : y + (n ? n * rowH + (n - 1) * gap : 0) + commentGap, p);
     let by = boxesTop;
     if (items.length) {
       infoBoxes(ctx, items, by, boxH, story, p, display);
@@ -157,15 +139,16 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
   ctx.font = display(story ? 64 : 54);
   ctx.fillStyle = p.ink;
   ctx.fillText(dateLabelOf(card.date), PAD, y);
-  const bh = levelBadges(ctx, card.level, card.format, PAD, y + (story ? 34 : 24), story, p);
+  const bh = levelBadges(ctx, card.level, card.format, PAD, y + (story ? 34 : 24), story, p, card.series);
   if (bh) y += (story ? 34 : 24) + bh;
 
   let boxesTop = bottom;
   if (place) boxesTop -= placeH;
   if (times.length) boxesTop -= boxH + (place ? 20 : 0);
-  const commentTop = comment.h ? boxesTop - comment.h - (times.length || place ? commentGap : 0) : boxesTop;
+  const commentTop = comment.h && comment.panel ? boxesTop - comment.h - (times.length || place ? commentGap : 0) : boxesTop;
+  const below = comment.h && !comment.panel ? comment.h + commentGap : 0;
 
-  drawMatchup(ctx, { team: card.team, opponent: g.opponent, logos: opts.logos, origins, y, boxesTop: commentTop, story, p }, (top, ls) => {
+  const nameBottom = drawMatchup(ctx, { team: card.team, opponent: g.opponent, logos: opts.logos, origins, y, boxesTop: commentTop, story, p, tags: homeAwayTags(g.homeAway, opts.homeAway), belowH: below }, (top, ls) => {
     // VS logojen välissä
     ctx.textAlign = 'center';
     ctx.font = display(story ? 120 : 100);
@@ -174,7 +157,7 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
     ctx.textAlign = 'left';
   });
 
-  if (comment.h) drawComment(ctx, comment, commentTop, p);
+  if (comment.h) drawComment(ctx, comment, comment.panel ? commentTop : nameBottom + commentGap, p, comment.panel ? 'left' : 'center');
   let by = boxesTop;
   if (times.length) {
     infoBoxes(ctx, times, by, boxH, story, p, display);

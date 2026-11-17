@@ -3,12 +3,14 @@
 
 import { LEVEL_LABEL } from './football';
 import { gameDaySchedule, tournamentStart } from './tournamentTime';
-import type { Fixture, GameFormat, HHmm, ISODate, PlannedSession } from './types';
+import type { Fixture, GameFormat, HHmm, HomeAway, ISODate, PlannedSession } from './types';
 
 export interface PreviewGame {
   opponent?: string;
   time?: HHmm;
   location?: string;
+  /** Koti- vai vieraspeli oman joukkueen kannalta (18.11.2026). */
+  homeAway?: HomeAway;
 }
 
 export interface PreviewCard {
@@ -18,6 +20,8 @@ export interface PreviewCard {
   eventName?: string;
   level?: string;
   format?: GameFormat;
+  /** Sarja, esim. P9 (18.11.2026). */
+  series?: string;
   team?: string;
   /** Pelin alku (ottelu) tai ensimmäisen pelin alku (turnaus). */
   kickoff?: HHmm;
@@ -80,6 +84,7 @@ export function previewCard(
     date: plan.date,
     ...(clean(f?.eventName) && tournament ? { eventName: clean(f?.eventName) } : {}),
     ...(f?.level ? { level: LEVEL_LABEL[f.level] } : {}),
+    ...(clean(f?.series) ? { series: clean(f?.series) } : {}),
     ...((f?.format ?? team?.format) ? { format: f?.format ?? team?.format } : {}),
     ...(clean(team?.name) ? { team: clean(team?.name) } : {}),
     ...(clean(f?.location) ? { location: clean(f?.location) } : {}),
@@ -103,13 +108,14 @@ export function previewCard(
       kind: 'game',
       ...base,
       ...(kickoff ? { kickoff, arrival: gameDaySchedule(kickoff, f?.warmupMin).arrival } : {}),
-      games: [{ ...(clean(f?.opponent) ? { opponent: clean(f?.opponent) } : {}), ...(kickoff ? { time: kickoff } : {}) }],
+      games: [{ ...(clean(f?.opponent) ? { opponent: clean(f?.opponent) } : {}), ...(kickoff ? { time: kickoff } : {}), ...(f?.homeAway ? { homeAway: f.homeAway } : {}) }],
     };
   }
   const scheduled = (f?.games ?? []).map((g) => ({
     ...(clean(g.opponent) ? { opponent: clean(g.opponent) } : {}),
     ...(g.time ? { time: g.time } : {}),
     ...(clean(g.location) ? { location: clean(g.location) } : {}),
+    ...(g.homeAway ? { homeAway: g.homeAway } : {}),
   }));
   // Järjestys kellonajan mukaan; ajattomat säilyttävät järjestyksensä lopussa.
   const games = scheduled
@@ -134,7 +140,7 @@ export function previewCard(
 
 /** Kuvan yläotsikko: "Otteluennakko · Elite · 8v8". */
 export function previewKicker(card: PreviewCard): string {
-  return [previewTitleOf(card), card.level, card.format].filter(Boolean).join(' · ');
+  return [previewTitleOf(card), card.series, card.level, card.format].filter(Boolean).join(' · ');
 }
 
 /** Kuvan yläreunan tunniste. */

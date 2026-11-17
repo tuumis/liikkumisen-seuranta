@@ -3,7 +3,8 @@
 
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import type { ActivityType, FieldPosition, FocusTag, GameFormat, GameLevel, GameResult, PlayedState, Session } from '../../domain/types';
+import type { ActivityType, FieldPosition, FocusTag, GameFormat, GameLevel, GameResult, HomeAway, PlayedState, Session } from '../../domain/types';
+import { HomeAwayChips, HomeAwaySelect } from '../games/HomeAway';
 import { DEFAULT_GAME_WARMUP_MIN, DEFAULT_PLAY_SHARE } from '../../domain/intensity';
 import { goalsLabel } from '../../ui/labels';
 import { GAME_FORMATS, LEVEL_LABEL, POSITION_LABEL, POSITIONS } from '../../domain/football';
@@ -20,7 +21,7 @@ import { openResultShare } from '../share/ResultShare';
 
 const PLAYED_PICKS = [10, 15, 20, 30, 40, 50, 60];
 
-type GameDraft = { opponent: string; goalsFor: string; goalsAgainst: string; playedMin: string; played: PlayedState | ''; playerGoals: string; time?: string; location?: string; note: string };
+type GameDraft = { opponent: string; goalsFor: string; goalsAgainst: string; playedMin: string; played: PlayedState | ''; playerGoals: string; time?: string; location?: string; note: string; homeAway?: HomeAway | '' };
 
 /** Pelasiko: Ei / Osan / Koko pelin (uudelleen painallus poistaa valinnan). */
 export function PlayedChips({ value, onChange, label, shareText }: { value: PlayedState | ''; onChange: (v: PlayedState | '') => void; label: string; shareText: string }) {
@@ -87,6 +88,8 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
   const [gamePlayed, setGamePlayed] = useState<PlayedState | ''>('');
   const [eventName, setEventName] = useState('');
   const [link, setLink] = useState('');
+  const [series, setSeries] = useState('');
+  const [homeAway, setHomeAway] = useState<HomeAway | ''>('');
   const [gamesCount, setGamesCount] = useState('');
   const [games, setGames] = useState<GameDraft[]>([]);
   const [playerGoals, setPlayerGoals] = useState('');
@@ -115,6 +118,8 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
     setGamePlayed(d?.played ?? '');
     setEventName(d?.eventName ?? '');
     setLink(d?.link ?? '');
+    setSeries(d?.series ?? '');
+    setHomeAway(d?.homeAway ?? '');
     setGamesCount(str(d?.games?.length ? undefined : d?.gamesCount));
     setGames(
       (d?.games ?? []).map((g) => ({
@@ -127,6 +132,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
         time: g.time,
         location: g.location,
         note: g.note ?? '',
+        homeAway: g.homeAway ?? '',
       })),
     );
     setPlayerGoals(str(d?.games?.length ? undefined : d?.playerGoals));
@@ -162,6 +168,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
       time: g.time,
       location: g.location,
       note: g.note,
+      homeAway: g.homeAway || undefined,
     }));
     const bad = [...Object.values(nums), ...rows.flatMap((r) => [r.goalsFor, r.goalsAgainst, r.playedMin, r.playerGoals])].some((n) => Number.isNaN(n));
     if (bad) return setError('Anna luvut kokonaislukuina');
@@ -195,6 +202,8 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
       played: kind === 'game' ? gamePlayed || undefined : undefined,
       eventName,
       link: cleanLink,
+      series,
+      homeAway: kind === 'game' ? homeAway || undefined : undefined,
       gamesCount: nums.count,
       games: rows,
       playerGoals: nums.own,
@@ -359,6 +368,19 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
           </>
         )}
 
+        {(kind === 'game' || kind === 'friendly') && (
+          <Field label="Sarja (valinnainen)" hint="Esim. P9 tai T12. Näkyy ennakko- ja tuloskuvassa.">
+            <input className={inputClass} value={series} onChange={(e) => setSeries(e.target.value)} list="fb-series" maxLength={20} placeholder="esim. P9" autoCapitalize="characters" />
+            {list('fb-series', names?.series)}
+          </Field>
+        )}
+        {kind === 'game' && (
+          <div>
+            <div className="mb-1 text-sm font-medium text-slate-700">Koti vai vieras</div>
+            <HomeAwayChips value={homeAway} onChange={setHomeAway} label="Koti- vai vieraspeli" />
+          </div>
+        )}
+
         {kind === 'game' && (
           <>
             <div>
@@ -490,6 +512,10 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
               <input className={inputClass} value={eventName} onChange={(e) => setEventName(e.target.value)} list="fb-events" maxLength={60} />
               {list('fb-events', names?.events)}
             </Field>
+            <Field label="Sarja (valinnainen)" hint="Esim. P9 tai T12. Näkyy ennakko- ja tuloskuvassa.">
+              <input className={inputClass} value={series} onChange={(e) => setSeries(e.target.value)} list="fb-series" maxLength={20} placeholder="esim. P9" autoCapitalize="characters" />
+            {list('fb-series', names?.series)}
+            </Field>
             {games.length === 0 && (
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Pelien määrä">
@@ -522,6 +548,11 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
                   suggestions={teamNames}
                   label={`Peli ${i + 1}: vastustaja`}
                   onChange={(v) => setGames((cur) => cur.map((x, j) => (j === i ? { ...x, opponent: v } : x)))}
+                />
+                <HomeAwaySelect
+                  value={g.homeAway ?? ''}
+                  label={`Peli ${i + 1}: koti vai vieras`}
+                  onChange={(v) => setGames((cur) => cur.map((x, j) => (j === i ? { ...x, homeAway: v } : x)))}
                 />
                 <PlayedChips
                   value={g.played}

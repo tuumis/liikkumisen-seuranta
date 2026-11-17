@@ -7,7 +7,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { isISODate } from '../../domain/dates';
 import { GAME_FORMATS, LEVEL_LABEL } from '../../domain/football';
 import { ARRIVAL_LEAD_MIN, DEFAULT_COOLDOWN_MIN, DEFAULT_WARMUP_MIN, defaultGameLength, firstGameMin, gameDaySchedule, tournamentDuration, tournamentEndMin, tournamentStart } from '../../domain/tournamentTime';
-import type { GameFormat, GameLevel, HHmm, Profile } from '../../domain/types';
+import type { GameFormat, GameLevel, HHmm, HomeAway, Profile } from '../../domain/types';
+import { HomeAwayChips, HomeAwaySelect } from './HomeAway';
 import { repo, type FixtureEntry, type FixtureInput } from '../../db/repositories';
 import { Button, Field, inputClass } from '../../ui/components';
 import { normalizeLink } from '../../domain/link';
@@ -38,8 +39,8 @@ const fromMin = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, '0
 const LEVELS: GameLevel[] = ['elite', 'kilpa', 'haaste'];
 const KIND_LABEL: Record<FixtureKind, string> = { game: 'Peli', tournament: 'Turnaus', friendly: 'Harjoituspeli' };
 
-type ScheduleRow = { time: string; opponent: string; location: string };
-const emptyRow = (): ScheduleRow => ({ time: '', opponent: '', location: '' });
+type ScheduleRow = { time: string; opponent: string; location: string; homeAway: HomeAway | '' };
+const emptyRow = (): ScheduleRow => ({ time: '', opponent: '', location: '', homeAway: '' });
 
 export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; draft: FixtureDraft | null; onClose: () => void }) {
   const toast = useToast();
@@ -63,6 +64,8 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
   const [infoMissing, setInfoMissing] = useState(false);
   const [missingNote, setMissingNote] = useState('');
   const [link, setLink] = useState('');
+  const [series, setSeries] = useState('');
+  const [homeAway, setHomeAway] = useState<HomeAway | ''>('');
   const [schedule, setSchedule] = useState<ScheduleRow[]>([]);
   // Turnauksen kesto otteluohjelmasta (aktiivinen aika): pelit × (lämmittely + pelin pituus) + loppuverryttely.
   const [auto, setAuto] = useState(true);
@@ -94,11 +97,14 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
     setInfoMissing(!!f?.infoMissing);
     setMissingNote(f?.missingNote ?? '');
     setLink(f?.link ?? '');
+    setSeries(f?.series ?? '');
+    setHomeAway(f?.homeAway ?? '');
     setSchedule(
       (f?.games ?? []).map((g) => ({
         time: g.time ?? '',
         opponent: g.opponent ?? '',
         location: g.location ?? '',
+        homeAway: g.homeAway ?? '',
       })),
     );
     setAuto(!f?.durationManual);
@@ -118,7 +124,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
   const team = teams?.find((t) => t.id === teamId);
   const editing = !!draft.entry;
 
-  const rowsNow = schedule.filter((g) => g.time || g.opponent.trim() || g.location.trim());
+  const rowsNow = schedule.filter((g) => g.time || g.opponent.trim() || g.location.trim() || g.homeAway).map((g) => ({ ...g, homeAway: g.homeAway || undefined }));
   const gamesN = rowsNow.length || (/^\d+$/.test(gamesCount.trim()) ? Number(gamesCount) : 0);
   const num = (s: string, d: number) => (/^\d{1,3}$/.test(s.trim()) ? Number(s) : d);
   const effFormat = format || team?.format || undefined;
@@ -148,7 +154,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
     const dur = autoOn ? autoDuration : (friendlyDuration ?? Number(duration));
     if (!isISODate(date)) return setError('Valitse päivä');
     if (!Number.isInteger(dur) || dur < 1 || dur > 1440) return setError('Tarkista kesto (min)');
-    const rows = schedule.filter((g) => g.time || g.opponent.trim() || g.location.trim());
+    const rows = schedule.filter((g) => g.time || g.opponent.trim() || g.location.trim() || g.homeAway);
     const gc = rows.length ? rows.length : gamesCount.trim() === '' ? undefined : Number(gamesCount);
     if (gc !== undefined && (!Number.isInteger(gc) || gc < 1 || gc > 20)) return setError('Tarkista pelien määrä');
     const cleanLink = normalizeLink(link);
@@ -172,6 +178,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
               time: g.time || undefined,
               opponent: g.opponent,
               location: g.location,
+              homeAway: g.homeAway || undefined,
             }))
           : kind === 'friendly'
             ? opponents.map((o) => ({ opponent: o }))
@@ -183,6 +190,8 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
       infoMissing,
       missingNote: infoMissing ? missingNote : undefined,
       link: cleanLink,
+      series,
+      homeAway: kind === 'game' ? homeAway || undefined : undefined,
     };
     try {
       if (draft!.entry) await repo.updateFixture(draft!.entry.plan.id, input);
@@ -332,6 +341,9 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
           <div>
             <div className="mb-1.5 text-[13px] font-semibold text-slate-700">Vastustaja</div>
             <TeamNameFields value={opponent} onChange={setOpponent} suggestions={teamNames} label="Vastustaja" />
+            <div className="mt-2">
+              <HomeAwayChips value={homeAway} onChange={setHomeAway} label="Koti- vai vieraspeli" />
+            </div>
             {opponent.trim() && (
               <div className="mt-2">
                 <OpponentHistoryCard profile={profile} opponent={opponent} />
@@ -360,6 +372,16 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
           </div>
         )}
 
+        {/* Sarja (18.11.2026): turnauksessa heti nimen alla; näkyy kuvissa merkkinä. */}
+        <Field label="Sarja (valinnainen)" hint="Esim. P9 tai T12. Näkyy ennakko- ja tuloskuvassa.">
+          <input className={inputClass} value={series} onChange={(e) => setSeries(e.target.value)} list="fx-series" maxLength={20} placeholder="esim. P9" autoCapitalize="characters" />
+          <datalist id="fx-series">
+            {names?.series.map((o) => (
+              <option key={o} value={o} />
+            ))}
+          </datalist>
+        </Field>
+
         {kind === 'tournament' && (
           <div className="card-sunk p-3">
             <div className="flex items-center justify-between gap-2">
@@ -382,11 +404,18 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
               <ul className="mt-2 space-y-2">
                 {schedule.map((g, i) => (
                   <li key={i} className="grid grid-cols-[7rem_1fr_auto] items-start gap-2">
-                    <TimeField
-                      label={`Ottelu ${i + 1}: kello`}
-                      value={g.time}
-                      onChange={(t) => setSchedule((cur) => cur.map((x, j) => (j === i ? { ...x, time: t } : x)))}
-                    />
+                    <div className="grid grid-cols-1 gap-1">
+                      <TimeField
+                        label={`Ottelu ${i + 1}: kello`}
+                        value={g.time}
+                        onChange={(t) => setSchedule((cur) => cur.map((x, j) => (j === i ? { ...x, time: t } : x)))}
+                      />
+                      <HomeAwaySelect
+                        value={g.homeAway}
+                        label={`Ottelu ${i + 1}: koti vai vieras`}
+                        onChange={(v) => setSchedule((cur) => cur.map((x, j) => (j === i ? { ...x, homeAway: v } : x)))}
+                      />
+                    </div>
                     <div className="grid grid-cols-1 gap-1">
                       <TeamNameFields
                         compact

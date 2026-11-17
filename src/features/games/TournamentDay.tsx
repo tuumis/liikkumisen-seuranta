@@ -4,7 +4,7 @@
 
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { OUTCOME_LABEL, outcomeOf } from '../../domain/football';
+import { HOME_AWAY_LABEL, OUTCOME_LABEL, outcomeOf } from '../../domain/football';
 import { DEFAULT_PLAY_SHARE } from '../../domain/intensity';
 import { opponentHistory } from '../../domain/opponentLibrary';
 import { displayTeamName } from '../../domain/opponent';
@@ -111,7 +111,7 @@ function TournamentEntry({ entry, profile, today }: { entry: Entry; profile: Pro
                     {g.opponent && ` · ${displayTeamName(g.opponent)}`}
                   </div>
                   <div className="line-clamp-2 text-xs text-slate-500">
-                    {[g.time && `klo ${g.time.replace(':', '.')}`, g.location, !hasResult(g) && h].filter(Boolean).join(' · ') || (hasResult(g) ? '' : 'Ei otteluohjelmaa')}
+                    {[g.time && `klo ${g.time.replace(':', '.')}`, g.location, g.homeAway && HOME_AWAY_LABEL[g.homeAway], !hasResult(g) && h].filter(Boolean).join(' · ') || (hasResult(g) ? '' : 'Ei otteluohjelmaa')}
                   </div>
                   {hasResult(g) && open !== i && <SavedScore g={g} profile={profile} />}
                 </div>

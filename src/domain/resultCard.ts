@@ -3,7 +3,7 @@
 
 import { LEVEL_LABEL, type GameOutcome, type GameRow } from './football';
 import { parseTeamName } from './opponent';
-import type { GameFormat, ISODate } from './types';
+import type { GameFormat, HomeAway, ISODate } from './types';
 
 export interface ResultCardGame {
   opponent?: string;
@@ -12,6 +12,8 @@ export interface ResultCardGame {
   outcome?: GameOutcome;
   time?: string;
   playerGoals?: number;
+  /** Koti- vai vieraspeli oman joukkueen kannalta (18.11.2026). */
+  homeAway?: HomeAway;
 }
 
 export interface ResultCard {
@@ -20,6 +22,8 @@ export interface ResultCard {
   eventName?: string;
   level?: string;
   format?: GameFormat;
+  /** Sarja, esim. P9 (18.11.2026). */
+  series?: string;
   team?: string;
   games: ResultCardGame[];
   wins: number;
@@ -34,6 +38,8 @@ export interface ResultCard {
   /** Ottelun alku ja paikka (kalenterin tapahtumasta tai kerrasta), jos tiedossa. */
   kickoff?: string;
   location?: string;
+  /** Valinnainen kommentti kuvaan (18.11.2026). */
+  comment?: string;
 }
 
 /**
@@ -50,6 +56,7 @@ export function resultCard(rows: GameRow[]): ResultCard | undefined {
     ...(r.outcome ? { goalsFor: r.goalsFor, goalsAgainst: r.goalsAgainst, outcome: r.outcome } : {}),
     ...(r.time ? { time: r.time } : {}),
     ...(r.playerGoals ? { playerGoals: r.playerGoals } : {}),
+    ...(r.homeAway ? { homeAway: r.homeAway } : {}),
   }));
   const played = games.filter((g) => g.outcome);
   return {
@@ -58,6 +65,7 @@ export function resultCard(rows: GameRow[]): ResultCard | undefined {
     ...(first.eventName ? { eventName: first.eventName } : {}),
     ...(first.level ? { level: LEVEL_LABEL[first.level] } : {}),
     ...(first.format ? { format: first.format } : {}),
+    ...(first.series ? { series: first.series } : {}),
     ...(first.team ? { team: first.team } : {}),
     games,
     wins: played.filter((g) => g.outcome === 'W').length,
@@ -74,7 +82,7 @@ export const OUTCOME_WORD: Record<GameOutcome, string> = { W: 'Voitto', D: 'Tasa
 
 /** Kuvan yläotsikon tiedot: "Turnaus · Elite · 5v5". */
 export function resultKicker(card: ResultCard): string {
-  return [card.kind === 'tournament' ? 'Turnaus' : 'Ottelu', card.level, card.format].filter(Boolean).join(' · ');
+  return [card.kind === 'tournament' ? 'Turnaus' : 'Ottelu', card.series, card.level, card.format].filter(Boolean).join(' · ');
 }
 
 /** Seuran nimikirjaimet logon puuttuessa: "FC Lahti 2018" → "FL", "HJK · Valkoinen · 2016" → "HJK". */

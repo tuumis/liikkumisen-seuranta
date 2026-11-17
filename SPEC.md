@@ -1301,3 +1301,18 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
     - Valinta näkyy vain, kun nimessä on ryhmä tai ikäluokka. Oletuksena kaikki näkyy, kuten ennen.
     - Valinta muistetaan laitteelle, ja se on yhteinen ennakko- ja tuloskuville. Se koskee vain kuvaa; tallennettu nimi, logo, maa ja paikkakunta eivät muutu.
     - Jos kuvassa on toinen joukkue samasta seurasta (esim. HJK · Valkoinen vastaan HJK · Musta), ryhmä jää erottamaan ne ja vain ikäluokka piilotetaan.
+  - **Kommentin tausta, sarja ja koti/vieras jakokuvissa** (käyttäjän toive 18.11.2026; `domain/types.ts` `HomeAway`, `Fixture.series/homeAway`, `ScheduledGame.homeAway`, `GameResult.homeAway`, `FootballDetails.series/homeAway/shareNote`, `domain/football.ts` `HOME_AWAY_LABEL`, `cleanSeries`, `previewCard.ts`, `resultCard.ts`, `features/share/drawResult.ts`, `drawPreview.ts`, `PreviewShare.tsx`, `ResultShare.tsx`, `ShareSheet.tsx`, `features/games/HomeAway.tsx`, `FixtureSheet.tsx`, `features/football/FootballPanel.tsx`, `repo.setResultNote`):
+    - **Kommentti:** tuloskuvaan tuli oma valinnainen kommentti (enintään 140 merkkiä). Se tallentuu pelille (`FootballDetails.shareNote`) ja synkronoituu, eikä lisätietolomakkeen tallennus poista sitä. Ennakko- ja tuloskuvassa on valinta "Kommentti harmaalla taustalla":
+      - Päällä (oletus): paneeli korostusviivalla laatikoiden yläpuolella, kuten ennen.
+      - Pois: pelkkä teksti heti pelin alla. Ottelussa teksti on keskitetty, turnauksessa ja pelitällissä listan alla.
+    - **Sarja** (esim. P9, T12; valinnainen, enintään 20 merkkiä):
+      - Kenttä on turnauksen nimen alla ja ottelun ja harjoituspelin lomakkeessa, sekä tulevalle että kirjatulle pelille. Aiemmin käytetyt sarjat tarjotaan ehdotuksina.
+      - Kuittaus siirtää sarjan kalenterista kirjaukseen.
+      - Kuvissa sarja näkyy ensimmäisenä merkkinä tason ja pelimuodon rinnalla (esim. P9 · ELITE · 8v8). Kalenterin ja tuloslistan riveillä se näkyy tekstinä.
+    - **Koti/vieras** (valinnainen):
+      - Ottelussa valitaan Koti tai Vieras vastustajan alla. Turnauksen otteluohjelmassa valinta on joka rivillä ajan alla kentän vieressä. Myös kirjatun pelin lisätiedoissa (turnauksessa pelikohtaisesti).
+      - Kuittaus ja turnauspäivän pikakirjaus säilyttävät valinnan.
+      - Kuvissa valinta "Koti/vieras" (oletus päällä, näkyy kun tieto on annettu):
+        - ottelussa KOTI ja VIERAS nimien alla samalla rivillä, oma joukkue pysyy vasemmalla
+        - turnauslistassa merkintä kentän vieressä (ennakko) tai kellonajan jälkeen (tulos).
+    - Kuvavalinnat (kommentin tausta, koti/vieras) muistetaan laitteelle, ja ne ovat yhteiset ennakko- ja tuloskuville.

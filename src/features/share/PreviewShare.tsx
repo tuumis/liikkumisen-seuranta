@@ -26,7 +26,7 @@ function readHidden(): Set<PreviewBox> {
   }
 }
 import { originOf } from './ResultShare';
-import { findOwnTeam, MissingTeamInfo, ShareImageSheet, TeamDetailChips, useTeamDetailPrefs, type RenderOptions } from './ShareSheet';
+import { findOwnTeam, MissingTeamInfo, ShareExtrasChips, ShareImageSheet, TeamDetailChips, useStoredFlag, useTeamDetailPrefs, type RenderOptions } from './ShareSheet';
 import { applyTeamDetails } from '../../domain/shareNames';
 
 const EVENT = 'preview-share-open';
@@ -112,15 +112,18 @@ export function PreviewShareSheet({ planId, onClose }: { planId: UUID | null; on
   const boxes = card ? availableBoxes(card) : [];
   // Ryhmä ja ikäluokka kuvassa (17.11.2026): logot ja seuran tiedot haetaan alkuperäisillä nimillä.
   const [details, setDetails] = useTeamDetailPrefs();
+  // Kommentin tausta ja koti/vieras (18.11.2026): laitteelle muistettavat, yhteiset tuloskuvan kanssa.
+  const [panel, setPanel] = useStoredFlag('shareCommentPanel', true);
+  const [showHomeAway, setShowHomeAway] = useStoredFlag('shareHomeAway', true);
   const drawn = useMemo(() => (card ? applyTeamDetails(card, details) : card), [card, details]);
   const logos = useClubLogos();
   const teamLogo = card ? (logoFor(logos, card.team) ?? data?.teamPhoto) : undefined;
   const clubs = useClubs();
   const names = card ? [card.team, ...card.games.map((g) => g.opponent)] : [];
   const renderKey = useMemo(
-    () => JSON.stringify([drawn, [...hidden].sort(), (teamLogo ?? '').length, names.map((n) => (logoFor(logos, n) ?? '').length), names.map((n) => originOf(clubs, n))]),
+    () => JSON.stringify([drawn, [...hidden].sort(), panel, showHomeAway, (teamLogo ?? '').length, names.map((n) => (logoFor(logos, n) ?? '').length), names.map((n) => originOf(clubs, n))]),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [drawn, logos, clubs, teamLogo, hidden],
+    [drawn, logos, clubs, teamLogo, hidden, panel, showHomeAway],
   );
   const render = card && drawn
     ? async (o: RenderOptions) => {
@@ -128,6 +131,8 @@ export function PreviewShareSheet({ planId, onClose }: { planId: UUID | null; on
         return drawPreviewCard(drawn, {
           ...o,
           hidden,
+          commentPanel: panel,
+          homeAway: showHomeAway,
           logos: { team, opponents },
           origins: { team: originOf(clubs, card.team), opponents: card.games.map((g) => originOf(clubs, g.opponent)) },
         });
@@ -170,6 +175,16 @@ export function PreviewShareSheet({ planId, onClose }: { planId: UUID | null; on
           <input className={inputClass} value={comment} maxLength={140} onChange={(e) => editComment(e.target.value)} placeholder="esim. Tervetuloa kannustamaan!" aria-label="Kommentti pelin alle" />
           <span className="mt-1 block text-xs text-slate-500">Tallentuu tälle tapahtumalle. {comment.length}/140</span>
         </label>
+      )}
+      {card && (
+        <ShareExtrasChips
+          hasComment={!!card.comment}
+          hasHomeAway={card.games.some((g) => g.homeAway)}
+          panel={panel}
+          onPanel={setPanel}
+          homeAway={showHomeAway}
+          onHomeAway={setShowHomeAway}
+        />
       )}
       {card && !card.team && <p className="text-xs text-slate-500">Valitse tapahtumalle oma joukkue, niin sen nimi, logo ja väri tulevat kuvaan.</p>}
       {card && <MissingTeamInfo key={planId ?? ''} teamName={card.team} teamLogo={!!teamLogo} opponentsMissing={opponentsMissing} />}

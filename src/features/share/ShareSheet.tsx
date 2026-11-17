@@ -397,3 +397,43 @@ export function TeamDetailChips({ team, opponents, prefs, onChange }: { team?: s
     </div>
   );
 }
+
+/** Laitteelle muistettava kyllä/ei-valinta jakokuviin (18.11.2026): yhteinen ennakko- ja tuloskuville. */
+export function useStoredFlag(key: string, fallback: boolean): [boolean, (v: boolean) => void] {
+  const [value, setValue] = useState<boolean>(() => {
+    try {
+      const v = localStorage.getItem(key);
+      return v === null ? fallback : v === '1';
+    } catch {
+      return fallback;
+    }
+  });
+  const update = (v: boolean) => {
+    setValue(v);
+    try {
+      localStorage.setItem(key, v ? '1' : '0');
+    } catch {
+      /* ei muistia */
+    }
+  };
+  return [value, update];
+}
+
+/** Kuvan lisävalinnat: kommentin harmaa tausta ja koti/vieras-merkinnät (vain kun tietoa on). */
+export function ShareExtrasChips({ hasComment, hasHomeAway, panel, onPanel, homeAway, onHomeAway }: { hasComment: boolean; hasHomeAway: boolean; panel: boolean; onPanel: (v: boolean) => void; homeAway: boolean; onHomeAway: (v: boolean) => void }) {
+  if (!hasComment && !hasHomeAway) return null;
+  return (
+    <div className="flex flex-wrap gap-2" role="group" aria-label="Kuvan lisävalinnat">
+      {hasComment && (
+        <ToggleChip on={panel} onChange={onPanel}>
+          Kommentti harmaalla taustalla
+        </ToggleChip>
+      )}
+      {hasHomeAway && (
+        <ToggleChip on={homeAway} onChange={onHomeAway}>
+          Koti/vieras
+        </ToggleChip>
+      )}
+    </div>
+  );
+}

@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import {
   friendlyRows, gameRows,
   gamesCsv,
+  HOME_AWAY_LABEL,
   LEVEL_LABEL,
   normalizeName,
   OUTCOME_LABEL,
@@ -234,10 +235,12 @@ function GameLine({ r, showDate }: { r: GameRow; showDate: boolean }) {
         <span className="block truncate text-sm text-slate-900">
           {r.team ?? 'Oma joukkue'} – {r.opponent ?? 'vastustaja ?'}
         </span>
-        {(r.playedMin !== undefined || r.time || r.format || r.positions || r.playerGoals) && (
+        {(r.playedMin !== undefined || r.time || r.format || r.positions || r.playerGoals || r.homeAway || r.series) && (
           <span className="block text-xs text-slate-500">
             {[
               r.time && `klo ${r.time}`,
+              r.homeAway && HOME_AWAY_LABEL[r.homeAway],
+              r.series,
               r.format,
               r.positions?.map((p) => POSITION_LABEL[p].toLowerCase()).join(', '),
               r.playedMin !== undefined && `pelattu ${r.playedMin} min`,

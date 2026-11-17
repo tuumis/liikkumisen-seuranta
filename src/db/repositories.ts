@@ -48,8 +48,8 @@ import type {
   TemplateItem,
   Timestamp,
   UUID,
-  Weekday, SessionPart } from '../domain/types';
-import { isClubFootball, isClubTraining, isGameFormat, LEVEL_EFFORT, POSITIONS, selfMin, trainingSelfLabel, trainingSelfStart } from '../domain/football';
+  Weekday, SessionPart, HomeAway } from '../domain/types';
+import { cleanSeries, isClubFootball, isClubTraining, isGameFormat, isHomeAway, LEVEL_EFFORT, POSITIONS, selfMin, trainingSelfLabel, trainingSelfStart } from '../domain/football';
 import { BUILT_IN_ACTIVITY_TYPES, BUILT_IN_RENAMES, ESTIMATE_DEFAULT_TYPE_KEY } from '../seed/activityTypes';
 import { nowTimestamp } from './clock';
 import { createPlanner } from './ensurePlanned';
@@ -122,6 +122,10 @@ export interface FootballDetailsInput {
   games?: GameResult[];
   /** Linkki pelin tai turnauksen tietoihin (ei treenille). */
   link?: string;
+  /** Sarja, esim. P9 (ei treenille). */
+  series?: string;
+  /** Ottelu: koti- vai vieraspeli. */
+  homeAway?: HomeAway;
   /** Pelin tai turnauksen pelatut minuutit (laskentapohja); turnauksessa pelirivien summa voittaa. */
   playedMin?: number;
   /** Oma joukkue (linkki) ja taso; taso säätää ponnistelun (Elite kovempi, Haaste kevyempi). */
@@ -165,6 +169,10 @@ export interface FixtureInput {
   missingNote?: string;
   /** Linkki pelin tai turnauksen tietoihin; virheellinen jätetään pois (lomake tarkistaa). */
   link?: string;
+  /** Sarja, esim. P9. */
+  series?: string;
+  /** Ottelu: koti- vai vieraspeli. */
+  homeAway?: HomeAway;
 }
 
 export interface FixtureEntry {
@@ -1051,6 +1059,8 @@ export function createRepositories(db: AppDB = defaultDb) {
           if (fixture.opponent) fd.opponent = fixture.opponent;
           if (fixture.eventName) fd.eventName = fixture.eventName;
           if (fixture.link) fd.link = fixture.link;
+          if (fixture.series) fd.series = fixture.series;
+          if (fixture.homeAway && type.footballKind === 'game') fd.homeAway = fixture.homeAway;
           if (fixture.gamesCount) fd.gamesCount = fixture.gamesCount;
           // Otteluohjelmasta valmiit pelirivit: tulos ja kommentti kirjataan pelien jälkeen.
           if (fixture.games?.length) {
@@ -1110,6 +1120,7 @@ export function createRepositories(db: AppDB = defaultDb) {
       ratingNote: fd?.ratingNote,
       eventName: fd?.eventName,
       link: fd?.link,
+      series: fd?.series,
       games,
     });
     return { sessionId, created };
@@ -1200,6 +1211,8 @@ export function createRepositories(db: AppDB = defaultDb) {
       const prev = await db.footballDetails.get(sessionId);
       const d: FootballDetails = await stamp({ sessionId, attendance: input.attendance, focusTags: [...new Set(input.focusTags)] });
       if (prev && !prev.deletedAt && prev.gameLengthMin !== undefined) d.gameLengthMin = prev.gameLengthMin;
+      // Tuloskuvan kommentti muokataan jakopaneelista (setResultNote); lomake ei koske siihen.
+      if (prev && !prev.deletedAt && prev.shareNote) d.shareNote = prev.shareNote;
       const set = <K extends keyof FootballDetails>(k: K, v: FootballDetails[K] | undefined) => {
         if (v !== undefined) d[k] = v;
       };
@@ -1218,6 +1231,8 @@ export function createRepositories(db: AppDB = defaultDb) {
       if (type.footballKind !== 'training') {
         const link = normalizeLink(input.link);
         if (link) d.link = link;
+        set('series', cleanSeries(input.series));
+        if (type.footballKind === 'game' && isHomeAway(input.homeAway)) d.homeAway = input.homeAway;
         set('level', input.level);
         if (isGameFormat(input.format)) d.format = input.format;
         const positions = POSITIONS.filter((p) => input.positions?.includes(p));
@@ -1267,6 +1282,7 @@ export function createRepositories(db: AppDB = defaultDb) {
           if (g.time) r.time = g.time;
           if (clean(g.location)) r.location = clean(g.location);
           if (g.note?.trim()) r.note = g.note.trim().slice(0, 500);
+          if (isHomeAway(g.homeAway)) r.homeAway = g.homeAway;
           return r;
         });
         if (games.length) {
@@ -1314,6 +1330,23 @@ export function createRepositories(db: AppDB = defaultDb) {
     });
   }
 
+  /** Tuloskuvan kommentti (18.11.2026): tallentuu kerran lisätietoihin ja synkronoituu; tyhjä poistaa. */
+  async function setResultNote(sessionId: UUID, text: string): Promise<void> {
+    noteLocalChange();
+    await db.transaction('rw', [db.footballDetails, db.sessions, db.meta], async () => {
+      const session = await db.sessions.get(sessionId);
+      if (!session || session.deletedAt) throw new Error('Kertaa ei löydy');
+      const cur = await db.footballDetails.get(sessionId);
+      if (!cur || cur.deletedAt) throw new Error('Pelin tietoja ei löydy');
+      const note = text.replace(/\s+/g, ' ').trim().slice(0, 140);
+      if ((cur.shareNote ?? '') === note) return;
+      const next = await stamp({ ...cur });
+      delete next.shareNote;
+      if (note) next.shareNote = note;
+      await db.footballDetails.put(next);
+    });
+  }
+
   /**
    * Päiväkirjakommentti jalkapallokerralle (FootballDetails.ratingNote). Luo lisätiedot, jos
    * niitä ei vielä ole (osallistuminen oletuksena kokonaan); tyhjä teksti poistaa kommentin.
@@ -1336,12 +1369,12 @@ export function createRepositories(db: AppDB = defaultDb) {
   }
 
   /** Aiemmin kirjatut joukkueet, vastustajat ja turnaukset (uusin ensin; samat nimet yhdistettyinä). */
-  async function footballNameSuggestions(profileId: UUID): Promise<{ teams: string[]; opponents: string[]; events: string[] }> {
+  async function footballNameSuggestions(profileId: UUID): Promise<{ teams: string[]; opponents: string[]; events: string[]; series: string[] }> {
     const sessions = live(
       await db.sessions.where('[profileId+date]').between([profileId, Dexie.minKey], [profileId, Dexie.maxKey]).toArray(),
     ).sort((a, b) => b.date.localeCompare(a.date));
     const details = await footballDetailsFor(sessions.map((s) => s.id));
-    const acc = { teams: new Map<string, string>(), opponents: new Map<string, string>(), events: new Map<string, string>() };
+    const acc = { teams: new Map<string, string>(), opponents: new Map<string, string>(), events: new Map<string, string>(), series: new Map<string, string>() };
     const add = (m: Map<string, string>, v?: string) => {
       const k = v?.trim().replace(/\s+/g, ' ').toLocaleLowerCase('fi');
       if (k && !m.has(k)) m.set(k, v!.trim().replace(/\s+/g, ' '));
@@ -1352,9 +1385,10 @@ export function createRepositories(db: AppDB = defaultDb) {
       add(acc.teams, d.team);
       add(acc.opponents, d.opponent);
       add(acc.events, d.eventName);
+      add(acc.series, d.series);
       for (const g of d.games ?? []) add(acc.opponents, g.opponent);
     }
-    return { teams: [...acc.teams.values()], opponents: [...acc.opponents.values()], events: [...acc.events.values()] };
+    return { teams: [...acc.teams.values()], opponents: [...acc.opponents.values()], events: [...acc.events.values()], series: [...acc.series.values()] };
   }
 
   // ---------- joukkueet (skeema v2) ----------
@@ -1640,9 +1674,10 @@ export function createRepositories(db: AppDB = defaultDb) {
         if (clean(g.opponent)) r.opponent = clean(g.opponent);
         if (g.time) r.time = g.time;
         if (clean(g.location)) r.location = clean(g.location);
+        if (isHomeAway(g.homeAway)) r.homeAway = g.homeAway;
         return r;
       })
-      .filter((g) => g.opponent || g.time || g.location);
+      .filter((g) => g.opponent || g.time || g.location || g.homeAway);
     if (input.kind === 'tournament' && games.length) {
       f.games = games;
       f.gamesCount = games.length;
@@ -1670,6 +1705,9 @@ export function createRepositories(db: AppDB = defaultDb) {
     }
     const link = normalizeLink(input.link);
     if (link) f.link = link;
+    const series = cleanSeries(input.series);
+    if (series) f.series = series;
+    if (input.kind === 'game' && isHomeAway(input.homeAway)) f.homeAway = input.homeAway;
     return f;
   }
 
@@ -2224,6 +2262,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     deleteSession,
     undoDelete,
     setPreviewNote,
+    setResultNote,
     getTrainingSelf,
     setTrainingSelf,
     trainingsWithoutSelf,

@@ -1,7 +1,8 @@
 // Tuloskuva canvasille (SPEC 16): tarina 1080 × 1920 tai julkaisu 1080 × 1350, sovelluksen teemalla
 // tai neutraalilla urheilutyylillä. Logot ovat käyttäjän lisäämiä kuvia (data URL); ei verkkoa.
 
-import type { GameOutcome } from '../../domain/football';
+import { HOME_AWAY_LABEL, type GameOutcome } from '../../domain/football';
+import type { HomeAway } from '../../domain/types';
 import { initials, OUTCOME_WORD, type ResultCard } from '../../domain/resultCard';
 import { formatDate } from '../../ui/format';
 import { drawFlag } from '../../ui/flags';
@@ -381,6 +382,56 @@ export interface DrawOptions {
   /** Tallennettu väriarvo (shareColors); puuttuessa sovelluksen värit. */
   color?: string;
   origins?: ShareOrigins;
+  /** Koti/vieras-merkinnät kuvaan (18.11.2026); oletus näkyy, jos tieto on annettu. */
+  homeAway?: boolean;
+  /** Kommentti harmaalla paneelilla (oletus) vai pelkkänä tekstinä heti pelin alla (18.11.2026). */
+  commentPanel?: boolean;
+}
+
+/** Kommentin mitat (0 = ei kommenttia): enintään kolme riviä; paneelissa sisennys ja reunat. */
+export interface CommentBlock {
+  lines: string[];
+  h: number;
+  px: number;
+  panel: boolean;
+}
+
+export function commentLayout(ctx: CanvasRenderingContext2D, text: string | undefined, story: boolean, p: Palette, panel = true): CommentBlock {
+  if (!text) return { lines: [], h: 0, px: 0, panel };
+  const px = story ? 40 : 34;
+  ctx.font = `500 ${px}px ${p.sans}`;
+  const lines = wrap(ctx, text, W - PAD * 2 - (panel ? 90 : 0), 3);
+  return { lines, h: lines.length * px * 1.3 + (panel ? (story ? 64 : 50) : 0), px, panel };
+}
+
+/** Kommentti: paneeli ja korostusviiva vasemmalla, tai pelkkä teksti (keskitetty VS-asettelussa). */
+export function drawComment(ctx: CanvasRenderingContext2D, c: CommentBlock, y: number, p: Palette, align: 'left' | 'center' = 'left') {
+  ctx.font = `500 ${c.px}px ${p.sans}`;
+  if (!c.panel) {
+    ctx.fillStyle = p.ink;
+    ctx.textAlign = align;
+    const x = align === 'center' ? W / 2 : PAD;
+    c.lines.forEach((l, i) => ctx.fillText(l, x, y + c.px * 0.95 + i * c.px * 1.3));
+    ctx.textAlign = 'left';
+    return;
+  }
+  const maxW = W - PAD * 2;
+  ctx.fillStyle = p.panel;
+  rr(ctx, PAD, y, maxW, c.h, 30);
+  ctx.fill();
+  ctx.fillStyle = p.accent;
+  rr(ctx, PAD + 24, y + 22, 8, c.h - 44, 4);
+  ctx.fill();
+  ctx.font = `500 ${c.px}px ${p.sans}`;
+  ctx.fillStyle = p.ink;
+  const top = y + (c.h - c.lines.length * c.px * 1.3) / 2 + c.px * 0.95;
+  c.lines.forEach((l, i) => ctx.fillText(l, PAD + 60, top + i * c.px * 1.3));
+}
+
+/** Koti/vieras-merkinnät VS-asettelun nimien alle: [oma joukkue, vastustaja]. */
+export function homeAwayTags(homeAway: HomeAway | undefined, show: boolean | undefined): [string, string] | undefined {
+  if (!homeAway || show === false) return undefined;
+  return homeAway === 'home' ? ['Koti', 'Vieras'] : ['Vieras', 'Koti'];
 }
 
 /** Kankaan, paletin ja taustan alustus (tulos- ja ennakkokuva). */
@@ -427,10 +478,13 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
     ctx.font = `500 ${story ? 40 : 34}px ${p.sans}`;
     ctx.fillStyle = p.soft;
     ctx.fillText(dateLabel, PAD, y);
-    const bh = levelBadges(ctx, card.level, card.format, PAD, y + (story ? 30 : 22), story, p);
+    const bh = levelBadges(ctx, card.level, card.format, PAD, y + (story ? 30 : 22), story, p, card.series);
     if (bh) y += (story ? 30 : 22) + bh - (story ? 14 : 10);
 
-    // Oma joukkue, pelirivit, (lapsen maalit) ja yhteenveto yhtenä lohkona, joka keskitetään otsikon alle.
+    // Oma joukkue, pelirivit, (kommentti), (lapsen maalit) ja yhteenveto yhtenä lohkona, joka keskitetään otsikon alle.
+    const comment = commentLayout(ctx, card.comment, story, p, opts.commentPanel !== false);
+    const commentGap = story ? 32 : 24;
+    const commentH = comment.h ? comment.h + commentGap : 0;
     y += story ? 64 : 44;
     const ls = story ? 112 : 92;
     const teamGap = story ? 44 : 28;
@@ -442,7 +496,7 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
     const n = card.games.length;
     const gap = story ? 18 : 14;
     const labelH = story ? 56 : 44;
-    const fixedH = ls + teamGap + labelH + sumGap + (playerH ? playerH + playerGap : 0) + sumH;
+    const fixedH = ls + teamGap + labelH + commentH + sumGap + (playerH ? playerH + playerGap : 0) + sumH;
     const rowH = Math.min(story ? 168 : 132, (bottom - y - fixedH - gap * (n - 1)) / n);
     const listH = n * rowH + (n - 1) * gap;
     y += Math.max(0, (bottom - y - fixedH - listH) / 2);
@@ -458,7 +512,8 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
     ctx.fillStyle = p.accent;
     ctx.fillText(spaced('Tulokset'), PAD, y + (story ? 30 : 24));
     y += labelH;
-    const sumTop = y + listH + sumGap + (playerH ? playerH + playerGap : 0);
+    const sumTop = y + listH + commentH + sumGap + (playerH ? playerH + playerGap : 0);
+    if (comment.h) drawComment(ctx, comment, y + listH + commentGap, p);
     card.games.forEach((g, k) => {
       const top = y + k * (rowH + gap);
       ctx.fillStyle = p.panel;
@@ -495,7 +550,8 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
       ctx.fillStyle = p.ink;
       const name = fit(ctx, g.opponent ?? 'Vastustaja', tw, (px) => `700 ${px}px ${p.sans}`, Math.round(Math.min(44, rowH * 0.3)), 24);
       ctx.fillText(name, tx, top + rowH / 2 - 2);
-      const sub = [`${k + 1}. peli`, g.time && `klo ${g.time}`, opts.player && g.playerGoals ? `⚽ ${g.playerGoals}` : undefined].filter(Boolean).join('  ·  ');
+      const ha = opts.homeAway !== false && g.homeAway ? HOME_AWAY_LABEL[g.homeAway] : undefined;
+      const sub = [`${k + 1}. peli`, g.time && `klo ${g.time}`, ha, opts.player && g.playerGoals ? `⚽ ${g.playerGoals}` : undefined].filter(Boolean).join('  ·  ');
       const subPx = Math.round(Math.min(30, rowH * 0.21));
       const subY = top + rowH / 2 + Math.min(40, rowH * 0.3);
       ctx.font = `500 ${subPx}px ${p.sans}`;
@@ -540,7 +596,7 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
   ctx.font = `${heavyOf(opts.style)} ${story ? 64 : 54}px ${p.display}`;
   ctx.fillStyle = p.ink;
   ctx.fillText(dateLabel, PAD, y);
-  const bh = levelBadges(ctx, card.level, card.format, PAD, y + (story ? 34 : 24), story, p);
+  const bh = levelBadges(ctx, card.level, card.format, PAD, y + (story ? 34 : 24), story, p, card.series);
   if (bh) y += (story ? 34 : 24) + bh;
 
   // Alareunan laatikot kuten ennakossa: pelin alku ja paikka (jos tiedossa); lapsen maalit niiden yläpuolella.
@@ -552,10 +608,16 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
   if (card.location) boxesTop -= placeH;
   if (times.length) boxesTop -= boxH + (card.location ? 20 : 0);
   const playerTop = boxesTop - (playerH ? playerH + (times.length || card.location ? 28 : 0) : 0);
+  // Kommentti: paneeli laatikoiden yläpuolelle tai pelkkä teksti heti ottelun alle.
+  const comment = commentLayout(ctx, card.comment, story, p, opts.commentPanel !== false);
+  const commentGap = story ? 32 : 24;
+  const commentTop = comment.h && comment.panel ? playerTop - comment.h - (playerH || times.length || card.location ? commentGap : 0) : playerTop;
 
   const heavy = heavyOf(opts.style);
   const display = (px: number) => `${heavy} ${px}px ${p.display}`;
-  drawMatchup(ctx, { team: card.team, opponent: g.opponent, logos: opts.logos, origins, y, boxesTop: playerTop, story, p }, (top, ls) => {
+  const tags = homeAwayTags(g.homeAway, opts.homeAway);
+  const below = comment.h && !comment.panel ? comment.h + commentGap : 0;
+  const nameBottom = drawMatchup(ctx, { team: card.team, opponent: g.opponent, logos: opts.logos, origins, y, boxesTop: commentTop, story, p, tags, belowH: below }, (top, ls) => {
     // Tulos logojen välissä, tulossana sen alla.
     const midW = W - PAD * 2 - ls * 2 - 70;
     const score = `${g.goalsFor ?? '–'}–${g.goalsAgainst ?? '–'}`;
@@ -573,6 +635,7 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
     ctx.textAlign = 'left';
     if (g.outcome) chip(ctx, OUTCOME_WORD[g.outcome].toUpperCase(), OUTCOME_COLOR[g.outcome], W / 2, scoreBase + (story ? 34 : 28), chipH, p, 'center');
   });
+  if (comment.h) drawComment(ctx, comment, comment.panel ? commentTop : nameBottom + commentGap, p, comment.panel ? 'left' : 'center');
 
   if (playerH) drawPlayer(ctx, opts.player!, card.playerGoals, PAD, playerTop, playerH, p);
   let by = boxesTop;
@@ -601,8 +664,9 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, name: string, goals: n
  * Sarjataso ja pelimuoto selkeinä merkkeinä päivän alla (käyttäjän toive 14.11.2026): taso täytettynä
  * korostusvärillä ("ELITE"), pelimuoto ääriviivoin ("5v5"). Yläreuna y; palauttaa korkeuden (0 = ei merkkejä).
  */
-export function levelBadges(ctx: CanvasRenderingContext2D, level: string | undefined, format: string | undefined, x: number, y: number, story: boolean, p: Palette): number {
-  const items = [level ? { text: spaced(level), fill: true } : undefined, format ? { text: format, fill: false } : undefined].filter((i): i is { text: string; fill: boolean } => !!i);
+export function levelBadges(ctx: CanvasRenderingContext2D, level: string | undefined, format: string | undefined, x: number, y: number, story: boolean, p: Palette, series?: string): number {
+  // Sarja (esim. P9) ensimmäisenä ääriviivamerkkinä (18.11.2026).
+  const items = [series ? { text: series, fill: false } : undefined, level ? { text: spaced(level), fill: true } : undefined, format ? { text: format, fill: false } : undefined].filter((i): i is { text: string; fill: boolean } => !!i);
   if (!items.length) return 0;
   const h = story ? 68 : 58;
   const px = Math.round(h * 0.46);
@@ -672,9 +736,22 @@ export function placeBox(ctx: CanvasRenderingContext2D, place: string, y: number
  */
 export function drawMatchup(
   ctx: CanvasRenderingContext2D,
-  m: { team?: string; opponent?: string; logos: ShareLogos; origins?: ShareOrigins; y: number; boxesTop: number; story: boolean; p: Palette },
+  m: {
+    team?: string;
+    opponent?: string;
+    logos: ShareLogos;
+    origins?: ShareOrigins;
+    y: number;
+    boxesTop: number;
+    story: boolean;
+    p: Palette;
+    /** Koti/vieras-merkinnät nimien alle (18.11.2026). */
+    tags?: [string, string];
+    /** Lohkon alle varattava tila (esim. kommentti pelkkänä tekstinä), jotta kokonaisuus keskitetään. */
+    belowH?: number;
+  },
   center: (top: number, ls: number) => void,
-) {
+): number {
   const { story, p, origins } = m;
   const ls = story ? 250 : 210;
   const namePx = story ? 40 : 34;
@@ -682,8 +759,9 @@ export function drawMatchup(
   ctx.font = `700 ${namePx}px ${p.sans}`;
   const names = [wrapName(ctx, m.team ?? 'Oma joukkue', nameW, 3), wrapName(ctx, m.opponent ?? 'Vastustaja', nameW, 3)];
   const hasOrigin = [origins?.team, origins?.opponents[0]].some((o) => o?.country || o?.city);
-  const nameH = Math.max(...names.map((l) => l.length)) * namePx * 1.2 + (hasOrigin ? (story ? 50 : 42) : 0);
-  const blockH = ls + 36 + nameH;
+  const rowStep = story ? 50 : 42;
+  const nameH = Math.max(...names.map((l) => l.length)) * namePx * 1.2 + ((hasOrigin ? 1 : 0) + (m.tags ? 1 : 0)) * rowStep;
+  const blockH = ls + 36 + nameH + (m.belowH ?? 0);
   const top = m.y + Math.max(story ? 70 : 40, (m.boxesTop - (story ? 40 : 24) - m.y - blockH) / 2);
   const centers = [PAD + ls / 2 + (story ? 0 : 10), W - PAD - ls / 2 - (story ? 0 : 10)];
   drawLogo(ctx, m.logos.team, m.team, centers[0] - ls / 2, top, ls, p.sans);
@@ -693,9 +771,19 @@ export function drawMatchup(
     ctx.font = `700 ${namePx}px ${p.sans}`;
     ctx.fillStyle = p.ink;
     lines.forEach((l, i) => ctx.fillText(l, centers[k], top + ls + 36 + namePx + i * namePx * 1.2));
-    drawOrigin(ctx, k === 0 ? origins?.team : origins?.opponents[0], centers[k], top + ls + 36 + namePx + lines.length * namePx * 1.2 + (story ? 10 : 6), story ? 30 : 26, p, 'center', nameW);
+    const originY = top + ls + 36 + namePx + lines.length * namePx * 1.2 + (story ? 10 : 6);
+    drawOrigin(ctx, k === 0 ? origins?.team : origins?.opponents[0], centers[k], originY, story ? 30 : 26, p, 'center', nameW);
     ctx.textAlign = 'center';
+    if (m.tags) {
+      ctx.font = `800 ${story ? 28 : 24}px ${p.sans}`;
+      ctx.fillStyle = p.accent;
+      // Molemmat merkinnät samalle riville pisimmän nimen alle.
+      const maxLines = Math.max(...names.map((l) => l.length));
+      const tagY = top + ls + 36 + namePx + maxLines * namePx * 1.2 + (story ? 10 : 6) + (hasOrigin ? rowStep - 4 : 0);
+      ctx.fillText(spaced(m.tags[k]), centers[k], tagY);
+    }
   });
   ctx.textAlign = 'left';
   center(top, ls);
+  return top + ls + 36 + nameH;
 }

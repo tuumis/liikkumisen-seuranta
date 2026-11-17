@@ -12,6 +12,7 @@ const minutes = z.object({ light: z.number().min(0), moderate: z.number().min(0)
 /** Pienennetty kuva (lisäys 16): vain base64-kuva-data-URL, ei ulkoisia osoitteita. */
 const photo = z.string().max(300_000).regex(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/);
 const category = z.enum(['hobby', 'school_pe', 'school_recess', 'daycare', 'commute', 'self_directed', 'family', 'other']);
+const homeAway = z.enum(['home', 'away']);
 
 /** Tyhjennetty poistomerkintä (profiilin poisto): vain avain ja synkronointikentät. */
 const tombstone = (key: 'id' | 'sessionId' | 'plannedSessionId') => z.looseObject({ [key]: z.string().min(1), updatedAt: ts, updatedBy: z.string().min(1), deletedAt: ts });
@@ -144,6 +145,9 @@ export const footballDetailsSchema = either(
     enjoyment: z.number().int().min(1).max(3).optional(),
     games: z.array(z.looseObject({})).optional(),
     link: z.string().max(600).optional(),
+    series: z.string().max(40).optional(),
+    homeAway: homeAway.optional(),
+    shareNote: z.string().max(200).optional(),
     ...sync,
   }),
   'sessionId',
@@ -171,7 +175,7 @@ export const teamSchema = either(
 );
 
 export const fixtureSchema = either(
-  z.looseObject({ plannedSessionId: z.string().min(1), level: level.optional(), infoMissing: z.boolean().optional(), missingNote: z.string().max(200).optional(), previewNote: z.string().max(200).optional(), link: z.string().max(600).optional(), ...sync }),
+  z.looseObject({ plannedSessionId: z.string().min(1), level: level.optional(), infoMissing: z.boolean().optional(), missingNote: z.string().max(200).optional(), previewNote: z.string().max(200).optional(), link: z.string().max(600).optional(), series: z.string().max(40).optional(), homeAway: homeAway.optional(), ...sync }),
   'plannedSessionId',
 );
 

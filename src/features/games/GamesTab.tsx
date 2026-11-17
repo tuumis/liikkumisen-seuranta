@@ -3,7 +3,7 @@
 
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { GAME_FORMATS, LEVEL_LABEL } from '../../domain/football';
+import { GAME_FORMATS, HOME_AWAY_LABEL, LEVEL_LABEL } from '../../domain/football';
 import type { ActivityType, GameFormat, GameLevel, Profile, Session, Team } from '../../domain/types';
 import { gameDaySchedule } from '../../domain/tournamentTime';
 import { repo, type FixtureEntry } from '../../db/repositories';
@@ -314,7 +314,9 @@ function FixtureSummary({ e, team, history }: { e: FixtureEntry; team?: Team; hi
         · {e.plan.durationMin} min
         {tournament && team && ` · ${team.name}`}
         {tournament && f?.gamesCount && ` · ${f.gamesCount} peliä`}
+        {f?.series && ` · ${f.series}`}
         {(f?.format ?? team?.format) && ` · ${f?.format ?? team?.format}`}
+        {f?.homeAway && ` · ${HOME_AWAY_LABEL[f.homeAway]}`}
         {f?.location && ` · ${f.location}`}
       </div>
       {!tournament && !friendly && history?.(f?.opponent) && <div className="mt-0.5 text-xs text-slate-500">{history(f?.opponent)}</div>}
@@ -325,6 +327,7 @@ function FixtureSummary({ e, team, history }: { e: FixtureEntry; team?: Team; hi
               {i + 1}. {g.time && `klo ${g.time} · `}
               {g.opponent ?? 'vastustaja ?'}
               {g.location && ` · ${g.location}`}
+              {g.homeAway && ` · ${HOME_AWAY_LABEL[g.homeAway]}`}
               {history?.(g.opponent) && <span className="block pl-3 text-slate-500">{history(g.opponent)}</span>}
             </li>
           ))}
