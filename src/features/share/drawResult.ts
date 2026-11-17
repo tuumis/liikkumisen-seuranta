@@ -310,7 +310,7 @@ function scoreboardBackground(ctx: CanvasRenderingContext2D, H: number, color?: 
 const scoreboardAccent = (color?: ShareColor) => (!color ? '#fbbf24' : isDark(color.base) ? (color.accent ?? '#fbbf24') : mix(color.base, '#ffffff', 0.2));
 
 /** Urheilutyylin korostus: valittu väri (liian tumma vaalennetaan) tai vihreä. */
-const sportAccent = (color?: ShareColor) => (!color ? '#4ade80' : color.id === 'black' && color.accent ? color.accent : isDark(color.base) ? mix(color.base, '#ffffff', 0.45) : mix(color.base, '#ffffff', 0.12));
+const sportAccent = (color?: ShareColor) => (!color ? '#4ade80' : color.accent && isDark(color.base) ? color.accent : isDark(color.base) ? mix(color.base, '#ffffff', 0.45) : mix(color.base, '#ffffff', 0.12));
 const isDark = (hex: string) => {
   const n = parseInt(hex.slice(1), 16);
   return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) < 60;
@@ -326,7 +326,7 @@ export function palette(style: ShareStyle, color?: ShareColor): Palette {
     return { ink: '#ffffff', soft: 'rgba(255,255,255,0.76)', accent: color.accent ?? mix(color.base, '#ffffff', 0.7), panel: 'rgba(255,255,255,0.1)', display, sans };
   }
   if (style === 'field')
-    return { ink: '#ffffff', soft: 'rgba(255,255,255,0.84)', accent: color && !isDark(color.base) ? (isLightColor(color.base) ? color.base : mix(color.base, '#ffffff', 0.4)) : '#fde047', panel: 'rgba(0,0,0,0.26)', display: sans, sans };
+    return { ink: '#ffffff', soft: 'rgba(255,255,255,0.84)', accent: color && !isDark(color.base) ? (isLightColor(color.base) ? color.base : mix(color.base, '#ffffff', 0.4)) : color?.accent && !isDark(color.accent) ? color.accent : '#fde047', panel: 'rgba(0,0,0,0.26)', display: sans, sans };
   if (style === 'poster') {
     const light = isLightColor(color?.base ?? '#b42318');
     return light

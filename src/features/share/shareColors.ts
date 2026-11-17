@@ -15,6 +15,9 @@ export const SHARE_COLORS: readonly ShareColor[] = [
   { id: 'sky', label: 'Vaaleansininen', base: '#0284c7', accent: '#ffffff' },
   { id: 'red', label: 'Punainen', base: '#c81e1e', accent: '#fde68a' },
   { id: 'black', label: 'Musta ja kulta', base: '#1f2328', accent: '#fbbf24' },
+  // Mustavalkoiset seurat (esim. FC Lahti, käyttäjän toive 17.11.2026): raidat ja korosteet valkoisina tai mustina.
+  { id: 'blackwhite', label: 'Musta ja valkoinen', base: '#141414', accent: '#ffffff' },
+  { id: 'whiteblack', label: 'Valkoinen ja musta', base: '#f4f4f2', accent: '#141414' },
   { id: 'green', label: 'Vihreä', base: '#15803d', accent: '#d9f99d' },
   { id: 'purple', label: 'Violetti', base: '#6d28d9', accent: '#f5d0fe' },
   { id: 'orange', label: 'Oranssi', base: '#ea580c', accent: '#fff7ed' },

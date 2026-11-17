@@ -1191,3 +1191,7 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
     - **Vastustaja talteen** (`repositories` `rememberOpponents`, `createFixture`/`updateFixture`):
       - Kun kalenterin peli, harjoituspeli tai turnaus tallennetaan, vastustajaseura tulee Vastustajat-listaan ja uusi ryhmä/ikäluokka seuran valinnaksi heti, jo ennen pelin pelaamista.
       - Tallennus kirjoittaa vain, jos jotain puuttuu. Virhe ei estä pelin tallennusta.
+  - **Mustavalkoiset jakokuvavärit** (käyttäjän toive 17.11.2026, esim. FC Lahti; `features/share/shareColors.ts`, `drawResult.ts`):
+    - Värivalintaan on lisätty **Musta ja valkoinen** (musta pohja, valkoiset raidat ja korosteet) sekä **Valkoinen ja musta** (vaalea pohja, mustat raidat ja korosteet).
+    - Valinta muistetaan joukkueelle kuten ennenkin, ja se toimii kaikissa tyyleissä sekä tulos- että ennakkokuvassa.
+    - Urheilu- ja Kenttä-tyyli käyttävät tumman pohjavärin kanssa valitun värin korostusta, eivät enää kiinteää keltaista tai vaalennettua pohjaväriä.
