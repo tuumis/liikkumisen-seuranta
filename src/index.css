@@ -237,6 +237,75 @@ body {
   background-attachment: fixed;
 }
 
+/* ---------- taustat (Asetukset → Ulkoasu, käyttäjän lista 17.11.2026) ----------
+   html[data-bg] = valittu tausta (laitekohtainen, theme.ts / theme-init.js). Kuvio piirretään kiinteään
+   kerrokseen body::before (toimii myös iOS:ssä, jossa background-attachment: fixed ei toimi). Jokaisella
+   piirretyllä taustalla on vaalea ja tumma versio; oma kuva himmennetään taustavärillä (--bg-dim). */
+html[data-bg] body {
+  background: transparent;
+}
+html[data-bg] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--bg-art, var(--bg));
+}
+.bg-sample {
+  background: var(--bg-art, var(--bg));
+}
+[data-bg-sample='default'] {
+  --bg-art: radial-gradient(240px 120px at 0% -10%, rgb(var(--glow) / 0.7), transparent 60%), radial-gradient(180px 100px at 100% 0%, rgb(243 227 204 / 0.45), transparent 55%), var(--bg);
+}
+.dark [data-bg-sample='default'] {
+  --bg-art: radial-gradient(240px 120px at 0% -10%, rgb(var(--glow) / 0.3), transparent 60%), radial-gradient(180px 100px at 100% 0%, rgb(221 169 110 / 0.07), transparent 55%), var(--bg);
+}
+[data-bg='grass'],
+[data-bg-sample='grass'] {
+  --bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 900' preserveAspectRatio='xMidYMid slice'%3E%3Cg fill='none' stroke='rgba(52,102,61,0.16)' stroke-width='4'%3E%3Ccircle cx='800' cy='450' r='150'/%3E%3Cpath d='M800 0 V900'/%3E%3Crect x='40' y='250' width='180' height='400'/%3E%3Crect x='1380' y='250' width='180' height='400'/%3E%3C/g%3E%3C/svg%3E") center / cover no-repeat, repeating-linear-gradient(180deg, rgb(64 120 60 / 0.10) 0 110px, transparent 110px 220px), linear-gradient(180deg, #edf4e8, #e3eedd);
+}
+.dark[data-bg='grass'],
+.dark [data-bg-sample='grass'] {
+  --bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 900' preserveAspectRatio='xMidYMid slice'%3E%3Cg fill='none' stroke='rgba(160,220,160,0.11)' stroke-width='4'%3E%3Ccircle cx='800' cy='450' r='150'/%3E%3Cpath d='M800 0 V900'/%3E%3Crect x='40' y='250' width='180' height='400'/%3E%3Crect x='1380' y='250' width='180' height='400'/%3E%3C/g%3E%3C/svg%3E") center / cover no-repeat, repeating-linear-gradient(180deg, rgb(120 200 120 / 0.07) 0 110px, transparent 110px 220px), linear-gradient(180deg, #11231a, #0c1910);
+}
+[data-bg='fjord'],
+[data-bg-sample='fjord'] {
+  --bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 420' preserveAspectRatio='none'%3E%3Cpath fill='rgba(31,74,91,0.14)' d='M0 230 L140 150 L260 210 L420 90 L560 200 L700 120 L860 220 L1010 100 L1160 190 L1300 130 L1460 210 L1600 150 V420 H0Z'/%3E%3Cpath fill='rgba(31,74,91,0.22)' d='M0 300 L180 220 L320 280 L480 200 L640 290 L820 210 L980 300 L1150 230 L1320 300 L1480 240 L1600 280 V420 H0Z'/%3E%3Cpath fill='rgba(31,74,91,0.16)' d='M0 360 Q400 330 800 352 T1600 345 V420 H0Z'/%3E%3C/svg%3E") bottom / 100% 42% no-repeat, radial-gradient(900px 500px at 85% 0%, rgb(239 191 148 / 0.35), transparent 60%), linear-gradient(180deg, #e3eef2, #f3f5f2 70%);
+}
+.dark[data-bg='fjord'],
+.dark [data-bg-sample='fjord'] {
+  --bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 420' preserveAspectRatio='none'%3E%3Cpath fill='rgba(150,200,215,0.08)' d='M0 230 L140 150 L260 210 L420 90 L560 200 L700 120 L860 220 L1010 100 L1160 190 L1300 130 L1460 210 L1600 150 V420 H0Z'/%3E%3Cpath fill='rgba(150,200,215,0.13)' d='M0 300 L180 220 L320 280 L480 200 L640 290 L820 210 L980 300 L1150 230 L1320 300 L1480 240 L1600 280 V420 H0Z'/%3E%3Cpath fill='rgba(150,200,215,0.10)' d='M0 360 Q400 330 800 352 T1600 345 V420 H0Z'/%3E%3C/svg%3E") bottom / 100% 42% no-repeat, radial-gradient(900px 500px at 85% 0%, rgb(239 191 148 / 0.06), transparent 60%), linear-gradient(180deg, #0c1a21, #0e1517 70%);
+}
+[data-bg='forest'],
+[data-bg-sample='forest'] {
+  --bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 420' preserveAspectRatio='none'%3E%3Cpath fill='rgba(36,76,59,0.13)' d='M-20 330 L24 120 L68 330Z M34 330 L86 83 L138 330Z M86 330 L135 96 L184 330Z M148 330 L185 151 L223 330Z M214 330 L252 153 L289 330Z M279 330 L316 149 L354 330Z M331 330 L377 109 L424 330Z M409 330 L448 143 L487 330Z M465 330 L517 85 L568 330Z M548 330 L598 91 L648 330Z M611 330 L670 45 L730 330Z M661 330 L718 59 L775 330Z M720 330 L760 141 L800 330Z M773 330 L817 122 L861 330Z M851 330 L892 137 L932 330Z M920 330 L972 84 L1024 330Z M982 330 L1032 95 L1081 330Z M1034 330 L1071 151 L1109 330Z M1090 330 L1142 79 L1195 330Z M1154 330 L1198 121 L1241 330Z M1223 330 L1270 105 L1318 330Z M1283 330 L1338 66 L1394 330Z M1356 330 L1398 129 L1440 330Z M1425 330 L1474 97 L1523 330Z M1505 330 L1559 74 L1613 330Z M1564 330 L1624 45 L1684 330Z M1617 330 L1663 109 L1710 330Z M0 330 H1600 V420 H0Z'/%3E%3Cpath fill='rgba(36,76,59,0.20)' d='M-20 400 L13 243 L46 400Z M32 400 L63 254 L93 400Z M89 400 L134 185 L179 400Z M143 400 L190 174 L238 400Z M190 400 L234 191 L278 400Z M245 400 L287 202 L328 400Z M296 400 L343 178 L389 400Z M361 400 L400 212 L439 400Z M417 400 L448 252 L480 400Z M475 400 L518 196 L561 400Z M541 400 L587 179 L634 400Z M587 400 L625 221 L663 400Z M644 400 L675 255 L705 400Z M695 400 L729 242 L762 400Z M737 400 L768 252 L799 400Z M797 400 L829 245 L862 400Z M842 400 L880 220 L917 400Z M904 400 L936 250 L968 400Z M955 400 L996 205 L1037 400Z M1018 400 L1064 180 L1111 400Z M1080 400 L1116 231 L1151 400Z M1130 400 L1167 223 L1204 400Z M1193 400 L1242 167 L1291 400Z M1236 400 L1269 241 L1303 400Z M1281 400 L1315 235 L1350 400Z M1332 400 L1374 202 L1416 400Z M1378 400 L1408 257 L1438 400Z M1428 400 L1466 222 L1503 400Z M1482 400 L1531 167 L1580 400Z M1540 400 L1580 209 L1620 400Z M1595 400 L1639 193 L1682 400Z M0 400 H1600 V420 H0Z'/%3E%3C/svg%3E") bottom / 100% 40% no-repeat, radial-gradient(1000px 600px at 0% 0%, rgb(220 232 220 / 0.9), transparent 60%), linear-gradient(180deg, #eef3ec, #e6eee4);
+}
+.dark[data-bg='forest'],
+.dark [data-bg-sample='forest'] {
+  --bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 420' preserveAspectRatio='none'%3E%3Cpath fill='rgba(160,210,180,0.08)' d='M-20 330 L24 120 L68 330Z M34 330 L86 83 L138 330Z M86 330 L135 96 L184 330Z M148 330 L185 151 L223 330Z M214 330 L252 153 L289 330Z M279 330 L316 149 L354 330Z M331 330 L377 109 L424 330Z M409 330 L448 143 L487 330Z M465 330 L517 85 L568 330Z M548 330 L598 91 L648 330Z M611 330 L670 45 L730 330Z M661 330 L718 59 L775 330Z M720 330 L760 141 L800 330Z M773 330 L817 122 L861 330Z M851 330 L892 137 L932 330Z M920 330 L972 84 L1024 330Z M982 330 L1032 95 L1081 330Z M1034 330 L1071 151 L1109 330Z M1090 330 L1142 79 L1195 330Z M1154 330 L1198 121 L1241 330Z M1223 330 L1270 105 L1318 330Z M1283 330 L1338 66 L1394 330Z M1356 330 L1398 129 L1440 330Z M1425 330 L1474 97 L1523 330Z M1505 330 L1559 74 L1613 330Z M1564 330 L1624 45 L1684 330Z M1617 330 L1663 109 L1710 330Z M0 330 H1600 V420 H0Z'/%3E%3Cpath fill='rgba(160,210,180,0.12)' d='M-20 400 L13 243 L46 400Z M32 400 L63 254 L93 400Z M89 400 L134 185 L179 400Z M143 400 L190 174 L238 400Z M190 400 L234 191 L278 400Z M245 400 L287 202 L328 400Z M296 400 L343 178 L389 400Z M361 400 L400 212 L439 400Z M417 400 L448 252 L480 400Z M475 400 L518 196 L561 400Z M541 400 L587 179 L634 400Z M587 400 L625 221 L663 400Z M644 400 L675 255 L705 400Z M695 400 L729 242 L762 400Z M737 400 L768 252 L799 400Z M797 400 L829 245 L862 400Z M842 400 L880 220 L917 400Z M904 400 L936 250 L968 400Z M955 400 L996 205 L1037 400Z M1018 400 L1064 180 L1111 400Z M1080 400 L1116 231 L1151 400Z M1130 400 L1167 223 L1204 400Z M1193 400 L1242 167 L1291 400Z M1236 400 L1269 241 L1303 400Z M1281 400 L1315 235 L1350 400Z M1332 400 L1374 202 L1416 400Z M1378 400 L1408 257 L1438 400Z M1428 400 L1466 222 L1503 400Z M1482 400 L1531 167 L1580 400Z M1540 400 L1580 209 L1620 400Z M1595 400 L1639 193 L1682 400Z M0 400 H1600 V420 H0Z'/%3E%3C/svg%3E") bottom / 100% 40% no-repeat, radial-gradient(1000px 600px at 0% 0%, rgb(60 110 85 / 0.18), transparent 60%), linear-gradient(180deg, #0d1712, #0a120e);
+}
+[data-bg='snow'],
+[data-bg-sample='snow'] {
+  --bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 300' preserveAspectRatio='none'%3E%3Cpath fill='rgba(255,255,255,0.9)' d='M0 200 Q300 140 620 190 T1200 170 T1600 190 V300 H0Z'/%3E%3C/svg%3E") bottom / 100% 24% no-repeat, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Ccircle cx='60' cy='151' r='3.2' fill='rgba(110,150,180,0.32)'/%3E%3Ccircle cx='33' cy='94' r='3.2' fill='rgba(110,150,180,0.32)'/%3E%3Ccircle cx='121' cy='160' r='3.2' fill='rgba(110,150,180,0.32)'/%3E%3Ccircle cx='16' cy='155' r='1.2' fill='rgba(110,150,180,0.32)'/%3E%3Ccircle cx='120' cy='66' r='3.2' fill='rgba(110,150,180,0.32)'/%3E%3Ccircle cx='59' cy='49' r='2.6' fill='rgba(110,150,180,0.32)'/%3E%3Ccircle cx='138' cy='140' r='2.6' fill='rgba(110,150,180,0.32)'/%3E%3Ccircle cx='101' cy='163' r='1.6' fill='rgba(110,150,180,0.32)'/%3E%3Ccircle cx='59' cy='162' r='1.6' fill='rgba(110,150,180,0.32)'/%3E%3Ccircle cx='133' cy='99' r='1.2' fill='rgba(110,150,180,0.32)'/%3E%3Ccircle cx='171' cy='198' r='1.2' fill='rgba(110,150,180,0.32)'/%3E%3Ccircle cx='40' cy='194' r='3.2' fill='rgba(110,150,180,0.32)'/%3E%3Ccircle cx='10' cy='77' r='1.2' fill='rgba(110,150,180,0.32)'/%3E%3Ccircle cx='68' cy='121' r='3.2' fill='rgba(110,150,180,0.32)'/%3E%3Ccircle cx='184' cy='99' r='2.6' fill='rgba(110,150,180,0.32)'/%3E%3Ccircle cx='101' cy='186' r='3.2' fill='rgba(110,150,180,0.32)'/%3E%3Ccircle cx='113' cy='34' r='2' fill='rgba(110,150,180,0.32)'/%3E%3Ccircle cx='24' cy='9' r='1.6' fill='rgba(110,150,180,0.32)'/%3E%3Ccircle cx='126' cy='55' r='2' fill='rgba(110,150,180,0.32)'/%3E%3Ccircle cx='172' cy='111' r='2' fill='rgba(110,150,180,0.32)'/%3E%3Ccircle cx='107' cy='129' r='2.6' fill='rgba(110,150,180,0.32)'/%3E%3Ccircle cx='146' cy='89' r='3.2' fill='rgba(110,150,180,0.32)'/%3E%3C/svg%3E"), linear-gradient(180deg, #e7eff5, #f6f9fb);
+}
+.dark[data-bg='snow'],
+.dark [data-bg-sample='snow'] {
+  --bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 300' preserveAspectRatio='none'%3E%3Cpath fill='rgba(200,220,235,0.10)' d='M0 200 Q300 140 620 190 T1200 170 T1600 190 V300 H0Z'/%3E%3C/svg%3E") bottom / 100% 24% no-repeat, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Ccircle cx='60' cy='151' r='3.2' fill='rgba(220,235,245,0.28)'/%3E%3Ccircle cx='33' cy='94' r='3.2' fill='rgba(220,235,245,0.28)'/%3E%3Ccircle cx='121' cy='160' r='3.2' fill='rgba(220,235,245,0.28)'/%3E%3Ccircle cx='16' cy='155' r='1.2' fill='rgba(220,235,245,0.28)'/%3E%3Ccircle cx='120' cy='66' r='3.2' fill='rgba(220,235,245,0.28)'/%3E%3Ccircle cx='59' cy='49' r='2.6' fill='rgba(220,235,245,0.28)'/%3E%3Ccircle cx='138' cy='140' r='2.6' fill='rgba(220,235,245,0.28)'/%3E%3Ccircle cx='101' cy='163' r='1.6' fill='rgba(220,235,245,0.28)'/%3E%3Ccircle cx='59' cy='162' r='1.6' fill='rgba(220,235,245,0.28)'/%3E%3Ccircle cx='133' cy='99' r='1.2' fill='rgba(220,235,245,0.28)'/%3E%3Ccircle cx='171' cy='198' r='1.2' fill='rgba(220,235,245,0.28)'/%3E%3Ccircle cx='40' cy='194' r='3.2' fill='rgba(220,235,245,0.28)'/%3E%3Ccircle cx='10' cy='77' r='1.2' fill='rgba(220,235,245,0.28)'/%3E%3Ccircle cx='68' cy='121' r='3.2' fill='rgba(220,235,245,0.28)'/%3E%3Ccircle cx='184' cy='99' r='2.6' fill='rgba(220,235,245,0.28)'/%3E%3Ccircle cx='101' cy='186' r='3.2' fill='rgba(220,235,245,0.28)'/%3E%3Ccircle cx='113' cy='34' r='2' fill='rgba(220,235,245,0.28)'/%3E%3Ccircle cx='24' cy='9' r='1.6' fill='rgba(220,235,245,0.28)'/%3E%3Ccircle cx='126' cy='55' r='2' fill='rgba(220,235,245,0.28)'/%3E%3Ccircle cx='172' cy='111' r='2' fill='rgba(220,235,245,0.28)'/%3E%3Ccircle cx='107' cy='129' r='2.6' fill='rgba(220,235,245,0.28)'/%3E%3Ccircle cx='146' cy='89' r='3.2' fill='rgba(220,235,245,0.28)'/%3E%3C/svg%3E"), linear-gradient(180deg, #0c1520, #101820);
+}
+[data-bg='paper'],
+[data-bg-sample='paper'] {
+  --bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35  0 0 0 0 0.27  0 0 0 0 0.18  0 0 0 0.10 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(#n)'/%3E%3C/svg%3E"), radial-gradient(1200px 700px at 50% 30%, transparent 40%, rgb(120 90 50 / 0.08)), linear-gradient(180deg, #f6f0e4, #f1e9da);
+}
+.dark[data-bg='paper'],
+.dark [data-bg-sample='paper'] {
+  --bg-art: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35  0 0 0 0 0.27  0 0 0 0 0.18  0 0 0 0.12 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(#n)'/%3E%3C/svg%3E"), radial-gradient(1200px 700px at 50% 30%, transparent 40%, rgb(0 0 0 / 0.25)), linear-gradient(180deg, #1c1915, #171410);
+}
+[data-bg='photo'],
+[data-bg-sample='photo'] {
+  --bg-art: linear-gradient(color-mix(in oklab, var(--bg) var(--bg-dim, 65%), transparent), color-mix(in oklab, var(--bg) var(--bg-dim, 65%), transparent)), var(--bg-photo, none) center / cover no-repeat, var(--bg);
+}
+
 /* Pitkä painallus ei avaa iOS:n tekstivalikkoa. */
 .no-callout {
   -webkit-touch-callout: none;

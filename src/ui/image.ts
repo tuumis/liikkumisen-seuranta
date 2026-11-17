@@ -53,6 +53,27 @@ export async function resizePhoto(file: Blob, size = PHOTO_SIZE): Promise<string
   return canvas.toDataURL('image/jpeg', 0.82);
 }
 
+/** Taustakuva (17.11.2026): kuvasuhde säilyy, pisin sivu enintään `size`, JPEG (vain tälle laitteelle). */
+export async function resizeBackground(file: Blob, size = 1600): Promise<string> {
+  if (file.type && !file.type.startsWith('image/')) throw new Error('Valitse kuvatiedosto');
+  const img = await decode(file);
+  if (!img.width || !img.height) throw new Error('Kuvaa ei voitu lukea');
+  const scale = Math.min(1, size / Math.max(img.width, img.height));
+  const w = Math.max(1, Math.round(img.width * scale));
+  const h = Math.max(1, Math.round(img.height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Kuvan käsittely ei onnistu tällä selaimella');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, w, h);
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, w, h);
+  if ('close' in img && typeof img.close === 'function') img.close();
+  return canvas.toDataURL('image/jpeg', 0.8);
+}
+
 /**
  * Logo kokonaisena (joukkuekirjasto): ei rajausta, kuvasuhde säilyy ja pisin sivu on enintään
  * `size`. PNG säilyttää läpinäkyvän taustan; liian suuri PNG tallennetaan JPEG:nä valkoisella taustalla.

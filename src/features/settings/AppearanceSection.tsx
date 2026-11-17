@@ -1,7 +1,10 @@
 import { Button, Card } from '../../ui/components';
 import { Segmented } from '../../ui/controls';
 import { playSound, soundsSupported, useSoundsEnabled } from '../../ui/sound';
-import { ACCENT_THEMES, useAccent, useThemeChoice, useViewMode, type ThemeChoice, type ViewMode } from '../../ui/theme';
+import { ACCENT_THEMES, BACKGROUNDS, useAccent, useBackground, useThemeChoice, useViewMode, type BackgroundId, type ThemeChoice, type ViewMode } from '../../ui/theme';
+import { useRef, useState } from 'react';
+import { resizeBackground } from '../../ui/image';
+import { useToast } from '../../ui/Toast';
 import { Switch } from './DesktopSection';
 
 const VIEW_MODES: { id: ViewMode; label: string; text: string }[] = [
@@ -93,6 +96,8 @@ export function AppearanceSection() {
         <p className="mt-3 text-xs text-slate-500">Väriteema vaihtaa korostevärit, navigaation ja kaavioiden pääsävyn. Kaaviovärit on tarkistettu erottuviksi myös värisokeille.</p>
       </Card>
 
+      <BackgroundCard />
+
       {soundsSupported() && (
         <Card title="Äänet">
           <Switch
@@ -117,5 +122,100 @@ export function AppearanceSection() {
         </Card>
       )}
     </div>
+  );
+}
+
+const CHECK = (
+  <span className="anim-pop absolute top-1.5 right-1.5 flex size-6 items-center justify-center rounded-full bg-green-700 text-white shadow" aria-hidden>
+    <svg viewBox="0 0 24 24" className="size-3.5" fill="none" stroke="currentColor" strokeWidth={2.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="m5 12.5 4.2 4.2L19 7" />
+    </svg>
+  </span>
+);
+
+/** Sovelluksen tausta (17.11.2026): piirretyt taustat (vaalea ja tumma) ja oma kuva himmennettynä, vain tällä laitteella. */
+function BackgroundCard() {
+  const toast = useToast();
+  const b = useBackground();
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const tile = (on: boolean) =>
+    `press card-interactive relative flex flex-col overflow-hidden rounded-2xl text-left ring-1 ${on ? 'ring-2 ring-green-700 shadow-md' : 'ring-[var(--line)]'}`;
+
+  async function pick(file: File | undefined) {
+    if (!file) return;
+    setBusy(true);
+    try {
+      b.setPhoto(await resizeBackground(file));
+      toast('Taustakuva asetettu', undefined, 'success');
+    } catch (e) {
+      const quota = e instanceof DOMException && /quota/i.test(e.name + e.message);
+      toast(quota ? 'Kuva on liian suuri tämän laitteen muistiin. Kokeile pienempää kuvaa.' : e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+      if (input.current) input.current.value = '';
+    }
+  }
+
+  const choose = (id: BackgroundId) => b.setBackground(id);
+  return (
+    <Card title="Tausta">
+      <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 xl:grid-cols-7" role="radiogroup" aria-label="Tausta">
+        {BACKGROUNDS.map((t) => {
+          const on = b.bg === t.id;
+          return (
+            <button key={t.id} type="button" role="radio" aria-checked={on} onClick={() => choose(t.id)} className={tile(on)}>
+              <span className="bg-sample block h-20 w-full" data-bg-sample={t.id} aria-hidden />
+              <span className="bg-[var(--surface)] px-2.5 py-1.5 text-sm font-semibold text-slate-900">{t.label}</span>
+              {on && CHECK}
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          role="radio"
+          aria-checked={b.bg === 'photo'}
+          onClick={() => (b.photo ? choose('photo') : input.current?.click())}
+          className={tile(b.bg === 'photo')}
+          disabled={busy}
+        >
+          {b.photo ? (
+            <span className="bg-sample block h-20 w-full" data-bg-sample="photo" aria-hidden />
+          ) : (
+            <span className="flex h-20 w-full items-center justify-center bg-[var(--surface-sunk)] text-2xl text-slate-400" aria-hidden>
+              +
+            </span>
+          )}
+          <span className="bg-[var(--surface)] px-2.5 py-1.5 text-sm font-semibold text-slate-900">{busy ? 'Ladataan…' : 'Oma kuva'}</span>
+          {b.bg === 'photo' && CHECK}
+        </button>
+      </div>
+      <input ref={input} type="file" accept="image/*" className="hidden" onChange={(e) => void pick(e.target.files?.[0])} aria-label="Taustakuva: valitse tiedosto" />
+
+      {b.photo && (
+        <div className="mt-4 space-y-3 rounded-2xl bg-[var(--surface-sunk)] p-3">
+          {b.bg === 'photo' && (
+            <label className="block">
+              <span className="flex items-center justify-between text-sm font-medium text-slate-700">
+                Himmennys <span className="tabular-nums text-slate-500">{b.dim} %</span>
+              </span>
+              <input type="range" min={30} max={90} step={5} value={b.dim} onChange={(e) => b.setDim(Number(e.target.value))} className="mt-1 w-full accent-green-700" aria-label="Taustakuvan himmennys" />
+              <span className="block text-xs text-slate-500">Mitä suurempi himmennys, sitä paremmin teksti ja kaaviot erottuvat kuvan päältä.</span>
+            </label>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={() => input.current?.click()} disabled={busy}>
+              Vaihda kuva
+            </Button>
+            <Button variant="secondary" onClick={() => b.setPhoto(undefined)} disabled={busy}>
+              Poista kuva
+            </Button>
+          </div>
+        </div>
+      )}
+      <p className="mt-3 text-xs text-slate-500">
+        Piirretyillä taustoilla on vaalea ja tumma versio. Oma kuva tallentuu vain tälle laitteelle: se ei siirry synkronoinnissa eikä varmuuskopiossa. Valinta koskee vain tätä laitetta.
+      </p>
+    </Card>
   );
 }

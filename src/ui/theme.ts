@@ -169,3 +169,102 @@ export function useViewMode(): [ViewMode, (m: ViewMode) => void] {
     },
   ];
 }
+
+// ---------- tausta (17.11.2026) ----------
+
+/**
+ * Sovelluksen tausta: oletus, piirretyt (vaalea ja tumma versio, index.css) tai oma kuva. Laitekohtainen
+ * (localStorage); oma kuva ei siirry synkronoinnissa eikä varmuuskopiossa. public/theme-init.js asettaa
+ * taustan ennen käynnistystä.
+ */
+export type BackgroundId = 'default' | 'grass' | 'fjord' | 'forest' | 'snow' | 'paper' | 'photo';
+export const BACKGROUNDS: { id: Exclude<BackgroundId, 'photo'>; label: string }[] = [
+  { id: 'default', label: 'Oletus' },
+  { id: 'grass', label: 'Nurmi' },
+  { id: 'fjord', label: 'Vuono' },
+  { id: 'forest', label: 'Metsä' },
+  { id: 'snow', label: 'Lumi' },
+  { id: 'paper', label: 'Paperi' },
+];
+const BG_KEY = 'background';
+const BG_PHOTO_KEY = 'bgPhoto';
+const BG_DIM_KEY = 'bgDim';
+export const DEFAULT_BG_DIM = 65;
+const BG_IDS: readonly BackgroundId[] = ['default', 'grass', 'fjord', 'forest', 'snow', 'paper', 'photo'];
+
+function read(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+export function getBackground(): BackgroundId {
+  const v = read(BG_KEY);
+  if (v === 'photo' && !read(BG_PHOTO_KEY)) return 'default';
+  return BG_IDS.includes(v as BackgroundId) ? (v as BackgroundId) : 'default';
+}
+export const getBackgroundPhoto = (): string | undefined => read(BG_PHOTO_KEY) ?? undefined;
+export function getBackgroundDim(): number {
+  const n = Number(read(BG_DIM_KEY));
+  return Number.isFinite(n) && n >= 20 && n <= 95 ? n : DEFAULT_BG_DIM;
+}
+
+export function applyBackground(): void {
+  const root = document.documentElement;
+  const bg = getBackground();
+  if (bg === 'default') root.removeAttribute('data-bg');
+  else root.setAttribute('data-bg', bg);
+  const photo = getBackgroundPhoto();
+  if (photo) root.style.setProperty('--bg-photo', `url("${photo}")`);
+  else root.style.removeProperty('--bg-photo');
+  root.style.setProperty('--bg-dim', `${getBackgroundDim()}%`);
+}
+
+function write(key: string, value: string | undefined): void {
+  if (value === undefined) localStorage.removeItem(key);
+  else localStorage.setItem(key, value);
+}
+
+/** Taustan tila ja muuttajat; oman kuvan tallennus heittää virheen, jos laitteen tila ei riitä. */
+export function useBackground() {
+  const [state, setState] = useState(() => ({ bg: getBackground(), photo: getBackgroundPhoto(), dim: getBackgroundDim() }));
+  const refresh = () => {
+    applyBackground();
+    setState({ bg: getBackground(), photo: getBackgroundPhoto(), dim: getBackgroundDim() });
+  };
+  return {
+    ...state,
+    setBackground(bg: BackgroundId) {
+      try {
+        write(BG_KEY, bg === 'default' ? undefined : bg);
+      } catch {
+        /* ei tallennusta */
+      }
+      refresh();
+    },
+    setPhoto(dataUrl: string | undefined) {
+      if (dataUrl) {
+        write(BG_PHOTO_KEY, dataUrl); // voi heittää (QuotaExceededError)
+        write(BG_KEY, 'photo');
+      } else {
+        try {
+          write(BG_PHOTO_KEY, undefined);
+          if (read(BG_KEY) === 'photo') write(BG_KEY, undefined);
+        } catch {
+          /* ei tallennusta */
+        }
+      }
+      refresh();
+    },
+    setDim(dim: number) {
+      try {
+        write(BG_DIM_KEY, dim === DEFAULT_BG_DIM ? undefined : String(dim));
+      } catch {
+        /* ei tallennusta */
+      }
+      refresh();
+    },
+  };
+}

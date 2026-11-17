@@ -1161,3 +1161,13 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
       - lajin muokkauksessa tehoprofiilin yläpuolella.
     - Jos lajin tehoprofiilia on muutettu, perustelun perään kerrotaan, että se koskee oletusta (oletusosuudet näkyvät). Omille lajeille ei ole perustelua.
     - Ohjeessa on lisäksi paikallaanolo, ponnistelun vaikutus ja maininta lajikohtaisista perusteluista.
+  - **Sovelluksen tausta** (käyttäjän lista 17.11.2026, vaihe 7; `ui/theme.ts` `useBackground`/`applyBackground`, `public/theme-init.js`, `index.css` "taustat", `features/settings/AppearanceSection.tsx`, `ui/image.ts` `resizeBackground`):
+    - Asetukset → Ulkoasu → **Tausta**. Vaihtoehdot:
+      - **Oletus:** nykyinen hento hehku.
+      - Piirretyt **Nurmi** (leikkuuraidat ja kentän viivat), **Vuono** (vuorisiluetit ja persikkainen hehku), **Metsä** (kuusirivit), **Lumi** (lumihiutaleet ja kinokset) ja **Paperi** (paperin rakeisuus).
+      - **Oma kuva.**
+    - Piirretyt taustat ovat CSS:ää ja SVG-data-URI:ta (ei verkkoa, CSP sallii). Jokaisella on vaalea ja tumma versio, joka seuraa teemaa. Kuviot ovat hillittyjä, jotta kortit ja kaaviot erottuvat.
+    - Tausta piirretään kiinteään kerrokseen `body::before`; se toimii myös iOS:ssä, jossa `background-attachment: fixed` ei toimi. Valinta näkyy esikatselukuvina, joissa on sama kuvio.
+    - **Oma kuva:** valitaan laitteelta, pienennetään (pisin sivu 1600 px, JPEG) ja tallennetaan vain tälle laitteelle (localStorage). Kuva ei siirry synkronoinnissa eikä varmuuskopiossa, eikä sitä lähetetä minnekään.
+    - Kuva himmennetään taustavärillä: **Himmennys** 30–90 %, oletus 65 %, tummassa teemassa tummalla. Kuvan voi vaihtaa tai poistaa. Jos laitteen tila ei riitä, sovellus ilmoittaa siitä.
+    - Valinta on laitekohtainen kuten teema. `theme-init.js` asettaa taustan ennen käynnistystä (ei välähdystä).
