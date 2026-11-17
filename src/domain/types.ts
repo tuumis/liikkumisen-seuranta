@@ -337,6 +337,11 @@ export interface Fixture extends SyncFields {
   cooldownMin?: number;
   /** Kesto annettu käsin (ei lasketa otteluohjelmasta). */
   durationManual?: boolean;
+  /**
+   * Pelin tai turnauksen päättymisaika (17.11.2026). Pelissä ja turnauksessa ilman otteluohjelmaa kesto =
+   * loppu − alku; otteluohjelman turnauksessa kesto on peliaika (tauot pois) ja loppu vain näytetään.
+   */
+  endTime?: HHmm;
   note?: string;
   /** "Tietoja puuttuu" (17.11.2026): esim. kellonaika tai paikka vielä tiedossa vain osittain; näkyy kalenterissa. */
   infoMissing?: boolean;

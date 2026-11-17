@@ -77,3 +77,14 @@ describe('harjoituspelin ennakko (17.11.2026)', () => {
     expect(previewCard({ activityTypeId: 't:football_friendly', date: '2026-11-25', startTime: '23:30', durationMin: 60 }, undefined).end).toBeUndefined();
   });
 });
+
+describe('päättymisaika ennakossa (17.11.2026)', () => {
+  it('pelin ja turnauksen Päättyy-laatikko', () => {
+    const g = previewCard({ activityTypeId: 't:football_game', date: '2026-11-21', startTime: '14:00' }, fx({ endTime: '15:30' }));
+    expect(availableBoxes(g)).toEqual(['arrival', 'kickoff', 'end']);
+    expect(previewTimeBoxes(g)).toEqual([['Paikalla', '13:30'], ['Peli alkaa', '14:00'], ['Päättyy', '15:30']]);
+    const t = previewCard({ activityTypeId: 't:football_tournament', date: '2026-11-21', startTime: '13:30' }, fx({ endTime: '17:00', games: [{ time: '14:00' }, { time: '15:30' }] }));
+    expect(t.end).toBe('17:00');
+    expect(previewTimeBoxes(t, new Set(['arrival']))).toEqual([['1. peli', '14:00'], ['Päättyy', '17:00'], ['Pelit', '2']]);
+  });
+});

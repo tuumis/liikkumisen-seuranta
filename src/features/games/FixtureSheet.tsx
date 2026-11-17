@@ -79,7 +79,8 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
     setTime(plan?.startTime ?? '');
     setDuration(String(plan?.durationMin ?? DEFAULT_DURATION[k]));
     const start = plan?.startTime ? toMin(plan.startTime) : undefined;
-    setEndTime(start !== undefined && plan ? fromMin(start + plan.durationMin) : '');
+    // Harjoituspelin loppu johdetaan; pelin ja turnauksen loppu on tallennettu erikseen (17.11.2026).
+    setEndTime(k !== 'friendly' ? (f?.endTime ?? '') : start !== undefined && plan ? fromMin(start + plan.durationMin) : '');
     setOpponents(k === 'friendly' && f?.games?.length ? f.games.map((g) => g.opponent ?? '') : ['']);
     setTeamId(f?.teamId ?? '');
     setOpponent(f?.opponent ?? '');
@@ -135,14 +136,19 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
   const kickoff = kind === 'game' ? (/^\d{2}:\d{2}$/.test(time) ? (time as HHmm) : undefined) : firstMin !== undefined ? (hhmm(firstMin) as HHmm) : undefined;
   const gameDay = kickoff ? gameDaySchedule(kickoff, timing.warmupMin) : undefined;
 
-  // Harjoituspeli: kesto alusta ja lopusta (yli puolenyön ei sallita).
+  // Kesto alusta ja lopusta (yli puolenyön ei sallita). Otteluohjelman turnauksessa kesto on peliaika
+  // (pelit × (lämmittely + peli) + loppuverryttely, tauot pois) ja loppu vain näytetään (17.11.2026).
   const startMin = toMin(time);
   const endMin = toMin(endTime);
-  const friendlyDuration = kind === 'friendly' && startMin !== undefined && endMin !== undefined ? endMin - startMin : undefined;
+  const spanStart = autoOn ? (autoStart ? toMin(autoStart) : undefined) : startMin;
+  const span = spanStart !== undefined && endMin !== undefined ? endMin - spanStart : undefined;
+  const spanDuration = autoOn ? undefined : span;
+  const friendlyDuration = kind === 'friendly' ? spanDuration : undefined;
 
   async function save() {
-    if (friendlyDuration !== undefined && friendlyDuration <= 0) return setError('Loppu on ennen alkua');
-    const dur = autoOn ? autoDuration : (friendlyDuration ?? Number(duration));
+    if (span !== undefined && span <= 0) return setError(kind === 'friendly' ? 'Loppu on ennen alkua' : 'Päättymisaika on ennen alkua');
+    if (endMin !== undefined && spanStart === undefined) return setError(kind === 'tournament' && !autoOn ? 'Anna myös alkamisaika (Kello), niin kesto lasketaan' : 'Anna myös alkamisaika, niin kesto lasketaan');
+    const dur = autoOn ? autoDuration : (spanDuration ?? Number(duration));
     if (!isISODate(date)) return setError('Valitse päivä');
     if (!Number.isInteger(dur) || dur < 1 || dur > 1440) return setError('Tarkista kesto (min)');
     const rows = schedule.filter((g) => g.time || g.opponent.trim() || g.location.trim());
@@ -157,6 +163,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
       warmupMin: timing.warmupMin,
       cooldownMin: timing.cooldownMin,
       durationManual: kind === 'tournament' && !auto ? true : undefined,
+      endTime: kind !== 'friendly' && endMin !== undefined ? (endTime as HHmm) : undefined,
       teamId: teamId || undefined,
       opponent: kind === 'game' ? opponent : undefined,
       eventName: kind === 'tournament' ? eventName : undefined,
@@ -264,15 +271,26 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
               <TimeField label="Kello" value={time} onChange={setTime} />
             )}
           </Field>
-          <Field label="Kesto (min)">
-            {autoOn ? (
-              <div className="field-shell flex min-h-11 items-center justify-center text-base tabular-nums text-slate-700" title="Laskettu otteluohjelmasta">
-                {autoDuration}
-              </div>
-            ) : (
-              <input className={inputClass} inputMode="numeric" value={duration} onChange={(e) => setDuration(e.target.value)} />
-            )}
+          <Field label="Päättyy">
+            <TimeField label="Päättyy" value={endTime} onChange={setEndTime} />
           </Field>
+          <div className="col-span-2">
+            {autoOn ? (
+              <p className={`text-sm tabular-nums ${span !== undefined && span <= 0 ? 'text-red-700' : 'text-slate-600'}`}>
+                {span !== undefined && span <= 0
+                  ? 'Päättymisaika on ennen saapumista'
+                  : `Kesto ${autoDuration} min: ${gamesN} ${gamesN === 1 ? 'peli' : 'peliä'} × (lämmittely ${timing.warmupMin} + peli ${timing.gameLengthMin} min)${timing.cooldownMin ? ` + loppuverryttely ${timing.cooldownMin}` : ''}. Pelien väliset tauot eivät ole liikuntaa.`}
+              </p>
+            ) : spanDuration !== undefined ? (
+              <p className={`text-sm tabular-nums ${spanDuration > 0 ? 'text-slate-600' : 'text-red-700'}`}>
+                {spanDuration > 0 ? `Kesto ${spanDuration} min (alusta loppuun)` : 'Päättymisaika on ennen alkua'}
+              </p>
+            ) : (
+              <Field label="Kesto (min)" hint="Tai anna päättymisaika, niin kesto lasketaan.">
+                <input className={inputClass} inputMode="numeric" value={duration} onChange={(e) => setDuration(e.target.value)} />
+              </Field>
+            )}
+          </div>
             </>
           )}
         </div>

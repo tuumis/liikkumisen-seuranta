@@ -150,6 +150,8 @@ export interface FixtureInput {
   cooldownMin?: number;
   /** Kesto annettu käsin (ei lasketa otteluohjelmasta). */
   durationManual?: boolean;
+  /** Pelin tai turnauksen päättymisaika (harjoituspelin loppu on alku + kesto). */
+  endTime?: HHmm;
   note?: string;
   /** "Tietoja puuttuu" ja valinnainen kuvaus. */
   infoMissing?: boolean;
@@ -1582,6 +1584,7 @@ export function createRepositories(db: AppDB = defaultDb) {
       if (n(input.cooldownMin) !== undefined) f.cooldownMin = input.cooldownMin;
       if (input.durationManual) f.durationManual = true;
     }
+    if (input.kind !== 'friendly' && input.endTime && /^\d{2}:\d{2}$/.test(input.endTime)) f.endTime = input.endTime;
     if (clean(input.note)) f.note = clean(input.note);
     if (input.infoMissing) {
       f.infoMissing = true;

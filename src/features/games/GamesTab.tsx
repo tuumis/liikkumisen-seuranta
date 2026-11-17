@@ -300,11 +300,11 @@ function FixtureSummary({ e, team, history }: { e: FixtureEntry; team?: Team; hi
         {e.plan.startTime &&
           (tournament
             ? f?.games?.some((g) => g.time) && !f.durationManual
-              ? ` · paikalla ${e.plan.startTime}`
-              : ` klo ${e.plan.startTime}`
+              ? ` · paikalla ${e.plan.startTime}${f.endTime ? ` · päättyy ${f.endTime}` : ''}`
+              : ` klo ${e.plan.startTime}${f?.endTime ? `–${f.endTime}` : ''}`
             : friendly
               ? ` klo ${e.plan.startTime}–${endText}`
-              : ` klo ${e.plan.startTime} (paikalla ${gameDaySchedule(e.plan.startTime, f?.warmupMin).arrival})`)}{' '}
+              : ` klo ${e.plan.startTime}${f?.endTime ? `–${f.endTime}` : ''} (paikalla ${gameDaySchedule(e.plan.startTime, f?.warmupMin).arrival})`)}{' '}
         · {e.plan.durationMin} min
         {tournament && team && ` · ${team.name}`}
         {tournament && f?.gamesCount && ` · ${f.gamesCount} peliä`}
