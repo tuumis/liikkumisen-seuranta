@@ -1224,3 +1224,4 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
     - Aiemmin se laskettiin Omaehtoiseen. Silloin korvausperiaate pyyhki treenipäivinä päivän "Leikki ja oma liikkuminen" -arvion, ja viikon omaehtoinen liikunta näytti liian pientä.
     - Erillinen "Jalkapallo – omatoiminen" -kerta (ei linkitetty treeniin) pysyy Omaehtoisena ja korvaa päivän arvion tavalliseen tapaan.
     - Laji, tehot ja jalkapallon omatoimisen harjoittelun yhteenveto eivät muutu. Muutos koskee vain kategoriaa, eli päiväkoostetta, viikon tunteja ja kontekstijakoa.
+    - Päivän Arkiliikunta-ikkuna käyttää samaa kategoriaa: treenipäivän verryttely ei näytä Leikki ja oma liikkuminen -arviota "kirjattuna" (korjattu käyttäjän kuvakaappauksesta 17.11.2026).

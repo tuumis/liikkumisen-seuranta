@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { estimateBaseMin, holidayOn, weekendLike } from '../../domain/holidays';
 import { isEstimateConfirmation } from '../../domain/hours';
-import { isDaycareLabel } from '../../domain/aggregate';
+import { isDaycareLabel, sessionCategory } from '../../domain/aggregate';
 import { activityTypeId } from '../../domain/ids';
 import type { ActivityType, Category, Estimate, ISODate, Profile, Session } from '../../domain/types';
 import { repo } from '../../db/repositories';
@@ -63,7 +63,9 @@ export function EstimateDaySheet({ date, profile, onClose }: { date: ISODate | n
   const [values, setValues] = useState<Record<string, string>>({});
   const holiday = data?.holiday;
   const minutesOf = (e: Estimate) => (date ? estimateBaseMin(e, date, !!holiday) : e.weekdayMin);
-  const catOf = (s: Session): Category => data?.types.find((t) => t.id === s.activityTypeId)?.category ?? 'other';
+  // Treenin verryttely (linkedTo) kuuluu Harrastukseen, ei korvaa omaehtoisen arviota (17.11.2026).
+  const typeMap = new Map((data?.types ?? []).map((t) => [t.id, t]));
+  const catOf = (s: Session): Category => sessionCategory(s, typeMap);
   const rows = (data?.estimates ?? []).map((e) => {
     const same = (data?.sessions ?? []).filter((s) => catOf(s) === e.category);
     return { e, est: minutesOf(e), conf: same.find(isEstimateConfirmation), manual: same.filter((s) => !isEstimateConfirmation(s)) };
