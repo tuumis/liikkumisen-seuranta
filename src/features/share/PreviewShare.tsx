@@ -26,7 +26,8 @@ function readHidden(): Set<PreviewBox> {
   }
 }
 import { originOf } from './ResultShare';
-import { findOwnTeam, MissingTeamInfo, ShareImageSheet, type RenderOptions } from './ShareSheet';
+import { findOwnTeam, MissingTeamInfo, ShareImageSheet, TeamDetailChips, useTeamDetailPrefs, type RenderOptions } from './ShareSheet';
+import { applyTeamDetails } from '../../domain/shareNames';
 
 const EVENT = 'preview-share-open';
 let pending: UUID | null = null;
@@ -109,19 +110,22 @@ export function PreviewShareSheet({ planId, onClose }: { planId: UUID | null; on
     return c;
   }, [stored, comment]);
   const boxes = card ? availableBoxes(card) : [];
+  // Ryhmä ja ikäluokka kuvassa (17.11.2026): logot ja seuran tiedot haetaan alkuperäisillä nimillä.
+  const [details, setDetails] = useTeamDetailPrefs();
+  const drawn = useMemo(() => (card ? applyTeamDetails(card, details) : card), [card, details]);
   const logos = useClubLogos();
   const teamLogo = card ? (logoFor(logos, card.team) ?? data?.teamPhoto) : undefined;
   const clubs = useClubs();
   const names = card ? [card.team, ...card.games.map((g) => g.opponent)] : [];
   const renderKey = useMemo(
-    () => JSON.stringify([card, [...hidden].sort(), (teamLogo ?? '').length, names.map((n) => (logoFor(logos, n) ?? '').length), names.map((n) => originOf(clubs, n))]),
+    () => JSON.stringify([drawn, [...hidden].sort(), (teamLogo ?? '').length, names.map((n) => (logoFor(logos, n) ?? '').length), names.map((n) => originOf(clubs, n))]),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [card, logos, clubs, teamLogo, hidden],
+    [drawn, logos, clubs, teamLogo, hidden],
   );
-  const render = card
+  const render = card && drawn
     ? async (o: RenderOptions) => {
         const [team, ...opponents] = await Promise.all(names.map((n, i) => loadImage(i === 0 ? teamLogo : logoFor(logos, n))));
-        return drawPreviewCard(card, {
+        return drawPreviewCard(drawn, {
           ...o,
           hidden,
           logos: { team, opponents },
@@ -159,6 +163,7 @@ export function PreviewShareSheet({ planId, onClose }: { planId: UUID | null; on
           </div>
         </div>
       )}
+      {card && <TeamDetailChips team={card.team} opponents={card.games.map((g) => g.opponent)} prefs={details} onChange={setDetails} />}
       {card && (
         <label className="block">
           <span className="mb-1.5 block text-sm font-medium text-slate-700">Kommentti pelin alle (valinnainen)</span>

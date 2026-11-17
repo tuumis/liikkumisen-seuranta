@@ -9,7 +9,8 @@ import { repo } from '../../db/repositories';
 import { db } from '../../db/schema';
 import { OriginFields } from '../../ui/Flag';
 import { Button } from '../../ui/components';
-import { Segmented } from '../../ui/controls';
+import { Segmented, ToggleChip } from '../../ui/controls';
+import { hasTeamDetails, SHOW_ALL_DETAILS, type TeamDetailPrefs } from '../../domain/shareNames';
 import { Sheet } from '../../ui/Sheet';
 import { clubFor, clubNameOf, useClubs } from '../../ui/TeamLogo';
 import { useToast } from '../../ui/Toast';
@@ -342,6 +343,57 @@ export function MissingTeamInfo({ teamName, teamLogo, opponentsMissing }: { team
           {n}
         </p>
       ))}
+    </div>
+  );
+}
+
+// ---------- ryhmä ja ikäluokka kuvassa (17.11.2026) ----------
+
+const DETAILS_KEY = 'shareTeamDetails';
+function readDetailPrefs(): TeamDetailPrefs {
+  try {
+    const v = JSON.parse(localStorage.getItem(DETAILS_KEY) ?? 'null') as Partial<TeamDetailPrefs> | null;
+    return { team: v?.team !== false, opponents: v?.opponents !== false };
+  } catch {
+    return SHOW_ALL_DETAILS;
+  }
+}
+
+/** Valinta muistetaan laitteelle, ja se on yhteinen ennakko- ja tuloskuville. Oletus: kaikki näkyvissä. */
+export function useTeamDetailPrefs(): [TeamDetailPrefs, (next: TeamDetailPrefs) => void] {
+  const [prefs, setPrefs] = useState<TeamDetailPrefs>(readDetailPrefs);
+  const update = (next: TeamDetailPrefs) => {
+    setPrefs(next);
+    try {
+      localStorage.setItem(DETAILS_KEY, JSON.stringify(next));
+    } catch {
+      /* ei muistia */
+    }
+  };
+  return [prefs, update];
+}
+
+/** Oma valinta omalle joukkueelle ja vastustajille; näytetään vain, kun nimissä on ryhmä tai ikäluokka. */
+export function TeamDetailChips({ team, opponents, prefs, onChange }: { team?: string; opponents: (string | undefined)[]; prefs: TeamDetailPrefs; onChange: (next: TeamDetailPrefs) => void }) {
+  const ownHas = hasTeamDetails(team);
+  const oppHas = opponents.some(hasTeamDetails);
+  if (!ownHas && !oppHas) return null;
+  return (
+    <div>
+      <div className="mb-1.5 text-sm font-medium text-slate-700">Ryhmä ja ikäluokka kuvassa</div>
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Ryhmä ja ikäluokka kuvassa">
+        {ownHas && (
+          <ToggleChip on={prefs.team} onChange={(on) => onChange({ ...prefs, team: on })}>
+            Oma joukkue
+          </ToggleChip>
+        )}
+        {oppHas && (
+          <ToggleChip on={prefs.opponents} onChange={(on) => onChange({ ...prefs, opponents: on })}>
+            {opponents.filter(Boolean).length > 1 ? 'Vastustajat' : 'Vastustaja'}
+          </ToggleChip>
+        )}
+      </div>
+      <p className="mt-1 text-xs text-slate-500">Pois valittuna kuvassa näkyy pelkkä seura. Tallennettu nimi ei muutu.</p>
     </div>
   );
 }

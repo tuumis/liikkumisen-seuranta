@@ -1296,3 +1296,8 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
     - Kuittauksessa (myös turnauspäivän pikakirjauksessa) linkki siirtyy kalenterista kirjaukseen. Lisätiedoissa sen voi vaihtaa tai tyhjentää.
     - Linkki näkyy "Tiedot ↗" -painikkeena tai kuvakkeena kalenterin tulevissa ja tulosta odottavissa peleissä, turnauspäivän kortissa sekä Tulokset-listassa (yksittäinen peli, turnauksen ja harjoituspelin otsikko). Se avautuu selaimen uuteen välilehteen (`noopener noreferrer`).
     - Sovellus ei hae linkistä mitään eikä ota yhteyttä verkkoon (SPEC 11). Sivu avautuu vain käyttäjän napautuksesta. Linkki synkronoituu ja kuuluu varmuuskopioon kuten muutkin pelin tiedot.
+  - **Ryhmä ja ikäluokka jakokuvissa** (käyttäjän toive 17.11.2026; `domain/shareNames.ts`, `features/share/ShareSheet.tsx` `TeamDetailChips`, `PreviewShare.tsx`, `ResultShare.tsx`):
+    - Otteluennakon ja tuloskuvan paneelissa on valinta "Ryhmä ja ikäluokka kuvassa", erikseen **Oma joukkue** ja **Vastustaja(t)**. Pois valittuna kuvassa näkyy pelkkä seura, esim. "HJK · Musta · 2016" → "HJK".
+    - Valinta näkyy vain, kun nimessä on ryhmä tai ikäluokka. Oletuksena kaikki näkyy, kuten ennen.
+    - Valinta muistetaan laitteelle, ja se on yhteinen ennakko- ja tuloskuville. Se koskee vain kuvaa; tallennettu nimi, logo, maa ja paikkakunta eivät muutu.
+    - Jos kuvassa on toinen joukkue samasta seurasta (esim. HJK · Valkoinen vastaan HJK · Musta), ryhmä jää erottamaan ne ja vain ikäluokka piilotetaan.

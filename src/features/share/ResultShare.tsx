@@ -11,7 +11,8 @@ import { db } from '../../db/schema';
 import { clubFor, logoFor, useClubLogos, useClubs } from '../../ui/TeamLogo';
 import { Switch } from '../settings/DesktopSection';
 import { drawResultCard, loadImage, ALL_SHARE_STYLES } from './drawResult';
-import { findOwnTeam, MissingTeamInfo, ShareImageSheet, type RenderOptions } from './ShareSheet';
+import { findOwnTeam, MissingTeamInfo, ShareImageSheet, TeamDetailChips, useTeamDetailPrefs, type RenderOptions } from './ShareSheet';
+import { applyTeamDetails } from '../../domain/shareNames';
 
 const EVENT = 'result-share-open';
 let pending: UUID | null = null;
@@ -78,18 +79,21 @@ export function ResultShareSheet({ sessionId, onClose }: { sessionId: UUID | nul
   }, [sessionId]);
 
   const card = data?.card;
+  // Ryhmä ja ikäluokka kuvassa (17.11.2026): logot ja seuran tiedot haetaan alkuperäisillä nimillä.
+  const [details, setDetails] = useTeamDetailPrefs();
+  const drawn = useMemo(() => (card ? applyTeamDetails(card, details) : card), [card, details]);
   const teamLogo = card ? (logoFor(logos, card.team) ?? data?.teamPhoto) : undefined;
   const names = card ? [card.team, ...card.games.map((g) => g.opponent)] : [];
   const renderKey = useMemo(
-    () => JSON.stringify([card, (teamLogo ?? '').length, names.map((n) => (logoFor(logos, n) ?? '').length), names.map((n) => originOf(clubs, n)), showPlayer, data?.profileName]),
+    () => JSON.stringify([drawn, (teamLogo ?? '').length, names.map((n) => (logoFor(logos, n) ?? '').length), names.map((n) => originOf(clubs, n)), showPlayer, data?.profileName]),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [card, logos, clubs, teamLogo, showPlayer, data?.profileName],
+    [drawn, logos, clubs, teamLogo, showPlayer, data?.profileName],
   );
 
-  const render = card
+  const render = card && drawn
     ? async (o: RenderOptions) => {
         const [team, ...opponents] = await Promise.all(names.map((n, i) => loadImage(i === 0 ? teamLogo : logoFor(logos, n))));
-        return drawResultCard(card, {
+        return drawResultCard(drawn, {
           ...o,
           logos: { team, opponents },
           origins: { team: originOf(clubs, card.team), opponents: card.games.map((g) => originOf(clubs, g.opponent)) },
@@ -115,6 +119,7 @@ export function ResultShareSheet({ sessionId, onClose }: { sessionId: UUID | nul
       styles={ALL_SHARE_STYLES}
     >
       {data === null && <p className="text-sm text-slate-600">Tälle kerralle ei ole vielä kirjattu tulosta.</p>}
+      {card && <TeamDetailChips team={card.team} opponents={card.games.map((g) => g.opponent)} prefs={details} onChange={setDetails} />}
       {card && card.playerGoals > 0 && (
         <Switch
           on={showPlayer}
