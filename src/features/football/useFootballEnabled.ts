@@ -68,3 +68,12 @@ export function useFootballAnyProfile(): boolean {
 export function withoutClubFootball<T extends ActivityType>(types: T[] | undefined, footballOn: boolean, keepId?: string): T[] | undefined {
   return footballOn ? types : types?.filter((t) => !isClubFootball(t) || t.id === keepId);
 }
+
+/** Perhekalenterin profiilit (19.11.2026): aktiiviset profiilit, joilla jalkapallo on käytössä, järjestyksessä. */
+export function useFootballProfiles(): Profile[] | undefined {
+  return useLiveQuery(async () => {
+    const out: Profile[] = [];
+    for (const p of await repo.listProfiles()) if (footballEnabled(p, p.football === undefined && (await repo.hasFootballData(p.id)))) out.push(p);
+    return out;
+  }, []);
+}

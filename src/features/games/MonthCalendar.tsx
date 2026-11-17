@@ -5,17 +5,17 @@
 import { useRef, useState, type TouchEvent } from 'react';
 import { addDays } from '../../domain/dates';
 import { HOME_AWAY_LABEL, OUTCOME_LABEL } from '../../domain/football';
-import { addMonths, clockText, eventTitle, gridRange, teamNameFor, KIND_ICON, KIND_LABEL, monthGrid, monthKeyOf, type CalEvent, type MonthKey } from '../../domain/monthCalendar';
+import { addMonths, clashes, clockText, eventTitle, gridRange, teamNameFor, windowText, KIND_ICON, KIND_LABEL, monthGrid, monthKeyOf, type CalEvent, type MonthKey } from '../../domain/monthCalendar';
 import type { ISODate, Profile, Session } from '../../domain/types';
 import type { FixtureEntry } from '../../db/repositories';
 import { Button, Card } from '../../ui/components';
 import { ToggleChip } from '../../ui/controls';
 import { dayLabel, formatDate } from '../../ui/format';
-import { IconChevronLeft, IconChevronRight, IconPlus, IconReport } from '../../ui/icons';
+import { IconChevronLeft, IconChevronRight, IconPlus } from '../../ui/icons';
 import { useStoredFlag } from '../../ui/storedPref';
 import type { FixtureKind } from './FixtureSheet';
 import { useCalendarEvents } from './useCalendarEvents';
-import { CalendarPrint } from './CalendarPrint';
+import { useFootballProfiles } from '../football/useFootballEnabled';
 
 const WEEKDAYS = ['Ma', 'Ti', 'Ke', 'To', 'Pe', 'La', 'Su'];
 
@@ -64,22 +64,41 @@ const STATE_NOTE: Partial<Record<CalEvent['state'], string>> = { pending: 'Tulos
 export function MonthCalendar({
   profile,
   today,
+  month,
+  onMonth: setMonth,
   onEdit,
   onAdd,
   onOpenSession,
 }: {
   profile: Profile;
   today: ISODate;
+  month: MonthKey;
+  onMonth: (m: MonthKey) => void;
   onEdit: (e: FixtureEntry) => void;
   onAdd: (kind: FixtureKind, date: ISODate) => void;
   onOpenSession: (s: Session) => void;
 }) {
-  const [month, setMonth] = useState<MonthKey>(monthKeyOf(today));
-  const [selected, setSelected] = useState<ISODate | undefined>(today);
+  const [selected, setSelected] = useState<ISODate | undefined>(() => (month === monthKeyOf(today) ? today : undefined));
   const [trainings, setTrainings] = useStoredFlag('calendarTrainings', false);
-  const [printing, setPrinting] = useState(false);
+  // Perhekalenteri (19.11.2026): kaikkien jalkapalloprofiilien tapahtumat, jokaisella oma värinsä.
+  const familyProfiles = useFootballProfiles();
+  const canFamily = (familyProfiles?.length ?? 0) > 1;
+  const [familyPref, setFamily] = useStoredFlag('calendarFamily', false);
+  const family = familyPref && canFamily;
+  const members = family ? familyProfiles! : [profile];
+  const memberById = new Map(members.map((p) => [p.id, p]));
   const range = gridRange(month);
-  const data = useCalendarEvents(profile.id, range.from, range.to, today, trainings);
+  const data = useCalendarEvents(
+    members.map((p) => p.id),
+    range.from,
+    range.to,
+    today,
+    trainings,
+  );
+  const own = (e: CalEvent) => !e.profileId || e.profileId === profile.id;
+  const colorOf = (e: CalEvent) => (family && e.profileId ? memberById.get(e.profileId)?.color : undefined);
+  // Päällekkäisyydet vain tästä päivästä eteenpäin (menneet eivät enää vaadi järjestelyjä).
+  const clashOn = (d: ISODate) => (family && d >= today ? clashes(data?.events.get(d) ?? []) : []);
   // Näytetään haetun välin kuukausi: uutta kuukautta ei piirretä tyhjänä ennen kuin sen tiedot ovat valmiit.
   const shown = data && data.from !== range.from ? monthKeyOf(addDays(data.from, 14)) : month;
   const weeks = monthGrid(shown);
@@ -116,9 +135,11 @@ export function MonthCalendar({
       if (entry) onEdit(entry);
     }
   };
-  const clickable = (e: CalEvent) => !!e.sessionId || (!!e.planId && e.state !== 'skipped');
+  // Toisen lapsen tapahtumaa muokataan hänen profiilissaan.
+  const clickable = (e: CalEvent) => own(e) && (!!e.sessionId || (!!e.planId && e.state !== 'skipped'));
 
   const dayEvents = selected ? (data?.events.get(selected) ?? []) : [];
+  const dayClashes = selected ? clashOn(selected) : [];
 
   return (
     <Card>
@@ -139,13 +160,15 @@ export function MonthCalendar({
             Tämä kuukausi
           </Button>
         )}
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="ml-auto flex shrink-0 flex-wrap items-center gap-1.5">
           <ToggleChip on={trainings} onChange={setTrainings}>
             Treenit
           </ToggleChip>
-          <Button variant="secondary" className="shrink-0" onClick={() => setPrinting(true)}>
-            <IconReport size="1rem" /> Tulosta
-          </Button>
+          {canFamily && (
+            <ToggleChip on={familyPref} onChange={setFamily}>
+              Koko perhe
+            </ToggleChip>
+          )}
         </div>
       </div>
 
@@ -175,11 +198,23 @@ export function MonthCalendar({
                   onSelect={() => setSelected(d)}
                   onOpen={open}
                   clickable={clickable}
+                  colorOf={colorOf}
+                  clash={clashOn(d).length > 0}
                 />
               ))}
             </div>
           ))}
         </div>
+        {family && (
+          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold text-slate-700" aria-label="Perheen värit">
+            {members.map((p) => (
+              <span key={p.id} className="inline-flex items-center gap-1.5">
+                <span className="size-3 rounded-full" style={{ background: p.color }} aria-hidden />
+                {p.name}
+              </span>
+            ))}
+          </div>
+        )}
         <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500">
           <span>⚽ ottelu</span>
           <span>🏆 turnaus</span>
@@ -189,6 +224,7 @@ export function MonthCalendar({
             <span className="size-2.5 rounded-full bg-amber-50 ring-1 ring-amber-200" /> tulos puuttuu
           </span>
           <span>⚠ tietoja puuttuu</span>
+          {family && <span className="font-semibold text-red-700">‼ päällekkäin</span>}
           <span className="sm:hidden">· pyyhkäise vaihtaaksesi kuukautta</span>
         </div>
       </div>
@@ -196,6 +232,18 @@ export function MonthCalendar({
       {selected && (
         <section className="mt-4 border-t border-slate-100 pt-3" aria-label={`Valittu päivä ${dayLabel(selected)}`}>
           <h3 className="text-sm font-semibold text-slate-900">{formatDate(selected, 'cccc d.M.yyyy').replace(/^./, (c) => c.toUpperCase())}</h3>
+          {dayClashes.length > 0 && (
+            <div className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-900 ring-1 ring-red-200" role="status">
+              <div className="font-semibold">‼ Päällekkäin</div>
+              <ul className="mt-0.5 space-y-0.5 text-xs">
+                {dayClashes.map(([a, b]) => (
+                  <li key={`${a.key}-${b.key}`}>
+                    {memberById.get(a.profileId!)?.name}: {KIND_LABEL[a.kind].toLowerCase()} {windowText(a)} ja {memberById.get(b.profileId!)?.name}: {KIND_LABEL[b.kind].toLowerCase()} {windowText(b)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {dayEvents.length === 0 ? (
             <p className="mt-1 text-sm text-slate-500">Ei pelejä{trainings ? ' eikä treenejä' : ''} tälle päivälle.</p>
           ) : (
@@ -207,6 +255,13 @@ export function MonthCalendar({
                       {KIND_ICON[e.kind]}
                     </span>
                     <span className="min-w-0 flex-1">
+                      {family && e.profileId && (
+                        <span className="mb-0.5 inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-slate-600">
+                          <span className="size-2.5 rounded-full" style={{ background: colorOf(e) }} aria-hidden />
+                          {memberById.get(e.profileId)?.name}
+                          {!own(e) && <span className="font-medium normal-case tracking-normal text-slate-500">· muokkaus hänen profiilissaan</span>}
+                        </span>
+                      )}
                       <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                         <span className={`truncate font-medium ${e.state === 'skipped' ? 'text-slate-500 line-through' : e.kind === 'training' ? 'text-slate-600' : 'text-slate-900'}`}>{eventTitle(e, 'full')}</span>
                         {e.result && <span className={`rounded-full px-2 py-0.5 text-xs font-bold ring-1 ${chipClass(e)}`}>{e.result}</span>}
@@ -241,7 +296,8 @@ export function MonthCalendar({
             </ul>
           )}
           {selected >= today ? (
-            <div className="mt-2 flex flex-wrap gap-2">
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {family && <span className="text-xs font-semibold text-slate-600">Lisää ({profile.name}):</span>}
               {(
                 [
                   ['game', 'Peli'],
@@ -260,7 +316,6 @@ export function MonthCalendar({
         </section>
       )}
 
-      {printing && <CalendarPrint profile={profile} today={today} startMonth={month} onClose={() => setPrinting(false)} />}
     </Card>
   );
 }
@@ -278,6 +333,8 @@ function DayCell({
   onSelect,
   onOpen,
   clickable,
+  colorOf,
+  clash,
 }: {
   date: ISODate;
   inMonth: boolean;
@@ -287,10 +344,12 @@ function DayCell({
   onSelect: () => void;
   onOpen: (e: CalEvent) => void;
   clickable: (e: CalEvent) => boolean;
+  colorOf: (e: CalEvent) => string | undefined;
+  clash: boolean;
 }) {
   const day = Number(date.slice(8, 10));
   const games = events.filter((e) => e.kind !== 'training').length;
-  const label = `${dayLabel(date)}${today ? ', tänään' : ''}${events.length ? `, ${events.map((e) => `${eventTitle(e, 'full') === KIND_LABEL[e.kind] ? '' : `${KIND_LABEL[e.kind]} `}${eventTitle(e, 'full')}${e.result ? ` ${e.result}` : ''}`).join(', ')}` : ''}`;
+  const label = `${dayLabel(date)}${today ? ', tänään' : ''}${clash ? ', päällekkäisiä tapahtumia' : ''}${events.length ? `, ${events.map((e) => `${eventTitle(e, 'full') === KIND_LABEL[e.kind] ? '' : `${KIND_LABEL[e.kind]} `}${eventTitle(e, 'full')}${e.result ? ` ${e.result}` : ''}`).join(', ')}` : ''}`;
   const more = events.length - 3;
   return (
     <div role="gridcell" aria-selected={selected} className={`relative min-h-14 p-1 sm:min-h-24 sm:p-1.5 ${inMonth ? 'bg-[var(--surface-raised)]' : 'bg-[var(--surface-sunk)]'} ${selected ? 'z-[1] outline-2 -outline-offset-2 outline-green-700' : ''}`}>
@@ -301,18 +360,26 @@ function DayCell({
         >
           {day}
         </span>
-        {games > 0 && events.some((e) => e.infoMissing) && (
-          <span className="text-[11px] text-amber-700" aria-hidden title="Tietoja puuttuu">
-            ⚠
-          </span>
-        )}
+        <span className="flex items-center gap-0.5">
+          {games > 0 && events.some((e) => e.infoMissing) && (
+            <span className={`text-[11px] text-amber-700 ${clash ? 'hidden sm:inline' : ''}`} aria-hidden title="Tietoja puuttuu">
+              ⚠
+            </span>
+          )}
+          {clash && (
+            <span className="text-[11px] font-bold text-red-700" aria-hidden title="Päällekkäin">
+              ‼
+            </span>
+          )}
+        </span>
       </div>
 
       {/* Puhelin: merkit (tulos kirjaimena); valittu päivä näyttää tiedot ruudukon alla. */}
       <div className="pointer-events-none relative mt-0.5 flex flex-wrap gap-0.5 sm:hidden" aria-hidden>
         {events.slice(0, 3).map((e) => (
-          <span key={e.key} className={`flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-0.5 text-[10px] font-bold leading-none ring-1 ${chipClass(e)} ${e.kind === 'training' ? 'opacity-70' : ''}`}>
+          <span key={e.key} className={`relative flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-0.5 text-[10px] font-bold leading-none ring-1 ${chipClass(e)} ${e.kind === 'training' ? 'opacity-70' : ''}`}>
             {e.state === 'played' && e.outcome ? OUTCOME_LABEL[e.outcome] : KIND_ICON[e.kind]}
+            {colorOf(e) && <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full ring-1 ring-[var(--surface-raised)]" style={{ background: colorOf(e) }} />}
           </span>
         ))}
         {more > 0 && <span className="text-[10px] font-semibold text-slate-500">+{more}</span>}
@@ -328,12 +395,13 @@ function DayCell({
               onClick={() => onOpen(e)}
               title={`${KIND_LABEL[e.kind]}: ${eventTitle(e, 'full')}${e.result ? ` ${e.result}` : ''}${STATE_NOTE[e.state] ? ` – ${STATE_NOTE[e.state]}` : ''}`}
               className={`press block w-full truncate rounded-md px-1 py-0.5 text-left text-[11px] font-medium leading-tight ring-1 ${chipClass(e)}`}
+              style={colorOf(e) ? { borderLeft: `3px solid ${colorOf(e)}` } : undefined}
             >
               <span aria-hidden>{KIND_ICON[e.kind]}</span> {e.infoMissing && '⚠ '}
               {chipText(e)}
             </button>
           ) : (
-            <div key={e.key} className={`pointer-events-none truncate rounded-md px-1 py-0.5 text-[11px] leading-tight ring-1 ${chipClass(e)}`}>
+            <div key={e.key} className={`pointer-events-none truncate rounded-md px-1 py-0.5 text-[11px] leading-tight ring-1 ${chipClass(e)}`} style={colorOf(e) ? { borderLeft: `3px solid ${colorOf(e)}` } : undefined}>
               <span aria-hidden>{KIND_ICON[e.kind]}</span> {chipText(e)}
             </div>
           ),

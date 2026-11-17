@@ -1352,3 +1352,19 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
     - kirjatut seuran jalkapallotreenit (linkitetty omatoiminen verryttely ei näy omana treeninään)
     - avoimet suunnitelmat; jos samalle päivälle on kirjattu sama treeni suoraan, näkyy vain kirjaus
     - viikkopohjasta johdetut tulevat kerrat.
+  - **Perhekalenteri ja vienti kalenteriin** (käyttäjän toive 19.11.2026, vaihe 2; `domain/monthCalendar.ts` `mergeProfileEvents`, `eventWindow`, `clashes`, `domain/ics.ts`, `features/games/MonthCalendar.tsx`, `CalendarPrint.tsx`, `IcsExport.tsx`, `calendarShared.tsx`, `useCalendarEvents.ts`, `useFootballProfiles`):
+    - **Koko perhe** (kuukausinäkymän kytkin; näkyy, kun jalkapallo on käytössä vähintään kahdella profiililla; muistetaan laitteelle):
+      - kaikkien jalkapalloprofiilien tapahtumat samassa kuukaudessa
+      - jokaisella profiilin oma väri: PC:llä palkki tapahtuman reunassa, puhelimella piste merkin kulmassa, selite ruudukon alla
+      - päällekkäisyys: kahden lapsen tapahtumat menevät tästä päivästä eteenpäin samaan aikaan (paikalla-ajasta loppuun). Päivässä näkyy ‼, ja valitun päivän kohdalla lukee esim. "Aino: ottelu 9.30–11.00 ja Eino: ottelu 10.00–11.30". Tapahtuma ilman kellonaikaa lasketaan koko päiväksi. Ei pelattuja eikä saman lapsen tapahtumia verrata.
+      - toisen lapsen tapahtuma näkyy, mutta sitä muokataan hänen profiilissaan; lisäyspainikkeet lisäävät valitulle profiilille
+    - **Tulosta ja Vie kalenteriin** ovat nyt Kalenteri-kohdan yläreunassa ja toimivat myös listanäkymässä. Kuukausinäkymässä alkukuukausi on näkyvä kuukausi.
+    - **Perheen tuloste** (valinta "Koko perhe"): otsikkona "Perheen pelit", värillinen selite ja tapahtumissa värireuna. Rivillä on lapsen joukkue, ja lapsen nimi vain valinnalla "Lasten nimet". Ilman joukkuetta tunnisteena on "Pelaaja 1", "Pelaaja 2"…
+    - **Vie kalenteriin (.ics)** (RFC 5545; muodostetaan laitteella, ei verkkoliikennettä eikä kirjastoja):
+      - Jakso: 1–12 kuukautta tai kausi. Valinnat: tulokset, treenit, koko perhe ja lapsen nimi; muistetaan laitteelle.
+      - "Lataa kalenteritiedosto" ja puhelimella lisäksi "Jaa…".
+      - Tapahtuma alkaa paikalla-ajasta ja päättyy suunnitelman alku + kesto. Aikavyöhyke on Europe/Helsinki (VTIMEZONE mukana), ja ilman kellonaikaa tulee koko päivän tapahtuma.
+      - Nimi esim. "⚽ PK-35 Valkoinen 2017 (vieras)", pelatussa tulos perässä. Perheessä alkuun tulee joukkue tai, valittaessa, lapsen nimi.
+      - Paikka LOCATION-kenttään. Kuvaukseen paikalla- ja alkamisaika, sarja, taso, koti/vieras, turnauksen otteluohjelma, tulos, puuttuvat tiedot ja linkki (myös URL).
+      - Ei pelattu = STATUS:CANCELLED.
+      - Pysyvä UID (suunnitelman tai kerran tunniste) ja vientihetkestä kasvava SEQUENCE: uudelleenvienti voi päivittää aiemmin tuodut tapahtumat niissä kalentereissa, jotka tunnistavat UID:n. Ohjeessa kerrotaan, että kalenteri ei päivity itsestään.

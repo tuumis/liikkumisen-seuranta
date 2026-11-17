@@ -10,7 +10,6 @@ import { repo } from '../../db/repositories';
 import { addDays } from '../../domain/dates';
 import { HOME_AWAY_LABEL } from '../../domain/football';
 import {
-  addMonths,
   clockText,
   eventsBetween,
   eventTitle,
@@ -20,12 +19,8 @@ import {
   lastOfMonth,
   monthGrid,
   monthKeyOf,
-  monthsFrom,
-  seasonMonths,
-  SEASON_LABEL,
   type CalEvent,
   type MonthKey,
-  type Season,
 } from '../../domain/monthCalendar';
 import type { ISODate, Profile, Team } from '../../domain/types';
 import { Segmented, ToggleChip } from '../../ui/controls';
@@ -34,9 +29,10 @@ import { readStoredJson, writeStoredJson } from '../../ui/storedPref';
 import { logoFor, useClubLogos } from '../../ui/TeamLogo';
 import { currentReportPalette, type ReportPalette } from '../analysis/reportPalette';
 import { useCalendarEvents } from './useCalendarEvents';
+import { memberLabeler, monthName, PeriodPicker, periodLabel, periodMonths, periodSelectClass, type Span } from './calendarShared';
+import { useFootballProfiles } from '../football/useFootballEnabled';
 
 type Format = 'month' | 'program';
-type Span = 'months' | Season;
 
 interface PrintOpts {
   format: Format;
@@ -47,9 +43,11 @@ interface PrintOpts {
   places: boolean;
   arrival: boolean;
   childName: boolean;
+  /** Perhekalenteri: kaikki profiilit, joilla jalkapallo on käytössä (19.11.2026). */
+  family: boolean;
 }
 
-const DEFAULT_OPTS: PrintOpts = { format: 'month', span: 'months', count: 1, trainings: false, results: true, places: true, arrival: true, childName: false };
+const DEFAULT_OPTS: PrintOpts = { format: 'month', span: 'months', count: 1, trainings: false, results: true, places: true, arrival: true, childName: false, family: false };
 const OPTS_KEY = 'calendarPrint';
 
 const cleanOpts = (v: Partial<PrintOpts>): PrintOpts => ({
@@ -61,23 +59,14 @@ const cleanOpts = (v: Partial<PrintOpts>): PrintOpts => ({
   places: v.places !== false,
   arrival: v.arrival !== false,
   childName: !!v.childName,
+  family: !!v.family,
 });
 
 const WD = ['Ma', 'Ti', 'Ke', 'To', 'Pe', 'La', 'Su'];
 const hhmm = clockText;
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const monthName = (m: MonthKey) => cap(formatDate(firstOfMonth(m), 'LLLL yyyy'));
-
-/** Jakson nimi otsikkoon: "Syyskausi 2026", "Marraskuu 2026" tai "Marraskuu 2026 – tammikuu 2027". */
-function spanLabel(span: Span, months: MonthKey[]): string {
-  const year = months[0].slice(0, 4);
-  if (span !== 'months') return `${SEASON_LABEL[span]} ${year}`;
-  if (months.length === 1) return monthName(months[0]);
-  const last = months[months.length - 1];
-  return `${monthName(months[0])} – ${formatDate(firstOfMonth(last), 'LLLL yyyy')}`;
-}
-
 export function CalendarPrint({ profile, today, startMonth, onClose }: { profile: Profile; today: ISODate; startMonth: MonthKey; onClose: () => void }) {
+  const familyProfiles = useFootballProfiles();
+  const canFamily = (familyProfiles?.length ?? 0) > 1;
   const [opts, setOptsState] = useState<PrintOpts>(() => readStoredJson(OPTS_KEY, DEFAULT_OPTS, cleanOpts));
   const set = (patch: Partial<PrintOpts>) =>
     setOptsState((o) => {
@@ -97,15 +86,26 @@ export function CalendarPrint({ profile, today, startMonth, onClose }: { profile
   const logo = team ? logoFor(logos, team.name) : undefined;
   const pal = useMemo(currentReportPalette, []);
 
-  const months = opts.span === 'months' ? monthsFrom(start, opts.count) : seasonMonths(year, opts.span);
+  const family = opts.family && canFamily;
+  const members = family ? familyProfiles! : [profile];
+  const months = periodMonths(opts.span, start, opts.count, year);
   const from = firstOfMonth(months[0]);
   const to = lastOfMonth(months[months.length - 1]);
-  const data = useCalendarEvents(profile.id, from, to, today, opts.trainings);
+  const data = useCalendarEvents(
+    members.map((p) => p.id),
+    from,
+    to,
+    today,
+    opts.trainings,
+  );
   const ready = !!data && data.from === from && data.to === to;
-  const visible = (e: CalEvent) => e.kind === 'training' || !team || !e.teamId || e.teamId === team.id;
+  const labels = memberLabeler(members, data?.teams ?? new Map(), opts.childName);
+  const visible = (e: CalEvent) => family || e.kind === 'training' || !team || !e.teamId || e.teamId === team.id;
   const eventsOn = (d: ISODate) => (ready ? (data.events.get(d) ?? []).filter(visible) : []);
-  // Kaikkien joukkueiden tulosteessa rivillä näkyy joukkue, jos joukkueita on useampi.
-  const teamPrefix = (e: CalEvent) => (!team && activeTeams.length > 1 && e.teamId ? teamById.get(e.teamId)?.name : undefined);
+  // Perheessä jokaisella rivillä lapsi tai joukkue; muuten joukkue, jos tulosteessa on useampi joukkue.
+  const teamPrefix = (e: CalEvent) =>
+    family ? labels.event(e) : !team && activeTeams.length > 1 && e.teamId ? teamNameFor(teamById.get(e.teamId)?.name ?? '', 'short') || undefined : undefined;
+  const colorOf = (e: CalEvent) => (family ? labels.color(e.profileId) : undefined);
 
   useEffect(() => {
     document.body.classList.add('print-report-open');
@@ -118,10 +118,21 @@ export function CalendarPrint({ profile, today, startMonth, onClose }: { profile
   }, [onClose]);
 
   // Ilman valittua joukkuetta otsikossa "Kaikki joukkueet" (useampi joukkue) tai "Jalkapallo"; lapsen nimi vain valittaessa.
-  const heading = team?.name ?? (activeTeams.length > 1 ? 'Kaikki joukkueet' : 'Jalkapallo');
-  const who = opts.childName ? `${heading} · ${profile.name}` : heading;
+  const heading = family ? 'Perheen pelit' : (team?.name ?? (activeTeams.length > 1 ? 'Kaikki joukkueet' : 'Jalkapallo'));
+  const who = opts.childName && !family ? `${heading} · ${profile.name}` : heading;
   const kicker = opts.format === 'month' ? 'Pelikalenteri' : 'Otteluohjelma';
-  const period = spanLabel(opts.span, months);
+  const period = periodLabel(opts.span, months);
+  // Perheen selite: väri ja lapsi tai joukkue.
+  const legend = family && (
+    <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 px-1 text-[10px] font-semibold">
+      {members.map((p) => (
+        <span key={p.id} className="inline-flex items-center gap-1.5">
+          <span className="size-2.5 rounded-sm" style={{ background: p.color }} />
+          {labels.profile(p.id)}
+        </span>
+      ))}
+    </div>
+  );
 
   const print = () => {
     const title = document.title;
@@ -134,12 +145,9 @@ export function CalendarPrint({ profile, today, startMonth, onClose }: { profile
     window.print();
   };
 
-  const monthOptions = Array.from({ length: 19 }, (_, i) => addMonths(monthKeyOf(today), i - 6));
-  const thisYear = Number(today.slice(0, 4));
-
   const header = (sub: ReactNode) => (
     <header className="flex items-center gap-4 rounded-xl px-5 py-3 text-[#ffffff]" style={{ background: pal.header }}>
-      {logo && (
+      {logo && !family && (
         <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#ffffff]">
           <img src={logo} alt="" className="size-[86%] object-contain" />
         </span>
@@ -180,57 +188,23 @@ export function CalendarPrint({ profile, today, startMonth, onClose }: { profile
               { value: 'program', label: 'Otteluohjelma' },
             ]}
           />
-          <Segmented<Span>
-            label="Jakso"
-            value={opts.span}
-            onChange={(span) => set({ span })}
-            options={[
-              { value: 'months', label: 'Kuukaudet' },
-              { value: 'spring', label: 'Kevätkausi' },
-              { value: 'autumn', label: 'Syyskausi' },
-            ]}
+          <PeriodPicker
+            today={today}
+            span={opts.span}
+            onSpan={(span) => set({ span })}
+            start={start}
+            onStart={setStart}
+            count={opts.count}
+            onCount={(count) => set({ count })}
+            maxCount={6}
+            year={year}
+            onYear={setYear}
           />
           <div className="flex flex-wrap items-center gap-2">
-            {opts.span === 'months' ? (
-              <>
-                <label className="flex items-center gap-2">
-                  <span className="text-slate-600">Alkaen</span>
-                  <select className="min-h-10 rounded-xl bg-[var(--surface-sunk)] px-2 ring-1 ring-slate-200" value={start} onChange={(e) => setStart(e.target.value)}>
-                    {monthOptions.map((m) => (
-                      <option key={m} value={m}>
-                        {monthName(m)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="flex items-center gap-2">
-                  <span className="text-slate-600">Kuukausia</span>
-                  <select className="min-h-10 rounded-xl bg-[var(--surface-sunk)] px-2 ring-1 ring-slate-200" value={opts.count} onChange={(e) => set({ count: Number(e.target.value) })}>
-                    {[1, 2, 3, 4, 5, 6].map((n) => (
-                      <option key={n} value={n}>
-                        {n}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </>
-            ) : (
-              <label className="flex items-center gap-2">
-                <span className="text-slate-600">Vuosi</span>
-                <select className="min-h-10 rounded-xl bg-[var(--surface-sunk)] px-2 ring-1 ring-slate-200" value={year} onChange={(e) => setYear(Number(e.target.value))}>
-                  {[thisYear - 1, thisYear, thisYear + 1].map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
-                <span className="text-xs text-slate-500">{opts.span === 'spring' ? 'tammi–kesäkuu' : 'heinä–joulukuu'}</span>
-              </label>
-            )}
-            {activeTeams.length > 1 && (
+            {!family && activeTeams.length > 1 && (
               <label className="flex items-center gap-2">
                 <span className="text-slate-600">Joukkue</span>
-                <select className="min-h-10 rounded-xl bg-[var(--surface-sunk)] px-2 ring-1 ring-slate-200" value={team?.id ?? ''} onChange={(e) => setTeamId(e.target.value)}>
+                <select className={periodSelectClass} value={team?.id ?? ''} onChange={(e) => setTeamId(e.target.value)}>
                   <option value="">Kaikki joukkueet</option>
                   {activeTeams.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -254,12 +228,18 @@ export function CalendarPrint({ profile, today, startMonth, onClose }: { profile
             <ToggleChip on={opts.trainings} onChange={(trainings) => set({ trainings })}>
               Treenit
             </ToggleChip>
+            {canFamily && (
+              <ToggleChip on={opts.family} onChange={(f) => set({ family: f })}>
+                Koko perhe
+              </ToggleChip>
+            )}
             <ToggleChip on={opts.childName} onChange={(childName) => set({ childName })}>
-              Lapsen nimi
+              {family ? 'Lasten nimet' : 'Lapsen nimi'}
             </ToggleChip>
           </div>
           <p className="text-xs text-slate-500">
             Valitse tulostusikkunassa kohteeksi ”Tallenna PDF-muodossa”, jos haluat tiedoston.{' '}
+            {family && !opts.childName && 'Perheen tulosteessa lapset erottuvat väreistä ja joukkueista; nimet näkyvät vain valittaessa. '}
             {opts.format === 'month' ? 'Kuukausikalenteri tulostuu vaakasivuille, kuukausi per sivu.' : 'Otteluohjelma tulostuu pystysivulle.'}
           </p>
         </div>
@@ -270,13 +250,29 @@ export function CalendarPrint({ profile, today, startMonth, onClose }: { profile
       ) : opts.format === 'month' ? (
         <div className="cal-scroll overflow-x-auto px-4 py-4">
           {months.map((m) => (
-            <MonthPage key={m} month={m} pal={pal} header={header(<MonthTitle month={m} period={opts.span !== 'months' || months.length > 1 ? period : undefined} />)} eventsOn={eventsOn} opts={opts} teamPrefix={teamPrefix} today={today} />
+            <MonthPage
+              key={m}
+              month={m}
+              pal={pal}
+              header={
+                <>
+                  {header(<MonthTitle month={m} period={opts.span !== 'months' || months.length > 1 ? period : undefined} />)}
+                  {legend}
+                </>
+              }
+              eventsOn={eventsOn}
+              opts={opts}
+              teamPrefix={teamPrefix}
+              colorOf={colorOf}
+              today={today}
+            />
           ))}
         </div>
       ) : (
         <article className="report-paper mx-auto my-4 max-w-[210mm] bg-[#ffffff] p-6 text-[11.5px] leading-snug shadow-xl print:p-0" style={{ color: pal.ink }}>
           {header(<div className="font-display text-[15px] font-semibold">{period}</div>)}
-          <ProgramTable months={months} eventsOn={eventsOn} opts={opts} pal={pal} teamPrefix={teamPrefix} />
+          {legend}
+          <ProgramTable months={months} eventsOn={eventsOn} opts={opts} pal={pal} teamPrefix={teamPrefix} colorOf={colorOf} />
           {ready && months.every((m) => eventsBetween(data.events, firstOfMonth(m), lastOfMonth(m), opts.trainings).filter(visible).length === 0) && (
             <p className="py-8 text-center" style={{ color: pal.soft }}>
               Ei pelejä valitulla jaksolla.
@@ -311,7 +307,7 @@ function Footer({ pal, today }: { pal: ReportPalette; today: ISODate }) {
 type Opts = Pick<PrintOpts, 'results' | 'places' | 'arrival' | 'trainings'>;
 
 /** Tapahtuman rivit kuukausiruudussa. */
-function CellEvent({ e, opts, pal, teamPrefix }: { e: CalEvent; opts: Opts; pal: ReportPalette; teamPrefix: (e: CalEvent) => string | undefined }) {
+function CellEvent({ e, opts, pal, teamPrefix, color }: { e: CalEvent; opts: Opts; pal: ReportPalette; teamPrefix: (e: CalEvent) => string | undefined; color?: string }) {
   const training = e.kind === 'training';
   const skipped = e.state === 'skipped';
   const prefix = teamPrefix(e);
@@ -322,7 +318,10 @@ function CellEvent({ e, opts, pal, teamPrefix }: { e: CalEvent; opts: Opts; pal:
     opts.places && e.location,
   ].filter(Boolean);
   return (
-    <div className={`overflow-hidden rounded-[3px] px-1 py-px ${skipped ? 'line-through' : ''}`} style={{ background: training ? 'transparent' : pal.tint, color: training || skipped ? pal.soft : pal.ink }}>
+    <div
+      className={`overflow-hidden rounded-[3px] px-1 py-px ${skipped ? 'line-through' : ''}`}
+      style={{ background: training ? 'transparent' : pal.tint, color: training || skipped ? pal.soft : pal.ink, ...(color ? { borderLeft: `3px solid ${color}` } : {}) }}
+    >
       <div className="truncate font-semibold">
         <span aria-hidden>{KIND_ICON[e.kind]}</span> {hhmm(e.time)} {prefix && `${prefix} – `}
         {eventTitle(e, 'short')}
@@ -342,10 +341,12 @@ function MonthPage({
   eventsOn,
   opts,
   teamPrefix,
+  colorOf,
   today,
 }: {
   month: MonthKey;
   today: ISODate;
+  colorOf: (e: CalEvent) => string | undefined;
   pal: ReportPalette;
   header: ReactNode;
   eventsOn: (d: ISODate) => CalEvent[];
@@ -393,7 +394,7 @@ function MonthPage({
                         {Number(d.slice(8, 10))}
                       </div>
                       {events.map((e) => (
-                        <CellEvent key={e.key} e={e} opts={opts} pal={pal} teamPrefix={teamPrefix} />
+                        <CellEvent key={e.key} e={e} opts={opts} pal={pal} teamPrefix={teamPrefix} color={colorOf(e)} />
                       ))}
                     </div>
                   </td>
@@ -410,7 +411,21 @@ function MonthPage({
   );
 }
 
-function ProgramTable({ months, eventsOn, opts, pal, teamPrefix }: { months: MonthKey[]; eventsOn: (d: ISODate) => CalEvent[]; opts: Opts; pal: ReportPalette; teamPrefix: (e: CalEvent) => string | undefined }) {
+function ProgramTable({
+  months,
+  eventsOn,
+  opts,
+  pal,
+  teamPrefix,
+  colorOf,
+}: {
+  months: MonthKey[];
+  eventsOn: (d: ISODate) => CalEvent[];
+  opts: Opts;
+  pal: ReportPalette;
+  teamPrefix: (e: CalEvent) => string | undefined;
+  colorOf: (e: CalEvent) => string | undefined;
+}) {
   const cols = 3 + (opts.arrival ? 1 : 0) + (opts.places ? 1 : 0) + (opts.results ? 1 : 0);
   const th = 'border-b-2 px-1.5 py-1 text-left text-[9.5px] font-bold uppercase tracking-wide';
   const td = 'border-b px-1.5 py-1 align-top';
@@ -462,7 +477,7 @@ function ProgramTable({ months, eventsOn, opts, pal, teamPrefix }: { months: Mon
               const lines = e.kind === 'tournament' || (e.kind === 'friendly' && e.state === 'played' && (e.games?.length ?? 0) > 1) ? e.games : undefined;
               return [
                 <tr key={e.key} className="break-inside-avoid" style={{ color: training || skipped ? pal.soft : pal.ink, borderColor: pal.line }}>
-                  <td className={`${td} whitespace-nowrap font-semibold`} style={{ borderColor: pal.line }}>
+                  <td className={`${td} whitespace-nowrap font-semibold`} style={{ borderColor: pal.line, ...(colorOf(e) ? { boxShadow: `inset 3px 0 0 ${colorOf(e)}` } : {}) }}>
                     {dayLabel(e.date)}
                   </td>
                   <td className={td} style={{ borderColor: pal.line }}>

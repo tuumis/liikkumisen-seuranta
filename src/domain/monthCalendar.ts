@@ -101,6 +101,10 @@ export interface CalEvent {
   planId?: UUID;
   sessionId?: UUID;
   durationMin?: number;
+  /** Pelin tai turnauksen linkki. */
+  link?: string;
+  /** Perhekalenterissa: kenen tapahtuma (19.11.2026). */
+  profileId?: UUID;
 }
 
 export interface CalTraining {
@@ -120,6 +124,8 @@ export interface MonthEventsInput {
   rows: GameRow[];
   /** Kirjattujen kertojen aloitusajat. */
   sessionStart?: ReadonlyMap<UUID, HHmm | undefined>;
+  /** Kirjattujen kertojen kestot (min). */
+  sessionDuration?: ReadonlyMap<UUID, number>;
   trainings?: CalTraining[];
 }
 
@@ -215,6 +221,7 @@ export function monthEvents(input: MonthEventsInput): Map<ISODate, CalEvent[]> {
       games: games?.length ? games : undefined,
       planId: plan.id,
       durationMin: plan.durationMin,
+      link: f?.link,
     });
   }
 
@@ -249,6 +256,8 @@ export function monthEvents(input: MonthEventsInput): Map<ISODate, CalEvent[]> {
       teamId: first.teamId,
       games: kind === 'game' ? undefined : linesOf(kind, rows),
       sessionId,
+      durationMin: input.sessionDuration?.get(sessionId),
+      link: first.link ?? f?.link,
     });
   }
 
@@ -287,3 +296,58 @@ export function eventTitle(e: Pick<CalEvent, 'title' | 'opponents'>, mode: NameM
 
 /** Kellonaika suomalaisittain: "09:30" → "9.30". */
 export const clockText = (t?: string): string | undefined => t?.replace(/^0(\d)/, '$1').replace(':', '.');
+
+// ---------- perhekalenteri (19.11.2026) ----------
+
+/** Yhdistää profiilien tapahtumat päivittäin ja merkitsee kunkin profiilin; päivän sisällä aikajärjestys. */
+export function mergeProfileEvents(byProfile: { profileId: UUID; events: ReadonlyMap<ISODate, CalEvent[]> }[]): Map<ISODate, CalEvent[]> {
+  const out = new Map<ISODate, CalEvent[]>();
+  for (const { profileId, events } of byProfile) {
+    for (const [d, list] of events) out.set(d, [...(out.get(d) ?? []), ...list.map((e) => ({ ...e, profileId }))]);
+  }
+  for (const list of out.values()) list.sort(byTime);
+  return out;
+}
+
+const toMin = (t: HHmm) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+const fromMin = (m: number): HHmm => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+
+/**
+ * Tapahtuman aikaikkuna minuutteina: alku = paikalla-aika tai aloitus, loppu = suunnitelman alku + kesto
+ * (pelissä aloitus, turnauksessa paikalla-aika, kun otteluohjelmassa on ajat). Ilman aikaa undefined (koko päivä).
+ */
+export function eventWindow(e: Pick<CalEvent, 'kind' | 'time' | 'arrival' | 'durationMin'>): { start: number; end: number } | undefined {
+  const first = e.arrival ?? e.time;
+  if (!first) return undefined;
+  const planStart = e.kind === 'tournament' && e.arrival ? e.arrival : (e.time ?? e.arrival)!;
+  const start = toMin(first);
+  const end = Math.max(start + 15, toMin(planStart) + (e.durationMin ?? 90));
+  return { start, end };
+}
+
+/** Ikkuna tekstinä: "9.15–11.30"; ilman aikaa "aika auki". */
+export function windowText(e: Pick<CalEvent, 'kind' | 'time' | 'arrival' | 'durationMin'>): string {
+  const w = eventWindow(e);
+  if (!w) return 'aika auki';
+  return `${clockText(fromMin(w.start))}–${clockText(fromMin(Math.min(w.end, 24 * 60 - 1)))}`;
+}
+
+/**
+ * Päällekkäiset tapahtumat eri profiileilla samana päivänä. Ilman kellonaikaa olevan tapahtuman
+ * oletetaan kestävän koko päivän (tarkistettava). Ei pelattuja eikä profiilin omia päällekkäisyyksiä.
+ */
+export function clashes(day: CalEvent[]): [CalEvent, CalEvent][] {
+  const list = day.filter((e) => e.profileId && e.state !== 'skipped');
+  const out: [CalEvent, CalEvent][] = [];
+  for (let i = 0; i < list.length; i++) {
+    for (let j = i + 1; j < list.length; j++) {
+      const a = list[i];
+      const b = list[j];
+      if (a.profileId === b.profileId) continue;
+      const wa = eventWindow(a);
+      const wb = eventWindow(b);
+      if (!wa || !wb || (wa.start < wb.end && wb.start < wa.end)) out.push([a, b]);
+    }
+  }
+  return out;
+}

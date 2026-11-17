@@ -23,12 +23,15 @@ import { GamesView } from '../football/GamesView';
 import { SkipReasons } from '../review/SkipReasons';
 import { FixtureSheet, fixtureKindOf, type FixtureDraft, type FixtureKind } from './FixtureSheet';
 import { MonthCalendar } from './MonthCalendar';
+import { CalendarPrint } from './CalendarPrint';
+import { IcsExport } from './IcsExport';
+import { monthKeyOf, type MonthKey } from '../../domain/monthCalendar';
 import { useStoredChoice } from '../../ui/storedPref';
 import { DiaryView } from './DiaryView';
 import { OpponentLibrary } from './TeamLibrary';
 import { TeamNameFields, useTeamNameSuggestions } from './TeamNameFields';
 import { FootballHero } from './FootballHero';
-import { IconPlus, IconShare } from '../../ui/icons';
+import { IconCalendarClock, IconPlus, IconReport, IconShare } from '../../ui/icons';
 import { InfoLink } from '../../ui/InfoLink';
 import { openPreviewShare } from '../share/PreviewShare';
 import { playSound } from '../../ui/sound';
@@ -143,6 +146,10 @@ function CalendarView({ profile, onEdit, onAdd }: { profile: Profile; onEdit: (e
   const today = todayFn();
   // Lista | Kuukausi (18.11.2026): valinta muistetaan laitteella; lista on oletus.
   const [mode, setMode] = useStoredChoice<'list' | 'month'>('calendarMode', ['list', 'month'], 'list');
+  // Kuukausinäkymän kuukausi; myös tulosteen ja kalenteriviennin alkukuukausi (19.11.2026).
+  const [month, setMonth] = useState<MonthKey>(() => monthKeyOf(today));
+  const [printing, setPrinting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const toast = useToast();
   const entries = useLiveQuery(() => repo.listFixtures(profile.id), [profile.id]);
   const teams = useLiveQuery(() => repo.listTeams(profile.id, { includeArchived: true }), [profile.id]);
@@ -177,18 +184,30 @@ function CalendarView({ profile, onEdit, onAdd }: { profile: Profile; onEdit: (e
 
   return (
     <div className="space-y-4">
-      <div className="max-w-xs">
-        <Segmented<'list' | 'month'>
-          label="Kalenterin esitystapa"
-          value={mode}
-          onChange={setMode}
-          options={[
-            { value: 'list', label: 'Lista' },
-            { value: 'month', label: 'Kuukausi' },
-          ]}
-        />
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="w-full max-w-xs flex-1 basis-56">
+          <Segmented<'list' | 'month'>
+            label="Kalenterin esitystapa"
+            value={mode}
+            onChange={setMode}
+            options={[
+              { value: 'list', label: 'Lista' },
+              { value: 'month', label: 'Kuukausi' },
+            ]}
+          />
+        </div>
+        <div className="ml-auto flex shrink-0 gap-2">
+          <Button variant="secondary" onClick={() => setPrinting(true)}>
+            <IconReport size="1rem" /> Tulosta
+          </Button>
+          <Button variant="secondary" onClick={() => setExporting(true)}>
+            <IconCalendarClock size="1rem" /> Vie kalenteriin
+          </Button>
+        </div>
       </div>
-      {mode === 'month' && <MonthCalendar profile={profile} today={today} onEdit={onEdit} onAdd={onAdd} onOpenSession={setPanel} />}
+      {mode === 'month' && <MonthCalendar profile={profile} today={today} month={month} onMonth={setMonth} onEdit={onEdit} onAdd={onAdd} onOpenSession={setPanel} />}
+      {printing && <CalendarPrint profile={profile} today={today} startMonth={mode === 'month' ? month : monthKeyOf(today)} onClose={() => setPrinting(false)} />}
+      <IcsExport profile={profile} today={today} startMonth={mode === 'month' ? month : monthKeyOf(today)} open={exporting} onClose={() => setExporting(false)} />
     <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
       {mode === 'list' && (
       <Card title={`Tulevat pelit ja turnaukset (${upcoming.length})`}>
