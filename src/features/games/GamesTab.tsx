@@ -173,7 +173,9 @@ function CalendarView({ profile, onEdit }: { profile: Profile; onEdit: (e: Fixtu
   return (
     <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
       <Card title={`Tulevat pelit ja turnaukset (${upcoming.length})`}>
-        {upcoming.length === 0 ? (
+        {!entries ? (
+          <div className="skeleton h-24 rounded-2xl" aria-busy="true" aria-label="Ladataan" />
+        ) : upcoming.length === 0 ? (
           <EmptyState art="calendar" title="Kalenteri on tyhjä" compact>
             Lisää tuleva peli tai turnaus yläreunan painikkeista.
           </EmptyState>
@@ -196,7 +198,9 @@ function CalendarView({ profile, onEdit }: { profile: Profile; onEdit: (e: Fixtu
 
       <div className="space-y-4">
         <Card title={`Odottaa tulosta (${pending.length})`}>
-          {pending.length === 0 ? (
+          {!entries ? (
+            <div className="skeleton h-24 rounded-2xl" aria-busy="true" aria-label="Ladataan" />
+          ) : pending.length === 0 ? (
             <EmptyState art="scoreboard" title="Kaikki tulokset kirjattu" compact>
               Pelatut pelit, joilta tulos puuttuu, tulevat tähän pelipäivän jälkeen.
             </EmptyState>

@@ -20,6 +20,19 @@ const CSP = [
   "form-action 'self'",
 ].join('; ');
 
+// Fonttien esilataus (17.11.2026): selain löytäisi fontit vasta CSS:n jäsentämisen jälkeen, jolloin
+// ensimmäisellä käynnistyksellä teksti näkyy hetken varafontilla ja vaihtuu (font-display: swap).
+// Esilataus aloittaa fonttien haun heti HTML:stä. Fontit ovat sovelluksen omia tiedostoja (SPEC 11).
+const fontPreloadPlugin = (): Plugin => ({
+  name: 'font-preload',
+  apply: 'build',
+  transformIndexHtml: (_html, ctx) =>
+    Object.keys(ctx.bundle ?? {})
+      .filter((f) => f.endsWith('.woff2'))
+      .sort()
+      .map((f) => ({ tag: 'link', attrs: { rel: 'preload', as: 'font', type: 'font/woff2', href: `./${f}`, crossorigin: '' }, injectTo: 'head' as const })),
+});
+
 const cspPlugin = (): Plugin => ({
   name: 'csp-meta',
   apply: 'build',
@@ -30,6 +43,7 @@ const cspPlugin = (): Plugin => ({
 
 export default defineConfig({
   plugins: [
+    fontPreloadPlugin(),
     react(),
     tailwindcss(),
     cspPlugin(),

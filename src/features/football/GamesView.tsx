@@ -156,7 +156,7 @@ export function GamesView({ profile, onBack }: { profile: Profile; onBack?: () =
 
       <div className="space-y-4 lg:col-span-7 xl:col-span-8">
       <Card title={`Pelit (${total.games})`} action={rows.length > 0 ? <Button variant="ghost" onClick={exportCsv}>Vie CSV</Button> : undefined}>
-        {groups.length === 0 && (
+        {data && groups.length === 0 && (
           <EmptyState art="ball" title="Ei pelejä valinnoilla" compact>
             Pelatut pelit ja turnaukset näkyvät tässä tuloksineen.
           </EmptyState>

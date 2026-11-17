@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { addDays, datesBetween, isoWeek, startOfIsoWeek, weekPeriod } from '../../domain/dates';
 import { planAdherence } from '../../domain/adherence';
@@ -8,6 +8,7 @@ import type { ActivityType, DayFlag, ISODate, PlannedSession, Profile, Recommend
 import { repo } from '../../db/repositories';
 import { Button, Card } from '../../ui/components';
 import { formatDate } from '../../ui/format';
+import { hideUntilSettled } from '../../ui/settle';
 import { useReport } from '../analysis/useReport';
 import { WeekReportButton } from '../analysis/WeekReport';
 import { today as todayFn } from '../../ui/today';
@@ -54,6 +55,17 @@ export const DAY_BAR_TARGET: Record<RecommendationGroup, number> = {
 export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpenSettings: (section?: SettingsSectionId) => void }) {
   const today = todayFn();
   const [weekStart, setWeekStart] = useState<ISODate>(() => startOfIsoWeek(today));
+  // Viikon vaihto (17.11.2026): kortit hakevat tietonsa kukin erikseen, joten päivärivit ja yhteenveto
+  // päivittyisivät porrastetusti ja yhteenveto näyttäisi hetken edellisen viikon lukuja. Kortit piilotetaan
+  // vaihdon ajaksi ja tuodaan näkyviin kerralla, kun uuden viikon tiedot ovat valmiit (ui/settle).
+  const weekBody = useRef<HTMLDivElement>(null);
+  const shownWeek = useRef(weekStart);
+  useLayoutEffect(() => {
+    if (shownWeek.current === weekStart) return;
+    shownWeek.current = weekStart;
+    if (!weekBody.current) return;
+    return hideUntilSettled(weekBody.current);
+  }, [weekStart]);
   const [quickAdd, setQuickAdd] = useState<{ date?: ISODate } | null>(null);
   const [editing, setEditing] = useState<Session | null>(null);
   const [dayMenu, setDayMenu] = useState<ISODate | null>(null);
@@ -417,6 +429,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
       {profile && isCurrent && <TournamentDayCard profile={profile} today={today} />}
       {profile && isCurrent && <LastWeekCard profile={profile} today={today} onOpenWeek={setWeekStart} />}
 
+      <div ref={weekBody} className="settle empty:hidden">
       {profile && report && (() => {
         // Käyttäjän valitsemat kortit järjestyksessään; PC:llä pää- ja sivupalstaan valinnan mukaan.
         const mainIds = cardIds.filter((id) => !sideIds.includes(id));
@@ -487,6 +500,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
           </div>
         );
       })()}
+      </div>
 
       {profile && (
         <>

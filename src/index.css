@@ -634,13 +634,19 @@ html[data-bg] body::before {
   view-transition-name: page;
   transition: opacity 0.16s var(--ease-out);
 }
-/* Profiilin vaihto (ui/settle.ts): sisältö piiloon heti, näkyviin häivyttäen kun tiedot ovat valmiit. */
-.page-view[data-switching] {
+/* Profiilin ja viikon vaihto sekä välilehdelle palaaminen (ui/settle.ts): sisältö piiloon heti,
+   näkyviin häivyttäen, kun tiedot ovat valmiit. */
+.settle {
+  transition: opacity 0.16s var(--ease-out);
+}
+.page-view[data-switching],
+.settle[data-switching] {
   opacity: 0;
   transition: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  .page-view {
+  .page-view,
+  .settle {
     transition: none;
   }
 }

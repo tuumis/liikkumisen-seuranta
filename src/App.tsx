@@ -22,6 +22,7 @@ import { StoryHost } from './features/story/StoryViewer';
 import { FootballStatusContext, useFootballStatusMap } from './features/football/useFootballEnabled';
 import { Avatar } from './ui/Avatar';
 import { hideUntilSettled } from './ui/settle';
+import { TabPanel } from './ui/TabPanel';
 import { formatDate } from './ui/format';
 import { IconBall, IconChart, IconHelp, IconLeaf, IconSearch, IconSettings, IconWeek } from './ui/icons';
 
@@ -104,15 +105,27 @@ export default function App() {
   const tab: Tab = !football && rawTab === 'games' ? 'week' : rawTab;
   const onboarded = useLiveQuery(() => (ready ? repo.getMeta<boolean>('onboarded').then((v) => v ?? false) : null), [ready]) ?? null;
 
+  // Siirtymän aikana pyydetty välilehti (17.11.2026): näkymänvaihto vaihtaa tilan vasta seuraavassa
+  // ruudussa, joten nopea toinen klikkaus verrataan viimeksi pyydettyyn eikä vielä näkyvään välilehteen.
+  // Muuten paluu lähtövälilehdelle kesken siirtymän jäisi huomiotta ja näkymä päätyisi ensin valitulle.
+  const pendingTab = useRef<Tab | null>(null);
   const setTab = (t: Tab) => {
-    if (t === 'settings' && tab === 'settings') setSettingsSection(undefined);
+    const current = pendingTab.current ?? tab;
+    if (t === 'settings' && current === 'settings') setSettingsSection(undefined);
     store.set('tab', t);
-    if (t === tab) return setTabState(t);
+    if (t === current) return setTabState(t);
     // Sulava näkymänvaihto (View Transitions), jos selain tukee eikä liikettä ole vähennetty.
-    const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown };
+    const doc = document as Document & { startViewTransition?: (cb: () => void) => { ready?: Promise<unknown> } | undefined };
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    if (doc.startViewTransition && !reduce) doc.startViewTransition(() => flushSync(() => setTabState(t)));
-    else setTabState(t);
+    if (doc.startViewTransition && !reduce) {
+      pendingTab.current = t;
+      const vt = doc.startViewTransition(() => {
+        flushSync(() => setTabState(t));
+        if (pendingTab.current === t) pendingTab.current = null;
+      });
+      // Uusi klikkaus ohittaa kesken jääneen siirtymän; ohitus ei ole virhe (ei konsolivirhettä).
+      vt?.ready?.catch(() => {});
+    } else setTabState(t);
     window.scrollTo({ top: 0 });
   };
   // Profiilin vaihto: sisältö näkyviin kerralla, kun uuden profiilin tiedot ovat valmiit (ui/settle).
@@ -323,13 +336,13 @@ export default function App() {
             </span>
           )}
         </div>
-        {/* Avatut välilehdet pidetään muistissa (piilotettuina), jotta palatessa sisältö näkyy heti. */}
+        {/* Avatut välilehdet pidetään muistissa (piilotettuina, laskenta pysäytettynä), jotta palatessa sisältö näkyy heti. */}
         <div className="page-view" ref={pageRef}>
           {!ready ? (
             <LoadingSkeleton />
           ) : (
             tabs.filter((t) => mounted.has(t.id)).map((t) => (
-              <div key={t.id} hidden={t.id !== tab}>
+              <TabPanel key={t.id} active={t.id === tab} contextKey={selected?.id}>
                 {t.id === 'week' ? (
                   <WeekView profile={selected} onOpenSettings={openSettings} />
                 ) : t.id === 'games' ? (
@@ -341,7 +354,7 @@ export default function App() {
                 ) : (
                   <SettingsView profile={selected} onProfileCreated={select} section={settingsSection} onSection={setSettingsSection} />
                 )}
-              </div>
+              </TabPanel>
             ))
           )}
         </div>
