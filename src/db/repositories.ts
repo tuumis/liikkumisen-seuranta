@@ -94,6 +94,11 @@ export interface SessionInput {
   label?: string;
   /** Arkiliikunnan vahvistus päiväkohtaisesti (säilyy muokattaessa). */
   estimateConfirmed?: boolean;
+  /**
+   * Tehoprofiili lajin profiilin sijaan (17.11.2026): arkiliikunnan vahvistus käyttää arvion omaa profiilia,
+   * jotta vahvistus sellaisenaan ei muuta päivän reipasta ja rasittavaa. Tallentuu snapshotiksi.
+   */
+  shares?: IntensityShares;
   /** Osat (liikuntapuisto ym.); vain lajeille, joilla supportsParts. Tyhjä tai puuttuva = ei osia. */
   parts?: SessionPart[];
 }
@@ -259,6 +264,35 @@ export function createRepositories(db: AppDB = defaultDb) {
       }
     });
     await fillClubOrigins();
+    await alignConfirmationShares();
+  }
+
+  /**
+   * Kerran laitteella (17.11.2026): aiemmat arkiliikunnan vahvistukset laskettiin kategorian oletuslajin
+   * tehoprofiililla, joten vahvistus sellaisenaan saattoi muuttaa päivän reipasta ja rasittavaa. Ne lasketaan
+   * päivänä voimassa olleen arvion profiililla; kesto ei muutu. Palauttaa korjattujen määrän.
+   */
+  async function alignConfirmationShares(): Promise<number> {
+    if (await getMeta<boolean>('confirmationSharesAligned')) return 0;
+    let n = 0;
+    await db.transaction('rw', [db.sessions, db.activityTypes, db.estimates, db.meta], async () => {
+      const types = new Map((await db.activityTypes.toArray()).map((t) => [t.id, t]));
+      const byProfile = new Map<UUID, Estimate[]>();
+      for (const e of live(await db.estimates.toArray())) byProfile.set(e.profileId, [...(byProfile.get(e.profileId) ?? []), e]);
+      for (const s of live(await db.sessions.toArray())) {
+        if (!isEstimateConfirmation(s) || s.intensitySource !== 'profile' || s.durationMin <= 0) continue;
+        const t = types.get(s.activityTypeId);
+        const e = t && activeEstimate(byProfile.get(s.profileId) ?? [], t.category, s.date);
+        if (!t || !e) continue;
+        const r = computeSessionMinutes({ ...t, shares: e.shares }, { durationMin: s.durationMin, effort: 0 });
+        const same = (['light', 'moderate', 'vigorous'] as const).every((k) => r.minutes[k] === s.minutes[k]);
+        if (same) continue;
+        await db.sessions.put(await stamp({ ...s, minutes: r.minutes, sharesSnapshot: r.snapshot }));
+        n++;
+      }
+      await setMeta('confirmationSharesAligned', true);
+    });
+    return n;
   }
 
   /**
@@ -434,8 +468,8 @@ export function createRepositories(db: AppDB = defaultDb) {
   /** Kerrat, joihin "Laske uudelleen" vaikuttaisi: lajin profiililla lasketut, päivä ≥ from. */
   async function recalculableSessions(typeId: UUID, from: ISODate): Promise<Session[]> {
     const rows = live(await db.sessions.where('activityTypeId').equals(typeId).toArray());
-    // Osiin jaetun kerran teho tulee osien lajeista, ei kerran lajista.
-    return rows.filter((s) => s.date >= from && s.intensitySource === 'profile' && !s.intensityPreset && !s.parts?.length);
+    // Osiin jaetun kerran teho tulee osien lajeista, arkiliikunnan vahvistuksen arviosta; ei kerran lajista.
+    return rows.filter((s) => s.date >= from && s.intensitySource === 'profile' && !s.intensityPreset && !s.parts?.length && !isEstimateConfirmation(s));
   }
 
   /**
@@ -506,6 +540,10 @@ export function createRepositories(db: AppDB = defaultDb) {
     /** Osien yhdistetty tehoprofiili (ks. partsShares); korvaa lajin profiilin. */
     fromParts?: IntensityShares,
   ): Pick<Session, 'intensitySource' | 'minutes' | 'sharesSnapshot' | 'intensityPreset'> {
+    if (input.shares && !input.intensityPreset && !input.manual) {
+      const r = computeSessionMinutes({ ...type, shares: input.shares }, { ...input, effort: 0, warmupShares });
+      return { intensitySource: 'profile', minutes: r.minutes, sharesSnapshot: r.snapshot };
+    }
     if (fromParts && !input.intensityPreset && !input.manual) {
       const r = computeSessionMinutes({ ...type, shares: fromParts }, { ...input, warmupShares });
       return { intensitySource: 'profile', minutes: r.minutes, sharesSnapshot: r.snapshot };

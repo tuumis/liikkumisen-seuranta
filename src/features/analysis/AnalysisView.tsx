@@ -235,7 +235,7 @@ function CategoryCard({ report }: { report: PeriodReport }) {
         </EmptyState>
       ) : (
         <>
-          <p className="mb-2 text-xs text-slate-600">Reipas ja rasittava arviolta, min (kokonaisliikunta suluissa). Vertailtavilta päiviltä.</p>
+          <p className="mb-2 text-xs text-slate-600">Reipas ja rasittava arviolta, min (kaikki liikunta kestona suluissa). Vertailtavilta päiviltä.</p>
           <ul className="space-y-2">
             {rows.map((r) => {
               const logged = r.logged.moderate + r.logged.vigorous;

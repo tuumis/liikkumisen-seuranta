@@ -457,8 +457,13 @@ export interface DayTotals {
   muscle: boolean;
   /** Jokin kirjattu kerta on luustoa vahvistava. Perusarvio ei koskaan vaikuta. */
   bone: boolean;
-  /** Päivän kirjattujen kertojen määrä (kattavuus 7.8). */
+  /**
+   * Päivän liikuntakerrat (17.11.2026): ei arkiliikunnan vahvistuksia eikä treenin verryttelyä
+   * (se kuuluu treeniin). Kattavuus (7.8) lasketaan kerroista ja vahvistuksista.
+   */
   sessionCount: number;
+  /** Päivän arkiliikunnan vahvistukset (myös "ei tänä päivänä"). */
+  confirmations: number;
   /** Kategoriat, joille perusarviota käytettiin. */
   estimatedCategories: Category[];
   /** Päiväkohtaisesti vahvistetun arkiliikunnan reipas+rasittava (sisältyy mvpa-lukuun). */

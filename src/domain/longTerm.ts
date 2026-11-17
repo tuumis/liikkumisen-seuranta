@@ -1,11 +1,12 @@
 // Pitkän aikavälin analytiikka (SPEC 9, vaihe 7): kuukausi, kausi ja vuosi samoista päiväkoosteista
 // kuin viikkoanalyysi. Puhdas funktio jakson raportista ja kerroista; ei tallennettua tilastotaulua.
 
-import { evaluatePeriod } from './aggregate';
+import { evaluatePeriod, hasLoggedData } from './aggregate';
 import { addDays, isoWeek, isoWeekday, monthPeriod, parseISODate, seasonPeriod, startOfIsoWeek, yearPeriod } from './dates';
+import { typeTotals } from './football';
 import { contextOf } from './groups';
 import { isEstimateConfirmation } from './hours';
-import { mvpaOf, totalOf } from './intensity';
+import { mvpaOf } from './intensity';
 import type { PeriodReport } from './report';
 import type { ActivityType, Context, DayTotals, ISODate, MovementGroup, Period, PeriodKind, RecommendationGroup, Session, Settings, UUID } from './types';
 
@@ -115,7 +116,7 @@ function bucketsOf(period: Period, days: DayTotals[], valid: Set<ISODate>): Tren
       validDays: v.length,
       mvpaLogged: avg(v.map((d) => d.mvpa)),
       mvpaCombined: avg(v.map((d) => d.mvpaCombined)),
-      coverage: v.length ? v.filter((d) => d.sessionCount > 0).length / v.length : 0,
+      coverage: v.length ? v.filter(hasLoggedData).length / v.length : 0,
     };
   });
 }
@@ -176,13 +177,11 @@ export function longTermSummary(report: PeriodReport, sessions: Session[], types
   const own = sessions.filter((s) => !s.deletedAt && valid.has(s.date) && !isEstimateConfirmation(s));
   const byType = new Map<UUID, TypeTotal>();
   const groups = new Set<MovementGroup>();
-  for (const s of own) {
-    const t = types.get(s.activityTypeId);
+  // Treenin verryttely lasketaan treenin lajiin (typeTotals), ei omaksi kerraksi.
+  for (const [typeId, v] of typeTotals(own)) {
+    const t = types.get(typeId);
     if (t && !NOT_VARIETY.includes(t.movementGroup)) groups.add(t.movementGroup);
-    const row = byType.get(s.activityTypeId) ?? { typeId: s.activityTypeId, name: t?.name ?? 'Muu', icon: t?.icon ?? '•', count: 0, minutes: 0 };
-    row.count++;
-    row.minutes += s.durationMin;
-    byType.set(s.activityTypeId, row);
+    byType.set(typeId, { typeId, name: t?.name ?? 'Muu', icon: t?.icon ?? '•', count: v.count, minutes: v.minutes });
   }
 
   return {
@@ -190,12 +189,8 @@ export function longTermSummary(report: PeriodReport, sessions: Session[], types
     group: report.group.group,
     validDays: n,
     mvpa: n ? { logged: loggedMvpa / n, combined: days.reduce((a, d) => a + d.mvpaCombined, 0) / n } : null,
-    // Alle kouluikäisellä kesto (3 h -suositus kestona), muilla kevyt + reipas + rasittava.
-    total: n
-      ? report.group.group === 'early_years'
-        ? { logged: days.reduce((a, d) => a + d.moving, 0) / n, combined: days.reduce((a, d) => a + d.movingCombined, 0) / n }
-        : { logged: days.reduce((a, d) => a + d.total, 0) / n, combined: days.reduce((a, d) => a + d.totalCombined, 0) / n }
-      : null,
+    // Kaikki liikunta kestona kaikille ryhmille, kuten tunneissa ja 3 h -suosituksessa (17.11.2026).
+    total: n ? { logged: days.reduce((a, d) => a + d.moving, 0) / n, combined: days.reduce((a, d) => a + d.movingCombined, 0) / n } : null,
     vigorousShare: loggedMvpa > 0 ? loggedVig / loggedMvpa : null,
     context: ctxSum > 0 ? { organized: ctx.organized / ctxSum, self_directed: ctx.self_directed / ctxSum, everyday: ctx.everyday / ctxSum } : null,
     variety: { groups: [...groups], types: byType.size },
@@ -206,5 +201,3 @@ export function longTermSummary(report: PeriodReport, sessions: Session[], types
   };
 }
 
-/** Kokonaisliikunta (L+M+V) päiväkoosteesta; viedään näyttöön totalOf-yhteensopivana. */
-export const dayTotal = (d: DayTotals) => totalOf(d.combined);

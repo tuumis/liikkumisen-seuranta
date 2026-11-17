@@ -9,7 +9,7 @@ import { dayTotals, evaluatePeriod, trackingStart, validDays } from './aggregate
 import { datesBetween } from './dates';
 import { holidayDates } from './holidays';
 import { periodGroup, type PeriodGroupInfo } from './groups';
-import { addMinutes, mvpaOf, totalOf, ZERO_MINUTES } from './intensity';
+import { addMinutes, mvpaOf, ZERO_MINUTES } from './intensity';
 import type {
   ActivityType,
   AdherenceSummary,
@@ -32,7 +32,7 @@ export interface CategoryBreakdown {
   category: Category;
   logged: IntensityMinutes;
   estimate: IntensityMinutes;
-  /** L + M + V (kirjattu + perusarvio). */
+  /** Kesto (min, kirjattu + perusarvio): sama "kaikki liikunta" kuin tunneissa (17.11.2026). */
   total: number;
   /** M + V (kirjattu + perusarvio). */
   mvpa: number;
@@ -103,20 +103,23 @@ export function periodReport(input: ReportInput): PeriodReport {
   const vigorousDay = vigorousDayThreshold(input.settings, profile, period.end);
   const evaluation = evaluatePeriod(group.group, days, { ...input.settings, vigorousDayMin: vigorousDay.min });
 
-  const acc = new Map<Category, { logged: IntensityMinutes; estimate: IntensityMinutes }>();
+  const acc = new Map<Category, { logged: IntensityMinutes; estimate: IntensityMinutes; durationMin: number }>();
   for (const d of days) {
     for (const [c, v] of Object.entries(d.byCategory) as [Category, NonNullable<DayTotals['byCategory'][Category]>][]) {
-      const cur = acc.get(c) ?? { logged: { ...ZERO_MINUTES }, estimate: { ...ZERO_MINUTES } };
+      const cur = acc.get(c) ?? { logged: { ...ZERO_MINUTES }, estimate: { ...ZERO_MINUTES }, durationMin: 0 };
       if (v.source === 'logged') cur.logged = addMinutes(cur.logged, v.minutes);
       else cur.estimate = addMinutes(cur.estimate, v.minutes);
-      if (v.addedEstimate) cur.estimate = addMinutes(cur.estimate, v.addedEstimate.minutes);
+      cur.durationMin += v.durationMin;
+      if (v.addedEstimate) {
+        cur.estimate = addMinutes(cur.estimate, v.addedEstimate.minutes);
+        cur.durationMin += v.addedEstimate.durationMin;
+      }
       acc.set(c, cur);
     }
   }
   const byCategory = CATEGORY_ORDER.filter((c) => acc.has(c)).map((c) => {
-    const { logged, estimate } = acc.get(c)!;
-    const both = addMinutes(logged, estimate);
-    return { category: c, logged, estimate, total: totalOf(both), mvpa: mvpaOf(both) };
+    const { logged, estimate, durationMin } = acc.get(c)!;
+    return { category: c, logged, estimate, total: durationMin, mvpa: mvpaOf(addMinutes(logged, estimate)) };
   });
 
   const inPeriod = <T extends { date: ISODate }>(rows: T[]) => rows.filter((r) => r.date >= period.start && r.date <= period.end);

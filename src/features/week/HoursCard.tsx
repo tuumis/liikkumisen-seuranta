@@ -286,9 +286,20 @@ export function HoursDetailCard({ report, isCurrentWeek }: { report: PeriodRepor
                               <strong className="font-semibold text-slate-900">{formatHours(act)}</strong> / {formatHours(c.forecast)}
                             </span>
                           </span>
+                          {/* Osat kuten päiväpylväissä: kerrat, vahvistettu arkiliikunta, arvio (17.11.2026). */}
                           <span className="relative mt-1 block h-2 rounded-full" style={{ background: C.track }} aria-hidden>
                             <span className="absolute inset-y-0 left-0 rounded-full border border-dashed" style={{ width: `${(c.forecast / catMax) * 100}%`, borderColor: C.trackLine }} />
-                            <span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${(act / catMax) * 100}%`, background: c.actual.sessions >= c.actual.estimate ? C.logged : C.estimate }} />
+                            <span className="absolute inset-y-0 left-0 flex gap-px overflow-hidden rounded-full" style={{ width: `${(act / catMax) * 100}%` }}>
+                              {[
+                                { v: Math.max(0, c.actual.sessions - c.confirmed), bg: C.logged },
+                                { v: c.confirmed, bg: C.arki },
+                                { v: c.actual.estimate, bg: C.estimate },
+                              ]
+                                .filter((x) => x.v > 0)
+                                .map((x, k) => (
+                                  <span key={k} className="h-full" style={{ flexGrow: x.v, flexBasis: 0, background: x.bg }} />
+                                ))}
+                            </span>
                           </span>
                         </button>
                         {isOpen && (

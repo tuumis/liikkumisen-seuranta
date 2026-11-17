@@ -40,7 +40,8 @@ export async function confirmDayEstimates(profileId: string, date: ISODate, cate
     const minutes = estimateBaseMin(e, date, holiday);
     const type = typeFor(e.category, types);
     if (!minutes || !type) continue;
-    const s = await repo.createSession({ profileId, activityTypeId: type.id, date, durationMin: minutes, effort: 0, muscle: false, bone: false, label: e.label, estimateConfirmed: true });
+    // Arvion oma tehoprofiili: vahvistus sellaisenaan ei muuta päivän reipasta ja rasittavaa (17.11.2026).
+    const s = await repo.createSession({ profileId, activityTypeId: type.id, date, durationMin: minutes, effort: 0, muscle: false, bone: false, label: e.label, estimateConfirmed: true, shares: e.shares });
     ids.push(s.id);
   }
   return ids;
@@ -93,7 +94,7 @@ export function EstimateDaySheet({ date, profile, onClose }: { date: ISODate | n
     const label = (m: number) => (m === 0 ? `${e.label}: ei tänä päivänä` : `${e.label}: ${m} min`);
     if (conf) {
       const before = conf.durationMin;
-      const input = { activityTypeId: conf.activityTypeId, date: date!, effort: 0 as const, muscle: false, bone: false, label: conf.label, note: conf.note };
+      const input = { activityTypeId: conf.activityTypeId, date: date!, effort: 0 as const, muscle: false, bone: false, label: conf.label, note: conf.note, shares: e.shares };
       await repo.updateSession(conf.id, { ...input, durationMin: minutes });
       toast(`${label(minutes)} tallennettu`, { label: 'Kumoa', run: () => repo.updateSession(conf.id, { ...input, durationMin: before }).then(() => {}) }, 'success');
       return;
@@ -110,6 +111,7 @@ export function EstimateDaySheet({ date, profile, onClose }: { date: ISODate | n
       bone: false,
       label: e.label,
       estimateConfirmed: true,
+      shares: e.shares,
     });
     toast(`${label(minutes)} vahvistettu`, { label: 'Kumoa', run: () => repo.deleteSession(s.id).then(() => {}) }, 'success');
   }

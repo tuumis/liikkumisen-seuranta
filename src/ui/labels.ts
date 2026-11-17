@@ -1,6 +1,7 @@
 // Käyttöliittymän suomenkieliset nimet (SPEC 2: koodissa englanti, UI:ssa suomi).
 
-import type { Category, FocusTag, MovementGroup, RecommendationGroup, SkipReason, StrengthDefault } from '../domain/types';
+import { CATEGORY_CONTEXT } from '../domain/groups';
+import type { Category, Context, FocusTag, MovementGroup, RecommendationGroup, SkipReason, StrengthDefault } from '../domain/types';
 
 export const CATEGORY_LABEL: Record<Category, string> = {
   hobby: 'Harrastus',
@@ -12,6 +13,20 @@ export const CATEGORY_LABEL: Record<Category, string> = {
   family: 'Perhe',
   other: 'Muu',
 };
+
+/** Ohjattu / omaehtoinen / arki (SPEC 2: kategoriasta johdettu konteksti). */
+export const CONTEXT_LABEL: Record<Context, string> = { organized: 'Ohjattu', self_directed: 'Omaehtoinen', everyday: 'Arki' };
+
+/**
+ * Kontekstin kategoriat näkyviin (17.11.2026): "Omaehtoinen" konteksti on laajempi kuin samanniminen
+ * kategoria (myös välitunnit ja perhe), joten jaossa kerrotaan aina, mitä se sisältää.
+ */
+export function contextContents(ctx: Context): string {
+  return (Object.keys(CATEGORY_LABEL) as Category[])
+    .filter((c) => CATEGORY_CONTEXT[c] === ctx)
+    .map((c) => CATEGORY_LABEL[c])
+    .join(', ');
+}
 
 export const MOVEMENT_GROUP_LABEL: Record<MovementGroup, string> = {
   ball_games: 'Pallopelit',

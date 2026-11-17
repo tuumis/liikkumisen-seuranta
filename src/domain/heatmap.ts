@@ -14,11 +14,11 @@ export interface HeatDay {
   date: ISODate;
   /** Reipas + rasittava (min) valitulla arviotavalla. */
   mvpa: number;
-  /** Kaikki liikunta (kevyt + reipas + rasittava, min). */
+  /** Kaikki liikunta kestona (min), kuten tunneissa (17.11.2026). */
   total: number;
-  /** Kirjatut kerrat (ei arkiliikunnan vahvistuksia). */
+  /** Liikuntakerrat (ei arkiliikunnan vahvistuksia eikä treenin verryttelyä). */
   sessions: number;
-  /** Kirjattujen kertojen osuus kaikesta liikunnasta (min); loput on arkiliikuntaa (arvio tai sen vahvistus). */
+  /** Kertojen osuus kaikesta liikunnasta (min); loput on arkiliikuntaa (vahvistettu tai arvio). */
   logged?: number;
   /** Päivän tavoite (reipas + rasittava, min). */
   target: number;

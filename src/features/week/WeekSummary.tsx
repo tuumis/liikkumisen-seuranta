@@ -78,7 +78,7 @@ export function weekModel(report: PeriodReport, settings: Settings): WeekModel {
       tiles: [
         hoursTile,
         { label: 'Lihaskunto', value: `${a.muscleDays.actual}/${a.muscleDays.target}`, sub: 'päivää viikossa' },
-        { label: 'Kirjauksia', value: String(report.days.reduce((n, d) => n + d.sessionCount, 0)), sub: 'tällä viikolla' },
+        { label: 'Liikuntakertoja', value: String(report.days.reduce((n, d) => n + d.sessionCount, 0)), sub: 'tällä viikolla' },
       ],
     };
   }

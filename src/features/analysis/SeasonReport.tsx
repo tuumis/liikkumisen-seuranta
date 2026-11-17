@@ -12,7 +12,7 @@ import type { ActivityType, Context, Period, Profile } from '../../domain/types'
 import { repo } from '../../db/repositories';
 import { useFootballEnabled } from '../football/useFootballEnabled';
 import { formatDate } from '../../ui/format';
-import { FOCUS_TAG_LABEL, MOVEMENT_GROUP_LABEL } from '../../ui/labels';
+import { CONTEXT_LABEL, contextContents, FOCUS_TAG_LABEL, MOVEMENT_GROUP_LABEL } from '../../ui/labels';
 import { today as todayFn } from '../../ui/today';
 import { DAY_BAR_TARGET } from '../week/WeekView';
 import { currentReportPalette } from './reportPalette';
@@ -20,7 +20,6 @@ import { currentReportPalette } from './reportPalette';
 const pct = (x: number | null | undefined) => (x === null || x === undefined ? '–' : `${Math.round(x * 100)} %`);
 const min = (x: number | null | undefined) => (x === null || x === undefined ? '–' : `${Math.round(x)} min/pv`);
 const hours = (m: number) => `${(m / 60).toFixed(1).replace('.', ',')} h`;
-const CONTEXT_TEXT: Record<Context, string> = { organized: 'Ohjattu', self_directed: 'Omaehtoinen', everyday: 'Arki' };
 
 function useExtras(profile: Profile, period: Period) {
   const today = todayFn();
@@ -113,7 +112,7 @@ export function SeasonReport({ profile, s, p, onClose }: { profile: Profile; s: 
         <Section title="Yhteenveto">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Tile label="Reipas ja rasittava" value={min(s.mvpa?.combined)} sub={`josta kirjattu ${Math.round(s.mvpa?.logged ?? 0)}`} />
-            <Tile label="Kaikki liikunta" value={min(s.total?.combined)} sub="kevyt mukaan" />
+            <Tile label="Kaikki liikunta" value={min(s.total?.combined)} sub="kestona, kevyt mukaan" />
             <Tile label="Kirjattuja kertoja" value={String(count(s))} sub={`${s.variety.types} lajia`} />
             <Tile label="Kattavuus" value={pct(s.quality.coverage)} sub={`arvion osuus ${pct(s.quality.estimateShare)}`} />
           </div>
@@ -196,7 +195,9 @@ export function SeasonReport({ profile, s, p, onClose }: { profile: Profile; s: 
               <ul className="space-y-1">
                 {(['organized', 'self_directed', 'everyday'] as Context[]).map((k) => (
                   <li key={k} className="flex justify-between gap-2">
-                    <span>{CONTEXT_TEXT[k]}</span>
+                    <span>
+                      {CONTEXT_LABEL[k]} <span className="text-[11px] text-[#5a645d]">({contextContents(k).toLocaleLowerCase('fi')})</span>
+                    </span>
                     <span className="font-semibold tabular-nums">{pct(s.context![k])}</span>
                   </li>
                 ))}

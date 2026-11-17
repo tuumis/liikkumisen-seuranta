@@ -3,7 +3,7 @@ import { buildStory } from './story';
 import type { PeriodReport } from '../../domain/report';
 import type { ActivityType, DayTotals, FootballDetails, Session } from '../../domain/types';
 
-const day = (date: string, total: number, mvpa: number) => ({ date, totalCombined: total, mvpaCombined: mvpa }) as DayTotals;
+const day = (date: string, total: number, mvpa: number) => ({ date, movingCombined: total, mvpaCombined: mvpa }) as DayTotals;
 const type = (id: string, name: string, extra: Partial<ActivityType> = {}) => ({ id, name, icon: '⚽', ...extra }) as ActivityType;
 const ses = (id: string, typeId: string, date: string, min: number) => ({ id, activityTypeId: typeId, date, durationMin: min, profileId: 'p' }) as Session;
 

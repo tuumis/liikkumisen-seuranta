@@ -7,7 +7,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { repo } from '../../db/repositories';
 import { dayTotals, isEstimateConfirmation, trackingStart } from '../../domain/aggregate';
 import { parseISODate, toISODate } from '../../domain/dates';
-import { computeSessionMinutes, totalOf } from '../../domain/intensity';
+import { computeSessionMinutes } from '../../domain/intensity';
 import { DAY_TARGET } from '../../domain/dayTarget';
 import { RECOMMENDATIONS } from '../../domain/recommendations';
 import { recommendationGroup } from '../../domain/groups';
@@ -57,8 +57,8 @@ const MEASURES: { value: HeatMeasure; label: string }[] = [
 
 const MEASURE_TEXT: Record<HeatMeasure, string> = {
   target: 'Reipas ja rasittava liikunta suhteessa päivän suositukseen.',
-  minutes: 'Kaikki liikunta minuutteina (kevyt, reipas ja rasittava).',
-  sessions: 'Kirjattujen liikuntakertojen määrä päivässä.',
+  minutes: 'Kaikki liikunta kestona minuutteina (myös kevyt), kuten viikon tunneissa.',
+  sessions: 'Liikuntakertojen määrä päivässä (treenin verryttely kuuluu treeniin).',
 };
 
 interface HeatData {
@@ -92,8 +92,8 @@ function useHeatData(profile: Profile, start: ISODate, end: ISODate, withEstimat
     const byDate = new Map<ISODate, Session[]>();
     for (const s of raw.sessions) {
       if (s.deletedAt) continue;
-      // Vain kirjatut: arkiliikunnan päiväkohtainen vahvistus on arvion vahvistus, ei kirjattu kerta.
-      if (!withEstimates && isEstimateConfirmation(s)) continue;
+      // Vahvistettu arkiliikunta on kirjattua tietoa: mukana myös "Vain kirjatut" -valinnalla, kuten
+      // suositusarviossa (17.11.2026). Se ei kuitenkaan ole kerta.
       const list = byDate.get(s.date);
       if (list) list.push(s);
       else byDate.set(s.date, [s]);
@@ -105,9 +105,10 @@ function useHeatData(profile: Profile, start: ISODate, end: ISODate, withEstimat
       return {
         date,
         mvpa: withEstimates ? t.mvpaCombined : t.mvpa,
-        total: withEstimates ? t.totalCombined : t.total,
-        sessions: list.filter((s) => !isEstimateConfirmation(s)).length,
-        logged: list.filter((s) => !isEstimateConfirmation(s)).reduce((a, s) => a + totalOf(s.minutes), 0),
+        // Kaikki liikunta kestona, kuten tunneissa (17.11.2026).
+        total: withEstimates ? t.movingCombined : t.moving,
+        sessions: t.sessionCount,
+        logged: list.filter((s) => !isEstimateConfirmation(s)).reduce((a, s) => a + Math.max(0, s.durationMin), 0),
         ...dayTargets(profile, date, withEstimates ? t.movingCombined : t.moving),
       };
     });
@@ -138,7 +139,7 @@ function useHeatData(profile: Profile, start: ISODate, end: ISODate, withEstimat
       return {
         date,
         mvpa: withEstimates ? t.mvpaCombined : t.mvpa,
-        total: withEstimates ? t.totalCombined : t.total,
+        total: withEstimates ? t.movingCombined : t.moving,
         sessions: list.length,
         ...dayTargets(profile, date, withEstimates ? t.movingCombined : t.moving),
         planned: true,
@@ -487,9 +488,9 @@ function HeatBody({
           label="Liikuntaa yhteensä"
           value={`${formatHours(stats.hours)} h`}
           sub={
-            withEstimates
-              ? `kirjatut ${formatHours(stats.loggedHours)} h + arkiliikunta ${formatHours(Math.max(0, stats.hours - stats.loggedHours))} h`
-              : 'vain kirjatut kerrat'
+            stats.hours - stats.loggedHours >= 0.05
+              ? `kerrat ${formatHours(stats.loggedHours)} h + ${withEstimates ? 'arkiliikunta' : 'vahvistettu arkiliikunta'} ${formatHours(Math.max(0, stats.hours - stats.loggedHours))} h`
+              : 'kirjatut kerrat'
           }
           big={big}
         />
@@ -535,16 +536,17 @@ function Explain({ measure, withEstimates, dayTarget, hasFuture, early }: { meas
       </summary>
       <ul className="mt-3 list-disc space-y-2 pl-5 leading-relaxed marker:text-slate-400">
         <li>
-          <strong>Kirjatut kerrat:</strong> itse kirjatut ja kuitatut liikuntakerrat. Minuutit lasketaan kerran kestosta lajin tyypillisen tehon mukaan (kevyt, reipas, rasittava);
-          pelissä ja turnauksessa mukana on peliaika ja lämmittely, ei vaihtopenkkiä.
+          <strong>Kirjatut kerrat:</strong> itse kirjatut ja kuitatut liikuntakerrat. Treenin verryttely kuuluu treeniin eikä ole oma kerta. Reipas ja rasittava lasketaan kerran
+          kestosta lajin tyypillisen tehon mukaan; pelissä ja turnauksessa mukana on peliaika ja lämmittely, ei vaihtopenkkiä.
         </li>
         <li>
-          <strong>Arkiliikunta</strong> {withEstimates ? '(nyt mukana)' : '(nyt ei mukana)'}: Asetukset → Arkiliikunta -kohdan arvio välitunneista, koulumatkoista ja leikistä.
+          <strong>Arkiliikunnan arvio</strong> {withEstimates ? '(nyt mukana)' : '(nyt ei mukana)'}: Asetukset → Arkiliikunta -kohdan arvio välitunneista, koulumatkoista ja leikistä.
           Arkipäivinä käytetään arkipäivän minuutteja, viikonloppuna ja lomalla viikonlopun minuutteja. Jos päivälle on kirjattu kerta samasta kategoriasta, kirjaus korvaa sen
-          päivän arvion, eikä samaa lasketa kahdesti. Jos olet kuitannut päivän arkiliikunnan, käytetään kuitattua tietoa. Kuluva päivä on mukana kokonaisena.
+          päivän arvion, eikä samaa lasketa kahdesti. Päiväkohtaisesti vahvistettu arkiliikunta on kirjattua tietoa: se on mukana aina, myös Vain kirjatut -valinnalla, mutta se
+          ei ole kerta. Kuluva päivä on mukana kokonaisena.
         </li>
         <li>
-          <strong>Liikuntaa yhteensä:</strong> kaikkien teholuokkien minuutit (myös kevyt) tunteina{withEstimates ? ', kirjatut kerrat ja arkiliikunta eriteltyinä' : ''}.
+          <strong>Liikuntaa yhteensä:</strong> kaikki liikunta kestona (myös kevyt liikunta ja tauot) tunteina, kuten viikon tunneissa; kerrat ja arkiliikunta eriteltyinä.
         </li>
         <li>
           <strong>Aktiivinen päivä:</strong> {active}. <strong>Pisin putki</strong> on pisin jakso tällaisia päiviä peräkkäin.
@@ -562,8 +564,8 @@ function Explain({ measure, withEstimates, dayTarget, hasFuture, early }: { meas
               ? 'heikompi kahdesta: vauhdikas suhteessa 60 minuuttiin tai liikkuminen suhteessa 3 tuntiin – alle puolet, 50–99 %, suositus täyttyi, 150 % tai enemmän.'
               : `reipas ja rasittava liikunta suhteessa ${t} minuuttiin: alle puolet, 50–99 %, suositus täyttyi, 150 % tai enemmän.`
             : measure === 'minutes'
-              ? 'kaikki liikunta minuutteina: 1–30, 31–60, 61–90, yli 90.'
-              : 'kirjattujen kertojen määrä: 1, 2, 3, 4 tai enemmän. Arkiliikunta ei ole kerta.'}{' '}
+              ? 'kaikki liikunta kestona minuutteina: 1–30, 31–60, 61–90, yli 90.'
+              : 'liikuntakertojen määrä: 1, 2, 3, 4 tai enemmän. Arkiliikunta ei ole kerta, eikä treenin verryttely ole oma kerta.'}{' '}
           Himmeät ruudut ovat ennen seurannan alkua.
         </li>
         {hasFuture && (

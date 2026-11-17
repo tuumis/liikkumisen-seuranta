@@ -2,7 +2,7 @@
 // näytetään sekä näkymässä että piirretään kuvaksi samoista tiedoista.
 
 import { formatHours, isEstimateConfirmation } from '../../domain/hours';
-import { footballKindOf, gameRows, summarizeGames } from '../../domain/football';
+import { footballKindOf, gameRows, summarizeGames, typeTotals } from '../../domain/football';
 import { isoWeek, startOfIsoWeek } from '../../domain/dates';
 import type { PeriodReport } from '../../domain/report';
 import type { ActivityType, FocusTag, FootballDetails, Session, UUID } from '../../domain/types';
@@ -45,7 +45,10 @@ const fi = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,
 export function buildStory(input: StoryInput): StorySlide[] {
   const { name, seasonLabel, report, types } = input;
   const sessions = input.sessions.filter((s) => !s.deletedAt && s.durationMin > 0 && !isEstimateConfirmation(s));
-  const totalMin = report.days.reduce((a, d) => a + d.totalCombined, 0);
+  // Kaikki liikunta kestona kuten tunneissa; treenin verryttely kuuluu treeniin (17.11.2026).
+  const totalMin = report.days.reduce((a, d) => a + d.movingCombined, 0);
+  const byType = typeTotals(sessions);
+  const sessionCount = [...byType.values()].reduce((a, v) => a + v.count, 0);
   const mvpaMin = report.days.reduce((a, d) => a + d.mvpaCombined, 0);
   const slides: StorySlide[] = [
     {
@@ -63,14 +66,12 @@ export function buildStory(input: StoryInput): StorySlide[] {
       title: 'Liikettä riitti',
       big: formatHours(totalMin).replace(' h', ''),
       bigUnit: 'tuntia',
-      lines: [`josta reipasta ja rasittavaa ≈ ${formatHours(mvpaMin)}`, `${sessions.length} kirjattua liikuntakertaa`],
+      lines: [`josta reipasta ja rasittavaa ≈ ${formatHours(mvpaMin)}`, `${sessionCount} kirjattua liikuntakertaa`],
     });
   }
 
   // Lajit keston mukaan (kirjatut kerrat).
-  const byType = new Map<UUID, number>();
-  for (const s of sessions) byType.set(s.activityTypeId, (byType.get(s.activityTypeId) ?? 0) + s.durationMin);
-  const top = [...byType.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
+  const top: [UUID, number][] = [...byType.entries()].map(([id, v]): [UUID, number] => [id, v.minutes]).sort((a, b) => b[1] - a[1]).slice(0, 4);
   if (top.length) {
     const max = top[0][1];
     slides.push({
@@ -86,7 +87,7 @@ export function buildStory(input: StoryInput): StorySlide[] {
   const weeks = new Map<string, number>();
   for (const d of report.days) {
     const w = startOfIsoWeek(d.date);
-    weeks.set(w, (weeks.get(w) ?? 0) + d.totalCombined);
+    weeks.set(w, (weeks.get(w) ?? 0) + d.movingCombined);
   }
   const best = [...weeks.entries()].sort((a, b) => b[1] - a[1])[0];
   if (best && best[1] > 0 && weeks.size > 1) {

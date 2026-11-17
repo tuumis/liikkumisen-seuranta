@@ -159,7 +159,7 @@ export function WeekReport({ profile, weekStart, onClose }: { profile: Profile; 
 
               <Section pal={pal} title="Reipas ja rasittava päivittäin" aside={<Legend pal={pal} items={[['Kirjatut kerrat', pal.logged], ['Arkiliikunta', pal.estimate]]} />}>
                 <DayChart pal={pal} days={cur.data.days} target={DAY_TARGET[group]} />
-                <IntensityBar pal={pal} light={s.light} moderate={s.moderate} vigorous={s.vigorous} />
+                <IntensityBar pal={pal} light={s.light} moderate={s.moderate} vigorous={s.vigorous} totalMin={s.totalMin} />
               </Section>
 
               <Section pal={pal} title="Viikon tapahtumat" breakable>
@@ -361,13 +361,19 @@ function Bar({ x, y, w, h, fill, round }: { x: number; y: number; w: number; h: 
   return <path d={`M${x},${y + h} V${y + r} Q${x},${y} ${x + r},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h} Z`} fill={fill} />;
 }
 
-function IntensityBar({ pal, light, moderate, vigorous }: { pal: ReportPalette; light: number; moderate: number; vigorous: number }) {
-  const total = light + moderate + vigorous;
+/**
+ * Viikon tehojakauma koko kestosta (17.11.2026): tehoprofiilin ulkopuolinen osa (tauot, ohjeet, paikallaanolo)
+ * näkyy omana osanaan, joten osat summautuvat raportin Yhteensä-lukuun.
+ */
+function IntensityBar({ pal, light, moderate, vigorous, totalMin }: { pal: ReportPalette; light: number; moderate: number; vigorous: number; totalMin: number }) {
+  const rest = Math.max(0, totalMin - light - moderate - vigorous);
+  const total = light + moderate + vigorous + rest;
   if (total <= 0) return null;
   const parts = [
     ['Kevyt', light, pal.light, pal.ink],
     ['Reipas', moderate, pal.moderate, '#fff'],
     ['Rasittava', vigorous, pal.vigorous, '#fff'],
+    ['Tauot ja paikallaanolo', rest, pal.line, pal.ink],
   ] as const;
   return (
     <div className="mt-3">

@@ -43,6 +43,8 @@ export interface CategoryHours {
   actual: HoursSplit;
   /** Ennuste koko viikolle (min). */
   forecast: number;
+  /** Vahvistettu arkiliikunta (min), sisältyy actual.sessions-lukuun. */
+  confirmed: number;
   /** Toteuman sisältö, suurin ensin (summa = actual.sessions + actual.estimate). */
   items: CategoryItem[];
 }
@@ -112,7 +114,7 @@ export function weeklyHours(input: {
   const acc = new Map<Category, CategoryHours>();
   const cat = (c: Category) => {
     let v = acc.get(c);
-    if (!v) acc.set(c, (v = { category: c, expected: { sessions: 0, estimate: 0 }, actual: { sessions: 0, estimate: 0 }, forecast: 0, items: [] }));
+    if (!v) acc.set(c, (v = { category: c, expected: { sessions: 0, estimate: 0 }, actual: { sessions: 0, estimate: 0 }, forecast: 0, confirmed: 0, items: [] }));
     return v;
   };
   const items = new Map<Category, Map<string, CategoryItem>>();
@@ -169,6 +171,7 @@ export function weeklyHours(input: {
       if (s.durationMin <= 0) continue;
       const t = input.types.get(s.activityTypeId);
       if (isEstimateConfirmation(s)) {
+        cat(c).confirmed += s.durationMin;
         const label = confirmedLabel(s);
         addItem(c, { key: `c:${label.toLocaleLowerCase('fi')}`, label, kind: 'confirmed' }, s.durationMin);
       } else if (s.linkedTo) addItem(c, { key: `w:${s.activityTypeId}`, label: t?.name ?? 'Verryttely', kind: 'warmup', icon: t?.icon }, s.durationMin);

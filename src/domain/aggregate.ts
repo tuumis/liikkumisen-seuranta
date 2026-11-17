@@ -33,7 +33,6 @@ const EPS = 1e-9;
 
 // ---------- perusarvio ----------
 
-/** Onko perusarvio voimassa päivänä d (validFrom ≤ d ≤ validTo, molemmat mukaan luettuina). */
 /** Päiväkodiksi nimetty arvio tai vahvistus (tupla päiväkodin tunnistus, 17.11.2026); ä-kirjaimen koodaus ei vaikuta. */
 export const isDaycareLabel = (label: string | undefined): boolean => /päiväko|varhaiskasv|päiväho|tarha/i.test((label ?? '').normalize('NFC'));
 
@@ -56,6 +55,7 @@ export function addsToEstimate(s: { activityTypeId: UUID; linkedTo?: UUID }, typ
   return !!t && t.category === 'self_directed' && !!t.sport;
 }
 
+/** Onko perusarvio voimassa päivänä d (validFrom ≤ d ≤ validTo, molemmat mukaan luettuina). */
 export function isEstimateValidOn(e: Estimate, d: ISODate): boolean {
   return !e.deletedAt && e.validFrom <= d && (e.validTo === undefined || d <= e.validTo);
 }
@@ -118,6 +118,7 @@ export function dayTotals(
   let muscle = false;
   let bone = false;
   let sessionCount = 0;
+  let confirmations = 0;
   let confirmedMvpa = 0;
   let moving = 0;
   // Kategoriat, joiden arvion kirjaus korvaa (lajiharjoittelu ei korvaa, vaan tulee päälle).
@@ -138,7 +139,9 @@ export function dayTotals(
     };
     muscle ||= s.muscle;
     bone ||= s.bone;
-    sessionCount++;
+    // Kerta = oma liikuntakerta: arkiliikunnan vahvistus ei ole kerta, treenin verryttely kuuluu treeniin (17.11.2026).
+    if (isEstimateConfirmation(s)) confirmations++;
+    else if (!s.linkedTo) sessionCount++;
   }
 
   let estimate: IntensityMinutes = { ...ZERO_MINUTES };
@@ -175,6 +178,7 @@ export function dayTotals(
     muscle,
     bone,
     sessionCount,
+    confirmations,
     estimatedCategories,
     confirmedMvpa,
     estimateAvailable: validEstimates.length > 0,
@@ -233,9 +237,12 @@ export function estimateShare(mvpaLogged: number, mvpaCombined: number): number 
   return mvpaCombined > 0 ? (mvpaCombined - mvpaLogged) / mvpaCombined : 0;
 }
 
+/** Onko päivälle kirjattu jotain: kerta tai arkiliikunnan vahvistus (kattavuus 7.8). */
+export const hasLoggedData = (d: Pick<DayTotals, 'sessionCount' | 'confirmations'>): boolean => d.sessionCount > 0 || d.confirmations > 0;
+
 export function dataQuality(days: DayTotals[]): DataQuality {
   const n = days.length;
-  const covered = days.filter((d) => d.sessionCount > 0).length;
+  const covered = days.filter(hasLoggedData).length;
   const coverage = n > 0 ? covered / n : 0;
   const sumLogged = days.reduce((a, d) => a + d.mvpa, 0);
   const sumCombined = days.reduce((a, d) => a + d.mvpaCombined, 0);

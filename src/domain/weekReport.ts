@@ -5,7 +5,7 @@
 
 import { isEstimateConfirmation } from './aggregate';
 import { dayGoalMet } from './dayTarget';
-import { outcomeOf } from './football';
+import { foldTrainingSelves, outcomeOf } from './football';
 import type { DayHours } from './hours';
 import { mvpaOf } from './intensity';
 import type { ActivityType, DayFlag, DayFlagReason, DayTotals, FootballDetails, ISODate, RecommendationGroup, Session, UUID } from './types';
@@ -120,7 +120,11 @@ export function weekReport(input: {
     const flag = flagByDate.get(t.date);
     const daySessions = input.sessions.filter((s) => s.date === t.date && !s.deletedAt);
     const real = daySessions.filter((s) => !isEstimateConfirmation(s)).sort((a, b) => (a.startTime ?? '99').localeCompare(b.startTime ?? '99') || a.createdAt.localeCompare(b.createdAt));
-    const entries = real.map((s): WeekReportEntry => {
+    // Treenin verryttely on osa treeniä: sama rivi ja yksi kerta (17.11.2026).
+    const { rows, selfOf } = foldTrainingSelves(real);
+    const entries = rows.map((s): WeekReportEntry => {
+      const self = selfOf(s.id);
+      const selfDur = self ? Math.max(0, self.durationMin) : 0;
       const ty = input.types.get(s.activityTypeId);
       const fb = ty?.sport === 'football' ? footballBrief(s, ty, input.details?.get(s.id)) : '';
       const parts = s.parts?.length ? s.parts.map((p) => shortName({}, input.types.get(p.activityTypeId))).join(' + ') : '';
@@ -128,19 +132,19 @@ export function weekReport(input: {
       const label = s.label && s.label !== typeName ? s.label : '';
       const acc = typeAcc.get(s.activityTypeId) ?? { typeId: s.activityTypeId, name: typeName, count: 0, durationMin: 0 };
       acc.count++;
-      acc.durationMin += Math.max(0, s.durationMin);
+      acc.durationMin += Math.max(0, s.durationMin) + selfDur;
       typeAcc.set(s.activityTypeId, acc);
       return {
         id: s.id,
         time: s.startTime,
         typeId: s.activityTypeId,
         name: typeName,
-        detail: [label, fb, parts].filter(Boolean).join(' · ') || undefined,
-        durationMin: Math.max(0, s.durationMin),
-        mvpa: mvpaOf(s.minutes),
-        vigorous: s.minutes.vigorous,
-        muscle: s.muscle,
-        bone: s.bone,
+        detail: [label, fb, parts, self ? `verryttely ${selfDur} min` : ''].filter(Boolean).join(' · ') || undefined,
+        durationMin: Math.max(0, s.durationMin) + selfDur,
+        mvpa: mvpaOf(s.minutes) + (self ? mvpaOf(self.minutes) : 0),
+        vigorous: s.minutes.vigorous + (self?.minutes.vigorous ?? 0),
+        muscle: s.muscle || !!self?.muscle,
+        bone: s.bone || !!self?.bone,
       };
     });
     const sum = (f: (e: WeekReportEntry) => number) => entries.reduce((a, e) => a + f(e), 0);

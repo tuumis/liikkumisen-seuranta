@@ -67,6 +67,24 @@ export function foldTrainingSelves<T extends Pick<Session, 'id' | 'linkedTo'>>(l
   return { rows: list.filter((s) => !(s.linkedTo && ids.has(s.linkedTo))), selfOf: (id) => selves.get(id) };
 }
 
+/**
+ * Kerrat ja minuutit lajeittain (17.11.2026): treenin verryttely (linkedTo) on osa treeniä, joten sen
+ * minuutit lasketaan treenin lajiin eikä se ole oma kerta. Jos treeniä ei ole listassa, verryttely on oma rivinsä.
+ */
+export function typeTotals<T extends Pick<Session, 'id' | 'linkedTo' | 'activityTypeId' | 'durationMin'>>(list: readonly T[]): Map<UUID, { count: number; minutes: number }> {
+  const byId = new Map(list.map((s) => [s.id, s]));
+  const out = new Map<UUID, { count: number; minutes: number }>();
+  for (const s of list) {
+    const parent = s.linkedTo ? byId.get(s.linkedTo) : undefined;
+    const typeId = parent ? parent.activityTypeId : s.activityTypeId;
+    const row = out.get(typeId) ?? { count: 0, minutes: 0 };
+    if (!parent) row.count++;
+    row.minutes += Math.max(0, s.durationMin);
+    out.set(typeId, row);
+  }
+  return out;
+}
+
 /** Verryttelykerran nimi minuuttien mukaan. */
 export function trainingSelfLabel(before: number, after: number): string {
   return before > 0 && after > 0 ? 'Alku- ja loppuverryttely' : before > 0 ? 'Alkuverryttely' : 'Loppuverryttely';

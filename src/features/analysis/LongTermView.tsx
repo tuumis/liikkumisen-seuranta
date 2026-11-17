@@ -10,7 +10,7 @@ import type { ActivityType, Context, Period, Profile } from '../../domain/types'
 import { repo } from '../../db/repositories';
 import { Button, Card, EmptyState } from '../../ui/components';
 import { formatDate } from '../../ui/format';
-import { MOVEMENT_GROUP_LABEL } from '../../ui/labels';
+import { CONTEXT_LABEL, contextContents, MOVEMENT_GROUP_LABEL } from '../../ui/labels';
 import { IconChevronLeft, IconChevronRight } from '../../ui/icons';
 import { cssVar, useIsDark, useThemeVersion } from '../../ui/theme';
 import { today as todayFn } from '../../ui/today';
@@ -29,7 +29,6 @@ const KIND_TEXT: Record<LongKind, { this: string; prev: string; bucket: string }
   year: { this: 'Tämä vuosi', prev: 'Edellinen vuosi', bucket: 'kuukausittain' },
 };
 
-const CONTEXT_TEXT: Record<Context, string> = { organized: 'Ohjattu (harrastus, koululiikunta)', self_directed: 'Omaehtoinen (välitunnit, leikki, perhe)', everyday: 'Arki (koulumatkat, muu)' };
 
 const pct = (x: number | null | undefined) => (x === null || x === undefined ? '–' : `${Math.round(x * 100)} %`);
 const min = (x: number | null | undefined) => (x === null || x === undefined ? '–' : `${Math.round(x)} min/pv`);
@@ -351,7 +350,7 @@ function CompareTable({ s, p }: { s: LongTermSummary; p?: LongTermSummary }) {
   const rows: [string, string, string, string][] = [
     ['Reipas ja rasittava (kirjattu + arvio)', min(s.mvpa?.combined), has ? min(p.mvpa?.combined) : '–', has ? delta(s.mvpa?.combined, p.mvpa?.combined, 'min') : ''],
     ['… josta kirjattu', min(s.mvpa?.logged), has ? min(p.mvpa?.logged) : '–', has ? delta(s.mvpa?.logged, p.mvpa?.logged, 'min') : ''],
-    ['Kaikki liikunta (kevyt mukaan)', min(s.total?.combined), has ? min(p.total?.combined) : '–', has ? delta(s.total?.combined, p.total?.combined, 'min') : ''],
+    ['Kaikki liikunta (kesto)', min(s.total?.combined), has ? min(p.total?.combined) : '–', has ? delta(s.total?.combined, p.total?.combined, 'min') : ''],
     ['Rasittavan osuus (kirjattu)', pct(s.vigorousShare), has ? pct(p.vigorousShare) : '–', has ? delta(s.vigorousShare, p.vigorousShare, 'pct') : ''],
     ['Ohjatun osuus (kirjattu)', pct(s.context?.organized), has ? pct(p.context?.organized) : '–', has ? delta(s.context?.organized, p.context?.organized, 'pct') : ''],
     ['Kirjattuja kertoja', String(count(s)), has ? String(count(p)) : '–', has ? delta(count(s), count(p), 'n') : ''],
@@ -402,7 +401,10 @@ function ContextBars({ s, p, prevName }: { s: LongTermSummary; p?: LongTermSumma
         {keys.map((k) => (
           <li key={k}>
             <div className="flex items-baseline justify-between gap-2 text-sm">
-              <span className="text-slate-700">{CONTEXT_TEXT[k]}</span>
+              <span className="min-w-0 text-slate-700">
+                {CONTEXT_LABEL[k]}
+                <span className="block text-[11px] text-slate-500">kategoriat: {contextContents(k)}</span>
+              </span>
               <span className="shrink-0 font-semibold tabular-nums text-slate-900">{pct(s.context![k])}</span>
             </div>
             <div className="mt-1 h-2 overflow-hidden rounded-full bg-[var(--viz-track)]">
