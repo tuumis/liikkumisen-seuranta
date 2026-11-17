@@ -7,7 +7,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { isISODate } from '../../domain/dates';
 import { GAME_FORMATS, LEVEL_LABEL } from '../../domain/football';
 import { ARRIVAL_LEAD_MIN, DEFAULT_COOLDOWN_MIN, DEFAULT_WARMUP_MIN, defaultGameLength, firstGameMin, gameDaySchedule, tournamentDuration, tournamentEndMin, tournamentStart } from '../../domain/tournamentTime';
-import type { GameFormat, GameLevel, HHmm, HomeAway, Profile } from '../../domain/types';
+import type { GameFormat, GameLevel, HHmm, HomeAway, ISODate, Profile } from '../../domain/types';
 import { HomeAwayChips, HomeAwaySelect } from './HomeAway';
 import { repo, type FixtureEntry, type FixtureInput } from '../../db/repositories';
 import { Button, Field, inputClass } from '../../ui/components';
@@ -26,6 +26,8 @@ export type FixtureKind = 'game' | 'tournament' | 'friendly';
 export type FixtureDraft = {
   kind: FixtureKind;
   entry?: FixtureEntry;
+  /** Uuden tapahtuman päivä (kuukausikalenterista valittu päivä). */
+  date?: ISODate;
 };
 
 /** Suunnitelman laji → kalenterin tyyppi. */
@@ -80,7 +82,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
     const { plan, fixture: f } = draft.entry ?? {};
     const k = plan ? fixtureKindOf(plan.activityTypeId) : draft.kind;
     setKind(k);
-    setDate(plan?.date ?? todayFn());
+    setDate(plan?.date ?? draft.date ?? todayFn());
     setTime(plan?.startTime ?? '');
     setDuration(String(plan?.durationMin ?? DEFAULT_DURATION[k]));
     const start = plan?.startTime ? toMin(plan.startTime) : undefined;

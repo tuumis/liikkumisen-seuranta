@@ -4,7 +4,7 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { GAME_FORMATS, HOME_AWAY_LABEL, LEVEL_LABEL } from '../../domain/football';
-import type { ActivityType, GameFormat, GameLevel, Profile, Session, Team } from '../../domain/types';
+import type { ActivityType, GameFormat, GameLevel, ISODate, Profile, Session, Team } from '../../domain/types';
 import { gameDaySchedule } from '../../domain/tournamentTime';
 import { repo, type FixtureEntry } from '../../db/repositories';
 import { clubKey, displayTeamName, parseTeamName } from '../../domain/opponent';
@@ -21,7 +21,9 @@ import { today as todayFn } from '../../ui/today';
 import { FootballPanel } from '../football/FootballPanel';
 import { GamesView } from '../football/GamesView';
 import { SkipReasons } from '../review/SkipReasons';
-import { FixtureSheet, fixtureKindOf, type FixtureDraft } from './FixtureSheet';
+import { FixtureSheet, fixtureKindOf, type FixtureDraft, type FixtureKind } from './FixtureSheet';
+import { MonthCalendar } from './MonthCalendar';
+import { useStoredChoice } from '../../ui/storedPref';
 import { DiaryView } from './DiaryView';
 import { OpponentLibrary } from './TeamLibrary';
 import { TeamNameFields, useTeamNameSuggestions } from './TeamNameFields';
@@ -116,7 +118,7 @@ export function GamesTab({ profile }: { profile?: Profile }) {
         )}
         {visited.has('calendar') && (
           <div hidden={view !== 'calendar'}>
-            <CalendarView profile={profile} onEdit={(entry) => setDraft({ kind: 'game', entry })} />
+            <CalendarView profile={profile} onEdit={(entry) => setDraft({ kind: 'game', entry })} onAdd={(kind, date) => setDraft({ kind, date })} />
           </div>
         )}
         {visited.has('results') && (
@@ -137,8 +139,10 @@ export function GamesTab({ profile }: { profile?: Profile }) {
   );
 }
 
-function CalendarView({ profile, onEdit }: { profile: Profile; onEdit: (e: FixtureEntry) => void }) {
+function CalendarView({ profile, onEdit, onAdd }: { profile: Profile; onEdit: (e: FixtureEntry) => void; onAdd: (kind: FixtureKind, date: ISODate) => void }) {
   const today = todayFn();
+  // Lista | Kuukausi (18.11.2026): valinta muistetaan laitteella; lista on oletus.
+  const [mode, setMode] = useStoredChoice<'list' | 'month'>('calendarMode', ['list', 'month'], 'list');
   const toast = useToast();
   const entries = useLiveQuery(() => repo.listFixtures(profile.id), [profile.id]);
   const teams = useLiveQuery(() => repo.listTeams(profile.id, { includeArchived: true }), [profile.id]);
@@ -172,7 +176,21 @@ function CalendarView({ profile, onEdit }: { profile: Profile; onEdit: (e: Fixtu
   }
 
   return (
+    <div className="space-y-4">
+      <div className="max-w-xs">
+        <Segmented<'list' | 'month'>
+          label="Kalenterin esitystapa"
+          value={mode}
+          onChange={setMode}
+          options={[
+            { value: 'list', label: 'Lista' },
+            { value: 'month', label: 'Kuukausi' },
+          ]}
+        />
+      </div>
+      {mode === 'month' && <MonthCalendar profile={profile} today={today} onEdit={onEdit} onAdd={onAdd} onOpenSession={setPanel} />}
     <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
+      {mode === 'list' && (
       <Card title={`Tulevat pelit ja turnaukset (${upcoming.length})`}>
         {!entries ? (
           <div className="skeleton h-24 rounded-2xl" aria-busy="true" aria-label="Ladataan" />
@@ -196,6 +214,7 @@ function CalendarView({ profile, onEdit }: { profile: Profile; onEdit: (e: Fixtu
         )}
         <p className="mt-3 text-xs text-slate-500">Tulevat pelit näkyvät myös Viikko-näkymässä suunnitelmina. Pelin jälkeen kirjaa tulos.</p>
       </Card>
+      )}
 
       <div className="space-y-4">
         <Card title={`Odottaa tulosta (${pending.length})`}>
@@ -257,6 +276,7 @@ function CalendarView({ profile, onEdit }: { profile: Profile; onEdit: (e: Fixtu
       </div>
 
       <FootballPanel session={panel} type={panel ? typeMap.get(panel.activityTypeId) : undefined} onClose={() => setPanel(null)} />
+    </div>
     </div>
   );
 }

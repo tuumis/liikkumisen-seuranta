@@ -1179,4 +1179,20 @@ html.morphing .bottom-nav {
     padding: 0 !important;
     box-shadow: none !important;
   }
+  /* Pelikalenterin kuukausisivut (18.11.2026): A4 vaaka, kuukausi per sivu. */
+  @page calendar-landscape {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+  .print-report .cal-landscape {
+    page: calendar-landscape;
+    break-after: page;
+  }
+  .print-report .cal-landscape:last-child {
+    break-after: auto;
+  }
+  .print-report .cal-scroll {
+    overflow: visible !important;
+    padding: 0 !important;
+  }
 }

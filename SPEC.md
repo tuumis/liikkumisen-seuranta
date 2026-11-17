@@ -1321,3 +1321,30 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
     - Harjoituspelillekin voi valita Koti tai Vieras vastustajien alla, sekä tulevalle että kirjatulle pelille. Valinta koskee koko tapahtumaa ja siirtyy kuittauksessa.
     - Ennakkokuvassa yhden vastustajan harjoituspelissä KOTI ja VIERAS näkyvät nimien alla. Pelitällissä merkintä on jokaisella vastustajarivillä.
     - Pelkkänä tekstinä näytettävä kommentti (ilman harmaata taustaa) on nyt kauempana joukkuetiedoista: väli on 60 px (tarina 76 px), aiemmin 24 px (tarina 32 px).
+  - **Pelikalenterin kuukausinäkymä ja tuloste** (käyttäjän toive 18.11.2026, vaihe 1; `domain/monthCalendar.ts`, `features/games/MonthCalendar.tsx`, `CalendarPrint.tsx`, `useCalendarEvents.ts`, `GamesTab.tsx`, `FixtureSheet.tsx` `FixtureDraft.date`, `repo.calendarTrainings`, `ui/storedPref.ts`, `index.css` `@page calendar-landscape`):
+    - **Lista | Kuukausi:** Jalkapallo → Kalenteri -kohdassa voi valita esitystavan. Valinta muistetaan laitteelle, ja lista on oletus. Kuukausinäkymässä tulosta odottavat ja väliin jääneet näkyvät ruudukon alla kuten ennen.
+    - **Ruudukko:**
+      - ma–su, vasemmalla ISO-viikkonumerot ja tämä päivä korostettuna
+      - kuukautta vaihdetaan nuolilla, "Tämä kuukausi" -painikkeella tai puhelimella pyyhkäisemällä
+      - merkit lajin mukaan: ⚽ ottelu, 🏆 turnaus, 🤝 harjoituspeli
+    - **Tapahtumien tilat:**
+      - tuleva: aika ja vastustaja tai tapahtuman nimi
+      - pelattu: tulos, esim. "3–1 V", turnauksessa "2V 1T"; väri tuloksen mukaan
+      - tulos puuttuu: keltainen
+      - ei pelattu: yliviivattu
+      - "Tietoja puuttuu": ⚠
+    - **Kirjatut pelit** tulevat kirjauksista, joten mukana ovat myös suoraan Viikko-näkymässä kirjatut. Kuitatun suunnitelman paikka, sarja ja paikalla-aika säilyvät.
+    - **Treenit:** "Treenit"-kytkin (oletus pois, muistetaan laitteelle) näyttää seuran jalkapallotreenit vaaleampina. Treenit tulevat suunnitelmista sekä viikkopohjasta niille tuleville päiville, joita ei ole vielä suunniteltu. Johdettuja kertoja ei tallenneta, eikä käyttäjän poistama kerta palaa.
+    - **PC:llä** tapahtumat näkyvät ruuduissa tekstinä (vastustaja lyhyesti seura + ryhmä), ja painallus avaa:
+      - tulevan tai tulosta odottavan pelin muokkauksen
+      - kirjatun pelin lisätiedot
+    - **Puhelimella** ruuduissa on merkit; pelatussa ottelussa näkyy tuloksen kirjain (V/T/H).
+    - **Päivän valinta:** valitun päivän tapahtumat näkyvät ruudukon alla koko nimin ja tiedoin. Tulevalle päivälle on painikkeet "+ Peli", "+ Harjoituspeli" ja "+ Turnaus", jotka avaavat lomakkeen valmiiksi sille päivälle.
+    - **Tulostus / PDF** (Tulosta-painike; `window.print`, ei kirjastoja eikä verkkoliikennettä; aina vaalea paperi teeman tummalla otsikkovärillä):
+      - Muodot:
+        - Kuukausikalenteri: kuukausi per A4-vaakasivu (nimetty `@page`).
+        - Otteluohjelma: tiivis taulukko A4-pystysivulle. Sarakkeet: päivä, klo, paikalla, peli (sarja, koti/vieras, turnauksen ja pelitällin pelit riveinä), paikka ja tulos.
+      - Jakso: alkukuukausi ja 1–6 kuukautta, tai kevätkausi (tammi–kesä) tai syyskausi (heinä–joulu) valittuna vuonna.
+      - Valinnat: tulokset, paikat, paikalla-ajat, treenit ja lapsen nimi. Valinnat muistetaan laitteelle.
+      - Otsikossa on joukkueen nimi ja seuran logo; lapsen nimi vain, jos se valitaan. Useammalla joukkueella valitaan joukkue tai "Kaikki joukkueet", jolloin riveillä näkyy joukkue.
+      - PDF:n tiedostonimi tulee otsikosta, esim. "Otteluohjelma FC Testi · Sininen · 2017 Syyskausi 2026".

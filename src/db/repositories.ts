@@ -5,11 +5,12 @@
 import { findFinnishClub } from '../domain/finnishClubs';
 import { Dexie, type Table } from 'dexie';
 import { CURRENT_SCHEMA_VERSION } from '../domain/migrations';
-import { activityTypeId, dayFlagId, newId, sessionIdFromPlanned, SETTINGS_ID, trainingSelfId } from '../domain/ids';
+import { activityTypeId, dayFlagId, newId, plannedSessionId, sessionIdFromPlanned, SETTINGS_ID, trainingSelfId } from '../domain/ids';
 import { computeSessionMinutes, DEFAULT_GAME_WARMUP_MIN, DEFAULT_PLAY_SHARE, INTENSITY_PRESETS, roundMinutes, partsShares, supportsParts } from '../domain/intensity';
 import { defaultGameLength, DEFAULT_WARMUP_MIN, legacyTournamentStart, tournamentStart } from '../domain/tournamentTime';
 import { DEFAULT_SETTINGS } from '../domain/recommendations';
-import { addDays, isISODate } from '../domain/dates';
+import { addDays, isISODate, maxDate } from '../domain/dates';
+import { newPlanned, templateItemDates } from '../domain/planning';
 import { holidayOn } from '../domain/holidays';
 import { activeEstimate, ESTIMATE_ONLY_CATEGORIES, isDaycareLabel, isEstimateConfirmation, isEstimateValidOn } from '../domain/aggregate';
 import { clubIdOf, clubKey, formatTeamName, parseTeamName, squadKey, type TeamParts } from '../domain/opponent';
@@ -1658,6 +1659,33 @@ export function createRepositories(db: AppDB = defaultDb) {
     });
   }
 
+  /**
+   * Kalenterin treenit (18.11.2026): seuran jalkapallotreenien suunnitelmat väliltä (ei väliin jääneitä) sekä
+   * viikkopohjasta johdetut tulevat kerrat päiville, joita ei ole vielä suunniteltu. Johdettuja ei tallenneta.
+   */
+  async function calendarTrainings(profileId: UUID, from: ISODate, to: ISODate, today: ISODate): Promise<PlannedSession[]> {
+    const types = new Map((await db.activityTypes.toArray()).map((t) => [t.id, t]));
+    const isTraining = (id: UUID) => isClubTraining(types.get(id));
+    const rows = await db.plannedSessions
+      .where('[profileId+date]')
+      .between([profileId, from], [profileId, to], true, true)
+      .toArray();
+    const out = live(rows).filter((p) => isTraining(p.activityTypeId) && p.status !== 'skipped');
+    const done = await planner.getPlannedThrough(profileId);
+    const start = maxDate(maxDate(from, today), done ? addDays(done, 1) : undefined);
+    if (start <= to) {
+      // Myös poistetut lasketaan: käyttäjän poistama kerta ei palaa johdettuna.
+      const taken = new Set(rows.map((p) => p.id));
+      for (const item of live(await db.templateItems.where('profileId').equals(profileId).toArray())) {
+        if (!item.active || !isTraining(item.activityTypeId)) continue;
+        for (const date of templateItemDates(item, start, to)) {
+          if (!taken.has(plannedSessionId(item.id, date))) out.push(newPlanned(item, date, item.updatedAt, item.updatedBy));
+        }
+      }
+    }
+    return out.sort((a, b) => a.date.localeCompare(b.date) || (a.startTime ?? '99').localeCompare(b.startTime ?? '99'));
+  }
+
   function fixtureRow(planId: UUID, input: FixtureInput, by: string, ts: Timestamp): Fixture {
     const f: Fixture = { plannedSessionId: planId, updatedAt: ts, updatedBy: by };
     const clean = (s?: string) => s?.trim().replace(/\s+/g, ' ') || undefined;
@@ -2302,6 +2330,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     saveTeam,
     setTeamArchived,
     listFixtures,
+    calendarTrainings,
     createFixture,
     createPlannedOnce,
     updateFixture,
