@@ -44,6 +44,8 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
   const [format, setFormat] = useState<GameFormat | ''>('');
   const [location, setLocation] = useState('');
   const [note, setNote] = useState('');
+  const [infoMissing, setInfoMissing] = useState(false);
+  const [missingNote, setMissingNote] = useState('');
   const [schedule, setSchedule] = useState<ScheduleRow[]>([]);
   // Turnauksen kesto otteluohjelmasta (aktiivinen aika): pelit × (lämmittely + pelin pituus) + loppuverryttely.
   const [auto, setAuto] = useState(true);
@@ -69,6 +71,8 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
     setFormat(f?.format ?? '');
     setLocation(f?.location ?? '');
     setNote(f?.note ?? '');
+    setInfoMissing(!!f?.infoMissing);
+    setMissingNote(f?.missingNote ?? '');
     setSchedule(
       (f?.games ?? []).map((g) => ({
         time: g.time ?? '',
@@ -145,6 +149,8 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
       format: format || undefined,
       location,
       note,
+      infoMissing,
+      missingNote: infoMissing ? missingNote : undefined,
     };
     try {
       if (draft!.entry) await repo.updateFixture(draft!.entry.plan.id, input);
@@ -187,7 +193,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
             if (!editing) setDuration(k === 'tournament' ? '300' : '60');
           }}
           options={[
-            { value: 'game', label: '🥅 Peli' },
+            { value: 'game', label: '⚽ Peli' },
             { value: 'tournament', label: '🏆 Turnaus' },
           ]}
         />
@@ -408,6 +414,25 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
         <Field label="Muistiinpano">
           <input className={inputClass} value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} />
         </Field>
+
+        {/* Tietoja puuttuu (17.11.2026): esim. kellonaika tai paikka vielä vahvistamatta; näkyy kalenterissa. */}
+        <div className="card-sunk space-y-2 p-3">
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-800">
+            <input type="checkbox" className="size-4 accent-green-700" checked={infoMissing} onChange={(e) => setInfoMissing(e.target.checked)} />
+            Tietoja puuttuu
+          </label>
+          {infoMissing && (
+            <input
+              className={inputClass}
+              value={missingNote}
+              onChange={(e) => setMissingNote(e.target.value)}
+              maxLength={120}
+              placeholder="Mitä puuttuu? esim. kellonaika, otteluohjelma (valinnainen)"
+              aria-label="Mitä tietoja puuttuu"
+            />
+          )}
+          <p className="text-xs text-slate-500">Merkki näkyy kalenterissa, kunnes poistat ruksin.</p>
+        </div>
 
         {error && <p className="text-sm text-red-700">{error}</p>}
         <div className="flex gap-2">

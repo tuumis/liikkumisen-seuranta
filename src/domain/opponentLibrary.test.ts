@@ -33,6 +33,30 @@ describe('joukkuekirjasto', () => {
   });
 });
 
+describe('käsin lisätyt vastustajat ja tallennetut ryhmät (17.11.2026)', () => {
+  it('vastustajaksi merkitty seura näkyy ilman pelejä; tallennetut ryhmät lisätään seuran alle', () => {
+    const lib = buildOpponentLibrary(
+      [row('2026-10-01', 'FC Honka · Musta', 2, 1)],
+      [],
+      [
+        { name: 'PK-35', opponent: true, squads: [{ group: 'Vihreä', age: '2018' }] },
+        { name: 'fc honka', squads: [{ group: 'musta' }, { group: 'Valkoinen' }] },
+        { name: 'Oma Seura', squads: [{ group: 'Sininen' }] }, // ei pelejä eikä vastustajamerkintää → ei listaan
+      ],
+    );
+    expect(lib.map((c) => [c.name, !!c.manual])).toEqual([
+      ['FC Honka', false],
+      ['PK-35', true],
+    ]);
+    expect(lib[0].squads.map((s) => [s.parts.group, s.rows.length, !!s.saved])).toEqual([
+      ['Musta', 1, true],
+      ['Valkoinen', 0, true],
+    ]);
+    expect(lib[1].squads.map((s) => [s.parts.club, s.parts.group, s.parts.age])).toEqual([['PK-35', 'Vihreä', '2018']]);
+    expect(lib[1].summary.games).toBe(0);
+  });
+});
+
 describe('vastustajan historia', () => {
   const rows = [
     row('2026-09-10', 'FC Honka / Musta', 3, 1),

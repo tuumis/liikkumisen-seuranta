@@ -352,6 +352,7 @@ export function UpcomingCard({
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-slate-900">{f?.opponent ? `vs ${f.opponent}` : f?.eventName ?? p.label ?? t?.name ?? 'Laji'}</span>
                     <span className="block truncate text-xs text-slate-500">
+                      {f?.infoMissing && <span className="font-semibold text-amber-800">⚠ tietoja puuttuu · </span>}
                       {f || p.label ? `${t?.name ?? ''} · ` : ''}
                       {p.startTime ? `klo ${p.startTime} · ` : ''}
                       {p.durationMin} min

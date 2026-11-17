@@ -3,10 +3,15 @@ import type { DayHours } from '../../domain/hours';
 import { InfoTip } from '../../ui/InfoTip';
 import { LEVEL_LABEL, OUTCOME_LABEL, outcomeOf } from '../../domain/football';
 
-/** "vs HJK · Elite · " tulevan pelin suunnitelmariville. */
+/** "vs HJK · Elite · " tulevan pelin suunnitelmariville; "⚠ tietoja puuttuu" ensin (17.11.2026). */
 function fixtureText(f?: Fixture): string {
   if (!f) return '';
-  const parts = [f.opponent ? `vs ${f.opponent}` : f.eventName, f.level ? LEVEL_LABEL[f.level] : undefined, f.location].filter(Boolean);
+  const parts = [
+    f.infoMissing ? `⚠ tietoja puuttuu${f.missingNote ? ` (${f.missingNote})` : ''}` : undefined,
+    f.opponent ? `vs ${f.opponent}` : f.eventName,
+    f.level ? LEVEL_LABEL[f.level] : undefined,
+    f.location,
+  ].filter(Boolean);
   return parts.length ? `${parts.join(' · ')} · ` : '';
 }
 import { mvpaOf } from '../../domain/intensity';

@@ -104,3 +104,46 @@ describe('seurat', () => {
     expect((await phone.repo.listClubs()).map((x) => [x.name, x.country, x.city])).toEqual([['Honka', 'FI', 'Espoo']]);
   });
 });
+
+describe('vastustajat käsin ja tallennetut ryhmät (17.11.2026)', () => {
+  it('vastustajan lisäys merkitsee seuran ja tallentaa ryhmän; ryhmät yhdistyvät ja poistuvat', async () => {
+    const { repo } = await device('opp');
+    const c = await repo.addOpponent('PK-35 · Vihreä · 2018');
+    expect(c).toMatchObject({ name: 'PK-35', opponent: true, squads: [{ group: 'Vihreä', age: '2018' }] });
+    await repo.saveClubSquad('pk-35', { group: ' vihreä ', age: '2018' }); // sama ryhmä toisella kirjoitusasulla
+    await repo.saveClubSquad('PK-35', { group: 'Musta' });
+    expect((await repo.listClubs())[0].squads).toEqual([{ group: 'Vihreä', age: '2018' }, { group: 'Musta' }]);
+    await expect(repo.saveClubSquad('PK-35', { group: ' ' })).rejects.toThrow();
+    await repo.removeClubSquad('PK-35', { group: 'vihreä', age: '2018' });
+    expect((await repo.listClubs())[0].squads).toEqual([{ group: 'Musta' }]);
+    // Logo ei kadota merkintää eikä ryhmiä.
+    await repo.saveClubLogo('PK-35', LOGO);
+    expect((await repo.listClubs())[0]).toMatchObject({ opponent: true, squads: [{ group: 'Musta' }], logo: LOGO });
+    await repo.removeOpponentMark('PK-35');
+    const after = (await repo.listClubs())[0];
+    expect(after.opponent).toBeUndefined();
+    expect(after.logo).toBe(LOGO);
+  });
+
+  it('nimen muutos ja ryhmän korjaus siirtävät tallennetut ryhmät; tiedot synkronoituvat', async () => {
+    const pc = await device('opp-pc');
+    const phone = await device('opp-phone');
+    await pc.repo.addOpponent('FC Honka · Musta');
+    await pc.repo.renameClub('FC Honka', 'Honka');
+    expect((await pc.repo.listClubs()).map((x) => [x.name, x.opponent, x.squads])).toEqual([['Honka', true, [{ group: 'Musta' }]]]);
+    await pc.repo.editSquad({ club: 'Honka', group: 'Musta' }, { club: 'Honka', group: 'Musta', age: '2018' });
+    expect((await pc.repo.listClubs())[0].squads).toEqual([{ group: 'Musta', age: '2018' }]);
+    await mergeSyncFile(phone.db, toJson(await buildSyncFile(pc.db, pc.id, 'pc')), phone.id);
+    expect((await phone.repo.listClubs()).map((x) => [x.name, x.opponent, x.squads])).toEqual([['Honka', true, [{ group: 'Musta', age: '2018' }]]]);
+  });
+
+  it('Tietoja puuttuu tallentuu peliin kuvauksineen ja poistuu ruksin poistolla', async () => {
+    const { repo } = await device('missing');
+    const e = await repo.createFixture('p1', { kind: 'game', date: '2026-11-20', durationMin: 60, opponent: 'HJK', infoMissing: true, missingNote: '  kellonaika ' });
+    expect(e.fixture).toMatchObject({ infoMissing: true, missingNote: 'kellonaika' });
+    await repo.updateFixture(e.plan.id, { kind: 'game', date: '2026-11-20', durationMin: 60, opponent: 'HJK', infoMissing: false, missingNote: 'kellonaika' });
+    const [entry] = await repo.listFixtures('p1');
+    expect(entry.fixture?.infoMissing).toBeUndefined();
+    expect(entry.fixture?.missingNote).toBeUndefined();
+  });
+});

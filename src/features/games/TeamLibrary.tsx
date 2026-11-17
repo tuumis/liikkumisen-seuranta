@@ -1,6 +1,8 @@
 // Joukkuekirjasto (SPEC 16): Vastustajat-osio kokoaa peleihin ja turnauksiin merkityt joukkueet
 // seuroittain. Seuran näkymässä logo, ryhmät ja ikäluokat, tulokset, oman pelaajan maalit ja
 // pelien kommentit (muokattavissa). Nimien korjaus koskee kaikkia saman ryhmän pelejä.
+// Vastustajan voi lisätä myös käsin ennen ensimmäistä peliä, ja seuralle voi tallentaa ryhmiä,
+// jotka ovat valittavissa nimeä kirjoitettaessa (17.11.2026).
 
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -27,6 +29,7 @@ const OUTCOME_CLASS: Record<GameOutcome, string> = {
 
 function useLibrary(profile: Profile) {
   const data = useFootball(profile.id);
+  const clubs = useLiveQuery(() => repo.listClubs(), []);
   const today = todayFn();
   const fixtures = useLiveQuery(() => repo.listFixtures(profile.id, today), [profile.id, today]);
   const notes = useMemo(() => {
@@ -43,8 +46,8 @@ function useLibrary(profile: Profile) {
       const f = e.fixture;
       for (const o of [f.opponent, ...(f.games ?? []).map((g) => g.opponent)]) if (o?.trim()) upcoming.push({ date: e.plan.date, opponent: o, eventName: f.eventName });
     }
-    return buildOpponentLibrary(rows, upcoming);
-  }, [data, fixtures]);
+    return buildOpponentLibrary(rows, upcoming, clubs ?? []);
+  }, [data, fixtures, clubs]);
   return { library, notes };
 }
 
@@ -68,6 +71,20 @@ export function OpponentLibrary({ profile }: { profile: Profile }) {
   const [walking, setWalking] = useState(false);
   const [skipped, setSkipped] = useState<ReadonlySet<string>>(new Set());
   const toast = useToast();
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState('');
+  const suggestions = useTeamNameSuggestions(profile.id);
+  async function addOpponent() {
+    try {
+      const c = await repo.addOpponent(newName);
+      setAdding(false);
+      setNewName('');
+      setOpen(clubKey(c.name));
+      toast(`${c.name} lisätty vastustajiin`, undefined, 'success');
+    } catch (e) {
+      toast(e instanceof Error ? e.message : String(e));
+    }
+  }
   const pending = (after: string | null) => missing.filter((c) => c.key !== after && !skipped.has(c.key));
   function walkNext() {
     const all = library ?? [];
@@ -86,7 +103,35 @@ export function OpponentLibrary({ profile }: { profile: Profile }) {
 
   return (
     <Card title="Vastustajat" eyebrow="Joukkuekirjasto">
-      <p className="-mt-1 mb-3 text-sm text-slate-600">Peleihin ja turnauksiin merkityt joukkueet kootaan tähän automaattisesti. Avaa seura nähdäksesi ryhmät, tulokset ja kommentit.</p>
+      <p className="-mt-1 mb-3 text-sm text-slate-600">
+        Peleihin ja turnauksiin merkityt joukkueet kootaan tähän automaattisesti. Voit lisätä vastustajan myös itse, esim. tulevan sarjan joukkueet. Avaa seura nähdäksesi ryhmät,
+        tulokset ja kommentit.
+      </p>
+      {adding ? (
+        <form
+          className="card-sunk mb-3 space-y-2 p-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void addOpponent();
+          }}
+        >
+          <div className="text-sm font-semibold text-slate-800">Uusi vastustaja</div>
+          <TeamNameFields value={newName} onChange={setNewName} suggestions={suggestions} label="Uusi vastustaja" />
+          <p className="text-xs text-slate-500">Ryhmä ja ikäluokka ovat valinnaisia; ne tallentuvat seuralle valittaviksi. Logon, maan ja paikkakunnan voit lisätä seuraavaksi.</p>
+          <div className="flex gap-2">
+            <Button type="submit" className="flex-1" disabled={!parseTeamName(newName).club}>
+              Lisää vastustaja
+            </Button>
+            <Button variant="ghost" onClick={() => setAdding(false)}>
+              Peruuta
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <Button variant="secondary" className="mb-3" onClick={() => setAdding(true)}>
+          + Lisää vastustaja
+        </Button>
+      )}
       {missing.length > 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-[var(--surface-sunk)] px-3 py-2">
           <span className="min-w-0 flex-1 text-sm text-slate-700">
@@ -109,7 +154,7 @@ export function OpponentLibrary({ profile }: { profile: Profile }) {
       )}
       {library?.length === 0 && (
         <EmptyState art="people" title="Ei vielä vastustajia" compact>
-          Kun kirjaat pelin tai turnauksen vastustajan, joukkue tulee tähän.
+          Kun kirjaat pelin tai turnauksen vastustajan, joukkue tulee tähän. Voit lisätä vastustajan myös itse.
         </EmptyState>
       )}
       <ul className="grid gap-2 sm:grid-cols-2">
@@ -127,7 +172,7 @@ export function OpponentLibrary({ profile }: { profile: Profile }) {
                   {c.squads.map((s) => squadLabel(s.parts)).join(', ')}
                 </span>
                 <span className="mt-0.5 block text-xs tabular-nums text-slate-500">
-                  {gamesText(c.summary.games)}
+                  {c.summary.games === 0 && c.upcoming === 0 ? 'Ei vielä pelejä' : gamesText(c.summary.games)}
                   {hasResults(c.summary) && ` · V–T–H ${record(c.summary)}`}
                   {c.upcoming > 0 && ` · tulossa ${c.upcoming}`}
                 </span>
@@ -281,12 +326,94 @@ function ClubSheet({
             <p className="text-xs text-slate-500">Nimen muutos koskee kaikkia tämän seuran pelejä. Saman nimen antaminen kahdelle seuralle yhdistää ne.</p>
           </div>
 
+          <SavedSquads club={club} info={info} />
+
           {club.squads.map((s) => (
             <SquadSection key={s.key} squad={s} profile={profile} notes={notes} />
           ))}
+
+          {club.manual && club.summary.games === 0 && club.upcoming === 0 && (
+            <Button
+              variant="ghost"
+              className="w-full text-red-700"
+              onClick={async () => {
+                await repo.removeOpponentMark(club.name);
+                toast(`${club.name} poistettu vastustajista`);
+                onClose();
+              }}
+            >
+              Poista vastustajista
+            </Button>
+          )}
         </div>
       )}
     </Sheet>
+  );
+}
+
+/**
+ * Seuralle tallennetut ryhmät (17.11.2026): valittavissa siruina, kun seuran nimi kirjoitetaan peliin,
+ * turnaukseen tai omaan joukkueeseen. Peleistä löytyvät ryhmät ovat valittavissa ilman tallennustakin.
+ */
+function SavedSquads({ club, info }: { club: ClubEntry; info?: Club }) {
+  const toast = useToast();
+  const [group, setGroup] = useState('');
+  const [age, setAge] = useState('');
+  const saved = info?.squads ?? [];
+  async function add() {
+    try {
+      await repo.saveClubSquad(club.name, { group, age });
+      setGroup('');
+      setAge('');
+    } catch (e) {
+      toast(e instanceof Error ? e.message : String(e));
+    }
+  }
+  return (
+    <section className="card-sunk space-y-2 p-3" aria-label="Seuran ryhmät">
+      <div className="text-sm font-semibold text-slate-800">Tallennetut ryhmät</div>
+      {saved.length > 0 ? (
+        <ul className="flex flex-wrap gap-1.5">
+          {saved.map((q) => {
+            const text = squadLabel({ club: club.name, ...q });
+            return (
+              <li key={squadLabel({ club: '', ...q })} className="flex items-center gap-1 rounded-full bg-[var(--surface-raised)] py-0.5 pl-2.5 pr-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-300">
+                {text}
+                <button
+                  type="button"
+                  className="flex size-7 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"
+                  aria-label={`Poista tallennettu ryhmä ${text}`}
+                  onClick={() => void repo.removeClubSquad(club.name, q)}
+                >
+                  ✕
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="text-xs text-slate-500">Ei tallennettuja ryhmiä. Tallennettu ryhmä on valittavissa, kun kirjoitat seuran nimen peliin tai turnaukseen.</p>
+      )}
+      <form
+        className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto] items-end gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void add();
+        }}
+      >
+        <label className="block min-w-0">
+          <span className="mb-1 block text-xs font-semibold text-slate-600">Ryhmä</span>
+          <input className={inputClass} value={group} onChange={(e) => setGroup(e.target.value)} maxLength={30} placeholder="esim. Musta" aria-label="Uusi ryhmä" />
+        </label>
+        <label className="block min-w-0">
+          <span className="mb-1 block text-xs font-semibold text-slate-600">Ikäluokka</span>
+          <input className={inputClass} value={age} onChange={(e) => setAge(e.target.value)} maxLength={12} placeholder="esim. 2018" aria-label="Uuden ryhmän ikäluokka" />
+        </label>
+        <Button type="submit" variant="secondary" disabled={!group.trim() && !age.trim()}>
+          Tallenna
+        </Button>
+      </form>
+    </section>
   );
 }
 
@@ -356,6 +483,7 @@ function SquadSection({ squad, profile, notes }: { squad: SquadEntry; profile: P
           </div>
         </form>
       )}
+      {squad.rows.length === 0 && squad.upcoming.length === 0 && <p className="text-sm text-slate-500">Ei vielä pelejä tätä ryhmää vastaan.</p>}
       <ul className="space-y-2">
         {squad.upcoming.map((u, i) => (
           <li key={`u${i}`} className="flex items-center gap-3 rounded-2xl border border-dashed border-slate-300 px-3 py-2 text-sm text-slate-600">

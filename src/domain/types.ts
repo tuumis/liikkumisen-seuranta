@@ -324,6 +324,16 @@ export interface Fixture extends SyncFields {
   /** Kesto annettu käsin (ei lasketa otteluohjelmasta). */
   durationManual?: boolean;
   note?: string;
+  /** "Tietoja puuttuu" (17.11.2026): esim. kellonaika tai paikka vielä tiedossa vain osittain; näkyy kalenterissa. */
+  infoMissing?: boolean;
+  /** Mitä puuttuu (valinnainen lyhyt teksti). */
+  missingNote?: string;
+}
+
+/** Seuralle tallennettu ryhmä ja ikäluokka (17.11.2026): valittavissa nimeä kirjoitettaessa. */
+export interface SavedSquad {
+  group?: string;
+  age?: string;
 }
 
 /**
@@ -342,6 +352,10 @@ export interface Club extends SyncFields {
   city?: string;
   /** Jakokuvien väri (features/share/shareColors: teeman tunniste tai #rrggbb); puuttuessa sovelluksen värit. */
   shareColor?: string;
+  /** Lisätty käsin vastustajaksi (17.11.2026): näkyy Vastustajat-listassa ilman pelejäkin. */
+  opponent?: boolean;
+  /** Tallennetut ryhmät (17.11.2026); peleistä löytyvät ryhmät näkyvät myös ilman tallennusta. */
+  squads?: SavedSquad[];
   createdAt: Timestamp;
 }
 

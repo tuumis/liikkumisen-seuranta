@@ -41,6 +41,7 @@ import type {
   SyncFields,
   FieldPosition,
   GameFormat,
+  SavedSquad,
   ScheduledGame,
   Team,
   TemplateItem,
@@ -149,6 +150,9 @@ export interface FixtureInput {
   /** Kesto annettu käsin (ei lasketa otteluohjelmasta). */
   durationManual?: boolean;
   note?: string;
+  /** "Tietoja puuttuu" ja valinnainen kuvaus. */
+  infoMissing?: boolean;
+  missingNote?: string;
 }
 
 export interface FixtureEntry {
@@ -1142,6 +1146,64 @@ export function createRepositories(db: AppDB = defaultDb) {
   /** Seuran logo (undefined poistaa). */
   const saveClubLogo = (name: string, logo: string | undefined) => saveClub(name, { logo });
 
+  const squadOf = (q: SavedSquad): SavedSquad => {
+    const c = (v?: string) => v?.replace(/\s+/g, ' ').trim() || undefined;
+    const group = c(q.group)?.slice(0, 30);
+    const age = c(q.age)?.slice(0, 12);
+    return { ...(group ? { group } : {}), ...(age ? { age } : {}) };
+  };
+  const savedKey = (q: SavedSquad) => `${(q.group ?? '').toLocaleLowerCase('fi')}|${(q.age ?? '').toLocaleLowerCase('fi')}`;
+  /** Ryhmälistojen yhdistys: järjestys säilyy, kaksoiskappaleet pois. */
+  const mergeSquads = (...lists: (SavedSquad[] | undefined)[]): SavedSquad[] => {
+    const out = new Map<string, SavedSquad>();
+    for (const q of lists.flat()) if (q && (q.group || q.age) && !out.has(savedKey(q))) out.set(savedKey(q), q);
+    return [...out.values()];
+  };
+
+  /**
+   * Vastustajan lisäys käsin (17.11.2026): seura merkitään vastustajaksi, jolloin se näkyy
+   * Vastustajat-listassa ennen ensimmäistä peliäkin. Annettu ryhmä/ikäluokka tallennetaan seuralle.
+   */
+  async function addOpponent(text: string): Promise<Club> {
+    const p = parseTeamName(text);
+    if (!p.club.trim()) throw new Error('Anna seuran nimi');
+    const club = await saveClub(p.club, {});
+    const squad = squadOf({ group: p.group, age: p.age });
+    const next: Club = await stamp({ ...club, opponent: true, squads: mergeSquads(club.squads, [squad]) });
+    if (!next.squads?.length) delete next.squads;
+    await db.clubs.put(next);
+    return next;
+  }
+
+  /** Käsin lisätyn vastustajan merkinnän poisto (seuran logo ja muut tiedot säilyvät). */
+  async function removeOpponentMark(name: string): Promise<void> {
+    const c = await db.clubs.get(clubIdOf(name));
+    if (!c || c.deletedAt || !c.opponent) return;
+    const next = await stamp({ ...c });
+    delete next.opponent;
+    await db.clubs.put(next);
+  }
+
+  /** Ryhmän tallennus seuralle (valittavissa nimeä kirjoitettaessa). */
+  async function saveClubSquad(name: string, squad: SavedSquad): Promise<Club> {
+    const q = squadOf(squad);
+    if (!q.group && !q.age) throw new Error('Anna ryhmä tai ikäluokka');
+    const club = await saveClub(name, {});
+    const next = await stamp({ ...club, squads: mergeSquads(club.squads, [q]) });
+    await db.clubs.put(next);
+    return next;
+  }
+
+  /** Tallennetun ryhmän poisto (peleissä oleva nimi ei muutu). */
+  async function removeClubSquad(name: string, squad: SavedSquad): Promise<void> {
+    const c = await db.clubs.get(clubIdOf(name));
+    if (!c || c.deletedAt || !c.squads?.length) return;
+    const k = savedKey(squadOf(squad));
+    const next: Club = await stamp({ ...c, squads: c.squads.filter((q) => savedKey(q) !== k) });
+    if (!next.squads?.length) delete next.squads;
+    await db.clubs.put(next);
+  }
+
   /**
    * Muuttaa joukkueiden nimiä kaikkialla (vastustajat peleissä ja pelikalenterissa, omat joukkueet).
    * `map` palauttaa uudet osat tai null, jos nimi ei kuulu muutokseen. Palauttaa muutettujen nimien määrän.
@@ -1193,7 +1255,10 @@ export function createRepositories(db: AppDB = defaultDb) {
       const existing = await db.clubs.get(clubIdOf(target));
       const keep = existing && !existing.deletedAt ? existing : undefined;
       if (clubIdOf(target) !== old.id) await softDelete(db.clubs, old.id);
-      await saveClub(target, { logo: keep?.logo ?? old.logo, country: keep?.country ?? old.country, city: keep?.city ?? old.city, shareColor: keep?.shareColor ?? old.shareColor });
+      const saved = await saveClub(target, { logo: keep?.logo ?? old.logo, country: keep?.country ?? old.country, city: keep?.city ?? old.city, shareColor: keep?.shareColor ?? old.shareColor });
+      // Käsin lisätyn vastustajan merkintä ja tallennetut ryhmät siirtyvät uudelle nimelle.
+      const squads = mergeSquads(keep?.squads, old.squads);
+      if (old.opponent || squads.length) await db.clubs.put(await stamp({ ...saved, ...(old.opponent || keep?.opponent ? { opponent: true } : {}), ...(squads.length ? { squads } : {}) }));
     }
     return n;
   }
@@ -1202,7 +1267,15 @@ export function createRepositories(db: AppDB = defaultDb) {
   async function editSquad(from: TeamParts, to: TeamParts): Promise<number> {
     if (!to.club.trim()) throw new Error('Anna seuran nimi');
     const key = squadKey(from);
-    return rewriteTeamNames((p) => (squadKey(p) === key ? to : null));
+    const n = await rewriteTeamNames((p) => (squadKey(p) === key ? to : null));
+    // Tallennettu ryhmä seuraa korjausta (myös toiselle seuralle).
+    const c = await db.clubs.get(clubIdOf(from.club));
+    const k = savedKey(squadOf(from));
+    if (c && !c.deletedAt && c.squads?.some((q) => savedKey(q) === k)) {
+      await removeClubSquad(from.club, from);
+      if (to.group?.trim() || to.age?.trim()) await saveClubSquad(to.club, to);
+    }
+    return n;
   }
 
   /** Pelin kommentti joukkuekirjastosta: turnauksen pelirivi (`index` 1…) tai yksittäisen pelin kommentti. */
@@ -1314,6 +1387,11 @@ export function createRepositories(db: AppDB = defaultDb) {
       if (input.durationManual) f.durationManual = true;
     }
     if (clean(input.note)) f.note = clean(input.note);
+    if (input.infoMissing) {
+      f.infoMissing = true;
+      const m = clean(input.missingNote);
+      if (m) f.missingNote = m.slice(0, 120);
+    }
     return f;
   }
 
@@ -1834,6 +1912,10 @@ export function createRepositories(db: AppDB = defaultDb) {
     correctEstimate,
     endEstimate,
     changeEstimateCategory,
+    addOpponent,
+    removeOpponentMark,
+    saveClubSquad,
+    removeClubSquad,
     dayFlagsInRange,
     setDayFlag,
     clearDayFlag,

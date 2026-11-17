@@ -165,11 +165,11 @@ export const teamSchema = either(
 );
 
 export const fixtureSchema = either(
-  z.looseObject({ plannedSessionId: z.string().min(1), level: level.optional(), ...sync }),
+  z.looseObject({ plannedSessionId: z.string().min(1), level: level.optional(), infoMissing: z.boolean().optional(), missingNote: z.string().max(200).optional(), ...sync }),
   'plannedSessionId',
 );
 
-export const clubSchema = either(z.looseObject({ id: z.string().min(1), name: z.string(), logo: photo.optional(), country: z.string().max(10).optional(), city: z.string().max(80).optional(), shareColor: z.string().max(20).optional(), createdAt: ts, ...sync }));
+export const clubSchema = either(z.looseObject({ id: z.string().min(1), name: z.string(), logo: photo.optional(), country: z.string().max(10).optional(), city: z.string().max(80).optional(), shareColor: z.string().max(20).optional(), opponent: z.boolean().optional(), squads: z.array(z.looseObject({ group: z.string().max(60).optional(), age: z.string().max(30).optional() })).max(100).optional(), createdAt: ts, ...sync }));
 
 export const metaSchema = z.looseObject({ key: z.string().min(1), value: z.unknown() });
 

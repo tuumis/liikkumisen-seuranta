@@ -251,6 +251,17 @@ function CalendarView({ profile, onEdit }: { profile: Profile; onEdit: (e: Fixtu
   );
 }
 
+/** "Tietoja puuttuu" -merkki (17.11.2026); kuvaus näkyy merkissä ja vihjeenä. */
+export function MissingBadge({ f }: { f?: { infoMissing?: boolean; missingNote?: string } }) {
+  if (!f?.infoMissing) return null;
+  return (
+    <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900 ring-1 ring-amber-200" title={f.missingNote}>
+      <span aria-hidden>⚠</span>
+      <span className="truncate">Tietoja puuttuu{f.missingNote ? `: ${f.missingNote}` : ''}</span>
+    </span>
+  );
+}
+
 function FixtureSummary({ e, team, history }: { e: FixtureEntry; team?: Team; history?: (opponent: string | undefined) => string | undefined }) {
   const tournament = e.plan.activityTypeId === 't:football_tournament';
   const f = e.fixture;
@@ -258,11 +269,12 @@ function FixtureSummary({ e, team, history }: { e: FixtureEntry; team?: Team; hi
   return (
     <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-2">
-        <span aria-hidden>{tournament ? '🏆' : '🥅'}</span>
+        <span aria-hidden>{tournament ? '🏆' : '⚽'}</span>
         <span className="truncate font-medium text-slate-900">
           {tournament ? f?.eventName ?? 'Turnaus' : `${team?.name ?? 'Oma joukkue'} – ${f?.opponent ?? 'vastustaja ?'}`}
         </span>
         <LevelBadge level={level} />
+        <MissingBadge f={f} />
       </div>
       <div className="mt-0.5 text-xs text-slate-600">
         {dayLabel(e.plan.date)}
