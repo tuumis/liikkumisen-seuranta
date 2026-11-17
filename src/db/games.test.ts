@@ -440,18 +440,3 @@ describe('ennakkokuvan kommentti (17.11.2026)', () => {
     expect((await db.fixtures.get(e.plan.id))!.previewNote).toBeUndefined();
   });
 });
-
-describe('pelin ja turnauksen päättymisaika (17.11.2026)', () => {
-  it('tallentuu pelille ja turnaukselle, ei harjoituspelille; muokkaus voi poistaa sen', async () => {
-    const { repo, db } = await device('end');
-    const g = await repo.createFixture('p1', { kind: 'game', date: '2026-11-21', startTime: '14:00', durationMin: 90, endTime: '15:30' });
-    expect((await db.fixtures.get(g.plan.id))!.endTime).toBe('15:30');
-    const t = await repo.createFixture('p1', { kind: 'tournament', date: '2026-11-21', startTime: '13:30', durationMin: 120, endTime: '17:00', games: [{ time: '14:00', opponent: 'HJK' }] });
-    expect((await db.fixtures.get(t.plan.id))!.endTime).toBe('17:00');
-    expect((await db.plannedSessions.get(t.plan.id))!.durationMin).toBe(120);
-    const f = await repo.createFixture('p1', { kind: 'friendly', date: '2026-11-21', startTime: '18:00', durationMin: 75, endTime: '19:15' });
-    expect((await db.fixtures.get(f.plan.id))?.endTime).toBeUndefined();
-    await repo.updateFixture(g.plan.id, { kind: 'game', date: '2026-11-21', startTime: '14:00', durationMin: 60 });
-    expect((await db.fixtures.get(g.plan.id))!.endTime).toBeUndefined();
-  });
-});

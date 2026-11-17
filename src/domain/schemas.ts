@@ -170,7 +170,7 @@ export const teamSchema = either(
 );
 
 export const fixtureSchema = either(
-  z.looseObject({ plannedSessionId: z.string().min(1), level: level.optional(), endTime: z.string().regex(/^\d{2}:\d{2}$/).optional(), infoMissing: z.boolean().optional(), missingNote: z.string().max(200).optional(), previewNote: z.string().max(200).optional(), ...sync }),
+  z.looseObject({ plannedSessionId: z.string().min(1), level: level.optional(), infoMissing: z.boolean().optional(), missingNote: z.string().max(200).optional(), previewNote: z.string().max(200).optional(), ...sync }),
   'plannedSessionId',
 );
 

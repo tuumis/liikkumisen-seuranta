@@ -103,7 +103,6 @@ export function previewCard(
       kind: 'game',
       ...base,
       ...(kickoff ? { kickoff, arrival: gameDaySchedule(kickoff, f?.warmupMin).arrival } : {}),
-      ...(f?.endTime ? { end: f.endTime } : {}),
       games: [{ ...(clean(f?.opponent) ? { opponent: clean(f?.opponent) } : {}), ...(kickoff ? { time: kickoff } : {}) }],
     };
   }
@@ -128,7 +127,6 @@ export function previewCard(
     ...(location ? { location } : {}),
     ...(timed ? { kickoff: timed } : {}),
     ...(arrival ? { arrival } : {}),
-    ...(f?.endTime ? { end: f.endTime } : {}),
     // Yhteinen paikka näytetään kerran; pelirivillä vain poikkeava paikka.
     games: games.length ? games.map(({ location: l, ...g }) => (l && l !== location ? { ...g, location: l } : g)) : Array.from({ length: Math.min(12, Math.max(0, f?.gamesCount ?? 0)) }, () => ({})),
   };

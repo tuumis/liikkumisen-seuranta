@@ -1195,10 +1195,4 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
     - Värivalintaan on lisätty **Musta ja valkoinen** (musta pohja, valkoiset raidat ja korosteet) sekä **Valkoinen ja musta** (vaalea pohja, mustat raidat ja korosteet).
     - Valinta muistetaan joukkueelle kuten ennenkin, ja se toimii kaikissa tyyleissä sekä tulos- että ennakkokuvassa.
     - Urheilu- ja Kenttä-tyyli käyttävät tumman pohjavärin kanssa valitun värin korostusta, eivät enää kiinteää keltaista tai vaalennettua pohjaväriä.
-  - **Päättymisaika peleille ja turnauksille** (käyttäjän toive 17.11.2026; `Fixture.endTime`, `features/games/FixtureSheet.tsx`, `GamesTab`, `domain/previewCard.ts`):
-    - Kalenterin pelin ja turnauksen lomakkeessa on alun vieressä **Päättyy**-kenttä (valinnainen).
-    - Pelissä ja turnauksessa ilman otteluohjelmaa kesto lasketaan automaattisesti: loppu − alku. Pelissä alku on pelin alku. Kesto-kenttää ei tällöin näytetä.
-    - Turnauksessa, jonka kesto lasketaan otteluohjelmasta, kesto pysyy peliaikana: pelit × (lämmittely 15 min ennen jokaista peliä + pelin pituus) + loppuverryttely. Pelien väliset tauot eivät ole liikuntaa (käyttäjän valinta 17.11.2026). Päättymisaika tallentuu ja näytetään, ja lomake näyttää laskentakaavan.
-    - Päättymisaika ennen alkua tai saapumista on virhe. Jos päättymisaika annetaan ilman alkua, lomake pyytää alkamisajan.
-    - Kalenterin rivillä näkyy "klo 14:00–15:30" tai turnauksessa "paikalla 13:30 · päättyy 17:00". Ennakkokuvassa on valittava **Päättyy**-laatikko myös peleille ja turnauksille.
-    - Harjoituspelin loppu lasketaan edelleen alusta ja kestosta, eikä sitä tallenneta erikseen.
+  - **Pelin ja turnauksen päättymisaika: kokeiltu ja poistettu** (17.11.2026). Käyttäjän mielestä vanha tapa on parempi. Peleissä ja turnauksissa annetaan alku ja kesto (turnauksessa kesto voidaan laskea otteluohjelmasta). Vain harjoituspelillä on alku ja loppu.
