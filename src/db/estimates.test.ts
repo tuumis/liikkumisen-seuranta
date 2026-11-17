@@ -180,3 +180,39 @@ describe('sisäänrakennettujen lajien uudelleennimeäminen (17.11.2026)', () =>
     expect((await db.activityTypes.get('t:other'))!.name).toBe('Liikuntapuisto (esim. Superpark)');
   });
 });
+
+describe('tupla päiväkoti vanhoilla päivillä (17.11.2026)', () => {
+  const daycare = (over: Partial<EstimateInput> = {}) => recess({ category: 'daycare', label: 'Päiväkoti', weekdayMin: 120, ...over });
+  const base = { profileId: 'p1', durationMin: 120, effort: 0 as const, muscle: false, bone: false, estimateConfirmed: true };
+
+  it('päättynyt Muu-päiväkotiarvio ja irrallinen vahvistus löytyvät ja yhdistyvät Päiväkotiin', async () => {
+    const old = await repo.saveEstimate('p1', daycare({ category: 'other', label: 'Päiväkotipäivä' }), '2026-11-17', '2026-08-15');
+    await db.estimates.update(old.id, { validTo: '2026-11-16' }); // vanha lopetettu, ei näy voimassa olevissa
+    await repo.saveEstimate('p1', daycare(), '2026-11-17', '2026-09-01');
+    const confirmed = await repo.createSession({ ...base, activityTypeId: 't:other', date: '2026-10-05', label: 'Päiväkotipäivä' });
+    const stray = await repo.createSession({ ...base, activityTypeId: 't:other', date: '2026-08-10', label: 'Päiväkoti' });
+    const both = await repo.createSession({ ...base, activityTypeId: 't:daycare_day', date: '2026-08-10', label: 'Päiväkoti' });
+    const other = await repo.createSession({ ...base, activityTypeId: 't:other', date: '2026-11-20', label: 'Leikki' });
+
+    expect((await repo.activeEstimates('p1', '2026-11-17')).map((e) => e.category)).toEqual(['daycare']);
+    expect(dayTotals('2026-10-20', [], await repo.listEstimates('p1'), types).estimatedCategories.sort()).toEqual(['daycare', 'other']);
+    const found = await repo.daycareDoubles('p1');
+    expect(found.estimates.map((e) => e.id)).toEqual([old.id]);
+    expect(found.sessions).toBe(2);
+
+    const r = await repo.mergeDaycareDoubles('p1');
+    expect(r).toMatchObject({ estimates: 1 });
+    expect(await db.estimates.get(old.id)).toMatchObject({ category: 'daycare', validTo: '2026-08-31' });
+    expect(dayTotals('2026-10-20', [], await repo.listEstimates('p1'), types).estimatedCategories).toEqual(['daycare']);
+    expect((await db.sessions.get(confirmed.id))!.activityTypeId).toBe('t:daycare_day');
+    expect((await db.sessions.get(stray.id))!.deletedAt).toBeTruthy();
+    expect((await db.sessions.get(both.id))!.deletedAt).toBeUndefined();
+    expect((await db.sessions.get(other.id))!.activityTypeId).toBe('t:other');
+    expect(await repo.daycareDoubles('p1')).toEqual({ estimates: [], sessions: 0 });
+  });
+
+  it('ilman Päiväkoti-kategoriaa ei ilmoitusta', async () => {
+    await repo.saveEstimate('p1', daycare({ category: 'other', label: 'Päiväkoti' }), '2026-11-17', '2026-09-01');
+    expect(await repo.daycareDoubles('p1')).toEqual({ estimates: [], sessions: 0 });
+  });
+});

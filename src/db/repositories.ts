@@ -1997,6 +1997,63 @@ export function createRepositories(db: AppDB = defaultDb) {
     });
   }
 
+  /** Päiväkodiksi nimetty arvio tai vahvistus (esim. "Päiväkoti", "Päiväkotipäivä", "Varhaiskasvatus"). */
+  const DAYCARE_LABEL = /päiväko|varhaiskasv|päiväho|tarha/i;
+
+  /**
+   * Tupla päiväkoti (käyttäjän havainto 17.11.2026): päiväkotiarvio tehty ensin muuhun kategoriaan ja
+   * myöhemmin Päiväkoti-kategoriaan. Vanha arvio voi olla jo päättynyt, jolloin se ei näy voimassa olevien
+   * listassa, mutta vanhoilla päivillä ovat voimassa molemmat. Palauttaa korjattavat: muun kategorian
+   * päiväkotiarviot (myös päättyneet) ja irralliset muun kategorian päiväkotivahvistukset. Tyhjä, jos
+   * profiililla ei ole Päiväkoti-kategorian arviota tai vahvistusta (silloin mikään ei ole kahdesti).
+   */
+  async function daycareDoubles(profileId: UUID): Promise<{ estimates: Estimate[]; sessions: number }> {
+    const all = await listEstimates(profileId);
+    const types = new Map((await db.activityTypes.toArray()).map((t) => [t.id, t]));
+    const sessions = live(await db.sessions.where('profileId').equals(profileId).toArray()).filter(isEstimateConfirmation);
+    const hasDaycare = all.some((e) => e.category === 'daycare') || sessions.some((s) => types.get(s.activityTypeId)?.category === 'daycare');
+    if (!hasDaycare) return { estimates: [], sessions: 0 };
+    const estimates = all.filter((e) => e.category !== 'daycare' && DAYCARE_LABEL.test(e.label));
+    const stray = sessions.filter((s) => types.get(s.activityTypeId)?.category !== 'daycare' && DAYCARE_LABEL.test(s.label ?? ''));
+    return { estimates, sessions: stray.length };
+  }
+
+  /**
+   * Tuplan korjaus yhdellä painalluksella: muun kategorian päiväkotiarviot siirretään Päiväkotiin koko
+   * historiaan (changeEstimateCategory: uudempi voittaa, vahvistukset mukaan), sitten jäljelle jääneet
+   * muun kategorian päiväkotivahvistukset siirretään Päiväkotiin tai poistetaan, jos päivälle on jo
+   * Päiväkoti-vahvistus. Tavalliset kirjatut kerrat eivät muutu.
+   */
+  async function mergeDaycareDoubles(profileId: UUID): Promise<{ estimates: number; moved: number; removed: number }> {
+    const { estimates } = await daycareDoubles(profileId);
+    let moved = 0;
+    let removed = 0;
+    for (const e of estimates) {
+      const r = await changeEstimateCategory(e.id, 'daycare');
+      moved += r.moved;
+      removed += r.removed;
+    }
+    await db.transaction('rw', [db.sessions, db.activityTypes, db.meta], async () => {
+      const types = new Map((await db.activityTypes.toArray()).map((t) => [t.id, t]));
+      const target = await db.activityTypes.get(activityTypeId(ESTIMATE_DEFAULT_TYPE_KEY.daycare));
+      if (!target) return;
+      const sessions = live(await db.sessions.where('profileId').equals(profileId).toArray()).filter(isEstimateConfirmation);
+      const daycareDates = new Set(sessions.filter((s) => types.get(s.activityTypeId)?.category === 'daycare').map((s) => s.date));
+      for (const s of sessions) {
+        if (types.get(s.activityTypeId)?.category === 'daycare' || !DAYCARE_LABEL.test(s.label ?? '')) continue;
+        if (daycareDates.has(s.date)) {
+          await softDelete(db.sessions, s.id);
+          removed++;
+        } else {
+          await db.sessions.put(await stamp({ ...s, activityTypeId: target.id, estimateConfirmed: true }));
+          daycareDates.add(s.date);
+          moved++;
+        }
+      }
+    });
+    return { estimates: estimates.length, moved, removed };
+  }
+
   // ---------- päivämerkinnät ----------
 
   async function dayFlagsInRange(profileId: UUID, from: ISODate, to: ISODate): Promise<DayFlag[]> {
@@ -2139,6 +2196,8 @@ export function createRepositories(db: AppDB = defaultDb) {
     correctEstimate,
     endEstimate,
     changeEstimateCategory,
+    daycareDoubles,
+    mergeDaycareDoubles,
     addOpponent,
     removeOpponentMark,
     saveClubSquad,

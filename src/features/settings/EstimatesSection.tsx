@@ -27,7 +27,11 @@ type Draft = { category: Category; label: string; existing?: Estimate; weekdayMi
 export function EstimatesSection({ profile }: { profile: Profile }) {
   const today = todayFn();
   const active = useLiveQuery(() => repo.activeEstimates(profile.id, today), [profile.id, today]);
+  const all = useLiveQuery(() => repo.listEstimates(profile.id), [profile.id]);
   const [draft, setDraft] = useState<Draft | null>(null);
+  // Aiemmat (päättyneet tai myöhemmin alkavat) arviot: näkyvät, jotta niiden kategorian voi korjata (17.11.2026).
+  const activeIds = new Set(active?.map((e) => e.id));
+  const earlier = (all ?? []).filter((e) => !activeIds.has(e.id)).sort((a, b) => b.validFrom.localeCompare(a.validFrom));
 
   if (draft) {
     return (
@@ -44,6 +48,7 @@ export function EstimatesSection({ profile }: { profile: Profile }) {
 
   return (
     <Card title={`Arkiliikunta (perusarviot) · ${profile.name}`}>
+      <DaycareDoubles profileId={profile.id} />
       <p className="text-sm text-slate-600">
         Arvio tavallisesta liikkumisesta, jota ei kirjata kerta kerralta (esim. välitunnit). Arvio täyttää kategorian vain päivinä, joille siinä ei ole kirjauksia, ja se näytetään
         aina erikseen.
@@ -96,6 +101,23 @@ export function EstimatesSection({ profile }: { profile: Profile }) {
           </Button>
         )}
       </div>
+      {earlier.length > 0 && (
+        <details className="mt-4 rounded-xl bg-[var(--surface-sunk)] p-3 ring-1 ring-slate-200">
+          <summary className="min-h-9 cursor-pointer text-sm font-semibold text-slate-800">Aiemmat arviot ({earlier.length})</summary>
+          <p className="mt-1 text-xs text-slate-500">Päättyneet arviot vaikuttavat yhä omien päiviensä laskentaan. Jos sama arki näkyy vanhoilla päivillä kahdesti, siirrä vanha arvio oikeaan kategoriaan.</p>
+          <ul className="mt-2 divide-y divide-slate-200/70">
+            {earlier.map((e) => (
+              <li key={e.id} className="py-2.5">
+                <span className="block truncate text-sm font-medium text-slate-900">{e.label}</span>
+                <span className="block text-xs text-slate-600">
+                  {CATEGORY_LABEL[e.category]} · arki {e.weekdayMin} min/pv · {formatDate(e.validFrom, 'd.M.yyyy')}–{e.validTo ? formatDate(e.validTo, 'd.M.yyyy') : ''}
+                </span>
+                <CategoryChange estimate={e} profileId={profile.id} onDone={() => undefined} />
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       {active && active.length > 0 && (
         <p className="mt-3 text-xs text-slate-500">
           Muokatessa voit valita, koskeeko muutos tästä päivästä eteenpäin (aiemmat päivät eivät muutu) vai korjataanko koko arvio alkamispäivää myöten.
@@ -272,8 +294,9 @@ function CategoryChange({ estimate: e, profileId, onDone }: { estimate: Estimate
   const [open, setOpen] = useState(false);
   const [target, setTarget] = useState<Category | ''>('');
   const [error, setError] = useState<string>();
-  const others = useLiveQuery(() => repo.activeEstimates(profileId, today), [profileId, today]);
-  const clash = target ? others?.find((o) => o.category === target && o.id !== e.id) : undefined;
+  const others = useLiveQuery(() => repo.listEstimates(profileId), [profileId]);
+  const overlaps = (o: Estimate) => o.validFrom <= (e.validTo ?? '9999-12-31') && e.validFrom <= (o.validTo ?? today);
+  const clash = target ? others?.find((o) => o.category === target && o.id !== e.id && overlaps(o)) : undefined;
 
   async function apply() {
     if (!target) return setError('Valitse kategoria');
@@ -344,5 +367,48 @@ function DaycareHint({ weekday, mvpa }: { weekday: number; mvpa?: number }) {
       (Liikkuva varhaiskasvatus) – kaksi kolmasosaa koko päivän 3 h / 1 h -suosituksesta.
       {mvpa !== undefined && ` Tällä arviolla ${weekday} min, josta reipasta ja rasittavaa ${mvpa} min${ok ? ' ✓' : ''}.`}
     </p>
+  );
+}
+
+/**
+ * Tupla päiväkoti (17.11.2026): ilmoitus ja yhden painalluksen korjaus, kun päiväkotiarvio on myös muussa
+ * kategoriassa (myös päättynyt arvio) tai vanhoja päiväkotivahvistuksia on muussa kategoriassa.
+ */
+function DaycareDoubles({ profileId }: { profileId: string }) {
+  const toast = useToast();
+  const found = useLiveQuery(() => repo.daycareDoubles(profileId), [profileId]);
+  const [busy, setBusy] = useState(false);
+  if (!found || (found.estimates.length === 0 && found.sessions === 0)) return null;
+
+  async function fix() {
+    setBusy(true);
+    try {
+      const r = await repo.mergeDaycareDoubles(profileId);
+      const parts = ['Päiväkoti yhdistetty'];
+      if (r.estimates) parts.push(`${r.estimates} arviota siirretty`);
+      if (r.moved) parts.push(`${r.moved} vahvistusta siirretty`);
+      if (r.removed) parts.push(`${r.removed} päällekkäistä poistettu`);
+      toast(parts.join(' · '), undefined, 'success');
+    } catch (e) {
+      toast(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const names = found.estimates.map((e) => `${e.label} (${CATEGORY_LABEL[e.category]}, ${formatDate(e.validFrom, 'd.M.yyyy')}–${e.validTo ? formatDate(e.validTo, 'd.M.yyyy') : ''})`);
+  return (
+    <div className="mb-3 rounded-xl bg-amber-50 p-3 ring-1 ring-amber-200">
+      <p className="text-sm font-semibold text-amber-900">Päiväkoti näkyy osalla päivistä kahdesti</p>
+      <p className="mt-1 text-xs leading-relaxed text-slate-700">
+        {names.length > 0 && <>Päiväkotiarvio on myös muussa kategoriassa: {names.join(', ')}. </>}
+        {found.sessions > 0 && <>{found.sessions} vanhaa päiväkotivahvistusta on muussa kategoriassa. </>}
+        Yhdistäminen siirtää ne Päiväkoti-kategoriaan koko historiaan: päällekkäisistä arvioista uudempi on voimassa omasta alkamispäivästään, ja saman päivän
+        päällekkäiset vahvistukset poistetaan. Tavalliset kirjatut kerrat eivät muutu.
+      </p>
+      <Button className="mt-2" onClick={() => void fix()} disabled={busy}>
+        {busy ? 'Yhdistetään…' : 'Yhdistä Päiväkotiin'}
+      </Button>
+    </div>
   );
 }

@@ -1196,3 +1196,10 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
     - Valinta muistetaan joukkueelle kuten ennenkin, ja se toimii kaikissa tyyleissä sekä tulos- että ennakkokuvassa.
     - Urheilu- ja Kenttä-tyyli käyttävät tumman pohjavärin kanssa valitun värin korostusta, eivät enää kiinteää keltaista tai vaalennettua pohjaväriä.
   - **Pelin ja turnauksen päättymisaika: kokeiltu ja poistettu** (17.11.2026). Käyttäjän mielestä vanha tapa on parempi. Peleissä ja turnauksissa annetaan alku ja kesto (turnauksessa kesto voidaan laskea otteluohjelmasta). Vain harjoituspelillä on alku ja loppu.
+  - **Tupla päiväkoti vanhoilla päivillä: ilmoitus ja korjaus** (käyttäjän havainto 17.11.2026; `db/repositories.ts` `daycareDoubles`/`mergeDaycareDoubles`, `features/settings/EstimatesSection.tsx`):
+    - Syy: arviolista näytti vain tänään voimassa olevat arviot. Jos vanha muun kategorian päiväkotiarvio oli jo päättynyt ja Päiväkoti-arvio alkoi taaksepäin, vanhoilla päivillä oli voimassa molemmat. Vanhaa arviota ei kuitenkaan voinut valita, joten "Vaihda kategoria" ei ollut käytettävissä.
+    - **Ilmoitus:** Asetukset → Arkiliikunta näyttää ilmoituksen "Päiväkoti näkyy osalla päivistä kahdesti" ja painikkeen **Yhdistä Päiväkotiin**, kun:
+      - muussa kategoriassa on päiväkodiksi nimetty arvio (myös päättynyt; nimessä esim. päiväkoti tai varhaiskasvatus) tai sellaisia vahvistuksia
+      - ja profiililla on Päiväkoti-kategorian arvio tai vahvistus.
+    - **Yhdistäminen:** arviot siirretään Päiväkotiin koko historiaan samoin säännöin kuin kategorian vaihdossa (uudempi alkamispäivä voittaa, vahvistukset siirtyvät mukaan). Jäljelle jääneet muun kategorian päiväkotivahvistukset siirretään Päiväkotiin, tai ne poistetaan, jos päivälle on jo Päiväkoti-vahvistus. Tavalliset kirjatut kerrat eivät muutu.
+    - **Aiemmat arviot:** päättyneet ja myöhemmin alkavat arviot näkyvät avattavana listana omine kausineen. Kunkin kategorian voi vaihtaa koko historiaan. Kategorian vaihdon päällekkäisyysilmoitus huomioi myös päättyneet arviot, jotka osuvat samalle ajalle.
