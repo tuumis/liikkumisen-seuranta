@@ -131,14 +131,14 @@ export function DayRow({
       }`}
       style={{ ['--i' as string]: index + 3 }}
     >
-      <div {...press.handlers} className="no-callout flex select-none items-center gap-3 px-4 pb-1.5 pt-3">
+      <div {...press.handlers} className="no-callout flex select-none flex-wrap items-center gap-x-3 gap-y-1.5 px-4 pb-1.5 pt-3">
         <div className={`flex size-11 shrink-0 flex-col items-center justify-center rounded-2xl leading-none ${isToday ? 'bg-green-700 text-white shadow-[0_6px_14px_-6px_rgb(var(--accent-rgb)/0.7)]' : isFuture ? 'bg-[var(--surface-sunk)] text-slate-400' : 'bg-[var(--surface-sunk)] text-slate-800'}`}>
           <span className="text-[9.5px] font-bold uppercase tracking-wider opacity-80">{weekday}</span>
           <span className="stat text-[17px] font-semibold">{dayNo}</span>
         </div>
-        {/* Päivän nimi näytetään vain, jos se mahtuu kokonaan: muuten riittää päivälaatta (ei "Sunnuntai…", 17.11.2026). */}
-        <div className="@container min-w-0 flex-1">
-          <div className={`${isToday ? 'truncate' : 'hidden whitespace-nowrap sm:@min-[5.75rem]:block'} text-sm font-bold ${isToday ? 'text-green-800' : isFuture ? 'text-slate-500' : 'text-slate-900'}`}>
+        {/* Päivän nimi näkyy aina kokonaan (17.11.2026): jos tila ei riitä, oikean reunan mittarit siirtyvät omalle rivilleen. */}
+        <div className="min-w-0 flex-1 sm:flex-[1_0_auto]">
+          <div className={`${isToday ? '' : 'hidden sm:block'} whitespace-nowrap text-sm font-bold ${isToday ? 'text-green-800' : isFuture ? 'text-slate-500' : 'text-slate-900'}`}>
             {isToday ? 'Tänään' : weekdayName}
             {isToday && <span className="sr-only"> ({dayLabel(date)})</span>}
           </div>
