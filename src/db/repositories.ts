@@ -176,6 +176,16 @@ export interface FixtureInput {
   homeAway?: HomeAway;
 }
 
+/** Kalenterin treeni: kirjattu kerta (done) tai suunniteltu / viikkopohjasta johdettu. */
+export interface CalendarTraining {
+  id: string;
+  date: ISODate;
+  startTime?: HHmm;
+  durationMin: number;
+  label?: string;
+  done: boolean;
+}
+
 export interface FixtureEntry {
   plan: PlannedSession;
   fixture?: Fixture;
@@ -1660,17 +1670,26 @@ export function createRepositories(db: AppDB = defaultDb) {
   }
 
   /**
-   * Kalenterin treenit (18.11.2026): seuran jalkapallotreenien suunnitelmat väliltä (ei väliin jääneitä) sekä
-   * viikkopohjasta johdetut tulevat kerrat päiville, joita ei ole vielä suunniteltu. Johdettuja ei tallenneta.
+   * Kalenterin treenit (18.11.2026): seuran jalkapallotreenit väliltä.
+   * - Kirjatut kerrat (myös suoraan Viikko-näkymässä kirjatut, joilla ei ole suunnitelmaa; käyttäjän havainto
+   *   18.11.2026: "9.11. ei ole treenimerkintää"). Linkitetty omatoiminen verryttely ei ole oma treeni.
+   * - Avoimet suunnitelmat (tulevat ja kuittaamattomat); kuitatun tilalla on kerta, väliin jäänyt ei näy.
+   * - Viikkopohjasta johdetut tulevat kerrat päiville, joita ei ole vielä suunniteltu. Johdettuja ei tallenneta.
    */
-  async function calendarTrainings(profileId: UUID, from: ISODate, to: ISODate, today: ISODate): Promise<PlannedSession[]> {
+  async function calendarTrainings(profileId: UUID, from: ISODate, to: ISODate, today: ISODate): Promise<CalendarTraining[]> {
     const types = new Map((await db.activityTypes.toArray()).map((t) => [t.id, t]));
     const isTraining = (id: UUID) => isClubTraining(types.get(id));
     const rows = await db.plannedSessions
       .where('[profileId+date]')
       .between([profileId, from], [profileId, to], true, true)
       .toArray();
-    const out = live(rows).filter((p) => isTraining(p.activityTypeId) && p.status !== 'skipped');
+    const sessions = (await sessionsInRange(profileId, from, to)).filter((s) => isTraining(s.activityTypeId) && !s.linkedTo);
+    const out: CalendarTraining[] = sessions.map((s) => ({ id: s.id, date: s.date, startTime: s.startTime, durationMin: s.durationMin, label: s.label, done: true }));
+    // Kuittaamaton suunnitelma päivälle, jolle sama treeni on jo kirjattu suoraan: näytetään vain kirjaus.
+    const recorded = new Set(sessions.map((s) => `${s.activityTypeId}|${s.date}`));
+    for (const p of live(rows)) {
+      if (isTraining(p.activityTypeId) && p.status === 'open' && !recorded.has(`${p.activityTypeId}|${p.date}`)) out.push({ id: p.id, date: p.date, startTime: p.startTime, durationMin: p.durationMin, label: p.label, done: false });
+    }
     const done = await planner.getPlannedThrough(profileId);
     const start = maxDate(maxDate(from, today), done ? addDays(done, 1) : undefined);
     if (start <= to) {
@@ -1679,7 +1698,9 @@ export function createRepositories(db: AppDB = defaultDb) {
       for (const item of live(await db.templateItems.where('profileId').equals(profileId).toArray())) {
         if (!item.active || !isTraining(item.activityTypeId)) continue;
         for (const date of templateItemDates(item, start, to)) {
-          if (!taken.has(plannedSessionId(item.id, date))) out.push(newPlanned(item, date, item.updatedAt, item.updatedBy));
+          if (taken.has(plannedSessionId(item.id, date))) continue;
+          const p = newPlanned(item, date, item.updatedAt, item.updatedBy);
+          out.push({ id: p.id, date, startTime: p.startTime, durationMin: p.durationMin, label: p.label, done: false });
         }
       }
     }

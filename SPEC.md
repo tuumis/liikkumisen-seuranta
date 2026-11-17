@@ -1348,3 +1348,7 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
       - Valinnat: tulokset, paikat, paikalla-ajat, treenit ja lapsen nimi. Valinnat muistetaan laitteelle.
       - Otsikossa on joukkueen nimi ja seuran logo; lapsen nimi vain, jos se valitaan. Useammalla joukkueella valitaan joukkue tai "Kaikki joukkueet", jolloin riveillä näkyy joukkue.
       - PDF:n tiedostonimi tulee otsikosta, esim. "Otteluohjelma FC Testi · Sininen · 2017 Syyskausi 2026".
+  - **Korjaus: kuukausikalenterin treenit** (käyttäjän havainto 18.11.2026 "9.11. ei ole treenimerkintää"; `repo.calendarTrainings`, `CalendarTraining`): kalenteri haki treenit vain suunnitelmista, joten pois jäivät suoraan Viikko-näkymässä kirjatut treenit ja päivät, joille viikkopohjasta ei ollut suunnitelmaa. Nyt kalenterissa näkyvät:
+    - kirjatut seuran jalkapallotreenit (linkitetty omatoiminen verryttely ei näy omana treeninään)
+    - avoimet suunnitelmat; jos samalle päivälle on kirjattu sama treeni suoraan, näkyy vain kirjaus
+    - viikkopohjasta johdetut tulevat kerrat.
