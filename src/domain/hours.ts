@@ -8,7 +8,7 @@
 // Tämä on kestovertailu; suositusvertailu (reipas ja rasittava) on erillinen (osio 7),
 // eikä suunnitelma koskaan näy liikuntamäärissä.
 
-import { activeEstimate, isEstimateConfirmation, isEstimateValidOn } from './aggregate';
+import { activeEstimate, isEstimateConfirmation, isEstimateValidOn, sessionCategory } from './aggregate';
 import { datesBetween } from './dates';
 import { estimateBaseMin } from './holidays';
 import { computeSessionMinutes, mvpaOf } from './intensity';
@@ -132,7 +132,8 @@ export function weeklyHours(input: {
     const logByCat = new Map<Category, number>();
     for (const s of input.sessions) {
       if (s.deletedAt || s.date !== d) continue;
-      logByCat.set(catOf(s.activityTypeId), (logByCat.get(catOf(s.activityTypeId)) ?? 0) + s.durationMin);
+      const c = sessionCategory(s, input.types);
+      logByCat.set(c, (logByCat.get(c) ?? 0) + s.durationMin);
     }
     let actualMin = 0;
     let actualLoggedMin = 0;

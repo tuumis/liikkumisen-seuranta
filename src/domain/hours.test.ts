@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { formatHours, hoursBand, HOURS_BANDS, isEstimateConfirmation, weeklyHours } from './hours';
+import { dayTotals } from './aggregate';
 import { weekPeriod } from './dates';
 import { activityTypeId } from './ids';
 import { estimate, planned, session, typesMap } from './test-helpers';
@@ -187,5 +188,26 @@ describe('arkiliikunnan vahvistus', () => {
     expect(isEstimateConfirmation(session({ date: '2026-11-10', minutes: M, estimateConfirmed: true }))).toBe(true);
     expect(isEstimateConfirmation(session({ date: '2026-11-10', minutes: M, effort: 0, muscle: false, bone: false, note: 'Arkiliikunta vahvistettu' }))).toBe(true);
     expect(isEstimateConfirmation(session({ date: '2026-11-10', minutes: M, effort: 0, muscle: false, bone: false }))).toBe(false);
+  });
+});
+
+describe('treenin verryttely Harrastukseen (17.11.2026)', () => {
+  const play = estimate({ category: 'self_directed', weekdayMin: 60, weekendMin: 60, validFrom: '2026-01-01' });
+  const training = session({ id: 's1', date: '2026-11-10', activityTypeId: TRAINING, durationMin: 90, minutes: { light: 30, moderate: 40, vigorous: 20 } });
+  const warmup = session({ id: 'w:s1', linkedTo: 's1', date: '2026-11-10', activityTypeId: activityTypeId('football_self'), durationMin: 15, minutes: { light: 5, moderate: 10, vigorous: 0 } });
+  const own = session({ id: 's2', date: '2026-11-10', activityTypeId: activityTypeId('football_self'), durationMin: 20, minutes: { light: 5, moderate: 15, vigorous: 0 } });
+
+  it('verryttely ei korvaa omaehtoisen arviota, vaan menee treenin kanssa Harrastukseen', () => {
+    const t = dayTotals('2026-11-10', [training, warmup], [play], typesMap());
+    expect(t.byCategory.hobby).toMatchObject({ source: 'logged', durationMin: 105 });
+    expect(t.byCategory.self_directed).toMatchObject({ source: 'estimate', durationMin: 60 });
+    const h = weeklyHours({ ...base, sessions: [training, warmup], estimates: [play] });
+    expect(h.byCategory.find((c) => c.category === 'hobby')!.actual.sessions).toBe(105);
+    expect(h.byCategory.find((c) => c.category === 'self_directed')!.actual).toEqual({ sessions: 0, estimate: 7 * 60 });
+  });
+
+  it('erillinen omatoiminen kerta pysyy omaehtoisena ja korvaa arvion', () => {
+    const t = dayTotals('2026-11-10', [training, own], [play], typesMap());
+    expect(t.byCategory.self_directed).toMatchObject({ source: 'logged', durationMin: 20 });
   });
 });

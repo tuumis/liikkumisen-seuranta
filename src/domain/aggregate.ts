@@ -37,6 +37,14 @@ const EPS = 1e-9;
 /** Päiväkodiksi nimetty arvio tai vahvistus (tupla päiväkodin tunnistus, 17.11.2026); ä-kirjaimen koodaus ei vaikuta. */
 export const isDaycareLabel = (label: string | undefined): boolean => /päiväko|varhaiskasv|päiväho|tarha/i.test((label ?? '').normalize('NFC'));
 
+/**
+ * Kerran kategoria. Treenin verryttely (linkedTo, esim. "Jalkapallo – omatoiminen") kuuluu treeniin ja
+ * lasketaan Harrastukseen sen kanssa, ettei se korvaa päivän omaehtoisen liikunnan arviota (17.11.2026).
+ */
+export function sessionCategory(s: Pick<Session, 'activityTypeId' | 'linkedTo'>, types: ReadonlyMap<UUID, ActivityType>): Category {
+  return s.linkedTo ? 'hobby' : (types.get(s.activityTypeId)?.category ?? 'other');
+}
+
 export function isEstimateValidOn(e: Estimate, d: ISODate): boolean {
   return !e.deletedAt && e.validFrom <= d && (e.validTo === undefined || d <= e.validTo);
 }
@@ -105,7 +113,7 @@ export function dayTotals(
   for (const s of sessions) {
     if (s.date !== date || s.deletedAt) continue;
     if (isEstimateConfirmation(s)) confirmedMvpa += mvpaOf(s.minutes);
-    const category: Category = types.get(s.activityTypeId)?.category ?? 'other';
+    const category = sessionCategory(s, types);
     logged = addMinutes(logged, s.minutes);
     moving += Math.max(0, s.durationMin);
     const prev = byCategory[category];

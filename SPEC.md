@@ -1219,3 +1219,8 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
     - Merkki ei näy tulevilla päivillä eikä sairas- tai matkapäivillä. Selite kertoo ehdon.
     - Päivätaulukossa kouluikäisellä on vastaava ✓-sarake (x/7).
     - Viikon suositus (keskimäärin 60 min/pv) ja sen juhlinta pysyvät ennallaan.
+  - **Treenin verryttely lasketaan Harrastukseen** (käyttäjän kysymys ja valinta 17.11.2026; `domain/aggregate.ts` `sessionCategory`, `dayTotals`, `domain/hours.ts`):
+    - Treeniin linkitetty alku- ja loppuverryttely (`linkedTo`, "Jalkapallo – omatoiminen") kuuluu treeniin, joten se lasketaan kategoriassa **Harrastus** treenin kanssa.
+    - Aiemmin se laskettiin Omaehtoiseen. Silloin korvausperiaate pyyhki treenipäivinä päivän "Leikki ja oma liikkuminen" -arvion, ja viikon omaehtoinen liikunta näytti liian pientä.
+    - Erillinen "Jalkapallo – omatoiminen" -kerta (ei linkitetty treeniin) pysyy Omaehtoisena ja korvaa päivän arvion tavalliseen tapaan.
+    - Laji, tehot ja jalkapallon omatoimisen harjoittelun yhteenveto eivät muutu. Muutos koskee vain kategoriaa, eli päiväkoostetta, viikon tunteja ja kontekstijakoa.
