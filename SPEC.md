@@ -1235,3 +1235,7 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
   - **Arkiliikunta-ikkunasta pois päivät, joille arvio on 0 min** (käyttäjän kysymys 17.11.2026; `EstimateDaySheet`):
     - Arvio on voimassa koko jakson. Koulumatkojen ja välituntien viikonlopun minuutit ovat 0, joten ikkuna näytti viikonloppuisin turhat 0 min rivit "Vahvista"- ja "Ei tänä päivänä" -painikkeineen.
     - Nyt rivi näkyy vain, jos arvion päivän minuutit ovat yli 0 tai rivillä on jo merkintä (vahvistus tai erillinen kirjaus). Päivän arkiliikuntarivi ja pikavahvistus ohittivat 0 min arviot jo aiemmin.
+  - **Viikkonäkymän päivän nimi ilman katkaisua** (käyttäjän kysymys 17.11.2026; `DayRow`):
+    - Päivän nimi katkesi kolmella pisteellä ("Sunnuntai…"), kun oikealla oli pitkä "min yhteensä" -teksti ja rivillä ✓ Suositus -merkki.
+    - Nyt nimi näytetään vain, jos se mahtuu kokonaan (container query). Muuten päivän tunnistaa päivälaatasta (SU 15). Tänään-otsikko näkyy aina.
+    - Nimi on perusmuodossa ("Sunnuntai"), ei taivutettuna ("Sunnuntaina").

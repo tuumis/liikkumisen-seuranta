@@ -116,7 +116,8 @@ export function DayRow({
   // Kuittauksen palaute: suunnitelma painuu pois ennen kuin kerta ilmestyy tilalle (välähdys + valintamerkki).
   const { leaving, confirm: confirmWithFeedback } = useConfirmFeedback(onPlanConfirm);
   const weekday = dayLabel(date).split(' ')[0];
-  const full = formatDate(date, 'EEEE');
+  // Itsenäinen muoto ("sunnuntai"), ei taivutettu "sunnuntaina" (17.11.2026).
+  const full = formatDate(date, 'cccc');
   const weekdayName = full.charAt(0).toUpperCase() + full.slice(1);
 
   return (
@@ -135,8 +136,9 @@ export function DayRow({
           <span className="text-[9.5px] font-bold uppercase tracking-wider opacity-80">{weekday}</span>
           <span className="stat text-[17px] font-semibold">{dayNo}</span>
         </div>
-        <div className="min-w-0 flex-1">
-          <div className={`${isToday ? '' : 'hidden sm:block'} truncate text-sm font-bold ${isToday ? 'text-green-800' : isFuture ? 'text-slate-500' : 'text-slate-900'}`}>
+        {/* Päivän nimi näytetään vain, jos se mahtuu kokonaan: muuten riittää päivälaatta (ei "Sunnuntai…", 17.11.2026). */}
+        <div className="@container min-w-0 flex-1">
+          <div className={`${isToday ? 'truncate' : 'hidden whitespace-nowrap sm:@min-[5.75rem]:block'} text-sm font-bold ${isToday ? 'text-green-800' : isFuture ? 'text-slate-500' : 'text-slate-900'}`}>
             {isToday ? 'Tänään' : weekdayName}
             {isToday && <span className="sr-only"> ({dayLabel(date)})</span>}
           </div>
