@@ -10,7 +10,7 @@ import { defaultGameLength, DEFAULT_WARMUP_MIN, legacyTournamentStart, tournamen
 import { DEFAULT_SETTINGS } from '../domain/recommendations';
 import { addDays, isISODate } from '../domain/dates';
 import { holidayOn } from '../domain/holidays';
-import { activeEstimate, ESTIMATE_ONLY_CATEGORIES, isEstimateConfirmation } from '../domain/aggregate';
+import { activeEstimate, ESTIMATE_ONLY_CATEGORIES, isDaycareLabel, isEstimateConfirmation, isEstimateValidOn } from '../domain/aggregate';
 import { clubIdOf, clubKey, formatTeamName, parseTeamName, squadKey, type TeamParts } from '../domain/opponent';
 import type {
   ActivityType,
@@ -1981,10 +1981,13 @@ export function createRepositories(db: AppDB = defaultDb) {
       );
       let moved = 0;
       let removed = 0;
+      // Päivä, jolle kohdekategorialla on oma arvio: siellä siirrettävä oli tupla.
+      const overlapOn = (d: ISODate) => all.some((o) => o.category === category && o.id !== e.id && isEstimateValidOn(o, d));
       for (const s of sessions) {
         if (!isEstimateConfirmation(s) || types.get(s.activityTypeId)?.category !== fromCat) continue;
         if (activeEstimate(all, fromCat, s.date)?.id !== e.id) continue;
-        if (targetConfirmed.has(s.date)) {
+        // Tuplan "ei tänä päivänä" (0 min) ei koske oikeaa arviota: poistetaan, ettei kohde nollaudu.
+        if (targetConfirmed.has(s.date) || (s.durationMin === 0 && overlapOn(s.date))) {
           await softDelete(db.sessions, s.id);
           removed++;
         } else {
@@ -1997,8 +2000,6 @@ export function createRepositories(db: AppDB = defaultDb) {
     });
   }
 
-  /** Päiväkodiksi nimetty arvio tai vahvistus (esim. "Päiväkoti", "Päiväkotipäivä", "Varhaiskasvatus"). */
-  const DAYCARE_LABEL = /päiväko|varhaiskasv|päiväho|tarha/i;
 
   /**
    * Tupla päiväkoti (käyttäjän havainto 17.11.2026): päiväkotiarvio tehty ensin muuhun kategoriaan ja
@@ -2013,8 +2014,8 @@ export function createRepositories(db: AppDB = defaultDb) {
     const sessions = live(await db.sessions.where('profileId').equals(profileId).toArray()).filter(isEstimateConfirmation);
     const hasDaycare = all.some((e) => e.category === 'daycare') || sessions.some((s) => types.get(s.activityTypeId)?.category === 'daycare');
     if (!hasDaycare) return { estimates: [], sessions: 0 };
-    const estimates = all.filter((e) => e.category !== 'daycare' && DAYCARE_LABEL.test(e.label));
-    const stray = sessions.filter((s) => types.get(s.activityTypeId)?.category !== 'daycare' && DAYCARE_LABEL.test(s.label ?? ''));
+    const estimates = all.filter((e) => e.category !== 'daycare' && isDaycareLabel(e.label));
+    const stray = sessions.filter((s) => types.get(s.activityTypeId)?.category !== 'daycare' && isDaycareLabel(s.label));
     return { estimates, sessions: stray.length };
   }
 
@@ -2033,15 +2034,17 @@ export function createRepositories(db: AppDB = defaultDb) {
       moved += r.moved;
       removed += r.removed;
     }
-    await db.transaction('rw', [db.sessions, db.activityTypes, db.meta], async () => {
+    await db.transaction('rw', [db.sessions, db.activityTypes, db.estimates, db.meta], async () => {
       const types = new Map((await db.activityTypes.toArray()).map((t) => [t.id, t]));
       const target = await db.activityTypes.get(activityTypeId(ESTIMATE_DEFAULT_TYPE_KEY.daycare));
       if (!target) return;
       const sessions = live(await db.sessions.where('profileId').equals(profileId).toArray()).filter(isEstimateConfirmation);
       const daycareDates = new Set(sessions.filter((s) => types.get(s.activityTypeId)?.category === 'daycare').map((s) => s.date));
+      const daycareEstimates = (await listEstimates(profileId)).filter((e) => e.category === 'daycare');
       for (const s of sessions) {
-        if (types.get(s.activityTypeId)?.category === 'daycare' || !DAYCARE_LABEL.test(s.label ?? '')) continue;
-        if (daycareDates.has(s.date)) {
+        if (types.get(s.activityTypeId)?.category === 'daycare' || !isDaycareLabel(s.label)) continue;
+        // Tuplan "ei tänä päivänä" (0 min) päivänä, jolle Päiväkoti-arvio on voimassa: poistetaan.
+        if (daycareDates.has(s.date) || (s.durationMin === 0 && daycareEstimates.some((e) => isEstimateValidOn(e, s.date)))) {
           await softDelete(db.sessions, s.id);
           removed++;
         } else {

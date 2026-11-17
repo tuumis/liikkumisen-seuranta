@@ -34,6 +34,9 @@ const EPS = 1e-9;
 // ---------- perusarvio ----------
 
 /** Onko perusarvio voimassa päivänä d (validFrom ≤ d ≤ validTo, molemmat mukaan luettuina). */
+/** Päiväkodiksi nimetty arvio tai vahvistus (tupla päiväkodin tunnistus, 17.11.2026); ä-kirjaimen koodaus ei vaikuta. */
+export const isDaycareLabel = (label: string | undefined): boolean => /päiväko|varhaiskasv|päiväho|tarha/i.test((label ?? '').normalize('NFC'));
+
 export function isEstimateValidOn(e: Estimate, d: ISODate): boolean {
   return !e.deletedAt && e.validFrom <= d && (e.validTo === undefined || d <= e.validTo);
 }

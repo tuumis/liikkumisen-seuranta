@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { estimateBaseMin, holidayOn, weekendLike } from '../../domain/holidays';
 import { isEstimateConfirmation } from '../../domain/hours';
+import { isDaycareLabel } from '../../domain/aggregate';
 import { activityTypeId } from '../../domain/ids';
 import type { ActivityType, Category, Estimate, ISODate, Profile, Session } from '../../domain/types';
 import { repo } from '../../db/repositories';
@@ -114,6 +115,26 @@ export function EstimateDaySheet({ date, profile, onClose }: { date: ISODate | n
           tänä päivänä ollut. Vahvistettu jää näkyviin päivän arkiliikuntariville.
         </p>
         {data && rows.length === 0 && <p className="text-sm text-slate-500">Tälle päivälle ei ole voimassa olevaa arkiliikunnan arviota.</p>}
+        {rows.some((r) => r.e.category === 'daycare') && rows.some((r) => r.e.category !== 'daycare' && isDaycareLabel(r.e.label)) && (
+          <div className="rounded-xl bg-amber-50 p-3 ring-1 ring-amber-200">
+            <p className="text-sm font-semibold text-amber-900">Päiväkoti on tällä päivällä kahdesti</p>
+            <p className="mt-1 text-xs leading-relaxed text-slate-700">
+              Sama päiväkotiarvio on myös kategoriassa {CATEGORY_LABEL[rows.find((r) => r.e.category !== 'daycare' && isDaycareLabel(r.e.label))!.e.category]}. Yhdistäminen siirtää sen
+              Päiväkotiin koko historiaan, jolloin päiväkoti lasketaan jokaisena päivänä kerran. Tuplalle tehdyt "ei tänä päivänä" -merkinnät poistetaan, eikä Päiväkoti-arvio muutu.
+            </p>
+            <Button
+              className="mt-2"
+              onClick={() =>
+                void repo
+                  .mergeDaycareDoubles(profile.id)
+                  .then(() => toast('Päiväkoti yhdistetty: näkyy nyt kerran', undefined, 'success'))
+                  .catch((err: unknown) => toast(err instanceof Error ? err.message : String(err)))
+              }
+            >
+              Yhdistä Päiväkotiin
+            </Button>
+          </div>
+        )}
         <ul className="space-y-3">
           {rows.map(({ e, est, conf, manual }) => {
             const v = values[e.category] ?? String(conf ? conf.durationMin : est);

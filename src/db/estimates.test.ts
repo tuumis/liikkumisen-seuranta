@@ -215,4 +215,26 @@ describe('tupla päiväkoti vanhoilla päivillä (17.11.2026)', () => {
     await repo.saveEstimate('p1', daycare({ category: 'other', label: 'Päiväkoti' }), '2026-11-17', '2026-09-01');
     expect(await repo.daycareDoubles('p1')).toEqual({ estimates: [], sessions: 0 });
   });
+
+  it('kuvakaappauksen tilanne: tuplan "ei tänä päivänä" poistuu eikä nollaa päiväkotia; ä-kirjaimen koodaus ei haittaa', async () => {
+    const nfd = 'Päiväkotipäivä'.normalize('NFD');
+    await repo.saveEstimate('p1', daycare({ category: 'other', label: nfd }), '2026-11-17', '2026-09-01');
+    await repo.saveEstimate('p1', daycare(), '2026-10-15');
+    // 2.11.: Päiväkoti vahvistettu 120, tupla merkitty 0. 3.11.: vain tupla merkitty 0, Päiväkoti arviona.
+    const dc = await repo.createSession({ ...base, activityTypeId: 't:daycare_day', date: '2026-11-02', label: 'Päiväkotipäivä' });
+    const zero1 = await repo.createSession({ ...base, durationMin: 0, activityTypeId: 't:other', date: '2026-11-02', label: `${nfd}: ei tänä päivänä` });
+    const zero2 = await repo.createSession({ ...base, durationMin: 0, activityTypeId: 't:other', date: '2026-11-03', label: `${nfd}: ei tänä päivänä` });
+    const early = await repo.createSession({ ...base, activityTypeId: 't:other', date: '2026-09-15', label: nfd });
+
+    expect((await repo.daycareDoubles('p1')).estimates).toHaveLength(1);
+    await repo.mergeDaycareDoubles('p1');
+    expect((await db.sessions.get(dc.id))!.deletedAt).toBeUndefined();
+    expect((await db.sessions.get(zero1.id))!.deletedAt).toBeTruthy();
+    expect((await db.sessions.get(zero2.id))!.deletedAt).toBeTruthy();
+    expect((await db.sessions.get(early.id))!.activityTypeId).toBe('t:daycare_day'); // ennen tuplajaksoa: siirtyy
+    const all = await repo.listEstimates('p1');
+    const nov3 = dayTotals('2026-11-03', await repo.sessionsInRange('p1', '2026-11-03', '2026-11-03'), all, types);
+    expect(nov3.estimatedCategories).toEqual(['daycare']);
+    expect(await repo.daycareDoubles('p1')).toEqual({ estimates: [], sessions: 0 });
+  });
 });
