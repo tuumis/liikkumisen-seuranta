@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.3',
+    date: '18.11.2026',
+    items: ['Treenin sisältöön uusi valinta 2v2.'],
+  },
+  {
     version: '1.1.2',
     date: '18.11.2026',
     items: ['Treenin omatoimisen alku- ja loppuverryttelyn minuutit voi kirjata kuittauksen jälkeen Lisätiedot-ikkunassa.'],

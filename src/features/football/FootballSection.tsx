@@ -12,7 +12,7 @@ import {
 } from '../../domain/football';
 import type { FocusTag, Period, SkipReason } from '../../domain/types';
 import { Button, Card, EmptyState } from '../../ui/components';
-import { ENJOYMENT_LABEL, FOCUS_TAG_LABEL, RATING_LABEL, SKIP_REASON_LABEL } from '../../ui/labels';
+import { ENJOYMENT_LABEL, FOCUS_TAG_LABEL, focusTagLabel, RATING_LABEL, SKIP_REASON_LABEL } from '../../ui/labels';
 import { num1, percent } from '../../ui/statusText';
 import { today as todayFn } from '../../ui/today';
 import { useFootball } from './useFootball';
@@ -158,7 +158,7 @@ function TagBars({ tagged, counts }: { tagged: number; counts: Partial<Record<Fo
           return (
             <li key={t}>
               <div className="flex justify-between text-sm text-slate-800">
-                <span>{FOCUS_TAG_LABEL[t]}</span>
+                <span>{focusTagLabel(t)}</span>
                 <span className="tabular-nums text-slate-600">
                   {counts[t]} · {percent(share)}
                 </span>

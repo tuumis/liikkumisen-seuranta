@@ -6,7 +6,7 @@ import { footballKindOf, gameRows, summarizeGames, typeTotals } from '../../doma
 import { isoWeek, startOfIsoWeek } from '../../domain/dates';
 import type { PeriodReport } from '../../domain/report';
 import type { ActivityType, FocusTag, FootballDetails, Session, UUID } from '../../domain/types';
-import { ENJOYMENT_LABEL, FOCUS_TAG_LABEL } from '../../ui/labels';
+import { ENJOYMENT_LABEL, focusTagLabel } from '../../ui/labels';
 
 export interface StoryBar {
   label: string;
@@ -136,9 +136,9 @@ export function buildStory(input: StoryInput): StorySlide[] {
       slides.push({
         id: 'focus',
         kicker: 'Harjoiteltua',
-        title: tags.length ? FOCUS_TAG_LABEL[tags[0][0]] : 'Viihtyminen',
+        title: tags.length ? focusTagLabel(tags[0][0]) : 'Viihtyminen',
         lines: enjoyN ? [`Viihtyminen: ${ENJOYMENT_LABEL[Math.round(enjoySum / enjoyN) as 1 | 2 | 3].toLowerCase()}`] : [],
-        bars: tags.map(([t, n]) => ({ label: FOCUS_TAG_LABEL[t], value: `${n} ×`, pct: n / maxT })),
+        bars: tags.map(([t, n]) => ({ label: focusTagLabel(t), value: `${n} ×`, pct: n / maxT })),
       });
     }
   }

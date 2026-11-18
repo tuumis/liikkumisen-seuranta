@@ -9,7 +9,7 @@ import { repo } from '../../db/repositories';
 import { Button, Card, inputClass, EmptyState } from '../../ui/components';
 import { ToggleChip } from '../../ui/controls';
 import { dayLabel, formatDate } from '../../ui/format';
-import { ENJOYMENT_LABEL, FOCUS_TAG_LABEL } from '../../ui/labels';
+import { ENJOYMENT_LABEL, focusTagLabel } from '../../ui/labels';
 import { useToast } from '../../ui/Toast';
 import { TypeIcon } from '../week/Dashboard';
 import { FootballPanel } from '../football/FootballPanel';
@@ -54,7 +54,7 @@ export function DiaryView({ profile }: { profile: Profile }) {
       .filter(({ d, s }) => !onlyCommented || hasComment(s, d))
       .filter(({ s, t, d }) => {
         if (!q) return true;
-        const hay = [t?.name, s.label, s.note, d?.ratingNote, d?.opponent, d?.team, d?.eventName, ...(d?.games ?? []).flatMap((g) => [g.opponent, g.note]), ...(d?.focusTags ?? []).map((x) => FOCUS_TAG_LABEL[x])]
+        const hay = [t?.name, s.label, s.note, d?.ratingNote, d?.opponent, d?.team, d?.eventName, ...(d?.games ?? []).flatMap((g) => [g.opponent, g.note]), ...(d?.focusTags ?? []).map((x) => focusTagLabel(x))]
           .filter(Boolean)
           .join(' ')
           .toLocaleLowerCase('fi');
@@ -356,7 +356,7 @@ function DiaryEntry({ s, t, d, self, onDetails }: { s: Session; t?: ActivityType
             {d?.parentRating && <span className="text-amber-600">{'★'.repeat(d.parentRating)}</span>}
             {d?.focusTags.map((tag) => (
               <span key={tag} className="rounded-full bg-slate-100 px-1.5">
-                {FOCUS_TAG_LABEL[tag]}
+                {focusTagLabel(tag)}
               </span>
             ))}
           </div>

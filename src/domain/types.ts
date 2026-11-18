@@ -227,6 +227,7 @@ export type FocusTag =
   | 'dribbling'
   | 'shooting'
   | 'one_v_one'
+  | 'two_v_two'
   | 'small_sided'
   | 'goalkeeping'
   | 'game_understanding'

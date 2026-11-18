@@ -10,7 +10,7 @@ import type { ActivityType, Period, Profile, UUID } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { EmptyState, SectionLabel } from '../../ui/components';
 import { dayLabel, formatDate } from '../../ui/format';
-import { ENJOYMENT_LABEL, FOCUS_TAG_LABEL, goalsLabel } from '../../ui/labels';
+import { ENJOYMENT_LABEL, focusTagLabel, goalsLabel } from '../../ui/labels';
 import { useCountUp } from '../../ui/motion';
 import { TypeIcon } from '../week/Dashboard';
 
@@ -155,7 +155,7 @@ export function HighlightsCard({ profile, week, fixed, className = '' }: { profi
             {h.playerGoals > 0 && <span className="rounded-full bg-[var(--surface-sage)] px-3 py-1.5 font-semibold text-green-900">⚽ {goalsLabel(profile.name)} {h.playerGoals}</span>}
             {h.topTags.map((t) => (
               <span key={t.tag} className="rounded-full bg-[var(--surface-sunk)] px-3 py-1.5 font-semibold text-slate-700">
-                {FOCUS_TAG_LABEL[t.tag]} ×{t.count}
+                {focusTagLabel(t.tag)} ×{t.count}
               </span>
             ))}
           </div>

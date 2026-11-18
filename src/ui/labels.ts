@@ -67,6 +67,7 @@ export const FOCUS_TAG_LABEL: Record<FocusTag, string> = {
   dribbling: 'Kuljetus',
   shooting: 'Laukaukset',
   one_v_one: '1v1',
+  two_v_two: '2v2',
   small_sided: 'Pienpelit',
   goalkeeping: 'Maalivahti',
   game_understanding: 'Pelikäsitys',
@@ -74,6 +75,9 @@ export const FOCUS_TAG_LABEL: Record<FocusTag, string> = {
   coordination: 'Koordinaatio',
   other: 'Muu',
 };
+
+/** Tagin nimi; tuntematon (uudemman version) tagi näytetään tunnisteena eikä kaada näkymää. */
+export const focusTagLabel = (t: string): string => FOCUS_TAG_LABEL[t as FocusTag] ?? t;
 
 /** Suoritusarvio suhteessa lapsen omaan tavalliseen tasoon (SPEC 8). */
 export const RATING_LABEL: Record<1 | 2 | 3 | 4 | 5, string> = {

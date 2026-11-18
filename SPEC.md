@@ -319,7 +319,7 @@ export interface Session {
 }
 
 export type FocusTag =
-  | 'passing' | 'dribbling' | 'shooting' | 'one_v_one' | 'small_sided'
+  | 'passing' | 'dribbling' | 'shooting' | 'one_v_one' | 'two_v_two' | 'small_sided'
   | 'goalkeeping' | 'game_understanding' | 'physical' | 'coordination' | 'other';
 
 export interface FootballDetails {
@@ -525,7 +525,7 @@ Jalkapallotiedot jaetaan neljään erilliseen osaan, joita ei yhdistetä yhdeksi
 | Osa | Mitä | Mistä | Luotettavuus |
 | --- | --- | --- | --- |
 | Osallistuminen ja peliaika | Treenit ja pelit, kokonaan/osittain, poissaolot syineen, pelatut minuutit | `PlannedSession`, `Session`, `FootballDetails.attendance`, `playedMin` | Hyvä: tosiasioita |
-| Harjoittelun sisältö | Fokustagit (syöttely, kuljetus, laukaukset, 1v1, pienpelit, maalivahti, pelikäsitys, fysiikka, koordinaatio) | `focusTags` | Kohtalainen: vanhempi ei aina tiedä treenin sisältöä |
+| Harjoittelun sisältö | Fokustagit (syöttely, kuljetus, laukaukset, 1v1, 2v2, pienpelit, maalivahti, pelikäsitys, fysiikka, koordinaatio) | `focusTags` | Kohtalainen: vanhempi ei aina tiedä treenin sisältöä |
 | Vanhemman arvio | Suoritus 1–5, viihtyminen 1–3, vapaa huomio | `parentRating`, `enjoyment` | Subjektiivinen: vain trendiksi |
 | Taitotestit (myöhempi vaihe) | Toistettavat mittaukset, esim. 20 m sprintti, pujottelurata, pompottelu | `SkillTest` | Hyvä, jos testi tehdään aina samalla tavalla |
 
@@ -1482,3 +1482,4 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
       - **Ohje:** uusi aihe "Mitä Analyysissä katsotaan?" (tasot, Muokkaa näkymää, Mihin luvut perustuvat); arkiliikunnan selitykseen päiväkoti ja päiväkohtainen vahvistus; sanaston polku "Asetukset → Tavoitteet ja lajit".
       - **Analyysin Jalkapallo-kortti** näyttää valitun viikon; kortin oma Viikko/kuukausi-valinta poistettiin, koska jakso valitaan Analyysin ylälaidasta.
     - **Verryttely kuittauksen jälkeen** (käyttäjän toive 18.11.2026: "omatoimisen verryttelyn aikaa ei tiedä tarkkaan kuin vasta treenin jälkeen"; `FootballPanel.tsx`): seuran jalkapallotreenin Lisätiedot-ikkunassa (aukeaa kuittauksen jälkeen ja kerran "Lisää tiedot" -painikkeesta) on samat Omatoiminen verryttely -kentät kuin kerran muokkauksessa: "Ennen treeniä (min)" ja "Treenin jälkeen (min)", 0–180. Kentissä on valmiina jo kirjattu verryttely (viikkorytmin oletus kuittauksessa). Tallenna päivittää treeniin linkitetyn "Jalkapallo – omatoiminen" -kerran samoin säännöin (0 + 0 poistaa); koskematon kenttä ei muuta mitään, ja Myöhemmin ei tallenna. Ei näy verryttelykerralla eikä peleissä.
+    - **Treenin sisältöön 2v2** (käyttäjän toive 18.11.2026; `FocusTag` `two_v_two`, `FOCUS_TAG_LABEL`, `focusTagLabel`): uusi valinta "2v2" heti 1v1:n jälkeen Lisätiedot-ikkunassa, päiväkirjassa ja harjoittelun sisällön jakaumissa. Tallennusmuoto ei muutu (tagit ovat merkkijonolista). Nimi haetaan nyt `focusTagLabel`-funktiolla, joka palauttaa tuntemattomalle tagille sen tunnisteen, joten myöhemmin lisätyt tagit eivät kaada vanhempaa versiota. Ennen versiota 1.1.3 oleva laite voi näyttää 2v2:n tyhjänä tai kaatua kausiraportissa, kunnes sovellus päivittyy (sivun uudelleenlataus).

@@ -12,7 +12,7 @@ import type { ActivityType, Context, Period, Profile } from '../../domain/types'
 import { repo } from '../../db/repositories';
 import { useFootballEnabled } from '../football/useFootballEnabled';
 import { formatDate } from '../../ui/format';
-import { CONTEXT_LABEL, contextContents, FOCUS_TAG_LABEL, MOVEMENT_GROUP_LABEL } from '../../ui/labels';
+import { CONTEXT_LABEL, contextContents, FOCUS_TAG_LABEL, focusTagLabel, MOVEMENT_GROUP_LABEL } from '../../ui/labels';
 import { today as todayFn } from '../../ui/today';
 import { DAY_BAR_TARGET } from '../week/WeekView';
 import { currentReportPalette } from './reportPalette';
@@ -267,7 +267,7 @@ export function SeasonReport({ profile, s, p, onClose }: { profile: Profile; s: 
                     .join(', ')}
                 </li>
               )}
-              {tags.length > 0 && <li>Treenien sisältö: {tags.map(([t, n]) => `${FOCUS_TAG_LABEL[t].toLowerCase()} ${n}`).join(', ')}</li>}
+              {tags.length > 0 && <li>Treenien sisältö: {tags.map(([t, n]) => `${focusTagLabel(t).toLowerCase()} ${n}`).join(', ')}</li>}
             </ul>
             <p className="mt-1 text-[11px] text-[#5a645d]">Tulokset ovat joukkueen tuloksia; ne eivät arvioi lasta.</p>
           </Section>

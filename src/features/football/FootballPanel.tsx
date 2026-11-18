@@ -14,7 +14,7 @@ import { Button, Field, inputClass } from '../../ui/components';
 import { normalizeLink } from '../../domain/link';
 import { Segmented, ToggleChip } from '../../ui/controls';
 import { dayLabel } from '../../ui/format';
-import { ENJOYMENT_LABEL, FOCUS_TAG_LABEL, RATING_LABEL } from '../../ui/labels';
+import { ENJOYMENT_LABEL, FOCUS_TAG_LABEL, focusTagLabel, RATING_LABEL } from '../../ui/labels';
 import { Sheet } from '../../ui/Sheet';
 import { useToast } from '../../ui/Toast';
 import { TeamNameFields, useTeamNameSuggestions } from '../games/TeamNameFields';
@@ -297,7 +297,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
             <div className="flex flex-wrap gap-2">
               {(Object.keys(FOCUS_TAG_LABEL) as FocusTag[]).map((t) => (
                 <ToggleChip key={t} on={tags.includes(t)} onChange={(on) => setTags((cur) => (on ? [...cur, t] : cur.filter((x) => x !== t)))}>
-                  {FOCUS_TAG_LABEL[t]}
+                  {focusTagLabel(t)}
                 </ToggleChip>
               ))}
             </div>
