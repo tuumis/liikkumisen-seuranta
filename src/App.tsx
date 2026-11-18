@@ -24,7 +24,9 @@ import { Avatar } from './ui/Avatar';
 import { hideUntilSettled } from './ui/settle';
 import { TabPanel } from './ui/TabPanel';
 import { formatDate } from './ui/format';
-import { IconBall, IconChart, IconHelp, IconLeaf, IconSearch, IconSettings, IconWeek } from './ui/icons';
+import { IconBall, IconCalendarClock, IconChart, IconHelp, IconLeaf, IconSearch, IconSettings, IconWeek } from './ui/icons';
+import { useUnconfirmedCounts } from './features/review/unconfirmed';
+import { requestWeek } from './features/desktop/settings';
 
 // Analyysi (Recharts) ladataan omana osanaan; service worker esivälimuistittaa senkin.
 const loadAnalysis = () => import('./features/analysis/AnalysisView');
@@ -143,6 +145,23 @@ export default function App() {
     store.set('selectedProfileId', id);
   };
 
+  // Kuittaamattomat kerrat (18.11.2026): sivuvalikon Kuittaa-painike, profiilien ja Viikko-kohdan numerot.
+  const pending = useUnconfirmedCounts(ready);
+  const pendingOf = (id: string) => pending?.get(id) ?? 0;
+  const pendingTotal = [...(pending?.values() ?? [])].reduce((a, n) => a + n, 0);
+  const pendingLine =
+    profiles && profiles.length > 1
+      ? profiles.filter((p) => pendingOf(p.id)).map((p) => `${p.name} ${pendingOf(p.id)}`).join(' · ')
+      : `${pendingTotal} ${pendingTotal === 1 ? 'kerta odottaa' : 'kertaa odottaa'}`;
+  /** Avaa kuittauksen: valittu profiili, jos sillä on kuitattavaa, muuten ensimmäinen, jolla on. */
+  const openReview = () => {
+    const id = selected && pendingOf(selected.id) ? selected.id : profiles?.find((p) => pendingOf(p.id))?.id;
+    if (!id) return;
+    select(id);
+    setTab('week');
+    requestWeek(true);
+  };
+
   /** Komento pikanäppäimestä, komentovalikosta tai tehtäväpalkista: Viikko-komennot avaavat Viikko-näkymän. */
   const runCommand = (cmd: AppCommand) => {
     if (cmd.kind === 'add' || cmd.kind === 'review' || cmd.kind === 'week') setTab('week');
@@ -240,8 +259,26 @@ export default function App() {
             );
           })}
         </nav>
+        {pendingTotal > 0 && (
+          <div className="mt-4 px-4">
+            <button
+              type="button"
+              onClick={openReview}
+              className="press anim-rise flex w-full items-center gap-3 rounded-2xl bg-[var(--hero-accent)] px-4 py-2.5 text-left text-[var(--side-from)] shadow-md hover:brightness-105"
+            >
+              <IconCalendarClock size="1.25rem" className="shrink-0" />
+              <span className="min-w-0 flex-1 leading-tight">
+                <span className="block text-sm font-semibold">Kuittaa kerrat</span>
+                <span className="block truncate text-[11px] font-medium opacity-80">{pendingLine}</span>
+              </span>
+              <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-[var(--side-from)] px-1.5 text-xs font-bold tabular-nums text-[var(--hero-accent)]" aria-hidden>
+                {pendingTotal}
+              </span>
+            </button>
+          </div>
+        )}
         {profiles && profiles.length > 0 && (
-          <div className="mt-10 px-4">
+          <div className={`${pendingTotal > 0 ? 'mt-8' : 'mt-10'} px-4`}>
             <div className="px-4 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--side-muted)]">Profiilit</div>
             <div className="space-y-1" role="tablist" aria-label="Profiilit" aria-orientation="vertical">
               {profiles.map((p) => {
@@ -257,6 +294,7 @@ export default function App() {
                   >
                     <Avatar name={p.name} photo={p.photo} color={p.color} size="sm" className={active ? '' : 'ring-2 ring-white/20'} />
                     <span className="truncate">{p.name}</span>
+                    <PendingCount n={pendingOf(p.id)} className="ml-auto bg-[var(--hero-accent)] text-[var(--side-from)]" />
                   </button>
                 );
               })}
@@ -314,6 +352,7 @@ export default function App() {
                 >
                   <Avatar name={p.name} photo={p.photo} color={p.color} size="sm" />
                   {p.name}
+                  <PendingCount n={pendingOf(p.id)} className="-mr-1 bg-amber-400 text-amber-950" />
                 </button>
               );
             })}
@@ -391,8 +430,16 @@ export default function App() {
                 aria-current={active ? 'page' : undefined}
                 className={`press relative z-10 flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-[1.35rem] text-[11px] font-semibold transition-colors ${active ? 'text-white' : 'text-slate-500'}`}
               >
-                <t.Icon size="1.4rem" />
+                <span className="relative">
+                  <t.Icon size="1.4rem" />
+                  {t.id === 'week' && pendingTotal > 0 && (
+                    <span className="absolute -right-2.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 text-[10px] font-bold tabular-nums text-amber-950 ring-2 ring-[var(--surface)]" aria-hidden>
+                      {pendingTotal}
+                    </span>
+                  )}
+                </span>
                 {t.label}
+                {t.id === 'week' && pendingTotal > 0 && <span className="sr-only">, {pendingTotal} kuittaamatta</span>}
               </button>
             );
           })}
@@ -415,6 +462,17 @@ export default function App() {
       )}
     </div>
     </FootballStatusContext.Provider>
+  );
+}
+
+/** Kuittaamattomien kertojen määrä profiilin vieressä (piilossa, kun ei kuitattavaa). */
+function PendingCount({ n, className }: { n: number; className: string }) {
+  if (!n) return null;
+  return (
+    <span className={`flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums ${className}`}>
+      {n}
+      <span className="sr-only"> kuittaamatta</span>
+    </span>
   );
 }
 

@@ -98,7 +98,8 @@ export function DesktopAgent({ onOpen }: { onOpen: (profileId: string) => void }
             `plan-${p.id}`,
             () => {
               onOpen(r.profile.id);
-              requestWeek(false);
+              // Klikkaus avaa suoraan kuittauksen (18.11.2026), ei pelkkää Viikko-näkymää.
+              requestWeek(true);
             },
           );
         }
@@ -120,7 +121,7 @@ export function DesktopAgent({ onOpen }: { onOpen: (profileId: string) => void }
         const text = reminderText({ unconfirmed: count, arkiNames: data.rows.filter((r) => r.arkiPending).map((r) => r.profile.name) });
         const first = pending[0]?.profile ?? data.rows.find((r) => r.arkiPending)?.profile;
         if (text && first) {
-          const review = pending.some((x) => x.p.date < t);
+          const review = pending.length > 0;
           void showNotification(text.title, text.body, 'evening', () => {
             onOpen(first.id);
             requestWeek(review);

@@ -1,12 +1,14 @@
 // Kuittaamattomat kerrat nyt: menneet avoimet ja tämän päivän jo päättyneet (SPEC 12, 16).
 
 import { useEffect, useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { addDays } from '../../domain/dates';
 import { unconfirmedNow, type EndOf } from '../../domain/reminders';
 import { endOfWithFixtures } from '../../domain/tournamentTime';
 import type { Fixture, ISODate, PlannedSession, UUID } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { db } from '../../db/schema';
+import { today as todayFn } from '../../ui/today';
 
 export const minutesNow = () => {
   const d = new Date();
@@ -23,6 +25,20 @@ export async function endOfFor(plans: PlannedSession[], today: ISODate): Promise
 export async function loadUnconfirmed(profileId: UUID, today: ISODate): Promise<PlannedSession[]> {
   const plans = await repo.unconfirmedPlans(profileId, addDays(today, 1));
   return unconfirmedNow(plans, today, minutesNow(), await endOfFor(plans, today));
+}
+
+/**
+ * Kuittaamattomien kertojen määrä profiileittain (vain profiilit, joilla on kuitattavaa).
+ * Sivuvalikon Kuittaa-painike ja profiilien numerot (18.11.2026).
+ */
+export function useUnconfirmedCounts(enabled: boolean): Map<UUID, number> | undefined {
+  const minute = useMinuteTick();
+  return useLiveQuery(async () => {
+    if (!enabled) return new Map<UUID, number>();
+    const t = todayFn();
+    const rows = await Promise.all((await repo.listProfiles()).map(async (p) => [p.id, (await loadUnconfirmed(p.id, t)).length] as const));
+    return new Map(rows.filter(([, n]) => n > 0));
+  }, [enabled, minute]);
 }
 
 /** Minuuttilaskuri live-kyselyn riippuvuudeksi: tämän päivän kerta tulee kuitattavaksi päättyessään. */
