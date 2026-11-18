@@ -7,13 +7,14 @@ import { initials, OUTCOME_WORD, type ResultCard } from '../../domain/resultCard
 import { formatDate } from '../../ui/format';
 import { drawFlag } from '../../ui/flags';
 import { alpha, isLightColor, mix, resolveShareColor, type ShareColor } from './shareColors';
+import { drawBrandResult } from './drawBrand';
 
 export type ShareSize = 'story' | 'post';
 /**
  * Kuvan tyyli: Pehmeä, Urheilu, Kenttä, Juliste, Selkeä ja Tulostaulu (käyttäjän lista 17.11.2026; kaikki
  * sekä tulos- että ennakkokuvassa). Tyyli vaihtaa taustan, värit ja fontin; asettelu on sama.
  */
-export type ShareStyle = 'theme' | 'sport' | 'field' | 'poster' | 'clean' | 'scoreboard' | 'narrow';
+export type ShareStyle = 'theme' | 'sport' | 'field' | 'poster' | 'clean' | 'scoreboard' | 'narrow' | 'brand';
 
 export const SHARE_STYLE_LABEL: Record<ShareStyle, string> = {
   theme: 'Pehmeä',
@@ -23,17 +24,18 @@ export const SHARE_STYLE_LABEL: Record<ShareStyle, string> = {
   clean: 'Selkeä',
   scoreboard: 'Tulostaulu',
   narrow: 'Kapea',
+  brand: 'Brändi',
 };
 /** Kaikki tyylit (tulos- ja ennakkokuva, 17.11.2026). */
-export const ALL_SHARE_STYLES: readonly ShareStyle[] = ['theme', 'sport', 'field', 'poster', 'clean', 'scoreboard', 'narrow'];
+export const ALL_SHARE_STYLES: readonly ShareStyle[] = ['theme', 'sport', 'field', 'poster', 'clean', 'scoreboard', 'narrow', 'brand'];
 export const isShareStyle = (v: unknown): v is ShareStyle => typeof v === 'string' && v in SHARE_STYLE_LABEL;
 
 /** Otsikkofontin paksuus tyylin mukaan. */
-export const heavyOf = (style: ShareStyle) => (style === 'narrow' ? 400 : style === 'sport' || style === 'poster' || style === 'field' ? 800 : style === 'scoreboard' ? 700 : 600);
+export const heavyOf = (style: ShareStyle) => (style === 'narrow' || style === 'brand' ? 400 : style === 'sport' || style === 'poster' || style === 'field' ? 800 : style === 'scoreboard' ? 700 : 600);
 
 /** Kapea-tyylin fontit (Bebas Neue, Work Sans) eivät ole käytössä sovelluksen näkymissä: ladataan ennen piirtoa. */
 export async function loadStyleFonts(style: ShareStyle): Promise<void> {
-  if (style !== 'narrow' || !document.fonts?.load) return;
+  if ((style !== 'narrow' && style !== 'brand') || !document.fonts?.load) return;
   await Promise.all(['400 100px "Bebas Neue"', '700 40px "Work Sans"', '500 40px "Work Sans"'].map((f) => document.fonts.load(f).catch(() => [])));
 }
 
@@ -208,6 +210,7 @@ export function background(ctx: CanvasRenderingContext2D, H: number, style: Shar
   if (style === 'clean') return cleanBackground(ctx, H, color);
   if (style === 'scoreboard') return scoreboardBackground(ctx, H, color);
   if (style === 'narrow') return narrowBackground(ctx, H, color);
+  if (style === 'brand') return brandBackground(ctx, H, color);
   // Urheilutyyli: tumma yönsininen, viistot raidat ja kirkas reunaviiva.
   const accent = sportAccent(color);
   const g = ctx.createLinearGradient(0, 0, 0, H);
@@ -337,6 +340,12 @@ function narrowBackground(ctx: CanvasRenderingContext2D, H: number, color?: Shar
   ctx.fillRect(0, 0, 16, Math.round(H * 0.17));
   ctx.fillRect(0, H - 8, W, 8);
 }
+/** Brändi (oma asettelu, drawBrand.ts): pelkkä tasainen pohja; korostuspalkki piirretään otsikon kohdalle. */
+function brandBackground(ctx: CanvasRenderingContext2D, H: number, color?: ShareColor) {
+  ctx.fillStyle = !color || isLightColor(color.base) ? '#161616' : mix('#161616', color.base, isDark(color.base) ? 0.5 : 0.07);
+  ctx.fillRect(0, 0, W, H);
+}
+
 /** Kapea-tyylin korostus: tumman teeman korostusväri tai valittu väri sellaisenaan; oletus vadelmanpunainen. */
 const narrowAccent = (color?: ShareColor) => {
   if (!color) return '#e64773';
@@ -373,6 +382,8 @@ export function palette(style: ShareStyle, color?: ShareColor): Palette {
   if (style === 'clean') return { ink: '#0f172a', soft: '#475569', accent: cleanAccent(color), panel: alpha(color?.base ?? '#1f5137', 0.07), display: sans, sans, light: true };
   if (style === 'scoreboard')
     return { ink: '#ffffff', soft: 'rgba(255,255,255,0.7)', accent: scoreboardAccent(color), panel: 'rgba(255,255,255,0.065)', display: 'ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace', sans };
+  if (style === 'brand')
+    return { ink: '#f5f5f5', soft: 'rgba(245,245,245,0.6)', accent: narrowAccent(color), panel: 'rgba(255,255,255,0.06)', display: "'Bebas Neue', 'Arial Narrow', sans-serif", sans: "'Work Sans', system-ui, sans-serif", names: true };
   if (style === 'narrow')
     return { ink: '#f5f5f5', soft: 'rgba(245,245,245,0.64)', accent: narrowAccent(color), panel: 'rgba(255,255,255,0.06)', display: "'Bebas Neue', 'Arial Narrow', sans-serif", sans: "'Work Sans', system-ui, sans-serif", names: true, displayScale: 1.3 };
   return { ink: '#ffffff', soft: 'rgba(226,232,240,0.78)', accent: sportAccent(color), panel: 'rgba(255,255,255,0.07)', display: sans, sans };
@@ -499,6 +510,7 @@ export function dateLabelOf(date: string): string {
 }
 
 export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasElement {
+  if (opts.style === 'brand') return drawBrandResult(card, opts);
   const { canvas, ctx, p, H, story } = setup(opts);
   const maxW = W - PAD * 2;
   const dateLabel = dateLabelOf(card.date);

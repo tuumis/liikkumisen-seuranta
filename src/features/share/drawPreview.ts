@@ -6,12 +6,16 @@ import { previewTimeBoxes, previewTitleOf, type PreviewBox, type PreviewCard } f
 import { HOME_AWAY_LABEL } from '../../domain/football';
 import { commentLayout, dateLabelOf, drawComment, drawLogo, drawMatchup, drawOrigin, fit, heavyOf, homeAwayTags, infoBoxes, levelBadges, nameFont, PAD, placeBox, rr, setup, spaced, W, wrap, type DrawOptions } from './drawResult';
 
+import { drawBrandPreview } from './drawBrand';
+
 type PreviewOptions = Omit<DrawOptions, 'player'> & {
   /** Piilotetut laatikot (Paikalla, 1. peli / Peli alkaa, Pelit, Paikka). */
   hidden?: ReadonlySet<PreviewBox>;
 };
 
 export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCanvasElement {
+  // Brändi-tyylillä oma asettelu (18.11.2026).
+  if (opts.style === 'brand') return drawBrandPreview(card, opts);
   const { canvas, ctx, p, H, story } = setup(opts);
   const maxW = W - PAD * 2;
   const heavy = heavyOf(opts.style);
