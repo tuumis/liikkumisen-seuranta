@@ -51,7 +51,7 @@ export function ProfileForm({
 }: {
   initial?: Profile;
   /** Uuden profiilin esitäyttö (pikatestin vastauksista). */
-  defaults?: { birthYear?: number; football?: boolean };
+  defaults?: { birthYear?: number; schoolStartYear?: number; football?: boolean };
   onSubmit: (v: ProfileFormValues) => Promise<void>;
   onCancel: () => void;
   /** Leveällä näytöllä kentät kahteen palstaan (aloitus). */
@@ -62,7 +62,7 @@ export function ProfileForm({
     kind: initial?.kind ?? 'child',
     birthYear: String(initial?.birthYear ?? defaults?.birthYear ?? ''),
     birthMonth: String(initial?.birthMonth ?? 1),
-    schoolStartYear: initial?.schoolStart ? String(initial.schoolStart.year) : '',
+    schoolStartYear: initial?.schoolStart ? String(initial.schoolStart.year) : defaults?.schoolStartYear ? String(defaults.schoolStartYear) : '',
     schoolStartMonth: String(initial?.schoolStart?.month ?? 8),
     groupOverride: (initial?.groupOverride ?? '') as '' | RecommendationGroup,
     color: initial?.color ?? PROFILE_COLORS[0],

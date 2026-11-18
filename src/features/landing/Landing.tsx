@@ -160,9 +160,9 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
           ))}
         </Reveal>
 
-        {/* Pikatesti iltamaiseman päällä (public/landing/quiz-bg.svg: järvi, kuusikko ja kenttä). */}
+        {/* Pikatesti iltamaiseman päällä (public/landing/quiz-bg.svg: hämärä taivas ja kaukainen metsänreuna; paikallaan). */}
         <section id="pikatesti" className="relative mt-16 scroll-mt-4 overflow-hidden rounded-[2rem] bg-[#0c2230] px-4 py-9 sm:px-8 lg:mt-24 lg:rounded-[2.5rem] lg:px-14 lg:py-16" aria-labelledby="quiz-title">
-          <div className="lp-scene absolute inset-0 bg-cover bg-bottom" style={{ backgroundImage: 'url(./landing/quiz-bg.svg)' }} aria-hidden />
+          <div className="absolute inset-0 bg-cover bg-bottom" style={{ backgroundImage: 'url(./landing/quiz-bg.svg)' }} aria-hidden />
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgb(8_26_36/0.55),rgb(8_26_36/0.1)_50%,transparent)] lg:bg-[linear-gradient(90deg,rgb(8_26_36/0.72),rgb(8_26_36/0.15)_55%,transparent)]" aria-hidden />
           <div className="relative z-10">
           <QuickTest

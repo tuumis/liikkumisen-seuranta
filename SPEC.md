@@ -1421,25 +1421,29 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
   - **Alkusivun pikatesti** (käyttäjän toive 18.11.2026; `domain/quickCheck.ts`, `features/landing/QuickTest.tsx`):
     - **Tarkoitus:** kävijä saa noin minuutissa karkean arvion siitä, liikkuuko oma lapsi tarpeeksi. Lopuksi kehotus pyytää kutsukoodi ja seurata todellista viikkoa.
     - **Sijainti:** oma osio luottamusmerkkien alla (`#pikatesti`); ensimmäisessä näkymässä painike "Tee 1 minuutin pikatesti".
-    - **Ulkoasu** (käyttäjän toive 18.11.2026: "taustakuvalla vakuuttavammalta"): osio on pyöreäkulmainen paneeli piirretyn iltamaiseman päällä (`public/landing/quiz-bg.svg`: tähtitaivas, laskeva aurinko, kuusimetsä, järvi ja etualalla jalkapallokenttä maaleineen). Otsikko vaalealla tekstillä tummennuksen päällä, kysymykset valkoisella kortilla. Maisema lähestyy hyvin hitaasti (40 s); vähennetyllä liikkeellä paikallaan.
+    - **Ulkoasu** (käyttäjän toiveet 18.11.2026): osio on pyöreäkulmainen paneeli rauhallisen taustakuvan päällä (`public/landing/quiz-bg.svg`: hämärä iltataivas, lämmin kajo ja kaukainen, sumea metsänreuna). Ensimmäinen versio (kenttä, maali, pallo, aurinko ja tähdet) oli palautteen mukaan "liian AI-mainen" ja vei huomion; myös hidas liike oli tökkivä, joten tausta on paikallaan. Otsikko vaalealla tekstillä tummennuksen päällä, kysymykset valkoisella kortilla.
     - **Kysymykset** yksi kerrallaan, valinta vie eteenpäin; "← Edellinen" palaa:
-      - kaikille: ikä (1–17 v), ohjatut harrastukset (enintään 3: laji, kertaa viikossa, kesto), koulu- tai päiväkotimatka (auto/kävellen/pyörällä ja minuutit päivässä), vapaa-ajan leikki (kolme tasoa)
-      - koululainen (7 v täyttänyt): välitunnit (kolme tasoa), rasittavat päivät ja hyppiminen/juoksu/kiipeily päivinä viikossa (0–7)
+      - kaikille: ikä (1–17 v), ohjatut harrastukset (enintään 3: laji, kertaa viikossa 1–7, kesto), koulu- tai päiväkotimatka (auto/kävellen/pyörällä ja 10/20/30/45 min päivässä molemmat suunnat), vapaa-ajan leikki (kolme tasoa)
+      - **"Käykö lapsi jo koulua?"** vain, kun ikä ei ratkaise: koulu alkaa elokuussa sinä vuonna, jona lapsi täyttää 7, joten syksyllä (elo–joulu) osa 6-vuotiaista on koulussa ja keväällä (tammi–heinä) osa 7-vuotiaista vielä esikoulussa. Muuten 7 v täyttänyt on koululainen.
+      - koululainen: välitunnit (enimmäkseen paikallaan / liikkuu jonkin verran / leikkii, juoksee ja pelaa), rasittavat päivät sekä hyppiminen, juoksu ja kiipeily päivinä viikossa (0–7)
       - alle kouluikäinen: onko päiväkodissa; matkakysymys vain päiväkotilaiselle
-    - **Laskenta** (sovelluksen tulkinta, ei virallinen luku):
-      - viikon minuutit lajeittain × ohjelman lajikohtaiset teho-osuudet (SPEC 5), jaettuna seitsemällä
-      - "Muu ohjattu harrastus" käyttää esiasetusta "enimmäkseen reipasta"
-      - koululaiselle oletetaan koululiikuntaa 2 × 45 min viikossa ja välitunteja 5 × 45 min (paikallaan oleva lasketaan 30 min kevyeksi)
-      - päiväkotipäivä 2 h (Liikkuva varhaiskasvatus); leikki koululaisella 20/60/120 min, pienemmällä 45/90/150 min päivässä
+    - **Laskenta** (sovelluksen tulkinta, ei virallinen luku; tarkistettu rivi riviltä 18.11.2026):
+      - viikon minuutit × ohjelman lajikohtaiset teho-osuudet (SPEC 5, `seed/activityTypes`), jaettuna seitsemällä; pyöristys vasta lopuksi
+      - harrastukset vastaavan lajin osuuksilla (jalkapallo = treeni). "Muu ohjattu harrastus" = lajien keskitaso (kevyt 0,40, reipas 0,35, rasittava 0,15), koska ohjelman Muu-laji (0,2) aliarvioisi esim. kamppailulajit
+      - koululainen: koululiikunta 2 × 45 min viikossa (koululiikunnan osuudet); välitunnit 5 × koulupäivä: paikallaan 30 min kevyttä oleilua (reipasta 0,1), jonkin verran 45 min välituntien osuuksin, leikkii ja pelaa 45 min ulkoleikin osuuksin
+      - päiväkotipäivä 2 h päiväkotipäivän osuuksin (Liikkuva varhaiskasvatus); matkat 5 arkipäivänä kävelyn tai pyöräilyn osuuksin, autolla 0
+      - leikki joka päivä ulkoleikin osuuksin: koululainen 20/60/120 min, päiväkotilainen 45/90/150 min, kotona hoidettava 90/180/240 min
+      - erittelyn osat pyöristetään suurimman jäännöksen menetelmällä, joten niiden summa on aina pääluku
     - **Tulos:**
       - koululainen: reipas ja rasittava min/pv suhteessa 60 min:iin, lisäksi rasittavat sekä lihaksia ja luustoa vahvistavat päivät (tavoite 3)
       - alle kouluikäinen: kaikki liikkuminen suhteessa 3 h:iin ja vauhdikas suhteessa 1 h:iin; tila heikomman mukaan
       - tila samoin rajoin kuin ohjelmassa: täyttyy / lähellä (≥ 75 %) / alle
-      - erittely osittain, enintään kaksi vinkkiä suurimman arvioidun lisäyksen mukaan, huomautus "karkea arvio, ei mittaus" ja suosituksen lähde
+      - **vinkit** (enintään kaksi, suurimman lisäyksen mukaan): minuuttivinkit (matka, leikki, välitunnit) vain, kun pääsuositus ei täyty, ja lisäys lasketaan erotuksena nykytilanteesta (jo kävelevälle pyörä); alle 3 min lisäyksiä ei tarjota. Päivävinkit (rasittavat, lihakset ja luusto), kun päiväraja ei täyty. Pienelle lapselle yleisvinkki, jos muuta ei ole.
+      - huomautus "karkea arvio, ei mittaus", oletukset ja suosituksen lähde
     - **Kehotus:** "Näe todellinen viikko" ja koodikenttä tuloksen vieressä; "Tee testi uudelleen".
     - **Tietosuoja:** kaikki lasketaan selaimessa; vastauksia ei lähetetä eikä tallenneta.
-    - **Esitäyttö aloitukseen:** jos koodi syötetään samalla käynnillä, vastaukset (vain muistissa, katoavat sivun latauksessa) täyttävät aloituksen:
+    - **Esitäyttö aloitukseen:** jos koodi syötetään samalla käynnillä, vastaukset (vain muistissa, katoavat sivun latauksessa) täyttävät aloituksen niin, että ohjelma laskee samoista tiedoista saman viikon kuin pikatesti (koululiikuntaa lukuun ottamatta, joka lisätään viikkorytmiin itse; testattu):
       - tervetulonäkymä kertoo, että vastaukset ovat valmiina
-      - profiili: syntymävuosi (kuluva vuosi − ikä) ja jalkapallo, jos se valittiin
-      - viikkorytmi: kortti "Pikatestin harrastukset", jossa ehdotetut treenipäivät kertamäärän mukaan; käyttäjä vaihtaa päivät ja lisää rivin
-      - arkiliikunta: välitunnit, päiväkoti, matkat ja leikki liukusäätimiin valmiiksi
+      - profiili: syntymävuosi (kuluva vuosi − ikä; koulukysymyksen tapauksissa tarkka), koulun aloitusvuosi (syntymävuosi + 7, elokuu) ja jalkapallo, jos se valittiin. Ohjelma valitsee näin saman suositusryhmän kuin pikatesti kaikilla iillä ja kuukausilla (testattu).
+      - viikkorytmi: kortti "Pikatestin harrastukset", jossa ehdotetut treenipäivät kertamäärän mukaan; käyttäjä vaihtaa päivät ja lisää rivin. "Muu ohjattu harrastus" lisätään itse oikealla lajilla.
+      - arkiliikunta: välitunnit, päiväkoti, matkat ja leikki liukusäätimiin valmiiksi; perusarvio tallennetaan vastauksen lajin osuuksin (esim. pyöräily kouluun, aktiivinen välitunti = ulkoleikki)

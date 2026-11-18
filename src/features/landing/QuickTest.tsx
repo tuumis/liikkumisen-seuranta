@@ -2,19 +2,26 @@
 // Lopuksi kehotus pyytää kutsukoodi; vastaukset esitäyttävät ohjelman aloituksen (vain muistissa).
 
 import { useState, type ReactNode } from 'react';
-import { computeQuick, prefillFromQuick, QUICK_HOBBIES, quickGroup, type Commute, type HobbyKey, type Level, type QuickAnswers, type QuickResult } from '../../domain/quickCheck';
+import { computeQuick, prefillFromQuick, QUICK_HOBBIES, quickGroup, schoolQuestionNeeded, type Commute, type HobbyKey, type Level, type QuickAnswers, type QuickResult } from '../../domain/quickCheck';
 import { RECOMMENDATIONS } from '../../domain/recommendations';
 import { today } from '../../ui/today';
 import { setQuickPrefill } from './quickPrefill';
 
-type StepId = 'age' | 'daycare' | 'hobbies' | 'commute' | 'recess' | 'play' | 'vigorous' | 'strength';
+type StepId = 'age' | 'school' | 'daycare' | 'hobbies' | 'commute' | 'recess' | 'play' | 'vigorous' | 'strength';
 
 const START: QuickAnswers = { age: 0, hobbies: [], commute: 'car', commuteMin: 0, recess: 1, daycare: true, play: 1, vigorousDays: 0, strengthDays: 0 };
 
-function stepsFor(a: QuickAnswers): StepId[] {
+function stepsFor(a: QuickAnswers, month: number): StepId[] {
   if (!a.age) return ['age'];
-  if (quickGroup(a.age) === 'school_age') return ['age', 'hobbies', 'commute', 'recess', 'play', 'vigorous', 'strength'];
-  return a.daycare ? ['age', 'daycare', 'hobbies', 'commute', 'play'] : ['age', 'daycare', 'hobbies', 'play'];
+  const head: StepId[] = schoolQuestionNeeded(a.age, month) ? ['age', 'school'] : ['age'];
+  if (quickGroup(a.age, a.inSchool) === 'school_age') return [...head, 'hobbies', 'commute', 'recess', 'play', 'vigorous', 'strength'];
+  return a.daycare ? [...head, 'daycare', 'hobbies', 'commute', 'play'] : [...head, 'daycare', 'hobbies', 'play'];
+}
+
+/** Kuluva vuosi ja kuukausi (koulukysymys ja syntymävuosi). */
+function nowYm(): [number, number] {
+  const t = today();
+  return [Number(t.slice(0, 4)), Number(t.slice(5, 7))];
 }
 
 const MINUTES = [30, 45, 60, 75, 90, 120];
@@ -24,19 +31,20 @@ export function QuickTest({ intro, invite }: { intro: ReactNode; invite: ReactNo
   const [a, setA] = useState<QuickAnswers>(START);
   const [step, setStep] = useState(0);
   const [result, setResult] = useState<QuickResult>();
-  const steps = stepsFor(a);
+  const [year, month] = nowYm();
+  const steps = stepsFor(a, month);
   const id = steps[step];
-  const school = a.age ? quickGroup(a.age) === 'school_age' : true;
+  const school = a.age ? quickGroup(a.age, a.inSchool) === 'school_age' : true;
   // Kysymysten määrä näytetään vasta, kun ikä tiedetään (koululaisella 7, pienemmällä 4–5).
   const total = a.age ? steps.length : 7;
 
   function next(patch: Partial<QuickAnswers> = {}) {
     const n = { ...a, ...patch };
     setA(n);
-    const s = stepsFor(n);
+    const s = stepsFor(n, month);
     if (step + 1 >= s.length) {
       setResult(computeQuick(n));
-      setQuickPrefill(prefillFromQuick(n, Number(today().slice(0, 4))));
+      setQuickPrefill(prefillFromQuick(n, year, month));
     } else setStep(step + 1);
   }
 
@@ -77,12 +85,25 @@ export function QuickTest({ intro, invite }: { intro: ReactNode; invite: ReactNo
           <Question title="Kuinka vanha lapsi on?" hint="Ikä valitsee suosituksen: alle kouluikäisillä kaikki liikkuminen, koululaisilla reipas ja rasittava liikunta.">
             <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-9">
               {Array.from({ length: 17 }, (_, i) => i + 1).map((n) => (
-                <Choice key={n} on={a.age === n} onClick={() => next({ age: n })} compact>
+                <Choice key={n} on={a.age === n} onClick={() => next({ age: n, inSchool: undefined })} compact>
                   {n}
                 </Choice>
               ))}
             </div>
             <p className="mt-2 text-xs text-slate-500">vuotta</p>
+          </Question>
+        )}
+
+        {id === 'school' && (
+          <Question title="Käykö lapsi jo koulua?" hint="Koulu alkaa elokuussa sinä vuonna, jona lapsi täyttää 7. Se ratkaisee, kumpaa suositusta käytetään.">
+            <Options>
+              <Choice on={a.inSchool === true} onClick={() => next({ inSchool: true })}>
+                Kyllä, koulussa
+              </Choice>
+              <Choice on={a.inSchool === false} onClick={() => next({ inSchool: false })}>
+                Ei vielä (esikoulu tai päiväkoti)
+              </Choice>
+            </Options>
           </Question>
         )}
 
@@ -106,7 +127,7 @@ export function QuickTest({ intro, invite }: { intro: ReactNode; invite: ReactNo
         {id === 'recess' && (
           <Question title="Mitä lapsi tekee välitunneilla?">
             <Options>
-              {(['Enimmäkseen paikallaan', 'Liikkuu vähän', 'Leikkii, juoksee ja pelaa'] as const).map((t, i) => (
+              {(['Enimmäkseen paikallaan', 'Liikkuu jonkin verran', 'Leikkii, juoksee ja pelaa'] as const).map((t, i) => (
                 <Choice key={t} on={false} onClick={() => next({ recess: i as Level })}>
                   {t}
                 </Choice>
@@ -121,7 +142,7 @@ export function QuickTest({ intro, invite }: { intro: ReactNode; invite: ReactNo
             hint="Ulkoleikit, pihapelit, pyöräily, trampoliini ja muu oma liikkuminen. Ei ohjattuja harrastuksia."
           >
             <Options>
-              {(school ? ['Alle puoli tuntia', 'Noin tunnin', 'Pari tuntia tai enemmän'] : ['Alle tunnin', '1–2 tuntia', 'Yli 2 tuntia']).map((t, i) => (
+              {(school ? ['Alle puoli tuntia', 'Noin tunnin', 'Pari tuntia tai enemmän'] : a.daycare ? ['Alle tunnin', '1–2 tuntia', 'Yli 2 tuntia'] : ['Alle 2 tuntia', '2–3 tuntia', 'Yli 3 tuntia']).map((t, i) => (
                 <Choice key={t} on={false} onClick={() => next({ play: i as Level })}>
                   {t}
                 </Choice>
@@ -327,7 +348,7 @@ function Result({ r, invite, onRestart }: { r: QuickResult; invite: ReactNode; o
   const school = r.group === 'school_age';
   const scale = Math.max(r.headlineTarget * 1.25, r.headline);
   const st = STATUS[r.status];
-  const parts = r.parts.filter((p) => Math.round(school ? p.mvpa : p.total) > 0);
+  const parts = r.parts.filter((p) => p.shown > 0);
   const source = school ? RECOMMENDATIONS.school_age.mvpaAvgMinPerDay.source.title : RECOMMENDATIONS.early_years.totalMinPerDay.source.title;
 
   return (
@@ -351,7 +372,7 @@ function Result({ r, invite, onRestart }: { r: QuickResult; invite: ReactNode; o
           {parts.map((p) => (
             <li key={p.key} className="flex justify-between gap-3 py-1.5">
               <span className="text-slate-700">{p.label}</span>
-              <span className="tabular-nums font-semibold text-slate-900">≈ {Math.round(school ? p.mvpa : p.total)} min/pv</span>
+              <span className="shrink-0 whitespace-nowrap tabular-nums font-semibold text-slate-900">≈ {p.shown} min/pv</span>
             </li>
           ))}
         </ul>

@@ -112,10 +112,10 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
         <div className="min-w-0 space-y-4">
       {step === 1 && (
         <Card title="Kenen liikkumista seurataan?">
-          {prefill && <QuizNote>Syntymävuosi ja jalkapallo on täytetty pikatestin vastauksista. Lisää nimi ja tarkista tiedot.</QuizNote>}
+          {prefill && <QuizNote>Syntymävuosi, koulun aloitusvuosi ja jalkapallo on täytetty pikatestin vastauksista. Lisää nimi ja tarkista tiedot.</QuizNote>}
           <ProfileForm
             wide
-            defaults={prefill ? { birthYear: prefill.birthYear, football: prefill.football } : undefined}
+            defaults={prefill ? { birthYear: prefill.birthYear, schoolStartYear: prefill.schoolStartYear, football: prefill.football } : undefined}
             onSubmit={async (v) => {
               const p = await repo.createProfile(v);
               void requestPersistentStorage();
@@ -310,7 +310,9 @@ function EstimatesStep({ profile, prefill, onNext }: { profile: Profile; prefill
     for (const s of suggestions) {
       const v = values[s.category];
       if (!v.weekday && !v.weekend) continue;
-      const shares = types?.find((t) => t.id === activityTypeId(ESTIMATE_DEFAULT_TYPE_KEY[s.category as Category]))?.shares;
+      // Pikatestin arvio tuo oman lajinsa (esim. pyöräily kouluun), muuten kategorian oletuslaji.
+      const key = prefill?.find((x) => x.category === s.category)?.typeKey ?? ESTIMATE_DEFAULT_TYPE_KEY[s.category as Category];
+      const shares = types?.find((t) => t.id === activityTypeId(key))?.shares;
       if (shares) await repo.saveEstimate(profile.id, { category: s.category, label: s.label, weekdayMin: v.weekday, weekendMin: v.weekend, shares }, today());
     }
     onNext();
@@ -429,13 +431,16 @@ function QuizHobbies({ profile, hobbies }: { profile: Profile; hobbies: QuickPre
               </span>
               {added[i] ? (
                 <span className="rounded-full bg-green-700 px-3 py-1 text-xs font-bold text-white">✓ Lisätty</span>
-              ) : (
+              ) : h.typeKey === 'other' ? null : (
                 <Button onClick={() => add(i)} disabled={days[i].length === 0}>
                   Lisää viikkorytmiin
                 </Button>
               )}
             </div>
-            {!added[i] && (
+            {h.typeKey === 'other' && (
+              <p className="mt-1.5 text-sm text-slate-600">Lisää tämä alta kohdasta "+ Lisää" ja valitse oikea laji, niin teho vastaa lajia.</p>
+            )}
+            {!added[i] && h.typeKey !== 'other' && (
               <div className="mt-2.5 flex flex-wrap gap-1.5" role="group" aria-label={`${h.label}: treenipäivät`}>
                 {DAY_LABELS.map((l, d) => {
                   const wd = (d + 1) as Weekday;
