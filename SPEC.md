@@ -1393,12 +1393,22 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
       - valintojen muutos hylkää valmiin videon
   - **Alkusivu ja kutsukoodi** (käyttäjän toive 18.11.2026; `features/landing/AccessGate.tsx`, `Landing.tsx`, `domain/invite.ts`, kuvat `public/landing/*.webp`):
     - **Kenelle:** uusi laite, jolla ei ole profiileja, näkee alkusivun ennen ohjelmaa. Laite, jolla on jo profiili (myös arkistoitu), avautuu suoraan eikä kysy koodia. Hyväksyntä muistetaan laitteelle (`localStorage` `inviteAccepted`).
-    - **Alkusivu:**
-      - ohjelman perustiedot ja keskeiset hyödyt
-      - kuvakollaasi PC- ja puhelinkehyksissä: viikko, analyysi, pelikalenteri, kirjaus, jalkapallon kausi ja otteluennakko; kuvan saa suureksi napauttamalla
-      - tekstikortit: PC ja puhelin, tietosuoja, asennus ja koko perhe
-      - "Näin pääset alkuun" kolmessa vaiheessa
-    - **Kuvat:** esimerkkiprofiileista Aino ja Eino (ei oikeita tietoja), WebP-muodossa. PC-kuvat 1280×800, puhelinkuvat 390×844 kaksinkertaisella tarkkuudella. Ne eivät kuulu service workerin esivälimuistiin.
+    - **Alkusivu** (selkeytetty käyttäjän palautteesta 18.11.2026: "paljon infoa aika levällään", toive animaatiosta):
+      - **Ensimmäinen näkymä:** tumma brändipohja, jossa liikkuvat valoläikät. Otsikko "Liikkuuko lapsi tarpeeksi? Nyt sen näkee.", yksi lause ja koodikenttä.
+      - **Animoitu esittely PC- ja puhelinkehyksissä**, viisi kohtausta noin 5 s välein:
+        - viikko, kirjaus, analyysi, pelit ja tulokset sekä ennakot
+        - puhelimen näkymä nousee alhaalta, PC vaihtuu ristiin häivyttäen
+        - kaksi merkintää ponnahtaa näkyviin (esim. "≈ Lähellä tahtia", "49 min / päivä")
+        - alla kuvateksti ja tarinapalkki: kohdan voi valita, ja esittelyn voi pysäyttää
+        - pysähtyy hiiren ollessa päällä, näppäimistöllä kohdistettaessa ja kun esittely ei ole näkyvissä
+        - laitteet kallistuvat kevyesti hiiren mukaan; kuvan saa suureksi napauttamalla
+      - **Esittelyn alla vain:**
+        - neljä luottamusmerkkiä: tiedot vain sinulla, PC ja puhelin, koko perhe, toimii ilman verkkoa
+        - kuusi lyhyttä ominaisuusruutua, jotka liukuvat esiin vierittäessä
+        - kutsuosio: kolme vaihetta, "Syötä kutsukoodi" ja yhteystieto
+      - **Puhelimella:** koodikenttä on esittelyn alla, ja yläpalkissa on pikapainike "Syötä koodi".
+      - **Vähennetty liike:** esittely ei vaihdu itsestään eikä mikään liu'u; kohdat valitaan palkista.
+    - **Kuvat:** esimerkkiprofiileista Aino ja Eino (ei oikeita tietoja), WebP-muodossa. PC-kuvat 1280×800, puhelinkuvat 390×844 kaksinkertaisella tarkkuudella (myös analyysi puhelimella). Ne eivät kuulu service workerin esivälimuistiin.
     - **Kutsukoodi:**
       - Kirjainkoolla, väliviivoilla, välilyönneillä ja ä/ö-pisteillä ei ole väliä.
       - Koodi tarkistetaan laitteella SHA-256-tiivisteestä; itse koodia ei ole lähdekoodissa eikä testeissä.

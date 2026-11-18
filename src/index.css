@@ -1196,3 +1196,169 @@ html.morphing .bottom-nav {
     padding: 0 !important;
   }
 }
+
+/* Alkusivu (18.11.2026): tumma esittelyosio, vaihtuvat näkymät laitteissa, ponnahtavat merkinnät,
+   tarinapalkki ja vierityksessä esiin liukuvat osat. Vähennetty liike: kaikki paikallaan. */
+.lp-hero {
+  position: relative;
+  overflow: hidden;
+  color: var(--hero-ink);
+  background:
+    radial-gradient(90% 70% at 85% 10%, rgb(221 169 110 / 0.22), transparent 60%),
+    radial-gradient(80% 60% at 0% 100%, rgb(120 190 170 / 0.16), transparent 60%),
+    linear-gradient(160deg, var(--hero-from), var(--hero-to));
+}
+.lp-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-radial-gradient(circle at 105% -5%, transparent 0 26px, rgb(255 255 255 / 0.035) 26px 27px);
+}
+.lp-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(70px);
+  pointer-events: none;
+  animation: lp-blob 16s ease-in-out infinite alternate;
+}
+@keyframes lp-blob {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(10%, -8%, 0) scale(1.2);
+  }
+}
+.lp-enter {
+  animation: lp-enter 0.9s var(--ease-out) both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes lp-enter {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+}
+.lp-stage {
+  transform: perspective(1600px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 0.5s var(--ease-out);
+  transform-style: preserve-3d;
+}
+.lp-float {
+  animation: lp-float 5s ease-in-out infinite alternate;
+}
+@keyframes lp-float {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-8px);
+  }
+}
+/* Näkymän vaihto laitteen ruudulla: uusi nousee alhaalta, vanha väistyy ylös. */
+.lp-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translateY(7%) scale(1.02);
+  transition:
+    opacity 0.7s var(--ease-out),
+    transform 0.9s var(--ease-out);
+}
+.lp-slide[data-state='active'] {
+  opacity: 1;
+  transform: none;
+}
+.lp-slide[data-state='prev'] {
+  transform: translateY(-5%) scale(0.98);
+}
+.lp-slide img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+.lp-slide[data-state='active'] img {
+  animation: lp-drift 7s ease-out both;
+}
+@keyframes lp-drift {
+  to {
+    transform: scale(1.04) translateY(-1%);
+  }
+}
+.lp-chip {
+  animation: lp-pop 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: var(--d, 600ms);
+}
+.lp-chip > span {
+  animation: lp-float 3.6s ease-in-out infinite alternate;
+  animation-delay: calc(var(--d, 600ms) + 650ms);
+}
+@keyframes lp-pop {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.6);
+  }
+}
+.lp-caption {
+  animation: lp-up 0.6s var(--ease-out) both;
+}
+@keyframes lp-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+.lp-fill {
+  transform-origin: left;
+  transform: scaleX(0);
+}
+.lp-fill[data-run] {
+  animation: lp-fill var(--dur, 5s) linear both;
+}
+.lp-fill[data-done] {
+  transform: scaleX(1);
+}
+.lp-paused .lp-fill[data-run] {
+  animation-play-state: paused;
+}
+@keyframes lp-fill {
+  to {
+    transform: scaleX(1);
+  }
+}
+.lp-reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 0.7s var(--ease-out),
+    transform 0.7s var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 80ms);
+}
+.is-in .lp-reveal,
+.lp-reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-blob,
+  .lp-enter,
+  .lp-float,
+  .lp-chip,
+  .lp-chip > span,
+  .lp-caption,
+  .lp-slide[data-state='active'] img {
+    animation: none !important;
+  }
+  .lp-stage,
+  .lp-slide,
+  .lp-reveal {
+    transition: none !important;
+  }
+  .lp-reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
