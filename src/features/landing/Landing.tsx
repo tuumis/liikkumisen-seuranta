@@ -67,7 +67,7 @@ const SCENES: Scene[] = [
   { phone: 'phone-story', pc: 'pc-story', title: 'Kauden kooste', text: 'Kauden kohokohdat tarinakortteina. Tallenna kuvana tai jaa.', chips: ['96,3 h liikuntaa', 'Paras viikko'] },
   { phone: 'phone-preview', pc: 'pc-calendar', title: 'Ennakot jakoon', text: 'Otteluennakko kuvana tai videona joukkueen WhatsApp-ryhmään.', chips: ['Kuva tai video', 'Jaa ryhmään'] },
 ];
-const SCENE_MS = 7000;
+const SCENE_MS = 5000;
 
 const FACTS = [
   ['Kuittaus yhdellä napautuksella', 'Viikon treenit ovat valmiina kirjattuina.'],
@@ -124,10 +124,10 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
         <div className="lp-wrap grid items-center gap-9 min-[900px]:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] min-[900px]:gap-14">
           <div>
             <h1 id="landing-title" className="font-display text-[clamp(36px,4.3vw,54px)] font-medium leading-[1.08] tracking-[-0.015em]">
-              Treeni kuitattu sekunnissa. <span className="block text-[var(--lp-ink-2)]">Viikko suhteessa suosituksiin.</span>
+              Tiedätkö, paljonko lapsesi liikkuu?
             </h1>
             <p className="mt-[22px] max-w-[34em] text-[17px] leading-relaxed text-[var(--lp-ink-2)] sm:text-[19px]">
-              Lisää lapsen harrastukset kerran. Sen jälkeen viikon treenit ovat valmiina, ja tehty kerta kuitataan yhdellä napautuksella. Ohjelma laskee reippaan ja rasittavan liikunnan ja näyttää, täyttyykö ikäryhmän liikkumissuositus.
+              Liikkumisen seuranta kokoaa treenit, pelit ja arkiliikunnan yhteen ja näyttää, täyttyykö ikäryhmän liikkumissuositus. Harrastukset lisätään kerran, ja tehty treeni kuitataan yhdellä napautuksella. Halutessasi voit kirjata myös kommentin, treenin sisällön ja oman arviosi.
             </p>
             <button type="button" onClick={() => scrollToId('pikatesti')} className="lp-btn lp-btn-quiz mt-[30px]">
               <IconClock size="1.25rem" />

@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.4',
+    date: '18.11.2026',
+    items: ['Alkusivun otsikko ja esittely kertovat selkeämmin, mitä ohjelma tekee.', 'Alkusivun kuvaesittely vaihtuu nopeammin.'],
+  },
+  {
     version: '1.1.3',
     date: '18.11.2026',
     items: ['Treenin sisältöön uusi valinta 2v2.'],
