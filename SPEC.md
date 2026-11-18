@@ -1402,14 +1402,14 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
         - kaksi merkintää ponnahtaa näkyviin (esim. "≈ Lähellä tahtia", "49 min / päivä")
         - alla kuvateksti ja tarinapalkki: kohdan voi valita, ja esittelyn voi pysäyttää
         - pysähtyy hiiren ollessa päällä, näppäimistöllä kohdistettaessa ja kun esittely ei ole näkyvissä
-        - laitteet kallistuvat kevyesti hiiren mukaan; kuvan saa suureksi napauttamalla
+        - kuvan saa suureksi napauttamalla. Laitteet eivät kallistu hiiren mukaan eikä näkymä zoomaa hitaasti, koska 3D-kallistus ja skaalaus pehmensivät kuvia (käyttäjän palaute 18.11.2026: "hieman epätarkkoja")
       - **Esittelyn alla vain:**
         - neljä luottamusmerkkiä: tiedot vain sinulla, PC ja puhelin, koko perhe, toimii ilman verkkoa
         - kuusi lyhyttä ominaisuusruutua, jotka liukuvat esiin vierittäessä
         - kutsuosio: kolme vaihetta, "Syötä kutsukoodi" ja yhteystieto
       - **Puhelimella:** koodikenttä on esittelyn alla, ja yläpalkissa on pikapainike "Syötä koodi".
       - **Vähennetty liike:** esittely ei vaihdu itsestään eikä mikään liu'u; kohdat valitaan palkista.
-    - **Kuvat:** esimerkkiprofiileista Aino ja Eino (ei oikeita tietoja), WebP-muodossa. PC-kuvat 1280×800, puhelinkuvat 390×844 kaksinkertaisella tarkkuudella (myös analyysi puhelimella). Teemakuvissa Kanerva-väriteema nurmitaustalla (PC) ja tumma Metsä-teema (puhelin); perhekalenterissa Ainon ja Einon pelit, joista yhdet päällekkäin. Ne eivät kuulu service workerin esivälimuistiin.
+    - **Kuvat:** esimerkkiprofiileista Aino ja Eino (ei oikeita tietoja), WebP-muodossa. PC-näkymä 1280×800 ja puhelinnäkymä 390×844 kuvataan tarkkoina (PC 2× = 2560 px, puhelin 3× = 1170 px leveä, WebP-laatu 90), ja niistä pienennetään perusversiot (PC 1280 px, puhelin 780 px). Selain valitsee `srcset`/`sizes`-tiedoilla näytön tarkkuuteen sopivan version; suurennos käyttää tarkkaa versiota (tiedostot `nimi.webp` ja `nimi-2x.webp` / `nimi-3x.webp`). Teemakuvissa Kanerva-väriteema nurmitaustalla (PC) ja tumma Metsä-teema (puhelin); perhekalenterissa Ainon ja Einon pelit, joista yhdet päällekkäin. Ne eivät kuulu service workerin esivälimuistiin.
     - **Kutsukoodi:**
       - Kirjainkoolla, väliviivoilla, välilyönneillä ja ä/ö-pisteillä ei ole väliä.
       - Koodi tarkistetaan laitteella SHA-256-tiivisteestä; itse koodia ei ole lähdekoodissa eikä testeissä.

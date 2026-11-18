@@ -3,7 +3,7 @@
 // Sen alla vain lyhyet luottamusmerkit, kuusi ominaisuutta ja kutsu. Kuvat ovat esimerkkiprofiileista
 // (Aino ja Eino), eivät oikeista tiedoista.
 
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode, type RefObject } from 'react';
 import { checkInvite } from '../../domain/invite';
 import { QuickTest } from './QuickTest';
 import { IconBall, IconBolt, IconChart, IconClose, IconDevices, IconLock, IconShare, IconUser, IconWeek } from '../../ui/icons';
@@ -41,6 +41,9 @@ const SHOTS: Record<ShotName, { w: number; h: number; alt: string }> = {
   'phone-story': { w: 390, h: 844, alt: 'Kauden kooste puhelimella: liikuntaa yhteensä' },
 };
 const src = (n: ShotName) => `./landing/${n}.webp`;
+/** Tarkat versiot: PC 1280 ja 2560 px, puhelin 780 ja 1170 px leveä (2x/3x-näytöille). */
+const srcSet = (n: ShotName) =>
+  n.startsWith('pc-') ? `./landing/${n}.webp 1280w, ./landing/${n}-2x.webp 2560w` : `./landing/${n}.webp 780w, ./landing/${n}-3x.webp 1170w`;
 
 interface Scene {
   phone: ShotName;
@@ -262,7 +265,6 @@ function Showcase({ onZoom }: { onZoom: (n: ShotName) => void }) {
   const [visible, setVisible] = useState(true);
   const [auto] = useState(() => !reducedMotion());
   const root = useRef<HTMLDivElement>(null);
-  const stage = useRef<HTMLDivElement>(null);
   const paused = !auto || userPaused || hover || !visible;
   const scene = SCENES[idx];
 
@@ -280,20 +282,6 @@ function Showcase({ onZoom }: { onZoom: (n: ShotName) => void }) {
     return () => io.disconnect();
   }, []);
 
-  // Kevyt kallistus hiiren mukaan (vain hiirellä ja ilman vähennettyä liikettä).
-  const tilt = (e: ReactPointerEvent) => {
-    if (!auto || e.pointerType !== 'mouse' || !stage.current) return;
-    const r = stage.current.getBoundingClientRect();
-    const x = (e.clientX - r.left) / r.width - 0.5;
-    const y = (e.clientY - r.top) / r.height - 0.5;
-    stage.current.style.setProperty('--ry', `${(x * 7).toFixed(2)}deg`);
-    stage.current.style.setProperty('--rx', `${(-y * 5).toFixed(2)}deg`);
-  };
-  const untilt = () => {
-    stage.current?.style.setProperty('--ry', '0deg');
-    stage.current?.style.setProperty('--rx', '0deg');
-  };
-
   const state = (i: number) => (i === idx ? 'active' : i === prev ? 'prev' : 'idle');
   const pcShots = [...new Set(SCENES.map((s) => s.pc))];
 
@@ -306,16 +294,12 @@ function Showcase({ onZoom }: { onZoom: (n: ShotName) => void }) {
       aria-roledescription="esittely"
       aria-label="Kuvia ohjelmasta"
       onPointerEnter={(e) => e.pointerType === 'mouse' && setHover(true)}
-      onPointerLeave={() => {
-        setHover(false);
-        untilt();
-      }}
-      onPointerMove={tilt}
+      onPointerLeave={() => setHover(false)}
       // Näppäimistöllä kohdistettu esittely pysähtyy; hiiren napautus ei pysäytä pysyvästi.
       onFocus={(e) => e.target.matches(':focus-visible') && setHover(true)}
       onBlur={() => setHover(false)}
     >
-      <div ref={stage} className="lp-stage relative mx-auto aspect-[100/108] w-full max-w-[640px] sm:aspect-[100/94]">
+      <div className="relative mx-auto aspect-[100/108] w-full max-w-[640px] sm:aspect-[100/94]">
         {/* PC taustalla */}
         <button
           type="button"
@@ -331,7 +315,7 @@ function Showcase({ onZoom }: { onZoom: (n: ShotName) => void }) {
           <span className="relative block aspect-[1280/800] overflow-hidden">
             {pcShots.map((n) => (
               <span key={n} className="lp-slide" data-state={n === scene.pc ? 'active' : 'idle'} aria-hidden={n !== scene.pc}>
-                <img src={src(n)} width={1280} height={800} alt="" decoding="async" />
+                <img src={src(n)} srcSet={srcSet(n)} sizes="(min-width: 640px) 540px, 86vw" width={1280} height={800} alt="" decoding="async" />
               </span>
             ))}
           </span>
@@ -348,7 +332,7 @@ function Showcase({ onZoom }: { onZoom: (n: ShotName) => void }) {
             <span className="relative block aspect-[390/844] overflow-hidden rounded-[1.35rem] bg-[var(--bg)] sm:rounded-[1.75rem]">
               {SCENES.map((s, i) => (
                 <span key={s.phone} className="lp-slide" data-state={state(i)} aria-hidden={i !== idx}>
-                  <img src={src(s.phone)} width={390} height={844} alt="" decoding="async" />
+                  <img src={src(s.phone)} srcSet={srcSet(s.phone)} sizes="(min-width: 640px) 245px, 44vw" width={390} height={844} alt="" decoding="async" />
                 </span>
               ))}
             </span>
@@ -546,7 +530,7 @@ function Zoom({ name, onClose }: { name: ShotName; onClose: () => void }) {
   }, [onClose]);
   return (
     <div role="dialog" aria-modal="true" aria-label={s.alt} className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" onClick={onClose}>
-      <img src={src(name)} width={s.w} height={s.h} alt={s.alt} className="h-auto max-h-[92dvh] w-auto max-w-full rounded-xl shadow-2xl" />
+      <img src={src(name)} srcSet={srcSet(name)} sizes="92vw" width={s.w} height={s.h} alt={s.alt} className="h-auto max-h-[92dvh] w-auto max-w-full rounded-xl shadow-2xl" />
       <button
         ref={closeRef}
         type="button"

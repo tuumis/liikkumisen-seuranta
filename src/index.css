@@ -1240,11 +1240,6 @@ html.morphing .bottom-nav {
     transform: translateY(28px);
   }
 }
-.lp-stage {
-  transform: perspective(1600px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
-  transition: transform 0.5s var(--ease-out);
-  transform-style: preserve-3d;
-}
 .lp-float {
   animation: lp-float 5s ease-in-out infinite alternate;
 }
@@ -1279,14 +1274,6 @@ html.morphing .bottom-nav {
   height: 100%;
   object-fit: cover;
   object-position: top;
-}
-.lp-slide[data-state='active'] img {
-  animation: lp-drift 9s ease-out both;
-}
-@keyframes lp-drift {
-  to {
-    transform: scale(1.04) translateY(-1%);
-  }
 }
 .lp-chip {
   animation: lp-pop 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) both;
@@ -1348,11 +1335,9 @@ html.morphing .bottom-nav {
   .lp-float,
   .lp-chip,
   .lp-chip > span,
-  .lp-caption,
-  .lp-slide[data-state='active'] img {
+  .lp-caption {
     animation: none !important;
   }
-  .lp-stage,
   .lp-slide,
   .lp-reveal {
     transition: none !important;
