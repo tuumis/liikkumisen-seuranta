@@ -84,14 +84,18 @@ export function QuickTest({ intro, invite }: { intro: ReactNode; invite: ReactNo
       <div key={id} className="lp-caption mt-5">
         {id === 'age' && (
           <Question title="Kuinka vanha lapsi on?" hint="Ikä valitsee suosituksen: alle kouluikäisillä kaikki liikkuminen, koululaisilla reipas ja rasittava liikunta.">
-            <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-9">
+            {/* Yksikkö ruudukon yläpuolella otsikkona (käyttäjän palaute 18.11.2026: "vuotta" alla oli hassussa paikassa). */}
+            <p id="quick-age-label" className="mb-2 text-xs font-semibold text-slate-500">
+              Ikä vuosina
+            </p>
+            <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-9" role="group" aria-labelledby="quick-age-label">
               {Array.from({ length: 17 }, (_, i) => i + 1).map((n) => (
                 <Choice key={n} on={a.age === n} onClick={() => next({ age: n, inSchool: undefined })} compact>
                   {n}
+                  <span className="sr-only"> vuotta</span>
                 </Choice>
               ))}
             </div>
-            <p className="mt-2 text-xs text-slate-500">vuotta</p>
           </Question>
         )}
 
