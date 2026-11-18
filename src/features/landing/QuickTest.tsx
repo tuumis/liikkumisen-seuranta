@@ -66,7 +66,7 @@ export function QuickTest({ intro, invite }: { intro: ReactNode; invite: ReactNo
     );
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.3fr)] lg:items-center lg:gap-12">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.3fr)] lg:items-start lg:gap-12">
     {intro}
     <div className="card overflow-hidden p-5 sm:p-7">
       <div className="flex items-center gap-3">

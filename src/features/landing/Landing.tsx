@@ -160,14 +160,18 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
           ))}
         </Reveal>
 
-        {/* Pikatesti iltamaiseman päällä (public/landing/quiz-bg.svg: hämärä taivas ja kaukainen metsänreuna; paikallaan). */}
+        {/* Pikatesti iltamaiseman päällä (taivas liukuvärinä; public/landing/quiz-forest.svg metsäkaistana alareunassa kiinteällä mittasuhteella, joten paneelin kasvu ei venytä maisemaa). */}
         <section id="pikatesti" className="relative mt-16 scroll-mt-4 overflow-hidden rounded-[2rem] bg-[#0c2230] px-4 py-9 sm:px-8 lg:mt-24 lg:rounded-[2.5rem] lg:px-14 lg:py-16" aria-labelledby="quiz-title">
-          <div className="absolute inset-0 bg-cover bg-bottom" style={{ backgroundImage: 'url(./landing/quiz-bg.svg)' }} aria-hidden />
+          <div
+            className="absolute inset-0"
+            style={{ background: 'url(./landing/quiz-forest.svg) center bottom / max(100%, 1100px) auto no-repeat, linear-gradient(180deg, #0f2833, #1d4652)' }}
+            aria-hidden
+          />
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgb(8_26_36/0.55),rgb(8_26_36/0.1)_50%,transparent)] lg:bg-[linear-gradient(90deg,rgb(8_26_36/0.72),rgb(8_26_36/0.15)_55%,transparent)]" aria-hidden />
           <div className="relative z-10">
           <QuickTest
             intro={
-          <div className="max-w-2xl">
+          <div className="max-w-2xl lg:pt-8">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--hero-accent)]">Pikatesti · noin minuutti</p>
             <h2 id="quiz-title" className="mt-2 font-display text-3xl font-semibold leading-tight tracking-tight text-[var(--hero-ink)] sm:text-4xl lg:text-5xl">
               Liikkuuko oma lapsesi tarpeeksi?
