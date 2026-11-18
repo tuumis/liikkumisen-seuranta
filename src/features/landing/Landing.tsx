@@ -7,17 +7,37 @@ import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type P
 import { checkInvite } from '../../domain/invite';
 import { IconBall, IconBolt, IconChart, IconClose, IconDevices, IconLock, IconShare, IconUser, IconWeek } from '../../ui/icons';
 
-type ShotName = 'pc-week' | 'pc-analysis' | 'pc-calendar' | 'phone-week' | 'phone-add' | 'phone-analysis' | 'phone-football' | 'phone-preview';
+type ShotName =
+  | 'pc-week'
+  | 'pc-analysis'
+  | 'pc-calendar'
+  | 'pc-theme'
+  | 'pc-family'
+  | 'pc-story'
+  | 'phone-week'
+  | 'phone-add'
+  | 'phone-analysis'
+  | 'phone-football'
+  | 'phone-preview'
+  | 'phone-theme'
+  | 'phone-family'
+  | 'phone-story';
 
 const SHOTS: Record<ShotName, { w: number; h: number; alt: string }> = {
   'pc-week': { w: 1280, h: 800, alt: 'Viikkonäkymä PC:llä' },
   'pc-analysis': { w: 1280, h: 800, alt: 'Analyysi PC:llä: kehitys kuukausittain ja lajit' },
   'pc-calendar': { w: 1280, h: 800, alt: 'Pelikalenterin kuukausinäkymä PC:llä' },
+  'pc-theme': { w: 1280, h: 800, alt: 'Viikkonäkymä PC:llä Kanerva-väriteemalla ja nurmitaustalla' },
+  'pc-family': { w: 1280, h: 800, alt: 'Koko perheen pelikalenteri PC:llä: sisarusten pelit väreittäin' },
+  'pc-story': { w: 1280, h: 800, alt: 'Kauden kooste PC:llä: paras viikko' },
   'phone-week': { w: 390, h: 844, alt: 'Viikkonäkymä puhelimella' },
   'phone-add': { w: 390, h: 844, alt: 'Uuden kerran kirjaus puhelimella' },
   'phone-analysis': { w: 390, h: 844, alt: 'Analyysi puhelimella: reipas ja rasittava liikunta kuukausittain' },
   'phone-football': { w: 390, h: 844, alt: 'Jalkapallon kausi puhelimella: treenit, pelit ja maalit' },
   'phone-preview': { w: 390, h: 844, alt: 'Otteluennakon jakokuva puhelimella' },
+  'phone-theme': { w: 390, h: 844, alt: 'Ulkoasuasetukset puhelimella: tumma teema ja väriteemat' },
+  'phone-family': { w: 390, h: 844, alt: 'Koko perheen pelikalenteri puhelimella, päällekkäiset pelit merkitty' },
+  'phone-story': { w: 390, h: 844, alt: 'Kauden kooste puhelimella: liikuntaa yhteensä' },
 };
 const src = (n: ShotName) => `./landing/${n}.webp`;
 
@@ -32,12 +52,15 @@ interface Scene {
 // Esittelyn kohtaukset; merkinnät vastaavat kuvien esimerkkitietoja.
 const SCENES: Scene[] = [
   { phone: 'phone-week', pc: 'pc-week', title: 'Viikko yhdellä silmäyksellä', text: 'Näet heti, täyttyykö ikäryhmän liikkumissuositus.', chips: ['≈ Lähellä tahtia', '49 min / päivä'] },
-  { phone: 'phone-add', pc: 'pc-week', title: 'Kirjaus sekunneissa', text: 'Laji, kesto ja tallenna. Viikon harrastukset tulevat valmiiksi.', chips: ['⚽ Treeni · 90 min', '✓ Tallennettu'] },
+  { phone: 'phone-add', pc: 'pc-week', title: 'Liikuntakerta sekunneissa', text: 'Laji, kesto ja tallenna. Viikon harrastukset tulevat valmiiksi.', chips: ['⚽ Treeni · 90 min', '✓ Tallennettu'] },
   { phone: 'phone-analysis', pc: 'pc-analysis', title: 'Kehitys kuukausittain', text: 'Kaudet, lajit ja suositusten toteutuminen. Raportit PDF:nä.', chips: ['↑ 9 min / pv syyskuusta', '6 lajia'] },
+  { phone: 'phone-theme', pc: 'pc-theme', title: 'Oman näköinen', text: 'Vaalea tai tumma teema, neljä väriteemaa ja taustat – myös oma kuva.', chips: ['🎨 4 väriteemaa', '🌙 Tumma teema'] },
   { phone: 'phone-football', pc: 'pc-calendar', title: 'Pelit ja tulokset', text: 'Pelikalenteri, turnaukset ja kauden tilastot koko perheelle.', chips: ['🏆 2–1–1', '⚽ Aino: 3 maalia'] },
+  { phone: 'phone-family', pc: 'pc-family', title: 'Koko perheen kalenteri', text: 'Sisarusten pelit väreittäin samassa kalenterissa. Päällekkäiset pelit näkyvät heti.', chips: ['‼ Päällekkäin', '📅 Vienti kalenteriin'] },
+  { phone: 'phone-story', pc: 'pc-story', title: 'Kauden kooste', text: 'Kauden kohokohdat tarinakortteina. Tallenna kuvana tai jaa.', chips: ['96,3 h liikuntaa', '⭐ Paras viikko'] },
   { phone: 'phone-preview', pc: 'pc-calendar', title: 'Ennakot jakoon', text: 'Otteluennakko kuvana tai videona joukkueen WhatsAppiin.', chips: ['🎬 Kuva tai video', '📤 Jaa'] },
 ];
-const SCENE_MS = 5200;
+const SCENE_MS = 7000;
 
 // Osoite kootaan vasta selaimessa, jottei se ole lähdekoodissa yhtenä merkkijonona (vähemmän roskapostia).
 const flip = (s: string) => s.split('').reverse().join('');
@@ -85,7 +108,7 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
                 Liikkuuko lapsi tarpeeksi? <span className="text-[var(--hero-accent)]">Nyt sen näkee.</span>
               </h1>
               <p className="mt-5 max-w-xl text-base leading-relaxed text-[var(--hero-ink-soft)] sm:text-lg">
-                Kirjaa liikunta sekunneissa ja näe viikko suhteessa suomalaisiin liikkumissuosituksiin. Jalkapalloperheille myös pelit, tulokset ja jaettavat ennakot.
+                Kirjaa liikuntakerrat sekunneissa ja näe viikko suhteessa suomalaisiin liikkumissuosituksiin. Jalkapalloperheille myös pelit, tulokset ja jaettavat ennakot.
               </p>
             </div>
 

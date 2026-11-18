@@ -1395,8 +1395,9 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
     - **Kenelle:** uusi laite, jolla ei ole profiileja, näkee alkusivun ennen ohjelmaa. Laite, jolla on jo profiili (myös arkistoitu), avautuu suoraan eikä kysy koodia. Hyväksyntä muistetaan laitteelle (`localStorage` `inviteAccepted`).
     - **Alkusivu** (selkeytetty käyttäjän palautteesta 18.11.2026: "paljon infoa aika levällään", toive animaatiosta):
       - **Ensimmäinen näkymä:** tumma brändipohja, jossa liikkuvat valoläikät. Otsikko "Liikkuuko lapsi tarpeeksi? Nyt sen näkee.", yksi lause ja koodikenttä.
-      - **Animoitu esittely PC- ja puhelinkehyksissä**, viisi kohtausta noin 5 s välein:
-        - viikko, kirjaus, analyysi, pelit ja tulokset sekä ennakot
+      - **Animoitu esittely PC- ja puhelinkehyksissä**, kahdeksan kohtausta noin 7 s välein (tahti hidastettu ja kohtia lisätty käyttäjän toiveesta 18.11.2026):
+        - viikko, liikuntakerran kirjaus, analyysi, teemat ja taustat, pelit ja tulokset, koko perheen kalenteri, kauden kooste sekä ennakot
+        - johdannossa "Kirjaa liikuntakerrat sekunneissa" (ei "Kirjaa liikunta")
         - puhelimen näkymä nousee alhaalta, PC vaihtuu ristiin häivyttäen
         - kaksi merkintää ponnahtaa näkyviin (esim. "≈ Lähellä tahtia", "49 min / päivä")
         - alla kuvateksti ja tarinapalkki: kohdan voi valita, ja esittelyn voi pysäyttää
@@ -1408,7 +1409,7 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
         - kutsuosio: kolme vaihetta, "Syötä kutsukoodi" ja yhteystieto
       - **Puhelimella:** koodikenttä on esittelyn alla, ja yläpalkissa on pikapainike "Syötä koodi".
       - **Vähennetty liike:** esittely ei vaihdu itsestään eikä mikään liu'u; kohdat valitaan palkista.
-    - **Kuvat:** esimerkkiprofiileista Aino ja Eino (ei oikeita tietoja), WebP-muodossa. PC-kuvat 1280×800, puhelinkuvat 390×844 kaksinkertaisella tarkkuudella (myös analyysi puhelimella). Ne eivät kuulu service workerin esivälimuistiin.
+    - **Kuvat:** esimerkkiprofiileista Aino ja Eino (ei oikeita tietoja), WebP-muodossa. PC-kuvat 1280×800, puhelinkuvat 390×844 kaksinkertaisella tarkkuudella (myös analyysi puhelimella). Teemakuvissa Kanerva-väriteema nurmitaustalla (PC) ja tumma Metsä-teema (puhelin); perhekalenterissa Ainon ja Einon pelit, joista yhdet päällekkäin. Ne eivät kuulu service workerin esivälimuistiin.
     - **Kutsukoodi:**
       - Kirjainkoolla, väliviivoilla, välilyönneillä ja ä/ö-pisteillä ei ole väliä.
       - Koodi tarkistetaan laitteella SHA-256-tiivisteestä; itse koodia ei ole lähdekoodissa eikä testeissä.

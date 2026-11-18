@@ -1281,7 +1281,7 @@ html.morphing .bottom-nav {
   object-position: top;
 }
 .lp-slide[data-state='active'] img {
-  animation: lp-drift 7s ease-out both;
+  animation: lp-drift 9s ease-out both;
 }
 @keyframes lp-drift {
   to {
