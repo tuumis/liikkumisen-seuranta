@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { AccessGate } from './features/landing/AccessGate';
 import { AppUpdateProvider } from './features/update/appUpdate';
 import { ToastProvider } from './ui/Toast';
 import { ErrorBoundary } from './ui/ErrorBoundary';
@@ -16,7 +17,9 @@ createRoot(document.getElementById('root')!).render(
     <ErrorBoundary>
       <ToastProvider>
         <AppUpdateProvider>
-          <App />
+          <AccessGate>
+            <App />
+          </AccessGate>
         </AppUpdateProvider>
       </ToastProvider>
     </ErrorBoundary>

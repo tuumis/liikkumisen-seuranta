@@ -1391,3 +1391,19 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
       - "Tee video" toistaa animaation ja tallentaa sen; edistyminen näkyy, ja teon voi perua
       - valmiin videon jälkeen "Jaa video" (puhelimen jakovalikko) ja "Tallenna video" (lataus)
       - valintojen muutos hylkää valmiin videon
+  - **Alkusivu ja kutsukoodi** (käyttäjän toive 18.11.2026; `features/landing/AccessGate.tsx`, `Landing.tsx`, `domain/invite.ts`, kuvat `public/landing/*.webp`):
+    - **Kenelle:** uusi laite, jolla ei ole profiileja, näkee alkusivun ennen ohjelmaa. Laite, jolla on jo profiili (myös arkistoitu), avautuu suoraan eikä kysy koodia. Hyväksyntä muistetaan laitteelle (`localStorage` `inviteAccepted`).
+    - **Alkusivu:**
+      - ohjelman perustiedot ja keskeiset hyödyt
+      - kuvakollaasi PC- ja puhelinkehyksissä: viikko, analyysi, pelikalenteri, kirjaus, jalkapallon kausi ja otteluennakko; kuvan saa suureksi napauttamalla
+      - tekstikortit: PC ja puhelin, tietosuoja, asennus ja koko perhe
+      - "Näin pääset alkuun" kolmessa vaiheessa
+    - **Kuvat:** esimerkkiprofiileista Aino ja Eino (ei oikeita tietoja), WebP-muodossa. PC-kuvat 1280×800, puhelinkuvat 390×844 kaksinkertaisella tarkkuudella. Ne eivät kuulu service workerin esivälimuistiin.
+    - **Kutsukoodi:**
+      - Kirjainkoolla, väliviivoilla, välilyönneillä ja ä/ö-pisteillä ei ole väliä.
+      - Koodi tarkistetaan laitteella SHA-256-tiivisteestä; itse koodia ei ole lähdekoodissa eikä testeissä.
+      - Koodin vaihto: uusi tiiviste `INVITE_HASHES`-listaan ja vanha pois. Aiemmin hyväksytyt laitteet pysyvät auki.
+      - Kevyt portti, ei tietoturvaa: tarkistuksen voi ohittaa, mutta käyttäjien tiedot ovat aina vain heidän omilla laitteillaan.
+    - **Kutsulinkki** `…/#kutsu=KOODI`: avaa ohjelman suoraan. Koodi poistetaan osoitteesta heti, ettei se jää historiaan tai kirjanmerkkeihin. Väärästä koodista näytetään ilmoitus.
+    - **Yhteystieto:** koodia pyydetään ohjelman tekijältä sähköpostilla (mailto-linkki). Osoite kootaan vasta selaimessa, jottei se ole lähdekoodissa yhtenä merkkijonona.
+    - **Aloitus:** koodin jälkeen jatketaan entiseen tapaan aloitukseen (SPEC 12).
