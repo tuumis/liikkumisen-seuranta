@@ -130,6 +130,8 @@ export interface Part {
   total: number;
   /** Näytettävä kokonaisluku pääluvun mittarilla; osien summa = pääluku. */
   shown: number;
+  /** Mistä luku tulee, käyttäjän vastauksina (esim. "2 kertaa viikossa, yhteensä 180 min"). */
+  basis: string;
 }
 
 export type QuickStatus = 'meets' | 'near' | 'below';
@@ -162,14 +164,14 @@ export interface QuickResult {
 }
 
 /** Viikon minuutit → päivän keskiarvo. Pyöristys vasta lopuksi. */
-function part(key: PartKey, label: string, items: { minPerWeek: number; shares: IntensityShares }[]): Omit<Part, 'shown'> {
+function part(key: PartKey, label: string, basis: string, items: { minPerWeek: number; shares: IntensityShares }[]): Omit<Part, 'shown'> {
   let mvpa = 0;
   let total = 0;
   for (const i of items) {
     mvpa += i.minPerWeek * mvpaShare(i.shares);
     total += i.minPerWeek * totalShare(i.shares);
   }
-  return { key, label, mvpa: mvpa / 7, total: total / 7 };
+  return { key, label, basis, mvpa: mvpa / 7, total: total / 7 };
 }
 
 /** Suurimman jäännöksen menetelmä: kokonaisluvut, joiden summa on sum (pyöristetty kokonaissumma). */
@@ -196,16 +198,24 @@ export function computeQuick(a: QuickAnswers): QuickResult {
   const commuteMin = goes && a.commute !== 'car' ? Math.max(0, a.commuteMin) : 0;
   const recess = recessLevel(a.recess);
 
+  const hobbyMin = hobbies.reduce((s, h) => s + Math.min(7, h.perWeek) * h.minutes, 0);
+  const each = hobbies.map((h) => `${Math.min(7, h.perWeek)} × ${h.minutes} min`);
+  const hobbyBasis = !each.length
+    ? 'Ei säännöllisiä harrastuksia'
+    : each.length === 1
+      ? `Viikossa ${each[0]}`
+      : `Viikossa ${each.slice(0, -1).join(', ')} ja ${each[each.length - 1]} (yhteensä ${hobbyMin} min)`;
+  const play = playMin(group, a.daycare)[a.play];
   const raw = [
-    part('hobbies', 'Harrastukset', hobbies.map((h) => ({ minPerWeek: Math.min(7, h.perWeek) * h.minutes, shares: hobbyShares(h.key) }))),
+    part('hobbies', 'Harrastukset', hobbyBasis, hobbies.map((h) => ({ minPerWeek: Math.min(7, h.perWeek) * h.minutes, shares: hobbyShares(h.key) }))),
     school
-      ? part('school', 'Koulu: liikuntatunnit ja välitunnit', [
+      ? part('school', 'Koulu: liikuntatunnit ja välitunnit', `Liikuntatunnit ${SCHOOL_PE_MIN_PER_WEEK} min viikossa ja välitunnit arkipäivisin`, [
           { minPerWeek: SCHOOL_PE_MIN_PER_WEEK, shares: sharesOf('school_pe') },
           { minPerWeek: 5 * recess.min, shares: recess.shares },
         ])
-      : part('daycare', 'Päiväkoti', a.daycare ? [{ minPerWeek: 5 * DAYCARE_MIN, shares: sharesOf('daycare_day') }] : []),
-    part('commute', school ? 'Koulumatkat' : 'Päiväkotimatkat', commuteMin > 0 && a.commute !== 'car' ? [{ minPerWeek: 5 * commuteMin, shares: sharesOf(COMMUTE_KEY[a.commute]) }] : []),
-    part('play', 'Leikki ja oma liikkuminen', [{ minPerWeek: 7 * playMin(group, a.daycare)[a.play], shares: sharesOf('outdoor_play') }]),
+      : part('daycare', 'Päiväkoti', a.daycare ? `Arkipäivisin noin ${DAYCARE_MIN} min liikkumista` : 'Ei päiväkotia', a.daycare ? [{ minPerWeek: 5 * DAYCARE_MIN, shares: sharesOf('daycare_day') }] : []),
+    part('commute', school ? 'Koulumatkat' : 'Päiväkotimatkat', commuteMin > 0 ? `Arkipäivisin ${commuteMin} min` : 'Ei lasketa (autolla tai ei matkaa)', commuteMin > 0 && a.commute !== 'car' ? [{ minPerWeek: 5 * commuteMin, shares: sharesOf(COMMUTE_KEY[a.commute]) }] : []),
+    part('play', 'Leikki ja oma liikkuminen', `Joka päivä noin ${play} min`, [{ minPerWeek: 7 * play, shares: sharesOf('outdoor_play') }]),
   ];
 
   const mvpa = Math.round(raw.reduce((s, p) => s + p.mvpa, 0));

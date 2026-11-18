@@ -84,6 +84,16 @@ describe('pikatesti: laskenta', () => {
     expect(r.tips[1].text).toBe('Kävely päiväkotiin (15 min suuntaansa) toisi noin 21 min liikkumista lisää päivässä.');
   });
 
+  it('erittelyn rivit kertovat, mistä viikon keskiarvo tulee', () => {
+    const r = computeQuick({ ...base, age: 4, daycare: true, play: 1, hobbies: [{ key: 'football', perWeek: 1, minutes: 60 }] });
+    const basis = Object.fromEntries(r.parts.map((p) => [p.key, p.basis]));
+    expect(basis.hobbies).toBe('Viikossa 1 × 60 min');
+    expect(basis.daycare).toBe('Arkipäivisin noin 120 min liikkumista');
+    expect(basis.play).toMatch(/^Joka päivä noin \d+ min$/);
+    const two = computeQuick({ ...base, hobbies: [{ key: 'football', perWeek: 3, minutes: 90 }, { key: 'dance', perWeek: 2, minutes: 60 }] });
+    expect(two.parts[0].basis).toBe('Viikossa 3 × 90 min ja 2 × 60 min (yhteensä 390 min)');
+  });
+
   it('kotona hoidettava: leikkiä enemmän, ei matkaa eikä matkavinkkiä', () => {
     const r = computeQuick({ ...base, age: 3, daycare: false, commute: 'walk', commuteMin: 30, play: 2 });
     expect(r.parts.find((p) => p.key === 'commute')!.mvpa).toBe(0);

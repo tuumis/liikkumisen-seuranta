@@ -370,10 +370,18 @@ function Result({ r, invite, onRestart }: { r: QuickResult; invite: ReactNode; o
         </div>
 
         <h3 className="mt-6 text-sm font-bold text-slate-900">Mistä arvio koostuu</h3>
+        {/* Käyttäjän kysymys 18.11.2026: "mitä tuo 7 min/pv harrastusta oikein tarkoittaa". Luvut ovat viikon keskiarvoja ja vain liikkumisen osuus. */}
+        <p className="mt-1 text-xs leading-snug text-slate-500">
+          Viikon keskiarvo päivää kohden: viikon minuutit jaettuna seitsemälle päivälle, myös viikonloput. Mukana on vain arvioitu{' '}
+          {r.group === 'school_age' ? 'reippaan ja rasittavan liikunnan' : 'liikkumisen'} osuus, ei koko kestoa.
+        </p>
         <ul className="mt-2 divide-y divide-slate-100 text-sm">
           {parts.map((p) => (
-            <li key={p.key} className="flex justify-between gap-3 py-1.5">
-              <span className="text-slate-700">{p.label}</span>
+            <li key={p.key} className="flex items-start justify-between gap-3 py-2">
+              <span className="min-w-0">
+                <span className="block text-slate-700">{p.label}</span>
+                <span className="block text-xs leading-snug text-slate-500">{p.basis}</span>
+              </span>
               <span className="shrink-0 whitespace-nowrap tabular-nums font-semibold text-slate-900">{p.shown} min/pv</span>
             </li>
           ))}
