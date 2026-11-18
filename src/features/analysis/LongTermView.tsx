@@ -19,7 +19,9 @@ import { SERIES } from './DailyMvpaChart';
 import { useReport } from './useReport';
 import { SeasonReport } from './SeasonReport';
 import { HeatmapCard } from './HeatmapCard';
-import { fullWidthSegments, useLongTermLayout, type LongCardId } from './layout';
+import { LONG_TOPICS, fullWidthSegments, useLongTermLayout, type LongCardId } from './layout';
+import { HighlightsCard } from './HighlightsCard';
+import { useFootballEnabled } from '../football/useFootballEnabled';
 import { EditLayoutSheet } from '../../ui/EditLayoutSheet';
 import { IconSettings } from '../../ui/icons';
 
@@ -56,8 +58,19 @@ export function LongTermView({ profile, kind }: { profile: Profile; kind: LongKi
   const p = useLongSummary(profile, prev);
   const texts = KIND_TEXT[kind];
   const [reportOpen, setReportOpen] = useState(false);
-  // Kortit käyttäjän valitsemassa järjestyksessä (oma asetus pitkille jaksoille).
-  const layout = useLongTermLayout();
+  // Kortit käyttäjän valitsemassa järjestyksessä; kuukaudella, kaudella ja vuodella omat oletukset ja asetukset.
+  const fullLayout = useLongTermLayout(kind);
+  // Kohokohdat (tähtiarviot, kommentit) kuuluvat jalkapallokirjauksiin: ilman jalkapalloa pois myös valinnoista.
+  const footballOn = useFootballEnabled(profile);
+  const layout = footballOn
+    ? fullLayout
+    : {
+        ...fullLayout,
+        cards: fullLayout.cards.filter((c) => c.id !== 'highlights'),
+        layout: { ...fullLayout.layout, order: fullLayout.layout.order.filter((id) => id !== 'highlights') },
+        visible: fullLayout.visible.filter((id) => id !== 'highlights'),
+      };
+  const topics = LONG_TOPICS.filter((t) => footballOn || t.id !== 'highlights');
   const [editing, setEditing] = useState(false);
 
   const longCard = (id: LongCardId) => {
@@ -93,6 +106,8 @@ export function LongTermView({ profile, kind }: { profile: Profile; kind: LongKi
             <WeeklyGoals s={s} />
           </Card>
         );
+      case 'highlights':
+        return <HighlightsCard profile={profile} week={period} fixed={period} />;
       case 'quality':
         return (
           <Card title="Datan laatu" eyebrow="Luotettavuus">
@@ -153,7 +168,7 @@ export function LongTermView({ profile, kind }: { profile: Profile; kind: LongKi
       )}
       {s && s.validDays > 0 && layout.visible.length === 0 && (
         <Card>
-          <p className="text-sm text-slate-600">Kaikki kortit on piilotettu. Valitse näytettävät kortit painikkeesta "Muokkaa näkymää".</p>
+          <p className="text-sm text-slate-600">Kaikki kortit on piilotettu. Valitse, mitä haluat nähdä, painikkeesta "Muokkaa näkymää".</p>
         </Card>
       )}
       {s &&
@@ -173,9 +188,10 @@ export function LongTermView({ profile, kind }: { profile: Profile; kind: LongKi
       <EditLayoutSheet
         open={editing}
         onClose={() => setEditing(false)}
-        title="Muokkaa jaksonäkymää"
-        intro="Valitse kuukausi-, kausi- ja vuosinäkymän kortit ja niiden järjestys. Aktiivisuuskartta vie aina koko leveyden."
+        title={`Mitä haluat nähdä ${kind === 'month' ? 'kuukaudesta' : kind === 'season' ? 'kaudesta' : 'vuodesta'}?`}
+        intro={`Valitse aiheet. ${kind === 'month' ? 'Kuukaudella' : kind === 'season' ? 'Kaudella' : 'Vuodella'} on omat valintansa; viikon ja muiden jaksojen näkymä ei muutu.`}
         api={layout}
+        topics={topics}
       />
     </div>
   );

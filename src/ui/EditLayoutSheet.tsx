@@ -1,6 +1,9 @@
 // Näkymän muokkaus (Viikko, Analyysi): korttien näkyvyys, järjestys ja PC:llä palsta.
+// Aiheiden kanssa (Analyysi) ensin ohjattu valinta "Mitä haluat nähdä?"; yksittäiset kortit ja järjestys
+// ovat avattavassa "Lisää vaihtoehtoja" -osassa.
 
-import type { CardLayoutApi } from './cardLayout';
+import type { ReactNode } from 'react';
+import type { CardLayoutApi, CardTopic } from './cardLayout';
 import { Button } from './components';
 import { Sheet } from './Sheet';
 
@@ -18,6 +21,7 @@ export function EditLayoutSheet<Id extends string>({
   api,
   columns = false,
   unavailable,
+  topics,
 }: {
   open: boolean;
   onClose: () => void;
@@ -28,11 +32,13 @@ export function EditLayoutSheet<Id extends string>({
   columns?: boolean;
   /** Kortit, jotka eivät koske valittua profiilia: näytetään himmennettyinä syyn kanssa, ei valittavissa. */
   unavailable?: Partial<Record<Id, string>>;
+  /** Ohjattu valinta: aiheet, joista kukin näyttää tai piilottaa joukon kortteja. */
+  topics?: CardTopic<Id>[];
 }) {
-  const { cards, layout, toggle, move, setSide, reset } = api;
-  return (
-    <Sheet open={open} onClose={onClose} title={title}>
-      <p className="mb-3 text-sm text-slate-600">{intro}</p>
+  const { cards, layout, toggle, move, setSide, setShown, reset } = api;
+  const known = new Set(cards.map((c) => c.id));
+  const topicList = (topics ?? []).map((t) => ({ ...t, cards: t.cards.filter((id) => known.has(id)) })).filter((t) => t.cards.length > 0);
+  const cardList = (
       <ul className="space-y-2">
         {layout.order.map((id, i) => {
           const c = cards.find((x) => x.id === id)!;
@@ -85,6 +91,46 @@ export function EditLayoutSheet<Id extends string>({
           );
         })}
       </ul>
+  );
+  return (
+    <Sheet open={open} onClose={onClose} title={title}>
+      <p className="mb-3 text-sm text-slate-600">{intro}</p>
+      {topicList.length > 0 ? (
+        <>
+          <ul className="space-y-2">
+            {topicList.map((t) => {
+              const shown = t.cards.filter((id) => !layout.hidden.includes(id)).length;
+              const all = shown === t.cards.length;
+              const partial = shown > 0 && !all;
+              return (
+                <li key={t.id}>
+                  <label className={`flex cursor-pointer items-center gap-3 rounded-2xl p-3 ${shown > 0 ? 'card' : 'card-sunk opacity-80'}`}>
+                    <input
+                      type="checkbox"
+                      className="size-5 shrink-0 accent-green-700"
+                      checked={all}
+                      ref={(el) => {
+                        if (el) el.indeterminate = partial;
+                      }}
+                      onChange={() => setShown(t.cards, !all)}
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-slate-900">{t.title}</span>
+                      <span className="block text-xs leading-snug text-slate-500">
+                        {t.text}
+                        {partial && <span className="block font-semibold text-slate-600">Osa näkyvissä ({shown}/{t.cards.length})</span>}
+                      </span>
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+          <More>{cardList}</More>
+        </>
+      ) : (
+        cardList
+      )}
       <div className="mt-4 flex gap-2">
         <Button className="flex-1" onClick={onClose}>
           Valmis
@@ -94,5 +140,22 @@ export function EditLayoutSheet<Id extends string>({
         </Button>
       </div>
     </Sheet>
+  );
+}
+
+function More({ children }: { children: ReactNode }) {
+  return (
+    <details className="group mt-4 rounded-2xl border border-slate-200">
+      <summary className="press flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-3 text-sm font-semibold text-slate-800 [&::-webkit-details-marker]:hidden">
+        Lisää vaihtoehtoja: yksittäiset kortit ja järjestys
+        <span className="transition-transform group-open:rotate-180">
+          <Arrow />
+        </span>
+      </summary>
+      <div className="px-2 pb-2">
+        <p className="mb-2 px-1 text-xs text-slate-500">Valitse kortit yksitellen ja muuta järjestystä. PC:llä kortit asettuvat palstoihin ylhäältä alas tässä järjestyksessä.</p>
+        {children}
+      </div>
+    </details>
   );
 }

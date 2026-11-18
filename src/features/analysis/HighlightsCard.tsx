@@ -42,10 +42,12 @@ function Stars({ value }: { value: number }) {
   );
 }
 
-export function HighlightsCard({ profile, week, className = '' }: { profile: Profile; week: Period; className?: string }) {
-  const [scope, setScope] = useState<Scope>('week');
+/** `fixed`: jakso tulee näkymästä (kuukausi, kausi, vuosi), jolloin kortin omaa jaksovalintaa ei näytetä. */
+export function HighlightsCard({ profile, week, fixed, className = '' }: { profile: Profile; week: Period; fixed?: Period; className?: string }) {
+  const [ownScope, setScope] = useState<Scope>('week');
   const [showAll, setShowAll] = useState(false);
-  const period: Period = scope === 'week' ? week : scope === 'month' ? monthPeriod(addDays(week.start, 3)) : seasonPeriod(addDays(week.start, 3));
+  const scope = fixed ? fixed.kind : ownScope;
+  const period: Period = fixed ?? (scope === 'week' ? week : scope === 'month' ? monthPeriod(addDays(week.start, 3)) : seasonPeriod(addDays(week.start, 3)));
   const len = days(period);
   const prevFrom = addDays(period.start, -len);
 
@@ -59,7 +61,7 @@ export function HighlightsCard({ profile, week, className = '' }: { profile: Pro
   const prev = useMemo(() => (data ? highlights(data.sessions, data.details, prevFrom, addDays(period.start, -1)) : null), [data, prevFrom, period.start]);
   const avgShown = useCountUp(h?.rating.avg ?? 0);
 
-  const scopeLabel = scope === 'week' ? 'viikolta' : scope === 'month' ? formatDate(period.start, 'LLLL') + 'lta' : 'kaudelta';
+  const scopeLabel = scope === 'week' ? 'viikolta' : scope === 'month' ? formatDate(period.start, 'LLLL') + 'lta' : scope === 'season' ? 'kaudelta' : 'vuodelta';
   const trend = h?.rating.avg != null && prev?.rating.avg != null ? h.rating.avg - prev.rating.avg : null;
   const comments = h ? (showAll ? h.comments : h.comments.slice(0, 5)) : [];
   const verdict = h ? ratingVerdict(h.rating.avg) : null;
@@ -73,7 +75,7 @@ export function HighlightsCard({ profile, week, className = '' }: { profile: Pro
             Kommentit ja yleisarvio
           </h2>
         </div>
-        <div className="inline-flex rounded-xl bg-[var(--surface-sunk)] p-0.5 text-[11px] font-bold" role="radiogroup" aria-label="Jakso">
+        {!fixed && <div className="inline-flex rounded-xl bg-[var(--surface-sunk)] p-0.5 text-[11px] font-bold" role="radiogroup" aria-label="Jakso">
           {(
             [
               ['week', 'Viikko'],
@@ -95,7 +97,7 @@ export function HighlightsCard({ profile, week, className = '' }: { profile: Pro
               {l}
             </button>
           ))}
-        </div>
+        </div>}
       </div>
       <p className="mt-1 text-xs text-slate-500">
         {scope === 'season' ? seasonKey(period.start) : `${formatDate(period.start, 'd.M.')} – ${formatDate(period.end, 'd.M.yyyy')}`} · {h?.sessions ?? 0} kertaa

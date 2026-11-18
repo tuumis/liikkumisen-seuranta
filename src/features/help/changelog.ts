@@ -9,6 +9,16 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.0',
+    date: '18.11.2026',
+    items: [
+      'Analyysi selkeämmäksi: viikolla, kuukaudella, kaudella ja vuodella omat oletusnäkymät ja lyhyt kuvaus siitä, mihin taso vastaa.',
+      'Viikon päiväkaavio ja lajijakauma samassa kortissa "Päivät ja lajit".',
+      'Muokkaa näkymää: valitse ensin aiheet, yksittäiset kortit ja järjestys löytyvät Lisää vaihtoehtoja -kohdasta.',
+      'Kohokohdat myös kuukausi-, kausi- ja vuosinäkymässä.',
+    ],
+  },
+  {
     version: '1.0.0',
     date: '18.11.2026',
     items: [

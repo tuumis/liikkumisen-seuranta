@@ -23,7 +23,7 @@ import { HighlightsCard } from './HighlightsCard';
 import { IconChevronLeft, IconChevronRight, IconSettings, IconSparkle } from '../../ui/icons';
 import { dispatchCommand } from '../desktop/commands';
 import { EditLayoutSheet } from '../../ui/EditLayoutSheet';
-import { fullWidthSegments, useAnalysisLayout } from './layout';
+import { ANALYSIS_TOPICS, LEVEL_INTRO, fullWidthSegments, useAnalysisLayout } from './layout';
 import { LongTermView } from './LongTermView';
 import { WeekReportButton } from './WeekReport';
 import { HeatmapCard } from './HeatmapCard';
@@ -71,6 +71,7 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
   const layoutApi = footballOn
     ? fullLayout
     : { ...fullLayout, cards: fullLayout.cards.filter((c) => !fbCard(c.id)), layout: { ...fullLayout.layout, order: fullLayout.layout.order.filter((id) => !fbCard(id)) } };
+  const topics = ANALYSIS_TOPICS.filter((t) => footballOn || !t.cards.every(fbCard));
   const visible = fullLayout.visible.filter((id) => footballOn || !fbCard(id));
 
   if (games && profile && footballOn) return <GamesView profile={profile} onBack={() => setGames(false)} />;
@@ -80,6 +81,7 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
     <div className="anim-fade flex flex-wrap items-end gap-3">
       <div className="w-full max-w-md">
         <Segmented<Mode> label="Jakso" value={mode} onChange={setMode} options={MODES} />
+        <p className="mt-2 text-sm text-slate-600">{LEVEL_INTRO[mode]}</p>
       </div>
       {!footballOn && (
         <button
@@ -162,22 +164,11 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
             {seg.map((id) => {
               const card =
                 id === 'goals' ? (
-                  <Card title={`Tavoitteet · ${profile.name}`} eyebrow="Suositusvertailu">
+                  <Card title={`Suositus · ${profile.name}`} eyebrow="Täyttyikö suositus">
                     <GoalCard report={report} variant="full" />
                   </Card>
-                ) : id === 'daily' ? (
-                  <Card title={report.group.group === 'early_years' ? 'Vauhdikas liikkuminen päivittäin' : 'Reipas ja rasittava päivittäin'} eyebrow="Päivittäin">
-                    <DailyMvpaChart
-                      days={report.allDays}
-                      validDates={report.validDates}
-                      target={DAY_BAR_TARGET[report.group.group]}
-                      targetLabel={
-                        report.group.group === 'adult'
-                          ? `tahti ${Math.round(DAY_BAR_TARGET.adult)} min/pv (150 min/vko)`
-                          : `suositus ${DAY_BAR_TARGET[report.group.group]} min/pv`
-                      }
-                    />
-                  </Card>
+                ) : id === 'days' ? (
+                  <DaysCard report={report} />
                 ) : id === 'gauge' ? (
                   report.group.group === 'school_age' ? <HoursGauge hours={report.hours} isCurrentWeek={isCurrent} /> : null
                 ) : id === 'hours' ? (
@@ -188,8 +179,6 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
                   <HighlightsCard profile={profile} week={period} />
                 ) : id === 'football' ? (
                   <FootballSection profileId={profile.id} week={period} onOpenGames={() => setGames(true)} />
-                ) : id === 'categories' ? (
-                  <CategoryCard report={report} />
                 ) : id === 'adherence' ? (
                   <AdherenceCard report={report} />
                 ) : (
@@ -206,15 +195,16 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
           )}
           {visible.length === 0 && (
             <Card>
-              <p className="text-sm text-slate-600">Kaikki kortit on piilotettu. Valitse näytettävät kortit painikkeesta "Muokkaa näkymää".</p>
+              <p className="text-sm text-slate-600">Kaikki kortit on piilotettu. Valitse, mitä haluat nähdä, painikkeesta "Muokkaa näkymää".</p>
             </Card>
           )}
           <EditLayoutSheet
             open={editing}
             onClose={() => setEditing(false)}
-            title="Muokkaa Analyysi-näkymää"
-            intro="Valitse näytettävät kortit ja niiden järjestys. PC:llä kortit asettuvat palstoihin ylhäältä alas tässä järjestyksessä."
+            title="Mitä haluat nähdä viikosta?"
+            intro="Valitse aiheet. Oletuksena näkyy tärkein: täyttyikö suositus ja mistä liikunta kertyi."
             api={layoutApi}
+            topics={topics}
           />
         </>
       )}
@@ -224,14 +214,32 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
   );
 }
 
-function CategoryCard({ report }: { report: PeriodReport }) {
+/** Päivät ja lajit: päiväkaavio ja sen alla, mistä liikunta kertyi (aiemmin kaksi erillistä korttia). */
+function DaysCard({ report }: { report: PeriodReport }) {
+  const g = report.group.group;
+  return (
+    <Card title="Päivät ja lajit" eyebrow="Viikon kulku">
+      <h3 className="mb-1 text-sm font-semibold text-slate-800">{g === 'early_years' ? 'Vauhdikas liikkuminen päivittäin' : 'Reipas ja rasittava päivittäin'}</h3>
+      <DailyMvpaChart
+        days={report.allDays}
+        validDates={report.validDates}
+        target={DAY_BAR_TARGET[g]}
+        targetLabel={g === 'adult' ? `tahti ${Math.round(DAY_BAR_TARGET.adult)} min/pv (150 min/vko)` : `suositus ${DAY_BAR_TARGET[g]} min/pv`}
+      />
+      <h3 className="mb-1 mt-5 border-t border-slate-100 pt-4 text-sm font-semibold text-slate-800">Mistä liikunta kertyi</h3>
+      <CategoryRows report={report} />
+    </Card>
+  );
+}
+
+function CategoryRows({ report }: { report: PeriodReport }) {
   const rows = report.byCategory;
   const max = Math.max(1, ...rows.map((r) => r.mvpa));
   return (
-    <Card title="Jakauma kategorioittain">
+    <>
       {rows.length === 0 ? (
         <EmptyState art="chart" title="Ei liikkumista vertailtavilla päivillä" compact>
-          Jakauma näkyy, kun jaksolle on kirjattu liikuntaa.
+          Jakauma näkyy, kun viikolle on kirjattu liikuntaa.
         </EmptyState>
       ) : (
         <>
@@ -259,7 +267,7 @@ function CategoryCard({ report }: { report: PeriodReport }) {
           </ul>
         </>
       )}
-    </Card>
+    </>
   );
 }
 
@@ -293,7 +301,7 @@ function AdherenceCard({ report }: { report: PeriodReport }) {
   if (a.planned === 0) return null;
   const reasons = (Object.keys(SKIP_REASON_LABEL) as SkipReason[]).filter((r) => a.skippedByReason[r] > 0);
   return (
-    <Card title="Suunnitelma vs. toteuma">
+    <Card title="Suunnitelma ja toteuma">
       <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-sm">
         <dt className="text-slate-600">Suunniteltuja</dt>
         <dd className="text-right tabular-nums">{a.planned}</dd>

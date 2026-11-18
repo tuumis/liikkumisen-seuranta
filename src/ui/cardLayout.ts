@@ -13,6 +13,14 @@ export interface CardDef<Id extends string> {
   side?: boolean;
 }
 
+/** Aihe ohjattuun valintaan ("Mitä haluat nähdä?"): yksi valinta näyttää tai piilottaa joukon kortteja. */
+export interface CardTopic<Id extends string> {
+  id: string;
+  title: string;
+  text: string;
+  cards: Id[];
+}
+
 export interface CardLayout<Id extends string> {
   order: Id[];
   hidden: Id[];
@@ -27,6 +35,8 @@ export interface CardLayoutApi<Id extends string> {
   toggle: (id: Id) => void;
   move: (id: Id, dir: -1 | 1) => void;
   setSide: (id: Id, side: boolean) => void;
+  /** Näytä tai piilota monta korttia kerralla (aiheen valinta). */
+  setShown: (ids: Id[], shown: boolean) => void;
   reset: () => void;
 }
 
@@ -58,7 +68,11 @@ function read<Id extends string>(key: string, cards: CardDef<Id>[], hidden: Id[]
 }
 
 export function useCardLayout<Id extends string>(key: string, cards: CardDef<Id>[], defaultHidden: Id[] = []): CardLayoutApi<Id> {
-  const [layout, setLayout] = useState(() => read(key, cards, defaultHidden));
+  // Avain voi vaihtua (esim. kuukausi/kausi/vuosi omilla asetuksillaan): luetaan uuden avaimen asetus.
+  const [state, setState] = useState(() => ({ key, layout: read(key, cards, defaultHidden) }));
+  const layout = state.key === key ? state.layout : read(key, cards, defaultHidden);
+  if (state.key !== key) setState({ key, layout });
+  const setLayout = (next: CardLayout<Id>) => setState({ key, layout: next });
   const locked = new Set(cards.filter((c) => c.locked).map((c) => c.id));
   const save = (next: CardLayout<Id>) => {
     setLayout(next);
@@ -85,6 +99,7 @@ export function useCardLayout<Id extends string>(key: string, cards: CardDef<Id>
       save({ ...layout, order });
     },
     setSide: (id, side) => save({ ...layout, side: side ? [...layout.side.filter((x) => x !== id), id] : layout.side.filter((x) => x !== id) }),
+    setShown: (ids, shown) => save({ ...layout, hidden: shown ? layout.hidden.filter((x) => !ids.includes(x)) : [...layout.hidden.filter((x) => !ids.includes(x)), ...ids] }),
     reset: () => save(defaults(cards, defaultHidden)),
   };
 }
