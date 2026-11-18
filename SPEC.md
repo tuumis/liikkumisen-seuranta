@@ -1394,23 +1394,26 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
       - valintojen muutos hylkää valmiin videon
   - **Alkusivu ja kutsukoodi** (käyttäjän toive 18.11.2026; `features/landing/AccessGate.tsx`, `Landing.tsx`, `domain/invite.ts`, kuvat `public/landing/*.webp`):
     - **Kenelle:** uusi laite, jolla ei ole profiileja, näkee alkusivun ennen ohjelmaa. Laite, jolla on jo profiili (myös arkistoitu), avautuu suoraan eikä kysy koodia. Hyväksyntä muistetaan laitteelle (`localStorage` `inviteAccepted`).
-    - **Alkusivu** (selkeytetty käyttäjän palautteesta 18.11.2026: "paljon infoa aika levällään", toive animaatiosta):
-      - **Ensimmäinen näkymä:** tumma brändipohja, jossa liikkuvat valoläikät. Otsikko "Liikkuuko lapsi tarpeeksi? Nyt sen näkee.", yksi lause ja koodikenttä.
-      - **Animoitu esittely PC- ja puhelinkehyksissä**, kahdeksan kohtausta noin 7 s välein (tahti hidastettu ja kohtia lisätty käyttäjän toiveesta 18.11.2026):
+    - **Alkusivu** (uusi ilme käyttäjän hyväksymän esimerkin mukaan 18.11.2026; aiempi tumma versio korvattu):
+      - **Ilme:** vaalea paperisävy (`.lp-page`-paletti, ei riipu ohjelman väriteemasta; tummassa tilassa samat roolit tummina), otsikot Fraunces-fontilla, ohuet erotinviivat korttien sijaan.
+      - **Yläpalkki:** nimi ja logo, osiolinkit (Ominaisuudet, Jalkapallo, Pikatesti, Tietosuoja; vain leveällä näytöllä) ja "Syötä kutsukoodi" (kapealla "Kutsukoodi"), joka vie koodikenttään.
+      - **Ensimmäinen näkymä:**
+        - otsikko "Näe lapsen liikunta suhteessa suosituksiin." ja lyhyt kuvaus
+        - pikatestin painike ensimmäisenä ja selvästi näkyvänä ("Tee 1 minuutin pikatesti", korostusväri; käyttäjän toive 18.11.2026), alla lause siitä, ettei vastauksia lähetetä
+        - erotinviivan alla "Onko sinulla kutsukoodi?", kenttä, "Avaa ohjelma" ja yhteystieto
+      - **Animoitu esittely PC- ja puhelinkehyksissä** ensimmäisen näkymän oikealla puolella (puhelimella tekstin alla), kahdeksan kohtausta noin 7 s välein:
         - viikko, liikuntakerran kirjaus, analyysi, teemat ja taustat, pelit ja tulokset, koko perheen kalenteri, kauden kooste sekä ennakot
-        - johdannossa "Kirjaa liikuntakerrat sekunneissa" (ei "Kirjaa liikunta")
-        - liike on rauhallinen (käyttäjän palaute 18.11.2026: "vähän tökkivä, ei niin vakuuttava"): uusi näkymä häivyttyy kummassakin laitteessa edellisen päälle pienellä nousulla, ja edellinen pysyy alla paikallaan, joten välissä ei näy tyhjää. Laitteet ja merkinnät eivät heilu jatkuvasti eivätkä pomppaa ylitse. Seuraavan kohdan kuvat puretaan valmiiksi ennen vaihtoa.
-        - kaksi merkintää häivyttyy näkyviin (esim. "≈ Lähellä tahtia", "49 min / päivä")
-        - alla kuvateksti ja tarinapalkki: kohdan voi valita, ja esittelyn voi pysäyttää
+        - liike on rauhallinen (käyttäjän palaute 18.11.2026: "vähän tökkivä, ei niin vakuuttava"): uusi näkymä häivyttyy kummassakin laitteessa edellisen päälle pienellä nousulla, ja edellinen pysyy alla paikallaan, joten välissä ei näy tyhjää. Laitteet ja merkinnät eivät heilu eivätkä pomppaa ylitse. Seuraavan kohdan kuvat puretaan valmiiksi ennen vaihtoa.
+        - kaksi merkintää häivyttyy näkyviin (esim. "Lähellä tahtia", "49 min / päivä")
+        - alla tarinapalkki ja kuvateksti: kohdan voi valita, ja esittelyn voi pysäyttää
         - pysähtyy hiiren ollessa päällä, näppäimistöllä kohdistettaessa ja kun esittely ei ole näkyvissä
         - kuvan saa suureksi napauttamalla. Laitteet eivät kallistu hiiren mukaan eikä näkymä zoomaa hitaasti, koska 3D-kallistus ja skaalaus pehmensivät kuvia (käyttäjän palaute 18.11.2026: "hieman epätarkkoja")
-      - **Esittelyn alla vain:**
-        - neljä luottamusmerkkiä: tiedot vain sinulla, PC ja puhelin, koko perhe, toimii ilman verkkoa
-        - kuusi lyhyttä ominaisuusruutua, jotka liukuvat esiin vierittäessä
-        - kutsuosio: kolme vaihetta, "Syötä kutsukoodi" ja yhteystieto
-      - **Puhelimella:** koodikenttä on esittelyn alla, ja yläpalkissa on pikapainike "Syötä koodi".
+      - **Tosiasiarivi:** ei tiliä eikä palvelinta, PC ja puhelin, koko perhe, toimii ilman verkkoa.
+      - **Kolme ominaisuusosiota** tekstin ja kuvan vuorotellen: kirjaaminen (puhelin), analyysi (PC) ja jalkapalloperheille (perheen kalenteri PC:llä ja otteluennakko puhelimella). Kuvat suurenevat napauttamalla ja liukuvat esiin vierittäessä.
+      - **Tekijän sanat** kursiivilla: miksi ohjelma syntyi (lapsen liikunnan määrä, jalkapalloon kuluva aika, treenien sisältö, turnaukset, ottelut ja tulokset yhdessä paikassa) ja allekirjoitus "Tuomas, ohjelmistokehittäjä". Teksti on käyttäjän omista sanoista.
+      - **Pikatesti** iltamaiseman päällä sivun lopussa (ks. alla), sen jälkeen alalaita: nimi, versio, Tietosuoja, Yhteys (mailto) ja suositusten lähteet.
       - **Vähennetty liike:** esittely ei vaihdu itsestään eikä mikään liu'u; kohdat valitaan palkista.
-    - **Kuvat:** esimerkkiprofiileista Aino ja Eino (ei oikeita tietoja), WebP-muodossa. PC-näkymä 1280×800 ja puhelinnäkymä 390×844 kuvataan tarkkoina (PC 2× = 2560 px, puhelin 3× = 1170 px leveä, WebP-laatu 90), ja niistä pienennetään perusversiot (PC 1280 px, puhelin 780 px). Selain valitsee `srcset`/`sizes`-tiedoilla näytön tarkkuuteen sopivan version; suurennos käyttää tarkkaa versiota (tiedostot `nimi.webp` ja `nimi-2x.webp` / `nimi-3x.webp`). Teemakuvissa Kanerva-väriteema nurmitaustalla (PC) ja tumma Metsä-teema (puhelin); perhekalenterissa Ainon ja Einon pelit, joista yhdet päällekkäin. Ne eivät kuulu service workerin esivälimuistiin.
+    - **Kuvat:** esimerkkiprofiileista Aino ja Eino (ei oikeita tietoja), WebP-muodossa. PC-näkymä 1280×800 ja puhelinnäkymä 390×844 kuvataan tarkkoina (PC 2× = 2560 px, puhelin 3× = 1170 px leveä, WebP-laatu 90), ja niistä pienennetään perusversiot (PC 1280 px, puhelin 780 px). Selain valitsee `srcset`/`sizes`-tiedoilla näytön tarkkuuteen sopivan version; suurennos käyttää tarkkaa versiota (tiedostot `nimi.webp` ja `nimi-2x.webp` / `nimi-3x.webp`). Teemakuvissa Kanerva-väriteema nurmitaustalla (PC) ja tumma Metsä-teema (puhelin); perhe- ja pelikalenterissa Ainon ja Einon viikoittaiset treenit ja useita pelejä, joista yhdet päällekkäin (kuvattu uudelleen täydempänä 18.11.2026). Ne eivät kuulu service workerin esivälimuistiin.
     - **Kutsukoodi:**
       - Kirjainkoolla, väliviivoilla, välilyönneillä ja ä/ö-pisteillä ei ole väliä.
       - Koodi tarkistetaan laitteella SHA-256-tiivisteestä; itse koodia ei ole lähdekoodissa eikä testeissä.
@@ -1458,4 +1461,4 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
     - **Versio ja Mitä uutta** (`domain/version.ts` `APP_VERSION` = 1.0.0, `package.json`, `features/help/changelog.ts`, `HelpSheet.tsx`): Ohjeen alalaidassa versio ja julkaisupäivä sekä linkit Mitä uutta- ja Tietosuoja-näkymiin (samassa ikkunassa, "Takaisin ohjeeseen"). Mitä uutta -luetteloon lisätään rivi jokaisesta julkaisusta, jonka käyttäjä huomaa. Alkusivun alalaidassa nimi, versio ja Tietosuoja.
     - **Linkin esikatselu** (`index.html`, `public/og-image.png` 1200 × 630): Open Graph- ja Twitter-tiedot, joten WhatsAppissa, Teamsissa ja sähköpostissa jaettu linkki näyttää kuvan, nimen ja kuvauksen. Kuvan osoite on täydellinen (`https://tuumis.github.io/liikkumisen-seuranta/og-image.png`), joten se päivitetään, jos julkaisuosoite vaihtuu. Kuva ei kuulu service workerin esivälimuistiin.
     - **Alkusivun kuvat** otettiin uudelleen siivotusta ohjelmasta.
-    - **Alkusivun uusi ilme:** erillinen esimerkki (`esimerkit/`, ei versionhallinnassa eikä julkaistu) odottaa käyttäjän päätöstä; nykyinen alkusivu on ennallaan.
+    - **Alkusivun uusi ilme** (käyttäjän hyväksymä esimerkki 18.11.2026): vaalea ja rauhallinen, pikatesti heti alussa, ominaisuusosiot kuvineen ja tekijän sanat. Kuvaus kohdassa Alkusivu ja kutsukoodi. Lainausta varten mukana Fraunces-fontin kursiivi (sama paketti, ei uutta riippuvuutta).
