@@ -47,8 +47,11 @@ export function ProfileForm({
   onSubmit,
   onCancel,
   wide,
+  defaults,
 }: {
   initial?: Profile;
+  /** Uuden profiilin esitäyttö (pikatestin vastauksista). */
+  defaults?: { birthYear?: number; football?: boolean };
   onSubmit: (v: ProfileFormValues) => Promise<void>;
   onCancel: () => void;
   /** Leveällä näytöllä kentät kahteen palstaan (aloitus). */
@@ -57,7 +60,7 @@ export function ProfileForm({
   const [raw, setRaw] = useState({
     name: initial?.name ?? '',
     kind: initial?.kind ?? 'child',
-    birthYear: String(initial?.birthYear ?? ''),
+    birthYear: String(initial?.birthYear ?? defaults?.birthYear ?? ''),
     birthMonth: String(initial?.birthMonth ?? 1),
     schoolStartYear: initial?.schoolStart ? String(initial.schoolStart.year) : '',
     schoolStartMonth: String(initial?.schoolStart?.month ?? 8),
@@ -68,7 +71,7 @@ export function ProfileForm({
   const [photo, setPhoto] = useState<string | undefined>(initial?.photo);
   // Jalkapallo: tallennettu valinta tai datasta päätelty (vanha profiili); uudella profiililla oletus "Ei".
   const inferredFootball = useFootballStatus(initial);
-  const [footballChoice, setFootballChoice] = useState<boolean | undefined>(initial?.football);
+  const [footballChoice, setFootballChoice] = useState<boolean | undefined>(initial ? initial.football : defaults?.football);
   const football = footballChoice ?? (initial ? !!inferredFootball : false);
   // Oletus = luontipäivä (uudella profiililla tänään); vain poikkeava päivä tallennetaan.
   const defaultStart = initial ? timestampToLocalDate(initial.createdAt) : today();

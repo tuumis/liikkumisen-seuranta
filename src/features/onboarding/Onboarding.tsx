@@ -5,7 +5,10 @@
 import { useState, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { activityTypeId } from '../../domain/ids';
-import type { Category, Profile } from '../../domain/types';
+import type { Category, Profile, Weekday } from '../../domain/types';
+import type { QuickPrefill } from '../../domain/quickCheck';
+import { getQuickPrefill, setQuickPrefill } from '../landing/quickPrefill';
+import { useToast } from '../../ui/Toast';
 import { mergeAnyFile } from '../../db/backup';
 import { repo, type DeviceRole } from '../../db/repositories';
 import { db } from '../../db/schema';
@@ -34,8 +37,11 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
   const [profile, setProfile] = useState<Profile>();
   const [message, setMessage] = useState<string>();
   const [error, setError] = useState<string>();
+  // Alkusivun pikatestin vastaukset (vain muistissa): ikä, harrastukset ja arkiliikunta valmiiksi.
+  const [prefill] = useState(getQuickPrefill);
 
   async function finish() {
+    setQuickPrefill(undefined);
     await repo.setMeta('onboarded', true);
     onDone(profile?.id);
   }
@@ -56,7 +62,7 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
     }
   }
 
-  if (step === 0) return <Welcome onStart={() => setStep(1)} onImport={importFromPc} onSkip={finish} error={error} />;
+  if (step === 0) return <Welcome onStart={() => setStep(1)} onImport={importFromPc} onSkip={finish} error={error} fromQuiz={!!prefill} />;
 
   const current = STEPS[step - 1];
   return (
@@ -106,8 +112,10 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
         <div className="min-w-0 space-y-4">
       {step === 1 && (
         <Card title="Kenen liikkumista seurataan?">
+          {prefill && <QuizNote>Syntymävuosi ja jalkapallo on täytetty pikatestin vastauksista. Lisää nimi ja tarkista tiedot.</QuizNote>}
           <ProfileForm
             wide
+            defaults={prefill ? { birthYear: prefill.birthYear, football: prefill.football } : undefined}
             onSubmit={async (v) => {
               const p = await repo.createProfile(v);
               void requestPersistentStorage();
@@ -129,6 +137,7 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
       {step === 2 &&
         (profile ? (
           <>
+            {prefill && prefill.hobbies.length > 0 && <QuizHobbies profile={profile} hobbies={prefill.hobbies} />}
             <TemplateSection profile={profile} />
             <StepNav onNext={() => setStep(3)} />
           </>
@@ -138,7 +147,7 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
 
       {step === 3 &&
         (profile ? (
-          <EstimatesStep profile={profile} onNext={() => setStep(4)} />
+          <EstimatesStep profile={profile} prefill={prefill?.estimates} onNext={() => setStep(4)} />
         ) : (
           <Skipped text="Perusarviot lisätään profiilille. Voit tehdä sen myöhemmin Asetuksissa." onNext={() => setStep(4)} />
         ))}
@@ -151,7 +160,7 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
 }
 
 /** Tervetulosivu: mitä sovellus tekee, missä tiedot ovat ja miten ne varmuuskopioidaan. PC:llä yhdellä näytöllä. */
-function Welcome({ onStart, onImport, onSkip, error }: { onStart: () => void; onImport: () => void; onSkip: () => void; error?: string }) {
+function Welcome({ onStart, onImport, onSkip, error, fromQuiz }: { onStart: () => void; onImport: () => void; onSkip: () => void; error?: string; fromQuiz?: boolean }) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[1500px] flex-col px-4 py-5 lg:px-10 lg:py-6">
       <div className="flex items-center justify-between gap-3">
@@ -180,7 +189,11 @@ function Welcome({ onStart, onImport, onSkip, error }: { onStart: () => void; on
             >
               Aloita <span aria-hidden>→</span>
             </button>
-            <p className="text-sm text-[var(--hero-ink-soft)]">Aloitus vie muutaman minuutin. Kaiken voi muuttaa myöhemmin Asetuksissa.</p>
+            <p className="text-sm text-[var(--hero-ink-soft)]">
+              {fromQuiz
+                ? 'Pikatestin vastaukset ovat valmiina: ikä, harrastukset ja arkiliikunta. Tarkistat ne vaiheissa.'
+                : 'Aloitus vie muutaman minuutin. Kaiken voi muuttaa myöhemmin Asetuksissa.'}
+            </p>
             <p className="text-sm text-[var(--hero-ink-soft)]">
               Onko tiedot jo toisella laitteella?{' '}
               <button type="button" onClick={onImport} className="font-semibold text-[var(--hero-ink)] underline underline-offset-2">
@@ -280,12 +293,17 @@ function Skipped({ text, onNext }: { text: string; onNext: () => void }) {
   );
 }
 
-function EstimatesStep({ profile, onNext }: { profile: Profile; onNext: () => void }) {
+function EstimatesStep({ profile, prefill, onNext }: { profile: Profile; prefill?: QuickPrefill['estimates']; onNext: () => void }) {
   const types = useLiveQuery(() => repo.listActivityTypes(), []);
   // Alle kouluikäiselle päiväkotipäivä ja leikki; koululaiselle välitunnit, koulumatkat ja leikki.
   const suggestions = estimateSuggestions(recommendationGroup(profile, today()));
   const [values, setValues] = useState<Record<string, { weekday: number; weekend: number }>>(() =>
-    Object.fromEntries(suggestions.map((s) => [s.category, { weekday: s.weekdayMin ?? 0, weekend: 0 }])),
+    Object.fromEntries(
+      suggestions.map((s) => {
+        const p = prefill?.find((x) => x.category === s.category);
+        return [s.category, p ? { weekday: p.weekdayMin, weekend: p.weekendMin } : { weekday: s.weekdayMin ?? 0, weekend: 0 }];
+      }),
+    ),
   );
 
   async function save() {
@@ -321,6 +339,7 @@ function EstimatesStep({ profile, onNext }: { profile: Profile; onNext: () => vo
 
   return (
     <Card title="Tavallinen arkiliikkuminen">
+      {prefill && <QuizNote>Arvot on täytetty pikatestin vastauksista. Tarkista ne.</QuizNote>}
       <p className="mb-3 text-sm text-slate-600">
         Arvioi liikkuminen, jota et kirjaa kerta kerralta. Perusarvio täyttää kategorian vain päivinä, joille siinä ei ole kirjauksia, ja se näytetään aina erikseen.
       </p>
@@ -363,6 +382,81 @@ function DeviceStep({ message, onDone }: { message?: string; onDone: () => void 
       <div className="mt-4 flex justify-end">
         <Button onClick={onDone}>Valmis</Button>
       </div>
+    </Card>
+  );
+}
+
+function QuizNote({ children }: { children: ReactNode }) {
+  return (
+    <p className="mb-3 flex items-start gap-2 rounded-xl bg-green-50 p-3 text-sm text-green-900 ring-1 ring-green-200">
+      <span aria-hidden>✨</span>
+      <span>{children}</span>
+    </p>
+  );
+}
+
+const DAY_LABELS = ['Ma', 'Ti', 'Ke', 'To', 'Pe', 'La', 'Su'];
+/** Ehdotetut treenipäivät kertamäärän mukaan; käyttäjä vaihtaa ne ennen lisäämistä. */
+const SUGGESTED_DAYS: Record<number, Weekday[]> = { 1: [2], 2: [2, 4], 3: [1, 3, 5], 4: [1, 2, 4, 5], 5: [1, 2, 3, 4, 5], 6: [1, 2, 3, 4, 5, 6], 7: [1, 2, 3, 4, 5, 6, 7] };
+
+/** Pikatestin harrastukset viikkorytmiin: valitse päivät ja lisää. */
+function QuizHobbies({ profile, hobbies }: { profile: Profile; hobbies: QuickPrefill['hobbies'] }) {
+  const toast = useToast();
+  const [days, setDays] = useState<Weekday[][]>(() => hobbies.map((h) => SUGGESTED_DAYS[Math.min(7, Math.max(1, h.perWeek))]));
+  const [added, setAdded] = useState<boolean[]>(() => hobbies.map(() => false));
+
+  async function add(i: number) {
+    const h = hobbies[i];
+    if (days[i].length === 0) return;
+    await repo.createTemplateItem(
+      profile.id,
+      { activityTypeId: activityTypeId(h.typeKey), weekdays: [...days[i]].sort(), durationMin: h.minutes, validFrom: today(), note: '', label: '' },
+      today(),
+    );
+    setAdded((a) => a.map((x, j) => (j === i ? true : x)));
+    toast(`${h.label} lisätty viikkorytmiin`, undefined, 'success');
+  }
+
+  return (
+    <Card title="Pikatestin harrastukset">
+      <p className="text-sm text-slate-600">Valitse treenipäivät, niin harrastus tulee joka viikolle valmiiksi kuitattavaksi. Kellonajan voi lisätä myöhemmin.</p>
+      <ul className="mt-3 space-y-3">
+        {hobbies.map((h, i) => (
+          <li key={h.typeKey + i} className="rounded-2xl bg-[var(--surface-sunk)] p-3.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-medium text-slate-900">
+                {h.icon} {h.label} <span className="text-sm font-normal text-slate-600">· {h.perWeek} × {h.minutes} min viikossa</span>
+              </span>
+              {added[i] ? (
+                <span className="rounded-full bg-green-700 px-3 py-1 text-xs font-bold text-white">✓ Lisätty</span>
+              ) : (
+                <Button onClick={() => add(i)} disabled={days[i].length === 0}>
+                  Lisää viikkorytmiin
+                </Button>
+              )}
+            </div>
+            {!added[i] && (
+              <div className="mt-2.5 flex flex-wrap gap-1.5" role="group" aria-label={`${h.label}: treenipäivät`}>
+                {DAY_LABELS.map((l, d) => {
+                  const wd = (d + 1) as Weekday;
+                  const on = days[i].includes(wd);
+                  return (
+                    <button
+                      key={l}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => setDays((all) => all.map((x, j) => (j === i ? (on ? x.filter((y) => y !== wd) : [...x, wd]) : x)))}
+                      className={`min-h-10 min-w-11 rounded-xl text-sm font-semibold ring-1 ${on ? 'bg-green-700 text-white ring-green-700' : 'bg-[var(--surface-raised)] text-slate-700 ring-slate-200'}`}
+                    >
+                      {l}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
     </Card>
   );
 }

@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from 'react';
 import { checkInvite } from '../../domain/invite';
+import { QuickTest } from './QuickTest';
 import { IconBall, IconBolt, IconChart, IconClose, IconDevices, IconLock, IconShare, IconUser, IconWeek } from '../../ui/icons';
 
 type ShotName =
@@ -71,6 +72,8 @@ const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(pre
 export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFailed: boolean }) {
   const [zoom, setZoom] = useState<ShotName>();
   const codeRef = useRef<HTMLInputElement>(null);
+  const quizCodeRef = useRef<HTMLInputElement>(null);
+  const goToQuiz = () => document.getElementById('pikatesti')?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' });
   const goToCode = () => {
     window.scrollTo({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' });
     window.setTimeout(() => codeRef.current?.focus({ preventScroll: true }), 400);
@@ -110,6 +113,18 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
               <p className="mt-5 max-w-xl text-base leading-relaxed text-[var(--hero-ink-soft)] sm:text-lg">
                 Kirjaa liikuntakerrat sekunneissa ja näe viikko suhteessa suomalaisiin liikkumissuosituksiin. Jalkapalloperheille myös pelit, tulokset ja jaettavat ennakot.
               </p>
+              <button
+                type="button"
+                onClick={goToQuiz}
+                className="press mt-6 inline-flex min-h-12 items-center gap-2.5 rounded-full bg-white/10 py-2 pl-2 pr-5 text-left text-[15px] font-semibold text-[var(--hero-ink)] ring-1 ring-white/25 backdrop-blur-sm hover:bg-white/15"
+              >
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--hero-accent)] text-sm text-[#1c2b24]" aria-hidden>
+                  ⏱
+                </span>
+                <span>
+                  Tee 1 minuutin pikatesti <span aria-hidden>→</span>
+                </span>
+              </button>
             </div>
 
             <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
@@ -144,6 +159,26 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
             </li>
           ))}
         </Reveal>
+
+        <section id="pikatesti" className="mt-16 scroll-mt-4 lg:mt-24" aria-labelledby="quiz-title">
+          <QuickTest
+            intro={
+          <div className="max-w-2xl">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-green-800">Pikatesti · noin minuutti</p>
+            <h2 id="quiz-title" className="mt-2 font-display text-3xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-4xl">
+              Liikkuuko oma lapsesi tarpeeksi?
+            </h2>
+            <p className="mt-3 text-base leading-relaxed text-slate-600">
+              Muutama kysymys arjesta, ja saat arvion suhteessa suomalaisiin liikkumissuosituksiin sekä vinkit helpoimpiin lisäyksiin.
+            </p>
+            <p className="mt-2 flex items-center gap-2 text-sm font-medium text-green-800">
+              <IconLock size="0.95rem" /> Vastauksesi eivät lähde tältä sivulta.
+            </p>
+          </div>
+            }
+            invite={<InviteForm idPrefix="quiz" inputRef={quizCodeRef} onUnlock={onUnlock} linkFailed={false} />}
+          />
+        </section>
 
         <Reveal as="section" className="mt-16 lg:mt-24" aria-labelledby="features-title">
           <h2 id="features-title" className="lp-reveal max-w-2xl font-display text-3xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-4xl">
@@ -391,7 +426,8 @@ function Reveal({ as = 'div', className = '', children, ...aria }: { as?: 'div' 
   return <div {...props}>{children}</div>;
 }
 
-function InviteForm({ inputRef, onUnlock, linkFailed }: { inputRef: RefObject<HTMLInputElement | null>; onUnlock: () => void; linkFailed: boolean }) {
+function InviteForm({ inputRef, onUnlock, linkFailed, idPrefix = '' }: { inputRef: RefObject<HTMLInputElement | null>; onUnlock: () => void; linkFailed: boolean; idPrefix?: string }) {
+  const ids = (n: string) => (idPrefix ? `${idPrefix}-${n}` : n);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -415,8 +451,8 @@ function InviteForm({ inputRef, onUnlock, linkFailed }: { inputRef: RefObject<HT
   }
 
   return (
-    <form id="kutsukoodi" onSubmit={submit} className="max-w-xl rounded-[1.6rem] bg-white/[0.07] p-4 ring-1 ring-white/15 backdrop-blur-sm sm:p-5" noValidate>
-      <label htmlFor="invite-code" className="block text-sm font-semibold">
+    <form id={ids('kutsukoodi')} onSubmit={submit} className="max-w-xl rounded-[1.6rem] bg-white/[0.07] p-4 ring-1 ring-white/15 backdrop-blur-sm sm:p-5" noValidate>
+      <label htmlFor={ids('invite-code')} className="block text-sm font-semibold">
         Kutsukoodi
       </label>
       {linkFailed && !error && (
@@ -427,7 +463,7 @@ function InviteForm({ inputRef, onUnlock, linkFailed }: { inputRef: RefObject<HT
       <div className="mt-2 flex gap-2">
         <input
           ref={inputRef}
-          id="invite-code"
+          id={ids('invite-code')}
           className="block min-h-12 w-full min-w-0 flex-1 rounded-full border-0 bg-white/95 px-4 text-base text-[#1c2b24] shadow-inner placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-[color-mix(in_oklab,var(--hero-accent)_55%,transparent)]"
           value={code}
           onChange={(e) => {
@@ -439,7 +475,7 @@ function InviteForm({ inputRef, onUnlock, linkFailed }: { inputRef: RefObject<HT
           spellCheck={false}
           placeholder="SANA-SANA-12"
           aria-invalid={!!error}
-          aria-describedby={error ? 'invite-error' : 'invite-help'}
+          aria-describedby={error ? ids('invite-error') : ids('invite-help')}
         />
         <button
           type="submit"
@@ -453,11 +489,11 @@ function InviteForm({ inputRef, onUnlock, linkFailed }: { inputRef: RefObject<HT
         </button>
       </div>
       {error ? (
-        <p id="invite-error" className="mt-2 text-sm font-semibold text-[#ffd4c4]" role="alert">
+        <p id={ids('invite-error')} className="mt-2 text-sm font-semibold text-[#ffd4c4]" role="alert">
           {error}
         </p>
       ) : (
-        <p id="invite-help" className="mt-2.5 text-sm text-[var(--hero-ink-soft)]">
+        <p id={ids('invite-help')} className="mt-2.5 text-sm text-[var(--hero-ink-soft)]">
           <Contact dark />
         </p>
       )}

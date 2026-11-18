@@ -1418,3 +1418,27 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
     - **Kutsulinkki** `…/#kutsu=KOODI`: avaa ohjelman suoraan. Koodi poistetaan osoitteesta heti, ettei se jää historiaan tai kirjanmerkkeihin. Väärästä koodista näytetään ilmoitus.
     - **Yhteystieto:** koodia pyydetään ohjelman tekijältä sähköpostilla (mailto-linkki). Osoite kootaan vasta selaimessa, jottei se ole lähdekoodissa yhtenä merkkijonona.
     - **Aloitus:** koodin jälkeen jatketaan entiseen tapaan aloitukseen (SPEC 12).
+  - **Alkusivun pikatesti** (käyttäjän toive 18.11.2026; `domain/quickCheck.ts`, `features/landing/QuickTest.tsx`):
+    - **Tarkoitus:** kävijä saa noin minuutissa karkean arvion siitä, liikkuuko oma lapsi tarpeeksi. Lopuksi kehotus pyytää kutsukoodi ja seurata todellista viikkoa.
+    - **Sijainti:** oma osio luottamusmerkkien alla (`#pikatesti`); ensimmäisessä näkymässä painike "Tee 1 minuutin pikatesti".
+    - **Kysymykset** yksi kerrallaan, valinta vie eteenpäin; "← Edellinen" palaa:
+      - kaikille: ikä (1–17 v), ohjatut harrastukset (enintään 3: laji, kertaa viikossa, kesto), koulu- tai päiväkotimatka (auto/kävellen/pyörällä ja minuutit päivässä), vapaa-ajan leikki (kolme tasoa)
+      - koululainen (7 v täyttänyt): välitunnit (kolme tasoa), rasittavat päivät ja hyppiminen/juoksu/kiipeily päivinä viikossa (0–7)
+      - alle kouluikäinen: onko päiväkodissa; matkakysymys vain päiväkotilaiselle
+    - **Laskenta** (sovelluksen tulkinta, ei virallinen luku):
+      - viikon minuutit lajeittain × ohjelman lajikohtaiset teho-osuudet (SPEC 5), jaettuna seitsemällä
+      - "Muu ohjattu harrastus" käyttää esiasetusta "enimmäkseen reipasta"
+      - koululaiselle oletetaan koululiikuntaa 2 × 45 min viikossa ja välitunteja 5 × 45 min (paikallaan oleva lasketaan 30 min kevyeksi)
+      - päiväkotipäivä 2 h (Liikkuva varhaiskasvatus); leikki koululaisella 20/60/120 min, pienemmällä 45/90/150 min päivässä
+    - **Tulos:**
+      - koululainen: reipas ja rasittava min/pv suhteessa 60 min:iin, lisäksi rasittavat sekä lihaksia ja luustoa vahvistavat päivät (tavoite 3)
+      - alle kouluikäinen: kaikki liikkuminen suhteessa 3 h:iin ja vauhdikas suhteessa 1 h:iin; tila heikomman mukaan
+      - tila samoin rajoin kuin ohjelmassa: täyttyy / lähellä (≥ 75 %) / alle
+      - erittely osittain, enintään kaksi vinkkiä suurimman arvioidun lisäyksen mukaan, huomautus "karkea arvio, ei mittaus" ja suosituksen lähde
+    - **Kehotus:** "Näe todellinen viikko" ja koodikenttä tuloksen vieressä; "Tee testi uudelleen".
+    - **Tietosuoja:** kaikki lasketaan selaimessa; vastauksia ei lähetetä eikä tallenneta.
+    - **Esitäyttö aloitukseen:** jos koodi syötetään samalla käynnillä, vastaukset (vain muistissa, katoavat sivun latauksessa) täyttävät aloituksen:
+      - tervetulonäkymä kertoo, että vastaukset ovat valmiina
+      - profiili: syntymävuosi (kuluva vuosi − ikä) ja jalkapallo, jos se valittiin
+      - viikkorytmi: kortti "Pikatestin harrastukset", jossa ehdotetut treenipäivät kertamäärän mukaan; käyttäjä vaihtaa päivät ja lisää rivin
+      - arkiliikunta: välitunnit, päiväkoti, matkat ja leikki liukusäätimiin valmiiksi
