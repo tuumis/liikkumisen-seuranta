@@ -55,7 +55,7 @@ export function ComparisonSection() {
             value={settings.primaryView}
             onChange={(v) => void repo.updateSettings({ primaryView: v })}
             options={[
-              { value: 'logged_plus_estimate', label: 'Kirjattu + perusarvio' },
+              { value: 'logged_plus_estimate', label: 'Kirjattu + arkiliikunta' },
               { value: 'logged', label: 'Vain kirjattu' },
             ]}
           />

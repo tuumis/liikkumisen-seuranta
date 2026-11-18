@@ -260,7 +260,7 @@ function CategoryRows({ report }: { report: PeriodReport }) {
                     {logged > 0 && <div className="h-full rounded-l-sm" style={{ width: `${(logged / max) * 100}%`, background: SERIES.logged, borderRadius: est > 0 ? '2px 0 0 2px' : '2px' }} />}
                     {est > 0 && <div className="h-full" style={{ width: `${(est / max) * 100}%`, background: SERIES.estimate, borderRadius: logged > 0 ? '0 2px 2px 0' : '2px' }} />}
                   </div>
-                  {est > 0 && <div className="mt-0.5 text-xs text-slate-500">josta perusarviota {est} min</div>}
+                  {est > 0 && <div className="mt-0.5 text-xs text-slate-500">josta arkiliikunnan arviota {est} min</div>}
                 </li>
               );
             })}
@@ -286,7 +286,7 @@ function QualityCard({ report }: { report: PeriodReport }) {
         <dd className="text-right tabular-nums text-slate-900">{report.evaluation.n}/7</dd>
         <dt className="text-slate-600">Kattavuus (päiviä, joilla kirjaus)</dt>
         <dd className="text-right tabular-nums text-slate-900">{report.evaluation.n ? percent(q.coverage) : '–'}</dd>
-        <dt className="text-slate-600">Perusarvion osuus reippaasta ja rasittavasta</dt>
+        <dt className="text-slate-600">Arkiliikunnan arvion osuus reippaasta ja rasittavasta</dt>
         <dd className="text-right tabular-nums text-slate-900">{report.evaluation.n ? percent(q.estimateShare) : '–'}</dd>
       </dl>
       {out.length > 0 && <p className="mt-2 text-xs text-slate-500">Pois vertailusta: {out.join(', ')}.</p>}
@@ -385,7 +385,7 @@ function Rationale() {
             </li>
             <li>Aikuisten "2 kertaa viikossa" lasketaan erillisinä päivinä.</li>
             <li>Tehoprofiilit (kuinka suuri osa treenistä on reipasta) ovat sovelluksen arvioita, eivät virallisia lukuja.</li>
-            <li>Perusarvio täyttää kategorian vain päivinä, joille siinä ei ole kirjauksia, eikä se koskaan tuota rasittavaa eikä vahvistavaa päivää.</li>
+            <li>Arkiliikunnan arvio täyttää kategorian vain päivinä, joille siinä ei ole kirjauksia, eikä se koskaan tuota rasittavaa eikä vahvistavaa päivää.</li>
             <li>Alle kouluikäisten jakson tila lasketaan täyttyneiden päivien osuudesta.</li>
             <li>Vertailussa ovat mukana päivät profiilin luonnista alkaen, ei tulevia eikä sairas- ja matkapäiviä.</li>
           </ul>

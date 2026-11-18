@@ -147,7 +147,7 @@ export function LastWeekCard({ profile, today, onOpenWeek }: { profile: Profile;
           </span>
         </span>
         <button type="button" onClick={open} className="press min-h-10 shrink-0 rounded-xl px-2.5 text-sm font-semibold text-green-800 hover:bg-green-50">
-          Avaa viikko ›
+          Avaa viikko
         </button>
         <button
           type="button"

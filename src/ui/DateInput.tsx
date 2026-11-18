@@ -3,6 +3,7 @@
 // Kuukausinäkymä, viikko alkaa maanantaista, min/max-rajat. Ei lisäkirjastoja.
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { IconChevronLeft, IconChevronRight } from './icons';
 import { createPortal } from 'react-dom';
 import { addDays, isISODate, isoWeekday, parseISODate, startOfIsoWeek, toISODate } from '../domain/dates';
 import type { ISODate } from '../domain/types';
@@ -137,13 +138,13 @@ export function DateInput({
           >
             <div className="flex items-center justify-between gap-1">
               <button type="button" className={nav} disabled={!canPrev} onClick={() => setView(prev)} aria-label="Edellinen kuukausi">
-                ‹
+                <IconChevronLeft size="1rem" />
               </button>
               <div className="text-sm font-bold text-slate-900" aria-live="polite">
                 {MONTHS[view.month - 1]} {view.year}
               </div>
               <button type="button" className={nav} disabled={!canNext} onClick={() => setView(next)} aria-label="Seuraava kuukausi">
-                ›
+                <IconChevronRight size="1rem" />
               </button>
             </div>
             <div className="mt-1 grid grid-cols-7 text-center text-[11px] font-semibold uppercase text-slate-500">

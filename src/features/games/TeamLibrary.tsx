@@ -20,7 +20,7 @@ import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { useFootball } from '../football/useFootball';
 import { TeamNameFields, useTeamNameSuggestions } from './TeamNameFields';
-import { IconClose } from '../../ui/icons';
+import { IconChevronRight, IconClose } from '../../ui/icons';
 
 const OUTCOME_CLASS: Record<GameOutcome, string> = {
   W: 'bg-green-700 text-white',
@@ -182,7 +182,7 @@ export function OpponentLibrary({ profile }: { profile: Profile }) {
                 </span>
               </span>
               <span className="text-slate-400" aria-hidden>
-                ›
+                <IconChevronRight size="1rem" />
               </span>
             </button>
           </li>
@@ -272,7 +272,7 @@ function ClubSheet({
               <Button variant="ghost" onClick={walk.onStop}>
                 Lopeta
               </Button>
-              <Button onClick={walk.onNext}>{walk.left > 0 ? (logo ? 'Seuraava ›' : 'Ohita ›') : 'Valmis'}</Button>
+              <Button onClick={walk.onNext}>{walk.left > 0 ? (logo ? 'Seuraava' : 'Ohita') : 'Valmis'}</Button>
             </div>
           )}
           <div className="flex flex-wrap items-center gap-4">

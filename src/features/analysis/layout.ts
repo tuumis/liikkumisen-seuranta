@@ -28,7 +28,7 @@ export const ANALYSIS_TOPICS: CardTopic<AnalysisCardId>[] = [
   { id: 'plan', title: 'Suunnitelma', text: 'Toteutuivatko suunnitellut kerrat', cards: ['adherence'] },
   { id: 'football', title: 'Jalkapallo', text: 'Treenit, pelit, peliaika ja tulokset', cards: ['football'] },
   { id: 'highlights', title: 'Kohokohdat', text: 'Kommentit ja arviot treeneistä ja peleistä', cards: ['highlights'] },
-  { id: 'details', title: 'Tarkat luvut', text: 'Tunnit päivittäin ja lajeittain, aktiivisuuskartta ja datan laatu', cards: ['hours', 'hoursDetail', 'gauge', 'heatmap', 'quality'] },
+  { id: 'details', title: 'Tarkemmat luvut', text: 'Tunnit päivittäin ja lajeittain, aktiivisuuskartta ja datan laatu', cards: ['hours', 'hoursDetail', 'gauge', 'heatmap', 'quality'] },
 ];
 
 export const useAnalysisLayout = () => useCardLayout('analysisLayout2', ANALYSIS_CARDS, ['highlights', 'hours', 'hoursDetail', 'gauge', 'heatmap', 'quality']);
@@ -65,7 +65,7 @@ export const LONG_TOPICS: CardTopic<LongCardId>[] = [
   { id: 'goals', title: 'Suositukset', text: 'Monenako viikkona tavoitteet täyttyivät', cards: ['weeklyGoals'] },
   { id: 'variety', title: 'Lajit ja monipuolisuus', text: 'Mitä lajeja ja mistä liikunta kertyi', cards: ['variety', 'context'] },
   { id: 'highlights', title: 'Kohokohdat', text: 'Kommentit ja arviot jaksolta', cards: ['highlights'] },
-  { id: 'details', title: 'Tarkat luvut', text: 'Aktiivisuuskartta ja datan laatu', cards: ['heatmap', 'quality'] },
+  { id: 'details', title: 'Tarkemmat luvut', text: 'Aktiivisuuskartta ja datan laatu', cards: ['heatmap', 'quality'] },
 ];
 
 export const useLongTermLayout = (kind: LongKind) => useCardLayout(`longLayout:${kind}`, LONG_CARDS[kind], LONG_DEFAULTS[kind].hidden);

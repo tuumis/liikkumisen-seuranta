@@ -9,6 +9,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.1',
+    date: '18.11.2026',
+    items: [
+      'Liikuntaa viikossa: kesken viikon luokitus tehdään koko viikon arviosta.',
+      'Yhtenäisemmät nimet ja painikkeet, selkeämmät synkronoinnin tekstit.',
+      'Ohjeeseen aihe Analyysistä.',
+    ],
+  },
+  {
     version: '1.1.0',
     date: '18.11.2026',
     items: [

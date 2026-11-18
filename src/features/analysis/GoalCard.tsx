@@ -1,5 +1,5 @@
 // Tavoitekortti (SPEC 12): pääluku suositusryhmän mukaan, päivätavoitteet ja laatumerkintä.
-// Jokaisessa vertailussa näkyvät "kirjattu" ja "kirjattu + perusarvio" sekä perusarvion osuus (SPEC 3).
+// Jokaisessa vertailussa näkyvät "kirjattu" ja "kirjattu + arkiliikunta" sekä arkiliikunnan osuus (SPEC 3).
 // compact = Viikko-näkymän yläkortti; full = Analyysi-välilehti.
 
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -30,7 +30,7 @@ export function GoalCard({ report, variant }: { report: PeriodReport; variant: '
   const inProgress = period.end > todayFn();
   const q = ev.quality;
   const hasEstimate = report.days.some((d) => d.estimateAvailable);
-  const primaryLabel = settings.primaryView === 'logged' ? 'kirjattu' : hasEstimate ? 'kirjattu + perusarvio' : 'kirjattu';
+  const primaryLabel = settings.primaryView === 'logged' ? 'kirjattu' : hasEstimate ? 'kirjattu + arkiliikunta' : 'kirjattu';
 
   const notes = (
     <>
@@ -55,10 +55,10 @@ export function GoalCard({ report, variant }: { report: PeriodReport; variant: '
   const both = (d: DualMeasure, unit: string) =>
     hasEstimate ? (
       <p className="text-xs text-slate-600">
-        kirjattu {num1(d.logged.actual)} · kirjattu + perusarvio {num1(d.combined.actual)} {unit} · perusarviota {percent(q.estimateShare)}
+        kirjattu {num1(d.logged.actual)} · kirjattu + arkiliikunta {num1(d.combined.actual)} {unit} · arkiliikuntaa {percent(q.estimateShare)}
       </p>
     ) : (
-      <p className="text-xs text-slate-600">kirjattu {num1(d.logged.actual)} {unit} · ei perusarvioita</p>
+      <p className="text-xs text-slate-600">kirjattu {num1(d.logged.actual)} {unit} · ei arkiliikunnan arviota</p>
     );
 
   const partial = period.kind === 'week' && ev.n < 7 ? ` · ${ev.n}/7 pv mukana` : '';
@@ -93,7 +93,7 @@ export function GoalCard({ report, variant }: { report: PeriodReport; variant: '
             <li>Lihaksia ja luustoa vahvistavat päivät: vain kirjatuista kerroista.</li>
             <li>
               Aktiivisia päiviä (≥ {r.mvpaAvgMinPerDay.value} min): kirjattu {s.activeDays.logged}/{ev.n}
-              {hasEstimate && ` · kirjattu + perusarvio ${s.activeDays.combined}/${ev.n}`} (täydentävä tieto, ei tavoitetta)
+              {hasEstimate && ` · kirjattu + arkiliikunta ${s.activeDays.combined}/${ev.n}`} (täydentävä tieto, ei tavoitetta)
             </li>
           </ul>
         )}
@@ -135,7 +135,7 @@ export function GoalCard({ report, variant }: { report: PeriodReport; variant: '
         {full && (
           <p className="text-xs text-slate-600">
             Päivä täyttyy, kun liikkumista on vähintään {r.totalMinPerDay.value} min ja siitä vauhdikasta vähintään {r.mvpaMinPerDay.value} min. Kirjattu: {e.daysMet.logged.actual}/{ev.n}
-            {hasEstimate && ` · kirjattu + perusarvio: ${e.daysMet.combined.actual}/${ev.n}`}.
+            {hasEstimate && ` · kirjattu + arkiliikunta: ${e.daysMet.combined.actual}/${ev.n}`}.
           </p>
         )}
       </>

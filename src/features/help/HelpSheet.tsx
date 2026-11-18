@@ -35,7 +35,8 @@ const TOPICS: { q: string; a: string[] }[] = [
   {
     q: 'Mikä on arkiliikunta (perusarvio)?',
     a: [
-      'Arvio tavallisesta liikkumisesta, jota ei kirjata joka päivä: välitunnit, koulumatkat ja leikki. Se täyttää vain ne päivät, joilta kirjaus puuttuu, ja näkyy aina erikseen.',
+      'Arvio tavallisesta liikkumisesta, jota ei kirjata joka päivä: päiväkoti, välitunnit, koulumatkat ja leikki. Arvio lasketaan mukaan vain päivinä, joille samaa asiaa ei ole kirjattu, ja se näkyy aina erikseen kirjatusta.',
+      'Arvion voi vahvistaa tai korjata päiväkohtaisesti, ja oletusminuutit muutetaan kohdassa Asetukset → Arkiliikunta.',
     ],
   },
   {
@@ -45,6 +46,14 @@ const TOPICS: { q: string; a: string[] }[] = [
       'Alle kouluikäiset: 3 tuntia liikkumista päivässä, josta 1 tunti vauhdikasta.',
       'Aikuiset: reipasta 150 min viikossa (rasittava minuutti lasketaan kahdesti) ja lihaskuntoa 2 kertaa viikossa.',
       'Liikunnalle ei ole ylärajaa, eikä sovellus kilpailuta tai palkitse.',
+    ],
+  },
+  {
+    q: 'Mitä Analyysissä katsotaan?',
+    a: [
+      'Valitse ylhäältä taso. Viikko: täyttyikö suositus ja mistä liikunta kertyi. Kuukausi: mihin suuntaan ollaan menossa. Kausi: kausi kokonaisuutena. Vuosi: koko vuosi yhdellä silmäyksellä.',
+      'Muokkaa näkymää -painikkeesta valitaan, mitä aiheita näytetään. Jokaisella tasolla on omat valintansa; yksittäiset kortit ja niiden järjestys löytyvät kohdasta Lisää vaihtoehtoja.',
+      'Sivun alalaidan "Mihin luvut perustuvat" kertoo suositukset, lähteet ja sovelluksen omat tulkinnat.',
     ],
   },
   {

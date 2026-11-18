@@ -5,7 +5,7 @@ import type { Profile } from '../../domain/types';
 import { repo, type DeviceRole } from '../../db/repositories';
 import { requestPersistentStorage } from '../../db/storage';
 import { Avatar } from '../../ui/Avatar';
-import { IconChevronRight, IconContrast, IconDevices, IconLock, IconRepeat, IconSun, IconTarget, IconUser } from '../../ui/icons';
+import { IconChevronLeft, IconChevronRight, IconContrast, IconDevices, IconLock, IconRepeat, IconSun, IconTarget, IconUser } from '../../ui/icons';
 import { Button, Card, EmptyState } from '../../ui/components';
 import { useToast } from '../../ui/Toast';
 import { GROUP_LABEL, MONTHS } from '../../ui/labels';
@@ -83,7 +83,7 @@ export function SettingsView({
     <div className="space-y-4">
       <div className="flex items-center gap-2 lg:hidden">
         <Button variant="ghost" className="px-2" onClick={() => onSection(undefined)}>
-          ‹ Asetukset
+          <IconChevronLeft size="1rem" /> Asetukset
         </Button>
       </div>
       <h2 className="flex items-center gap-2 font-display text-xl font-semibold text-slate-900">

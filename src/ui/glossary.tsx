@@ -14,7 +14,7 @@ export function termText(id: TermId, vigorousMin = 18): { title: string; body: R
         body: (
           <>
             Päivä, jolle on kirjattu vähintään <strong>{vigorousMin} min rasittavaa</strong> liikuntaa – niin kovaa, että puhuminen on hengästymisen takia hankalaa (esim. juoksu, kova peli, kilpailu).
-            Kouluikäisille suositellaan rasittavaa liikuntaa vähintään 3 päivänä viikossa. Minuuttiraja on sovelluksen oma tulkinta iän mukaan (Asetukset → Tavoitteet), eikä arkiliikunnan arvio koskaan
+            Kouluikäisille suositellaan rasittavaa liikuntaa vähintään 3 päivänä viikossa. Minuuttiraja on sovelluksen oma tulkinta iän mukaan (Asetukset → Tavoitteet ja lajit), eikä arkiliikunnan arvio koskaan
             tee päivästä rasittavaa.
           </>
         ),

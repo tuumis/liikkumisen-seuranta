@@ -27,7 +27,7 @@ import { num1 } from '../../ui/statusText';
 import { goalsLabel } from '../../ui/labels';
 import { resultLine } from './FootballSection';
 import { useFootball } from './useFootball';
-import { IconShare } from '../../ui/icons';
+import { IconChevronLeft, IconShare } from '../../ui/icons';
 import { InfoLink } from '../../ui/InfoLink';
 import { openResultShare } from '../share/ResultShare';
 
@@ -130,7 +130,7 @@ export function GamesView({ profile, onBack }: { profile: Profile; onBack?: () =
       {onBack && (
         <div className="flex items-center gap-2">
           <Button variant="ghost" onClick={onBack} className="px-2">
-            ‹ Analyysi
+            <IconChevronLeft size="1rem" /> Analyysi
           </Button>
           <h2 className="font-display text-lg font-semibold text-slate-900">Pelit ja tulokset · {profile.name}</h2>
         </div>

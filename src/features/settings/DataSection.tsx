@@ -88,7 +88,7 @@ export function BackupSection() {
             Vie kerrat (CSV)
           </Button>
         </div>
-        <p className="text-xs text-slate-500">Edellinen varmuuskopio: {lastExport ? `${formatDate(lastExport.slice(0, 10), 'd.M.yyyy')} (${ago(lastExport)})` : 'ei koskaan'}</p>
+        <p className="text-xs text-slate-500">Edellinen varmuuskopio: {lastExport ? `${formatDate(lastExport.slice(0, 10), 'd.M.yyyy')} (${ago(lastExport)})` : 'ei vielä tehty'}</p>
         {sync?.role === 'pc' && sync.hasFolder && (
           <p className="text-xs text-slate-500">
             Automaattinen varmuuskopio: kerran viikossa synkronointikansion alikansioon <code>{AUTO_BACKUP_DIR}</code>, {AUTO_BACKUP_KEEP} uusinta säilytetään

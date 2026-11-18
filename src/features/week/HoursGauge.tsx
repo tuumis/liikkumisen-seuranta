@@ -1,6 +1,8 @@
 // Viikon liikuntamäärä mittarina (lisäys 16): kokonaiskesto tunteina luokiteltuna käyttäjän
 // taulukon mukaan (alle 7 h … 20+ h). Osoitin = toteuma, katkoviiva = viikon arvio.
 // Luokat kuvaavat määrää; suositusvertailu (reipas ja rasittava) on erikseen.
+// Kesken viikon luokitus tehdään koko viikon arviosta, ja toteuma on "tähän mennessä" (18.11.2026: ennen
+// keskiviikon 4,8 h näkyi "Alle suosituksen", vaikka viikon arvio oli suosituksen mukainen).
 
 import { Collapse, CollapseToggle, useCollapsible } from '../../ui/Collapse';
 import { formatHours, hoursBand, HOURS_BANDS, type WeeklyHours } from '../../domain/hours';
@@ -18,6 +20,8 @@ export function HoursGauge({ hours, isCurrentWeek, className = '' }: { hours: We
   const actualIdx = HOURS_BANDS.indexOf(actual);
   const expectedIdx = HOURS_BANDS.indexOf(expected);
   const x = xOf(hours.actualMin);
+  // Luokka, jota kortti korostaa: kesken viikon arvio, muuten toteuma.
+  const shownIdx = showExpected ? expectedIdx : actualIdx;
   const [open, toggle] = useCollapsible('hoursGauge');
 
   return (
@@ -32,8 +36,8 @@ export function HoursGauge({ hours, isCurrentWeek, className = '' }: { hours: We
         <div className="flex items-center gap-2">
           {!open && (
             <span className="whitespace-nowrap text-sm font-semibold tabular-nums text-slate-700">
-              {formatHours(hours.actualMin)}
-              <span className="hidden sm:inline"> · {actual.label.toLowerCase()}</span>
+              {showExpected ? `${formatHours(hours.actualMin)} · arvio ${formatHours(hours.forecastMin)}` : formatHours(hours.actualMin)}
+              <span className="hidden sm:inline"> · {(showExpected ? expected : actual).label.toLowerCase()}</span>
             </span>
           )}
           <CollapseToggle open={open} onToggle={toggle} label="Liikuntaa viikossa" />
@@ -43,14 +47,24 @@ export function HoursGauge({ hours, isCurrentWeek, className = '' }: { hours: We
 
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="text-4xl font-semibold tracking-tight tabular-nums text-slate-900">{formatHours(hours.actualMin)}</span>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-sm font-medium text-slate-900">
-          <span className="size-2.5 rounded-full ring-1 ring-slate-300" style={{ background: bandColor(actualIdx) }} aria-hidden />
-          {actual.label}
-        </span>
+        {showExpected ? (
+          <span className="text-sm text-slate-600">tähän mennessä</span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-sm font-medium text-slate-900">
+            <span className="size-2.5 rounded-full ring-1 ring-slate-300" style={{ background: bandColor(actualIdx) }} aria-hidden />
+            {actual.label}
+          </span>
+        )}
       </div>
       {showExpected && (
-        <p className="mt-1 text-sm text-slate-600">
-          {isCurrentWeek ? 'Koko viikon arvio' : 'Viikon arvio oli'} <strong className="tabular-nums text-slate-900">{formatHours(hours.forecastMin)}</strong> · {expected.label}
+        <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-600">
+          <span>
+            {isCurrentWeek ? 'Koko viikon arvio' : 'Viikon arvio'} <strong className="tabular-nums text-slate-900">{formatHours(hours.forecastMin)}</strong>
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-sm font-medium text-slate-900">
+            <span className="size-2.5 rounded-full ring-1 ring-slate-300" style={{ background: bandColor(expectedIdx) }} aria-hidden />
+            {expected.label}
+          </span>
         </p>
       )}
 
@@ -60,7 +74,7 @@ export function HoursGauge({ hours, isCurrentWeek, className = '' }: { hours: We
           {HOURS_BANDS.map((b, i) => (
             <div
               key={b.key}
-              className={`h-full ${i === 0 ? 'rounded-l-full' : ''} ${i === HOURS_BANDS.length - 1 ? 'rounded-r-full' : ''} ${i === actualIdx ? '' : 'opacity-70'}`}
+              className={`h-full ${i === 0 ? 'rounded-l-full' : ''} ${i === HOURS_BANDS.length - 1 ? 'rounded-r-full' : ''} ${i === shownIdx ? '' : 'opacity-70'}`}
               style={{ flexGrow: (b.toH ?? SCALE_H) - b.fromH, flexBasis: 0, background: bandColor(i) }}
               title={`${b.range}: ${b.label}`}
             />
@@ -85,15 +99,16 @@ export function HoursGauge({ hours, isCurrentWeek, className = '' }: { hours: We
         </div>
       </div>
 
-      {/* Luokat taulukkona; nykyinen korostettuna. */}
+      {/* Luokat taulukkona; korostettuna kesken viikon arvion luokka, muuten toteuman. */}
       <ul className="mt-2 grid grid-cols-1 gap-1 @md:grid-cols-2">
         {HOURS_BANDS.map((b, i) => {
-          const on = i === actualIdx;
+          const on = i === shownIdx;
           return (
             <li key={b.key} className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm ${on ? 'bg-slate-100 font-semibold text-slate-900 ring-1 ring-slate-300' : 'text-slate-600'}`} aria-current={on || undefined}>
               <span className="size-3 shrink-0 rounded-sm" style={{ background: bandColor(i) }} aria-hidden />
               <span className="w-14 shrink-0 tabular-nums text-xs text-slate-500">{b.range}</span>
               <span className="min-w-0 flex-1 truncate">{b.label}</span>
+              {showExpected && i === actualIdx && i !== expectedIdx && <span className="shrink-0 rounded-full border border-slate-400 px-1.5 text-[10px] font-medium text-slate-500">nyt</span>}
               {showExpected && i === expectedIdx && <span className="shrink-0 rounded-full border border-dashed border-slate-400 px-1.5 text-[10px] font-medium text-slate-500">arvio</span>}
             </li>
           );
@@ -101,7 +116,7 @@ export function HoursGauge({ hours, isCurrentWeek, className = '' }: { hours: We
       </ul>
 
       <p className="mt-3 text-[11px] text-slate-500">
-        Kesto kellotunteina: kirjatut kerrat + arkiliikunnan arvio{isCurrentWeek ? ' tähän päivään asti' : ''}. Luokitus on sovelluksen arvio kokonaismäärästä; kouluikäisten suositus 60 min päivässä = 7 h viikossa.
+        Kesto kellotunteina: kirjatut kerrat + arkiliikunnan arvio{isCurrentWeek ? ' tähän päivään asti' : ''}. Luokitus on sovelluksen arvio kokonaismäärästä{showExpected ? ' ja tehdään kesken viikon koko viikon arviosta' : ''}; kouluikäisten suositus 60 min päivässä = 7 h viikossa.
         Reippaan ja rasittavan liikunnan vertailu näkyy erikseen.
       </p>
       </Collapse>

@@ -1,8 +1,7 @@
-// Analyysin jalkapallo-osio (SPEC 8 "Mittarit"): viikko tai kuukausi (vahvistettu: oma valitsin osiossa).
+// Analyysin jalkapallo-osio (SPEC 8 "Mittarit"): valittu viikko (kuukauden ja kauden luvut Analyysin omilla tasoilla).
 // Osat näytetään erikseen eikä niitä yhdistetä pisteluvuksi. Viihtyminen ennen suoritusarviota.
 
-import { useState } from 'react';
-import { addDays, maxDate, minDate, monthPeriod, seasonPeriod } from '../../domain/dates';
+import { maxDate, minDate, seasonPeriod } from '../../domain/dates';
 import {
   footballPeriodSummary,
   footballTrend,
@@ -13,8 +12,6 @@ import {
 } from '../../domain/football';
 import type { FocusTag, Period, SkipReason } from '../../domain/types';
 import { Button, Card, EmptyState } from '../../ui/components';
-import { Segmented } from '../../ui/controls';
-import { formatDate } from '../../ui/format';
 import { ENJOYMENT_LABEL, FOCUS_TAG_LABEL, RATING_LABEL, SKIP_REASON_LABEL } from '../../ui/labels';
 import { num1, percent } from '../../ui/statusText';
 import { today as todayFn } from '../../ui/today';
@@ -28,11 +25,9 @@ export function resultLine(g: GameSummary): string {
 
 export function FootballSection({ profileId, week, onOpenGames }: { profileId: string; week: Period; onOpenGames: () => void }) {
   const today = todayFn();
-  const [scope, setScope] = useState<'week' | 'month'>('week');
-  // Kuukausi: viikon torstain kuukausi (ISO-viikon kuukausi).
-  const month = monthPeriod(addDays(week.start, 3));
-  const period = scope === 'week' ? week : month;
-  const monthLabel = formatDate(month.start, 'LLLL').replace(/^./, (c) => c.toUpperCase());
+  // Analyysin viikkonäkymän viikko; kuukausi ja kausi katsotaan Analyysin omilla tasoilla (18.11.2026: kortin
+  // oma Viikko/kuukausi-valinta oli päällekkäinen ylimmän jaksovalinnan kanssa).
+  const period = week;
   const ref = trendRefDate(period, today);
   const season = seasonPeriod(ref);
   const data = useFootball(profileId, minDate(period.start, season.start), maxDate(period.end, ref));
@@ -50,16 +45,6 @@ export function FootballSection({ profileId, week, onOpenGames }: { profileId: s
   return (
     <Card title="⚽ Jalkapallo">
       <div className="space-y-4">
-        <Segmented
-          label="Jalkapallon jakso"
-          value={scope}
-          onChange={setScope}
-          options={[
-            { value: 'week', label: 'Viikko' },
-            { value: 'month', label: monthLabel },
-          ]}
-        />
-
         <section>
           <h3 className="mb-1 text-sm font-semibold text-slate-800">Osallistuminen ja peliaika</h3>
           <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-sm">
@@ -128,7 +113,7 @@ export function FootballSection({ profileId, week, onOpenGames }: { profileId: s
           <p className="text-sm text-slate-800">{resultLine(sum.games)}</p>
           <p className="text-xs text-slate-500">Joukkueen tuloksia; eivät vaikuta muihin mittareihin.</p>
           <Button variant="secondary" className="mt-2 w-full" onClick={onOpenGames}>
-            Pelit ja tulokset ›
+            Pelit ja tulokset
           </Button>
         </section>
       </div>

@@ -307,7 +307,7 @@ export function DayRow({
               {(() => {
                 const pending = estimateRow.pendingMin > 0;
                 const parts = [
-                  ...estimateRow.confirmed.map((c) => `${c.name.toLowerCase()} ${c.min > 0 ? `${c.min} min` : 'ei tänä päivänä'} ✓`),
+                  ...estimateRow.confirmed.map((c) => `${c.name.toLowerCase()} ${c.min > 0 ? `${c.min} min` : 'ei tänä päivänä'} (vahvistettu)`),
                   ...(pending
                     ? [`${estimateRow.pendingCats.map((c) => CATEGORY_LABEL[c].toLowerCase()).join(', ')} ${estimateRow.pendingMin} min${estimateRow.confirmed.length ? ' (arvio)' : ''}`]
                     : []),

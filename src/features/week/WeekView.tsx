@@ -291,6 +291,8 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
       {profile && !simple && (
         <Button variant="secondary" onClick={() => setEditingLayout(true)} aria-label="Muokkaa näkymää" className="shrink-0">
           <IconSettings size="1.1rem" />
+          {/* Puhelimella lyhyt teksti: pelkkä kuvake omalla rivillään oli epäselvä (18.11.2026). */}
+          <span className="sm:hidden">Muokkaa</span>
           <span className="hidden sm:inline">Muokkaa näkymää</span>
         </Button>
       )}

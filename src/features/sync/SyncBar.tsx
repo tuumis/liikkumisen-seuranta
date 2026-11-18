@@ -18,6 +18,9 @@ import { subscribeCommands } from '../desktop/commands';
 
 const DAY = 86_400_000;
 
+/** "Synkronoitu 5 min sitten" tai "Ei vielä synkronoitu" (ei kömpelöä "Synkronoitu ei koskaan"). */
+const synced = (ts?: string) => (ts ? 'Synkronoitu ' + ago(ts) : 'Ei vielä synkronoitu');
+
 export function ago(ts?: string): string {
   if (!ts) return 'ei koskaan';
   const min = Math.round((Date.now() - new Date(ts).getTime()) / 60000);
@@ -106,7 +109,7 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' }) {
   };
   const sideBtn = 'press flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-left hover:bg-white/[0.06] disabled:opacity-60';
   if (variant === 'sidebar') {
-    const sub = busy ? 'Synkronoidaan…' : phoneHasNew ? 'Puhelimella uusia kirjauksia' : `Synkronoitu ${ago(state.lastSyncRunAt)}`;
+    const sub = busy ? 'Synkronoidaan…' : phoneHasNew ? 'Puhelimella uusia kirjauksia' : synced(state.lastSyncRunAt);
     return (
       <div ref={rootRef}>
         {supportsFolder() ? (
@@ -126,7 +129,7 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' }) {
               <IconSync size="1.25rem" />
               Synkronointi
             </div>
-            <div className="mt-0.5 pl-7 text-[11px] text-[var(--side-muted)]">Synkronoitu {ago(state.lastSyncRunAt)}</div>
+            <div className="mt-0.5 pl-7 text-[11px] text-[var(--side-muted)]">{synced(state.lastSyncRunAt)}</div>
             <div className="mt-2 flex gap-2 pl-7">
               <button type="button" disabled={busy} onClick={() => run(actions.importFile)} className="press rounded-full bg-white/[0.08] px-3 py-1.5 text-xs font-semibold text-[var(--side-ink)] hover:bg-white/[0.14] disabled:opacity-60">
                 Tuo puhelimelta
@@ -153,7 +156,7 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' }) {
         <div className="space-y-2 lg:hidden">
           {phoneHasNew && <div className="rounded-2xl bg-sky-50 p-3 text-sm text-sky-950 ring-1 ring-sky-200">Puhelimella on uusia kirjauksia – synkronoi</div>}
           <div className="card flex items-center gap-2 !rounded-2xl p-2 pl-3">
-            <span className="flex-1 text-xs text-slate-600">Synkronoitu {ago(state.lastSyncRunAt)}</span>
+            <span className="flex-1 text-xs text-slate-600">{synced(state.lastSyncRunAt)}</span>
             {supportsFolder() ? (
               <Button disabled={busy} onClick={() => run(actions.pcSync)}>
                 {busy ? 'Synkronoidaan…' : 'Synkronoi'}
@@ -179,7 +182,7 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' }) {
                 {state.pending} odottaa siirtoa PC:lle
               </button>
             ) : (
-              <span className="min-w-0 flex-1 text-xs text-slate-600">PC:ltä {ago(state.lastSyncAt)}</span>
+              <span className="min-w-0 flex-1 text-xs text-slate-600">{state.lastSyncAt ? 'PC:ltä ' + ago(state.lastSyncAt) : 'Ei vielä tietoja PC:ltä'}</span>
             )}
             <Button variant="secondary" disabled={busy} onClick={() => run(actions.importFile)}>
               Päivitä PC:ltä
@@ -211,7 +214,7 @@ export function BackupReminder({ onOpenSettings }: { onOpenSettings: () => void 
   if (age <= info.days) return null;
   return (
     <button type="button" onClick={onOpenSettings} className="w-full rounded-2xl bg-amber-50 p-3 text-left text-sm text-amber-950 ring-1 ring-amber-200">
-      {info.never ? 'Varmuuskopiota ei ole vielä tehty.' : `Edellisestä varmuuskopiosta on ${age} päivää.`} <strong>Tee varmuuskopio ›</strong>
+      {info.never ? 'Varmuuskopiota ei ole vielä tehty.' : `Edellisestä varmuuskopiosta on ${age} päivää.`} <strong>Tee varmuuskopio</strong>
     </button>
   );
 }
