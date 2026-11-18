@@ -124,10 +124,10 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
         <div className="lp-wrap grid items-center gap-9 min-[900px]:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] min-[900px]:gap-14">
           <div>
             <h1 id="landing-title" className="font-display text-[clamp(36px,4.3vw,54px)] font-medium leading-[1.08] tracking-[-0.015em]">
-              Tiedätkö, paljonko lapsesi liikkuu?
+              Tiedätkö, kuinka paljon lapsesi liikkuu?
             </h1>
             <p className="mt-[22px] max-w-[34em] text-[17px] leading-relaxed text-[var(--lp-ink-2)] sm:text-[19px]">
-              Liikkumisen seuranta kokoaa treenit, pelit ja arkiliikunnan yhteen ja näyttää, täyttyykö ikäryhmän liikkumissuositus. Harrastukset lisätään kerran, ja tehty treeni kuitataan yhdellä napautuksella. Halutessasi voit kirjata myös kommentin, treenin sisällön ja oman arviosi.
+              Liikkumisen seuranta kokoaa lapsen treenit, pelit ja arkiliikunnan yhteen paikkaan. Näet helposti, kuinka paljon lapsesi liikkuu ja täyttyykö ikäryhmän liikkumissuositus. Lisää harrastukset kerran ja kuittaa treenit yhdellä napautuksella. Voit myös lisätä kommentteja, kuvata treenin sisältöä ja arvioida harjoituksen onnistumista.
             </p>
             <button type="button" onClick={() => scrollToId('pikatesti')} className="lp-btn lp-btn-quiz mt-[30px]">
               <IconClock size="1.25rem" />
