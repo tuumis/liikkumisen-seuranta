@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Button } from '../../ui/components';
 import { useToast } from '../../ui/Toast';
-import { HEIGHT, W } from './drawResult';
+import { HEIGHT, loadStyleFonts, W } from './drawResult';
 import { drawFrame, layerCollector, pickVideoFormat, recordScene, type VideoScene } from './previewVideo';
 import type { RenderOptions } from './ShareSheet';
 import { IconPlay } from '../../ui/icons';
@@ -49,6 +49,7 @@ export function useVideoShare({
     setState({ k: 'idle' });
     void (async () => {
       await document.fonts?.ready;
+      await loadStyleFonts(options.style);
       const c = layerCollector();
       await render({ ...options, mark: c.mark });
       if (!cancelled) setScene(c.finish());

@@ -13,7 +13,7 @@ export type ShareSize = 'story' | 'post';
  * Kuvan tyyli: Pehmeä, Urheilu, Kenttä, Juliste, Selkeä ja Tulostaulu (käyttäjän lista 17.11.2026; kaikki
  * sekä tulos- että ennakkokuvassa). Tyyli vaihtaa taustan, värit ja fontin; asettelu on sama.
  */
-export type ShareStyle = 'theme' | 'sport' | 'field' | 'poster' | 'clean' | 'scoreboard';
+export type ShareStyle = 'theme' | 'sport' | 'field' | 'poster' | 'clean' | 'scoreboard' | 'narrow';
 
 export const SHARE_STYLE_LABEL: Record<ShareStyle, string> = {
   theme: 'Pehmeä',
@@ -22,13 +22,20 @@ export const SHARE_STYLE_LABEL: Record<ShareStyle, string> = {
   poster: 'Juliste',
   clean: 'Selkeä',
   scoreboard: 'Tulostaulu',
+  narrow: 'Kapea',
 };
 /** Kaikki tyylit (tulos- ja ennakkokuva, 17.11.2026). */
-export const ALL_SHARE_STYLES: readonly ShareStyle[] = ['theme', 'sport', 'field', 'poster', 'clean', 'scoreboard'];
+export const ALL_SHARE_STYLES: readonly ShareStyle[] = ['theme', 'sport', 'field', 'poster', 'clean', 'scoreboard', 'narrow'];
 export const isShareStyle = (v: unknown): v is ShareStyle => typeof v === 'string' && v in SHARE_STYLE_LABEL;
 
 /** Otsikkofontin paksuus tyylin mukaan. */
-export const heavyOf = (style: ShareStyle) => (style === 'sport' || style === 'poster' || style === 'field' ? 800 : style === 'scoreboard' ? 700 : 600);
+export const heavyOf = (style: ShareStyle) => (style === 'narrow' ? 400 : style === 'sport' || style === 'poster' || style === 'field' ? 800 : style === 'scoreboard' ? 700 : 600);
+
+/** Kapea-tyylin fontit (Bebas Neue, Work Sans) eivät ole käytössä sovelluksen näkymissä: ladataan ennen piirtoa. */
+export async function loadStyleFonts(style: ShareStyle): Promise<void> {
+  if (style !== 'narrow' || !document.fonts?.load) return;
+  await Promise.all(['400 100px "Bebas Neue"', '700 40px "Work Sans"', '500 40px "Work Sans"'].map((f) => document.fonts.load(f).catch(() => [])));
+}
 
 export interface ShareLogos {
   team?: HTMLImageElement;
@@ -64,7 +71,14 @@ export interface Palette {
   sans: string;
   /** Vaalea tausta (tumma teksti). */
   light?: boolean;
+  /** Joukkueiden nimet otsikkofontilla (Kapea); muuten lihavoitu tekstifontti. */
+  names?: boolean;
+  /** Kapean otsikkofontin suurennos isoissa luvuissa (päivä, tulos, VS, laatikot); oletus 1. */
+  displayScale?: number;
 }
+
+/** Joukkueen nimen fontti: Kapea-tyylissä kapea otsikkofontti isompana, muuten lihavoitu tekstifontti. */
+export const nameFont = (p: Palette) => (px: number) => (p.names ? `400 ${Math.round(px * 1.4)}px ${p.display}` : `700 ${px}px ${p.sans}`);
 
 export function loadImage(src: string | undefined): Promise<HTMLImageElement | undefined> {
   if (!src) return Promise.resolve(undefined);
@@ -193,6 +207,7 @@ export function background(ctx: CanvasRenderingContext2D, H: number, style: Shar
   if (style === 'poster') return posterBackground(ctx, H, color);
   if (style === 'clean') return cleanBackground(ctx, H, color);
   if (style === 'scoreboard') return scoreboardBackground(ctx, H, color);
+  if (style === 'narrow') return narrowBackground(ctx, H, color);
   // Urheilutyyli: tumma yönsininen, viistot raidat ja kirkas reunaviiva.
   const accent = sportAccent(color);
   const g = ctx.createLinearGradient(0, 0, 0, H);
@@ -310,12 +325,33 @@ function scoreboardBackground(ctx: CanvasRenderingContext2D, H: number, color?: 
 }
 const scoreboardAccent = (color?: ShareColor) => (!color ? '#fbbf24' : isDark(color.base) ? (color.accent ?? '#fbbf24') : mix(color.base, '#ffffff', 0.2));
 
+/**
+ * Kapea (18.11.2026, ideana seurojen brändikirjojen tyyli): tasainen lähes musta pohja (tumma valittu väri
+ * sävyttää), yksi korostusväri pystypalkkina vasemmassa yläkulmassa ja ohut viiva alareunassa.
+ */
+function narrowBackground(ctx: CanvasRenderingContext2D, H: number, color?: ShareColor) {
+  // Tumma väri sävyttää pohjan selvästi, keskitumma hieman; vaalea väri (esim. keltainen) ei sävytä.
+  ctx.fillStyle = !color || isLightColor(color.base) ? '#161616' : mix('#161616', color.base, isDark(color.base) ? 0.5 : 0.07);
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = narrowAccent(color);
+  ctx.fillRect(0, 0, 16, Math.round(H * 0.17));
+  ctx.fillRect(0, H - 8, W, 8);
+}
+/** Kapea-tyylin korostus: tumman teeman korostusväri tai valittu väri sellaisenaan; oletus vadelmanpunainen. */
+const narrowAccent = (color?: ShareColor) => {
+  if (!color) return '#e64773';
+  if (isDark(color.base)) return color.accent ?? '#e64773';
+  // Keskitumma väri (esim. sininen) vaalennetaan, jotta teksti erottuu mustalta pohjalta.
+  return luma(color.base) < 120 ? mix(color.base, '#ffffff', 0.32) : color.base;
+};
+
 /** Urheilutyylin korostus: valittu väri (liian tumma vaalennetaan) tai vihreä. */
 const sportAccent = (color?: ShareColor) => (!color ? '#4ade80' : color.accent && isDark(color.base) ? color.accent : isDark(color.base) ? mix(color.base, '#ffffff', 0.45) : mix(color.base, '#ffffff', 0.12));
-const isDark = (hex: string) => {
+const luma = (hex: string) => {
   const n = parseInt(hex.slice(1), 16);
-  return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) < 60;
+  return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
 };
+const isDark = (hex: string) => luma(hex) < 60;
 
 export function palette(style: ShareStyle, color?: ShareColor): Palette {
   const display = css('--font-display', 'Georgia, serif');
@@ -337,6 +373,8 @@ export function palette(style: ShareStyle, color?: ShareColor): Palette {
   if (style === 'clean') return { ink: '#0f172a', soft: '#475569', accent: cleanAccent(color), panel: alpha(color?.base ?? '#1f5137', 0.07), display: sans, sans, light: true };
   if (style === 'scoreboard')
     return { ink: '#ffffff', soft: 'rgba(255,255,255,0.7)', accent: scoreboardAccent(color), panel: 'rgba(255,255,255,0.065)', display: 'ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace', sans };
+  if (style === 'narrow')
+    return { ink: '#f5f5f5', soft: 'rgba(245,245,245,0.64)', accent: narrowAccent(color), panel: 'rgba(255,255,255,0.06)', display: "'Bebas Neue', 'Arial Narrow', sans-serif", sans: "'Work Sans', system-ui, sans-serif", names: true, displayScale: 1.3 };
   return { ink: '#ffffff', soft: 'rgba(226,232,240,0.78)', accent: sportAccent(color), panel: 'rgba(255,255,255,0.07)', display: sans, sans };
 }
 
@@ -511,7 +549,7 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
 
     drawLogo(ctx, opts.logos.team, card.team, PAD, y, ls, p.sans);
     ctx.fillStyle = p.ink;
-    const teamText = fit(ctx, card.team ?? 'Oma joukkue', maxW - ls - 32, (px) => `700 ${px}px ${p.sans}`, story ? 52 : 46, 30);
+    const teamText = fit(ctx, card.team ?? 'Oma joukkue', maxW - ls - 32, nameFont(p), story ? 52 : 46, 30);
     const teamOrigin = origins?.team?.country || origins?.team?.city;
     ctx.fillText(teamText, PAD + ls + 32, y + ls / 2 + (teamOrigin ? -4 : 17));
     if (teamOrigin) drawOrigin(ctx, origins?.team, PAD + ls + 32, y + ls / 2 + (story ? 46 : 40), story ? 30 : 26, p, 'left', maxW - ls - 32);
@@ -556,7 +594,7 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
       const tx = lx + lsz + 26;
       const tw = scoreRight - sw - 30 - tx;
       ctx.fillStyle = p.ink;
-      const name = fit(ctx, g.opponent ?? 'Vastustaja', tw, (px) => `700 ${px}px ${p.sans}`, Math.round(Math.min(44, rowH * 0.3)), 24);
+      const name = fit(ctx, g.opponent ?? 'Vastustaja', tw, nameFont(p), Math.round(Math.min(44, rowH * 0.3)), 24);
       ctx.fillText(name, tx, top + rowH / 2 - 2);
       const ha = opts.homeAway !== false && g.homeAway ? HOME_AWAY_LABEL[g.homeAway] : undefined;
       const sub = [`${k + 1}. peli`, g.time && `klo ${g.time}`, ha, opts.player && g.playerGoals ? `⚽ ${g.playerGoals}` : undefined].filter(Boolean).join('  ·  ');
@@ -600,10 +638,13 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
 
   // Yksittäinen ottelu: logo – tulos – logo yhtenä rivinä, nimet logojen alla; lohko keskitetään.
   const g = card.games[0];
+  const heavy = heavyOf(opts.style);
+  const scale = p.displayScale ?? 1;
+  const display = (px: number) => `${heavy} ${Math.round(px * scale)}px ${p.display}`;
   y += story ? 92 : 70;
-  ctx.font = `${heavyOf(opts.style)} ${story ? 64 : 54}px ${p.display}`;
+  ctx.font = display(story ? 64 : 54);
   ctx.fillStyle = p.ink;
-  ctx.fillText(dateLabel, PAD, y);
+  ctx.fillText(fit(ctx, dateLabel, maxW, display, story ? 64 : 54, 36), PAD, y);
   const bh = levelBadges(ctx, card.level, card.format, PAD, y + (story ? 34 : 24), story, p, card.series);
   if (bh) y += (story ? 34 : 24) + bh;
 
@@ -622,8 +663,6 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
   const plainGap = story ? 76 : 60;
   const commentTop = comment.h && comment.panel ? playerTop - comment.h - (playerH || times.length || card.location ? commentGap : 0) : playerTop;
 
-  const heavy = heavyOf(opts.style);
-  const display = (px: number) => `${heavy} ${px}px ${p.display}`;
   const tags = homeAwayTags(g.homeAway, opts.homeAway);
   const below = comment.h && !comment.panel ? comment.h + plainGap : 0;
   const nameBottom = drawMatchup(ctx, { team: card.team, opponent: g.opponent, logos: opts.logos, origins, y, boxesTop: commentTop, story, p, tags, belowH: below }, (top, ls) => {
@@ -632,12 +671,12 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
     const score = `${g.goalsFor ?? '–'}–${g.goalsAgainst ?? '–'}`;
     let px = story ? 190 : 150;
     ctx.font = display(px);
-    while (ctx.measureText(score).width > midW && px > 80) {
+    while (ctx.measureText(score).width > midW && px > 60) {
       px -= 6;
       ctx.font = display(px);
     }
     const chipH = story ? 66 : 56;
-    const scoreBase = top + ls / 2 + px * 0.3 - (g.outcome ? chipH * 0.55 : 0);
+    const scoreBase = top + ls / 2 + px * scale * 0.3 - (g.outcome ? chipH * 0.55 : 0);
     ctx.textAlign = 'center';
     ctx.fillStyle = p.ink;
     ctx.fillText(score, W / 2, scoreBase);
@@ -716,8 +755,10 @@ export function infoBoxes(ctx: CanvasRenderingContext2D, items: [string, string]
     ctx.fillStyle = p.soft;
     ctx.fillText(spaced(label), x + 30, y + (story ? 58 : 46));
     ctx.fillStyle = p.ink;
+    // Laatikoissa kapea fontti vain hieman suurempana, ettei arvo osu otsikkoon.
+    const box = (s: number) => display((s / (p.displayScale ?? 1)) * Math.min(p.displayScale ?? 1, 1.1));
     const px = items.length > 2 ? (story ? 66 : 54) : story ? 80 : 62;
-    ctx.fillText(fit(ctx, value, cw - 60, display, px, 34), x + 30, y + h - (story ? 38 : 28));
+    ctx.fillText(fit(ctx, value, cw - 60, box, px, 34), x + 30, y + h - (story ? 38 : 28));
   });
 }
 
@@ -767,7 +808,7 @@ export function drawMatchup(
   const ls = story ? 250 : 210;
   const namePx = story ? 40 : 34;
   const nameW = story ? 340 : 300;
-  ctx.font = `700 ${namePx}px ${p.sans}`;
+  ctx.font = nameFont(p)(namePx);
   const names = [wrapName(ctx, m.team ?? 'Oma joukkue', nameW, 3), wrapName(ctx, m.opponent ?? 'Vastustaja', nameW, 3)];
   const hasOrigin = [origins?.team, origins?.opponents[0]].some((o) => o?.country || o?.city);
   const rowStep = story ? 50 : 42;
@@ -782,7 +823,7 @@ export function drawMatchup(
   ctx.textAlign = 'center';
   names.forEach((lines, k) => {
     m.mark?.(k === 0 ? 'team' : 'opponent');
-    ctx.font = `700 ${namePx}px ${p.sans}`;
+    ctx.font = nameFont(p)(namePx);
     ctx.fillStyle = p.ink;
     lines.forEach((l, i) => ctx.fillText(l, centers[k], top + ls + 36 + namePx + i * namePx * 1.2));
     const originY = top + ls + 36 + namePx + lines.length * namePx * 1.2 + (story ? 10 : 6);

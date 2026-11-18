@@ -4,7 +4,7 @@
 
 import { previewTimeBoxes, previewTitleOf, type PreviewBox, type PreviewCard } from '../../domain/previewCard';
 import { HOME_AWAY_LABEL } from '../../domain/football';
-import { commentLayout, dateLabelOf, drawComment, drawLogo, drawMatchup, drawOrigin, fit, heavyOf, homeAwayTags, infoBoxes, levelBadges, PAD, placeBox, rr, setup, spaced, W, wrap, type DrawOptions } from './drawResult';
+import { commentLayout, dateLabelOf, drawComment, drawLogo, drawMatchup, drawOrigin, fit, heavyOf, homeAwayTags, infoBoxes, levelBadges, nameFont, PAD, placeBox, rr, setup, spaced, W, wrap, type DrawOptions } from './drawResult';
 
 type PreviewOptions = Omit<DrawOptions, 'player'> & {
   /** Piilotetut laatikot (Paikalla, 1. peli / Peli alkaa, Pelit, Paikka). */
@@ -22,7 +22,8 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
   const commentGap = story ? 32 : 24;
   // Pelkkä teksti tarvitsee enemmän ilmaa joukkuetietojen alle kuin paneeli (18.11.2026).
   const plainGap = story ? 76 : 60;
-  const display = (px: number) => `${heavy} ${px}px ${p.display}`;
+  const scale = p.displayScale ?? 1;
+  const display = (px: number) => `${heavy} ${Math.round(px * scale)}px ${p.display}`;
   const origins = opts.origins;
   const bottom = H - (story ? 140 : 84);
   const mark = (name: string) => opts.mark?.(name, ctx);
@@ -82,7 +83,7 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
     mark('team');
     drawLogo(ctx, opts.logos.team, card.team, PAD, y, ls, p.sans);
     ctx.fillStyle = p.ink;
-    const teamText = fit(ctx, card.team ?? 'Oma joukkue', maxW - ls - 32, (px) => `700 ${px}px ${p.sans}`, story ? 52 : 46, 30);
+    const teamText = fit(ctx, card.team ?? 'Oma joukkue', maxW - ls - 32, nameFont(p), story ? 52 : 46, 30);
     const teamOrigin = origins?.team?.country || origins?.team?.city;
     ctx.fillText(teamText, PAD + ls + 32, y + ls / 2 + (teamOrigin ? -4 : 17));
     if (teamOrigin) drawOrigin(ctx, origins?.team, PAD + ls + 32, y + ls / 2 + (story ? 46 : 40), story ? 30 : 26, p, 'left', maxW - ls - 32);
@@ -113,7 +114,7 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
         const tw = PAD + maxW - 24 - tx;
         ctx.fillStyle = g.opponent ? p.ink : p.soft;
         const namePx = Math.round(Math.min(42, rowH * 0.3));
-        const name = fit(ctx, g.opponent ?? 'Vastustaja selviää', tw, (px) => `700 ${px}px ${p.sans}`, namePx, 22);
+        const name = fit(ctx, g.opponent ?? 'Vastustaja selviää', tw, nameFont(p), namePx, 22);
         const o = origins?.opponents[k];
         // Kentän vieressä koti/vieras (18.11.2026).
         const ha = opts.homeAway !== false && g.homeAway ? HOME_AWAY_LABEL[g.homeAway] : undefined;
@@ -151,7 +152,7 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
   mark('date');
   ctx.font = display(story ? 64 : 54);
   ctx.fillStyle = p.ink;
-  ctx.fillText(dateLabelOf(card.date), PAD, y);
+  ctx.fillText(fit(ctx, dateLabelOf(card.date), maxW, display, story ? 64 : 54, 36), PAD, y);
   const bh = levelBadges(ctx, card.level, card.format, PAD, y + (story ? 34 : 24), story, p, card.series);
   if (bh) y += (story ? 34 : 24) + bh;
 
@@ -166,7 +167,7 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
     ctx.textAlign = 'center';
     ctx.font = display(story ? 120 : 100);
     ctx.fillStyle = p.accent;
-    ctx.fillText('VS', W / 2, top + ls / 2 + (story ? 42 : 35));
+    ctx.fillText('VS', W / 2, top + ls / 2 + (story ? 42 : 35) * scale);
     ctx.textAlign = 'left';
   });
 

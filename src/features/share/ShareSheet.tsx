@@ -14,7 +14,7 @@ import { hasTeamDetails, SHOW_ALL_DETAILS, type TeamDetailPrefs } from '../../do
 import { Sheet } from '../../ui/Sheet';
 import { clubFor, clubNameOf, useClubs } from '../../ui/TeamLogo';
 import { useToast } from '../../ui/Toast';
-import { isShareStyle, SHARE_STYLE_LABEL, type LayerMark, type ShareSize, type ShareStyle } from './drawResult';
+import { isShareStyle, loadStyleFonts, SHARE_STYLE_LABEL, type LayerMark, type ShareSize, type ShareStyle } from './drawResult';
 import { isHexColor, isLightColor, mix, SHARE_COLORS } from './shareColors';
 import { useVideoShare } from './VideoShare';
 import { IconCheck } from '../../ui/icons';
@@ -124,6 +124,7 @@ export function ShareImageSheet({
     let cancelled = false;
     void (async () => {
       await document.fonts?.ready;
+      await loadStyleFonts(prefs.style);
       const c = await render({ ...prefs, color });
       if (cancelled || !c) return;
       canvas.current = c;
@@ -250,13 +251,14 @@ const STYLE_SAMPLE: Record<ShareStyle, string> = {
   poster: 'linear-gradient(135deg,#b42318 0 58%,#facc15 58% 70%,#b42318 70%)',
   clean: 'linear-gradient(180deg,#1f5137 0 5px,#f4f7f5 5px)',
   scoreboard: 'radial-gradient(circle,#fbbf24 1.2px,transparent 1.6px) 0 0/7px 7px,#0b0b0c',
+  narrow: 'linear-gradient(90deg,#e64773 0 5px,#161616 5px)',
 };
 
 function StylePicker({ styles, value, onChange }: { styles: readonly ShareStyle[]; value: ShareStyle; onChange: (v: ShareStyle) => void }) {
   return (
     <div>
       <div className="mb-1.5 text-sm font-medium text-slate-700">Kuvan tyyli</div>
-      <div role="radiogroup" aria-label="Kuvan tyyli" className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+      <div role="radiogroup" aria-label="Kuvan tyyli" className="grid grid-cols-4 gap-2 sm:grid-cols-7">
         {styles.map((s) => (
           <button
             key={s}

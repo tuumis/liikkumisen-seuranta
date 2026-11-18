@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.8',
+    date: '18.11.2026',
+    items: ['Ennakko- ja tuloskuviin uusi Kapea-tyyli: kapea urheilufontti, tumma pohja ja yksi korostusväri. Uusi väri: musta ja vadelma.'],
+  },
+  {
     version: '1.1.7',
     date: '18.11.2026',
     items: ['Kuittaa kerrat -painike sivuvalikossa ja kuittaamattomien määrä profiilien vieressä. Ilmoituksen klikkaus avaa kuittauksen suoraan.'],

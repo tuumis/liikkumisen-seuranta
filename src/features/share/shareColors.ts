@@ -18,6 +18,8 @@ export const SHARE_COLORS: readonly ShareColor[] = [
   // Mustavalkoiset seurat (esim. FC Lahti, käyttäjän toive 17.11.2026): raidat ja korosteet valkoisina tai mustina.
   { id: 'blackwhite', label: 'Musta ja valkoinen', base: '#141414', accent: '#ffffff' },
   { id: 'whiteblack', label: 'Valkoinen ja musta', base: '#f4f4f2', accent: '#141414' },
+  // Musta pohja ja vadelmanpunainen korostus (18.11.2026, sopii Kapea-tyyliin).
+  { id: 'blackpink', label: 'Musta ja vadelma', base: '#161616', accent: '#e64773' },
   { id: 'green', label: 'Vihreä', base: '#15803d', accent: '#d9f99d' },
   { id: 'purple', label: 'Violetti', base: '#6d28d9', accent: '#f5d0fe' },
   { id: 'orange', label: 'Oranssi', base: '#ea580c', accent: '#fff7ed' },
