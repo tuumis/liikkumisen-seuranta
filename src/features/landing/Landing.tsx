@@ -190,7 +190,7 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
             <blockquote className="font-display text-[clamp(18px,1.75vw,21px)] font-normal italic leading-[1.55] text-[var(--lp-ink-2)]">
               Minulta kysyttiin kerran, paljonko lapseni liikkuu viikossa, enkä osannut vastata tarkasti. Samalla tajusin, että halusin tietää muutakin: paljonko aikaa jalkapalloon oikeasti kuluu ja mitä treeneissä on tehty. Turnaukset ja ottelut piti saada yhteen selkeään paikkaan ja niiden tulokset talteen, vähän kuin oma tulospalvelu lapseni peleille. Niistä tarpeista syntyi tämä ohjelma.
             </blockquote>
-            <figcaption className="mt-[18px] text-[15px] text-[var(--lp-ink-3)]">Tuomas, ohjelmistokehittäjä</figcaption>
+            <figcaption className="mt-[18px] text-[15px] text-[var(--lp-ink-3)]">Tuomas, ohjelman tekijä</figcaption>
           </figure>
           </div>
         </Reveal>
