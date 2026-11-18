@@ -22,7 +22,7 @@ import { TemplateSection } from '../settings/TemplateSection';
 import { InstallHint } from '../settings/InstallHint';
 import { pickTextFile } from '../sync/fileIO';
 import { summaryText } from '../sync/useSync';
-import { IconBall, IconChart, IconCheck, IconImport, IconLock, IconPencil, IconSync } from '../../ui/icons';
+import { IconCheck, IconImport, IconLock, IconSync } from '../../ui/icons';
 
 type Step = 0 | 1 | 2 | 3 | 4;
 
@@ -160,124 +160,105 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
   );
 }
 
-/** Tervetulosivu: mitä sovellus tekee, missä tiedot ovat ja miten ne varmuuskopioidaan. PC:llä yhdellä näytöllä. */
+/** Tervetulosivu kutsukoodin jälkeen (18.11.2026, alkusivun ilme): mitä aloituksessa tehdään, Aloita, tiedostontuonti sekä
+ *  missä tiedot ovat ja miten ne varmuuskopioidaan. Ominaisuuksia ei esitellä uudelleen, koska alkusivu kertoi ne jo. */
 function Welcome({ onStart, onImport, onSkip, error, fromQuiz }: { onStart: () => void; onImport: () => void; onSkip: () => void; error?: string; fromQuiz?: boolean }) {
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-[1500px] flex-col px-4 py-5 lg:px-10 lg:py-6">
-      <div className="flex items-center justify-between gap-3">
-        <span className="font-display text-lg font-semibold text-slate-900">Liikkumisen seuranta</span>
-        <Button variant="ghost" onClick={onSkip}>
-          Ohita aloitus
-        </Button>
-      </div>
+    <div className="lp-page">
+      <header className="lp-top">
+        <div className="lp-wrap flex h-[68px] items-center justify-between gap-4">
+          <span className="flex min-w-0 items-center gap-2.5">
+            <img src="./favicon.svg" alt="" className="size-[30px] shrink-0" />
+            <span className="truncate font-display text-[17px] font-semibold sm:text-[19px]">Liikkumisen seuranta</span>
+          </span>
+          <button type="button" onClick={onSkip} className="lp-navlink min-h-11 shrink-0 text-[15px] font-semibold text-[var(--lp-ink-2)]">
+            Ohita aloitus
+          </button>
+        </div>
+      </header>
 
-      <div className="mt-4 grid flex-1 gap-4 lg:mt-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,8fr)] lg:gap-6">
-        <section className="hero anim-rise flex flex-col justify-between p-7 lg:p-9" aria-labelledby="welcome-title">
-          <div className="relative z-10">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--hero-accent)]">Tervetuloa</p>
-            <h1 id="welcome-title" className="mt-3 font-display text-4xl font-semibold leading-[1.05] tracking-tight xl:text-5xl">
-              Liikkumisen seuranta
-            </h1>
-            <p className="mt-4 max-w-md text-base leading-relaxed text-[var(--hero-ink-soft)]">
-              Lapsen ja perheen liikunta yhdessä paikassa. Kirjaa kerrat muutamalla napautuksella ja näe, miten viikko vertautuu suomalaisiin liikkumissuosituksiin.
-            </p>
-          </div>
-          <div className="relative z-10 mt-8">
-            <button
-              type="button"
-              onClick={onStart}
-              className="press inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-[var(--hero-accent)] px-8 text-base font-bold text-[#1c2b24] shadow-lg hover:brightness-105 sm:w-auto"
-            >
-              Aloita
+      <div className="lp-wrap grid gap-10 pb-12 pt-10 min-[900px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] min-[900px]:gap-16 min-[900px]:pb-10 min-[900px]:pt-12">
+        <section className="anim-rise" aria-labelledby="welcome-title">
+          <p className="text-sm font-bold text-[var(--lp-kicker)]">Tervetuloa</p>
+          <h1 id="welcome-title" className="mt-2 font-display text-[clamp(34px,4vw,50px)] font-medium leading-[1.08] tracking-[-0.015em]">
+            Aloitetaan lapsen tiedoista.
+          </h1>
+          <p className="mt-4 max-w-[34em] text-[17px] leading-relaxed text-[var(--lp-ink-2)]">
+            {fromQuiz
+              ? 'Pikatestin vastaukset ovat valmiina: ikä, harrastukset ja arkiliikunta. Tarkistat ne vaiheissa.'
+              : 'Aloitus vie muutaman minuutin. Vaiheet voi ohittaa ja kaiken voi muuttaa myöhemmin Asetuksissa.'}
+          </p>
+          <ol className="mt-7 max-w-[34em] border-t border-[var(--lp-line)]" aria-label="Aloituksen vaiheet">
+            {STEPS.map((x) => (
+              <li key={x.n} className="flex gap-4 border-b border-[var(--lp-line)] py-3 min-[900px]:py-2.5">
+                <span className="w-4 shrink-0 font-display text-lg font-medium leading-6 text-[var(--lp-kicker)]">{x.n}</span>
+                <span className="min-w-0">
+                  <b className="block text-[15px] font-bold leading-6">{x.title}</b>
+                  <span className="block text-sm leading-snug text-[var(--lp-ink-2)]">{x.text}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+          <button type="button" onClick={onStart} className="lp-btn lp-btn-dark press mt-7 h-[54px] w-full px-12 text-base font-bold sm:w-auto">
+            Aloita
+          </button>
+
+          <div className="mt-9 max-w-[34em] border-t border-[var(--lp-line)] pt-5">
+            <p className="text-sm font-bold text-[var(--lp-ink-2)]">Onko tiedot jo toisella laitteella?</p>
+            <button type="button" onClick={onImport} className="lp-btn lp-btn-line press mt-3 h-12 w-full px-5 text-[15px] sm:w-auto">
+              <IconImport size="1.15rem" />
+              Tuo tiedosto
             </button>
-            <p className="mt-3 text-sm text-[var(--hero-ink-soft)]">
-              {fromQuiz
-                ? 'Pikatestin vastaukset ovat valmiina: ikä, harrastukset ja arkiliikunta. Tarkistat ne vaiheissa.'
-                : 'Aloitus vie muutaman minuutin. Kaiken voi muuttaa myöhemmin Asetuksissa.'}
-            </p>
-            {/* Toinen tapa aloittaa: tiedot toiselta laitteelta (synkronointi- tai varmuuskopiotiedosto). */}
-            <div className="mt-6 border-t border-white/15 pt-5">
-              <p className="text-sm font-semibold text-[var(--hero-ink)]">Onko tiedot jo toisella laitteella?</p>
-              <button
-                type="button"
-                onClick={onImport}
-                className="press mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2.5 rounded-full bg-white/10 px-6 text-[15px] font-semibold text-[var(--hero-ink)] ring-1 ring-white/30 hover:bg-white/15 sm:w-auto"
-              >
-                <IconImport size="1.15rem" />
-                Tuo tiedosto
-              </button>
-              <p className="mt-2.5 text-xs leading-snug text-[var(--hero-ink-soft)]">PC:n synkronointitiedosto tai varmuuskopio. Tiedot siirtyvät tälle laitteelle.</p>
-            </div>
+            <p className="mt-2.5 text-sm text-[var(--lp-ink-3)]">PC:n synkronointitiedosto tai varmuuskopio. Tiedot siirtyvät tälle laitteelle.</p>
             {error && (
-              <p className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-900" role="alert">
+              <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-900" role="alert">
                 {error}
               </p>
             )}
           </div>
         </section>
 
-        <div className="grid content-start gap-4 sm:grid-cols-2">
-          <Info icon={<IconPencil size="1.15rem" />} title="Kirjaa ja kuittaa">
-            Lisää kerta +-painikkeella. Viikkorytmin harrastukset tulevat valmiiksi, ja kuittaat ne tehdyiksi yhdellä napautuksella.
-          </Info>
-          <Info icon={<IconChart size="1.15rem" />} title="Vertaa suosituksiin">
-            Viikko suhteessa ikäryhmän suositukseen: reipas ja rasittava liikunta sekä lihaksia ja luustoa vahvistavat päivät.
-          </Info>
-          <Info icon={<IconBall size="1.15rem" />} title="Jalkapallo valinnaisena">
-            Pelikalenteri, tulokset, turnaukset ja päiväkirja, jos lapsi pelaa. Muille lajeille tavallinen kirjaus riittää.
-          </Info>
-          <Info icon={<IconSync size="1.15rem" />} title="PC ja puhelin">
+        <aside className="anim-rise self-start rounded-2xl border border-[var(--lp-line)] bg-[var(--lp-raised)] p-6 sm:p-8" aria-labelledby="welcome-data">
+          <span className="flex size-10 items-center justify-center rounded-xl bg-[var(--lp-paper-2)] text-[var(--lp-kicker)]" aria-hidden>
+            <IconLock size="1.15rem" />
+          </span>
+          <h2 id="welcome-data" className="mt-4 font-display text-[26px] font-medium leading-tight">
+            Tiedot pysyvät sinulla
+          </h2>
+          <p className="mt-3 leading-relaxed text-[var(--lp-ink-2)]">
+            Ei tiliä eikä palvelinta: tiedot ovat vain tämän laitteen selaimessa, eikä ohjelma lähetä niitä minnekään. Ne katoavat, jos selaimen tiedot tyhjennetään tai laite vaihtuu,
+            joten tee varmuuskopio.
+          </p>
+          <ol className="mt-5 border-t border-[var(--lp-line)] text-[15px] leading-snug text-[var(--lp-ink-2)]" aria-label="Varmuuskopion teko">
+            {[
+              <>
+                Asetukset → Laitteet ja varmuuskopio → <strong className="text-[var(--lp-ink)]">Vie varmuuskopio</strong>
+              </>,
+              <>
+                Tallenna tiedosto <strong className="text-[var(--lp-ink)]">pilvikansioon</strong>: OneDrive, iCloud Drive tai Google Drive
+              </>,
+              <>
+                Palauta samasta kohdasta: <strong className="text-[var(--lp-ink)]">Tuo varmuuskopio</strong>, myös uudelle laitteelle
+              </>,
+            ].map((t, i) => (
+              <li key={i} className="flex gap-4 border-b border-[var(--lp-line)] py-3">
+                <span className="w-4 shrink-0 font-display text-lg font-medium leading-5 text-[var(--lp-kicker)]">{i + 1}</span>
+                <span className="min-w-0">{t}</span>
+              </li>
+            ))}
+          </ol>
+          <h3 className="mt-7 flex items-center gap-2 text-[15px] font-bold">
+            <IconSync size="1.05rem" className="text-[var(--lp-kicker)]" />
+            PC ja puhelin
+          </h3>
+          <p className="mt-1.5 text-sm leading-relaxed text-[var(--lp-ink-2)]">
             PC on päälaite. Yhteisen pilvikansion kautta laitteet vaihtavat tiedot: puhelimella kirjaat ja painat "Lähetä PC:lle". Yksikin laite riittää.
-          </Info>
-          <div className="card anim-rise p-5 ring-1 ring-green-700/25 sm:col-span-2">
-            <div className="flex items-start gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-green-50 text-green-800" aria-hidden>
-                <IconLock size="1.15rem" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <h2 className="font-display text-lg font-semibold leading-tight text-slate-900">Tiedot pysyvät sinulla – varmuuskopioi ne pilveen</h2>
-                <p className="mt-1 text-sm leading-snug text-slate-600">
-                  Ei tiliä eikä palvelinta: tiedot ovat vain tämän laitteen selaimessa, eikä sovellus lähetä niitä minnekään. Ne katoavat, jos selaimen tiedot tyhjennetään tai laite
-                  vaihtuu, joten tee varmuuskopio:
-                </p>
-                <ol className="mt-3 grid gap-2 text-sm leading-snug text-slate-700 sm:grid-cols-3">
-                  <li className="rounded-xl bg-[var(--surface-sunk)] p-3">
-                    <span className="block text-xs font-bold text-green-800">1</span>
-                    Asetukset → Laitteet ja varmuuskopio → <strong>Vie varmuuskopio</strong>
-                  </li>
-                  <li className="rounded-xl bg-[var(--surface-sunk)] p-3">
-                    <span className="block text-xs font-bold text-green-800">2</span>
-                    Tallenna tiedosto <strong>pilvikansioon</strong>: OneDrive, iCloud Drive tai Google Drive
-                  </li>
-                  <li className="rounded-xl bg-[var(--surface-sunk)] p-3">
-                    <span className="block text-xs font-bold text-green-800">3</span>
-                    Palauta samasta kohdasta: <strong>Tuo varmuuskopio</strong>, myös uudelle laitteelle
-                  </li>
-                </ol>
-                <p className="mt-2.5 text-xs leading-snug text-slate-500">
-                  Kun PC:lle valitaan synkronoinnin pilvikansio, sinne tehdään myös automaattinen varmuuskopio kerran viikossa. Tiedosto sisältää lapsen tietoja: säilytä se omassa
-                  pilvessäsi.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Info({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
-  return (
-    <div className="card anim-rise p-5">
-      <div className="flex items-start gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface-sunk)] text-green-800" aria-hidden>
-          {icon}
-        </span>
-        <div className="min-w-0">
-          <h2 className="font-display text-lg font-semibold leading-tight text-slate-900">{title}</h2>
-          <p className="mt-1 text-sm leading-snug text-slate-600">{children}</p>
-        </div>
+          </p>
+          <p className="mt-5 text-[13px] leading-snug text-[var(--lp-ink-3)]">
+            Kun PC:lle valitaan synkronoinnin pilvikansio, sinne tehdään myös automaattinen varmuuskopio kerran viikossa. Tiedosto sisältää lapsen tietoja, joten säilytä se omassa
+            pilvessäsi.
+          </p>
+        </aside>
       </div>
     </div>
   );
