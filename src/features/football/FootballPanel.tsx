@@ -7,7 +7,8 @@ import type { ActivityType, FieldPosition, FocusTag, GameFormat, GameLevel, Game
 import { HomeAwayChips, HomeAwaySelect } from '../games/HomeAway';
 import { DEFAULT_GAME_WARMUP_MIN, DEFAULT_PLAY_SHARE } from '../../domain/intensity';
 import { goalsLabel } from '../../ui/labels';
-import { GAME_FORMATS, LEVEL_LABEL, POSITION_LABEL, POSITIONS } from '../../domain/football';
+import { GAME_FORMATS, isClubTraining, LEVEL_LABEL, POSITION_LABEL, POSITIONS } from '../../domain/football';
+import { parseSelfMin, TrainingSelfFields } from './TrainingSelf';
 import { repo, type FootballDetailsInput } from '../../db/repositories';
 import { Button, Field, inputClass } from '../../ui/components';
 import { normalizeLink } from '../../domain/link';
@@ -97,6 +98,11 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
   const [positions, setPositions] = useState<FieldPosition[]>([]);
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
+  // Omatoiminen verryttely (18.11.2026): minuutit tiedetään usein vasta treenin jälkeen, joten ne voi kirjata
+  // tässä kuittauksen jälkeen. Esitäytetty jo kirjatulla (viikkorytmin oletus kuittauksessa); null = ei muutettu.
+  const [selfBefore, setSelfBefore] = useState<string | null>(null);
+  const [selfAfter, setSelfAfter] = useState<string | null>(null);
+  const self = useLiveQuery(() => (session ? repo.getTrainingSelf(session.id) : undefined), [session?.id]);
 
   // Avattaessa: olemassa olevat tiedot tai oletukset (oma joukkue = viimeksi käytetty).
   const existing = useLiveQuery(async () => (session ? (await repo.getFootballDetails(session.id)) ?? null : undefined), [session?.id]);
@@ -138,6 +144,8 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
     setPlayerGoals(str(d?.games?.length ? undefined : d?.playerGoals));
     setFormat(d?.format ?? '');
     setPositions(d?.positions ?? []);
+    setSelfBefore(null);
+    setSelfAfter(null);
     setError(undefined);
   }, [session, existing]);
 
@@ -155,6 +163,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
   const warmupMin = session.warmupMin ?? DEFAULT_GAME_WARMUP_MIN;
   const shareText = `~${Math.round((session.playShare ?? DEFAULT_PLAY_SHARE) * 100)} %`;
   const goals = goalsLabel(playerName);
+  const showSelf = kind === 'training' && isClubTraining(type) && !session.linkedTo;
 
   async function save() {
     const nums = { gf: toNum(gf), ga: toNum(ga), played: toNum(played), count: toNum(gamesCount), own: toNum(playerGoals) };
@@ -175,6 +184,9 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
     if (nums.played !== undefined && nums.played > session!.durationMin) return setError('Pelatut minuutit eivät voi ylittää kestoa');
     const cleanLink = kind === 'training' ? undefined : normalizeLink(link);
     if (cleanLink === null) return setError('Tarkista linkki, esim. https://tulospalvelu.fi/…');
+    const sb = selfBefore === null ? (self?.before ?? 0) : parseSelfMin(selfBefore);
+    const sa = selfAfter === null ? (self?.after ?? 0) : parseSelfMin(selfAfter);
+    if (showSelf && (sb === null || sa === null)) return setError('Anna verryttelyn minuutit kokonaislukuina (0–180)');
     // Peli: tarkat minuutit, muuten Ei = 0, Koko pelin = kesto − lämmittely, Osan = peliaika-arvio (ei minuutteja).
     const gamePlayedMin =
       kind !== 'game'
@@ -213,6 +225,9 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
     setSaving(true);
     try {
       await repo.saveFootballDetails(session!.id, input);
+      if (showSelf && sb !== null && sa !== null && (selfBefore !== null || selfAfter !== null) && (sb !== (self?.before ?? 0) || sa !== (self?.after ?? 0))) {
+        await repo.setTrainingSelf(session!.id, { before: sb, after: sa });
+      }
       const scored = (a?: number, b?: number) => a !== undefined && b !== undefined;
       const hasResult = kind === 'game' ? scored(nums.gf, nums.ga) : kind === 'tournament' && rows.some((r) => scored(r.goalsFor, r.goalsAgainst));
       const id = session!.id;
@@ -625,6 +640,15 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
               placeholder="https://…"
             />
           </Field>
+        )}
+
+        {showSelf && (
+          <TrainingSelfFields
+            before={selfBefore ?? (self?.before ? String(self.before) : '')}
+            after={selfAfter ?? (self?.after ? String(self.after) : '')}
+            onBefore={setSelfBefore}
+            onAfter={setSelfAfter}
+          />
         )}
 
         <Field label="Kommentti (päiväkirja)" hint="Lyhyt muistiinpano treenistä tai pelistä; löytyy myöhemmin Jalkapallo → Päiväkirja.">
