@@ -273,6 +273,14 @@ function Showcase({ onZoom }: { onZoom: (n: ShotName) => void }) {
     setIdx((n + SCENES.length) % SCENES.length);
   };
 
+  // Seuraavan kohdan kuvat puretaan valmiiksi, ettei vaihto nyki ensimmäisellä kerralla.
+  useEffect(() => {
+    const next = SCENES[(idx + 1) % SCENES.length];
+    root.current?.querySelectorAll<HTMLImageElement>('.lp-slide img').forEach((img) => {
+      if (img.currentSrc.includes(`/${next.pc}`) || img.currentSrc.includes(`/${next.phone}`)) img.decode?.().catch(() => {});
+    });
+  }, [idx]);
+
   // Esittely pysähtyy, kun se ei ole näkyvissä (ei kulu taustalla).
   useEffect(() => {
     const el = root.current;
@@ -314,7 +322,7 @@ function Showcase({ onZoom }: { onZoom: (n: ShotName) => void }) {
           </span>
           <span className="relative block aspect-[1280/800] overflow-hidden">
             {pcShots.map((n) => (
-              <span key={n} className="lp-slide" data-state={n === scene.pc ? 'active' : 'idle'} aria-hidden={n !== scene.pc}>
+              <span key={n} className="lp-slide" data-state={n === scene.pc ? 'active' : prev !== undefined && n === SCENES[prev].pc ? 'prev' : 'idle'} aria-hidden={n !== scene.pc}>
                 <img src={src(n)} srcSet={srcSet(n)} sizes="(min-width: 640px) 540px, 86vw" width={1280} height={800} alt="" decoding="async" />
               </span>
             ))}
@@ -322,7 +330,7 @@ function Showcase({ onZoom }: { onZoom: (n: ShotName) => void }) {
         </button>
 
         {/* Puhelin edessä */}
-        <div className="lp-float absolute right-[2%] top-[13%] w-[46%] sm:right-[3%] sm:top-[12%] sm:w-[38%]">
+        <div className="absolute right-[2%] top-[13%] w-[46%] sm:right-[3%] sm:top-[12%] sm:w-[38%]">
           <button
             type="button"
             onClick={() => onZoom(scene.phone)}

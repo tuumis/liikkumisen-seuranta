@@ -1398,8 +1398,8 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
       - **Animoitu esittely PC- ja puhelinkehyksissä**, kahdeksan kohtausta noin 7 s välein (tahti hidastettu ja kohtia lisätty käyttäjän toiveesta 18.11.2026):
         - viikko, liikuntakerran kirjaus, analyysi, teemat ja taustat, pelit ja tulokset, koko perheen kalenteri, kauden kooste sekä ennakot
         - johdannossa "Kirjaa liikuntakerrat sekunneissa" (ei "Kirjaa liikunta")
-        - puhelimen näkymä nousee alhaalta, PC vaihtuu ristiin häivyttäen
-        - kaksi merkintää ponnahtaa näkyviin (esim. "≈ Lähellä tahtia", "49 min / päivä")
+        - liike on rauhallinen (käyttäjän palaute 18.11.2026: "vähän tökkivä, ei niin vakuuttava"): uusi näkymä häivyttyy kummassakin laitteessa edellisen päälle pienellä nousulla, ja edellinen pysyy alla paikallaan, joten välissä ei näy tyhjää. Laitteet ja merkinnät eivät heilu jatkuvasti eivätkä pomppaa ylitse. Seuraavan kohdan kuvat puretaan valmiiksi ennen vaihtoa.
+        - kaksi merkintää häivyttyy näkyviin (esim. "≈ Lähellä tahtia", "49 min / päivä")
         - alla kuvateksti ja tarinapalkki: kohdan voi valita, ja esittelyn voi pysäyttää
         - pysähtyy hiiren ollessa päällä, näppäimistöllä kohdistettaessa ja kun esittely ei ole näkyvissä
         - kuvan saa suureksi napauttamalla. Laitteet eivät kallistu hiiren mukaan eikä näkymä zoomaa hitaasti, koska 3D-kallistus ja skaalaus pehmensivät kuvia (käyttäjän palaute 18.11.2026: "hieman epätarkkoja")

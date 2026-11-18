@@ -1240,33 +1240,26 @@ html.morphing .bottom-nav {
     transform: translateY(28px);
   }
 }
-.lp-float {
-  animation: lp-float 5s ease-in-out infinite alternate;
-}
-@keyframes lp-float {
-  from {
-    transform: translateY(0);
-  }
-  to {
-    transform: translateY(-8px);
-  }
-}
 /* Näkymän vaihto laitteen ruudulla: uusi nousee alhaalta, vanha väistyy ylös. */
+/* Näkymän vaihto laitteen ruudulla: uusi häivyttyy esiin pienellä nousulla vanhan päälle, vanha pysyy paikallaan. */
 .lp-slide {
   position: absolute;
   inset: 0;
   opacity: 0;
-  transform: translateY(7%) scale(1.02);
+  transform: translate3d(0, 14px, 0);
   transition:
-    opacity 0.7s var(--ease-out),
-    transform 0.9s var(--ease-out);
+    opacity 0.55s ease-out,
+    transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  backface-visibility: hidden;
 }
 .lp-slide[data-state='active'] {
+  z-index: 1;
   opacity: 1;
   transform: none;
 }
 .lp-slide[data-state='prev'] {
-  transform: translateY(-5%) scale(0.98);
+  opacity: 1;
+  transform: none;
 }
 .lp-slide img {
   display: block;
@@ -1276,17 +1269,13 @@ html.morphing .bottom-nav {
   object-position: top;
 }
 .lp-chip {
-  animation: lp-pop 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: lp-pop 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: var(--d, 600ms);
-}
-.lp-chip > span {
-  animation: lp-float 3.6s ease-in-out infinite alternate;
-  animation-delay: calc(var(--d, 600ms) + 650ms);
 }
 @keyframes lp-pop {
   from {
     opacity: 0;
-    transform: translateY(14px) scale(0.6);
+    transform: translate3d(0, 10px, 0) scale(0.96);
   }
 }
 .lp-caption {
@@ -1332,9 +1321,7 @@ html.morphing .bottom-nav {
 @media (prefers-reduced-motion: reduce) {
   .lp-blob,
   .lp-enter,
-  .lp-float,
   .lp-chip,
-  .lp-chip > span,
   .lp-caption {
     animation: none !important;
   }
