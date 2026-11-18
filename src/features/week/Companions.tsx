@@ -8,6 +8,7 @@ import { repo } from '../../db/repositories';
 import { Avatar } from '../../ui/Avatar';
 import { inputClass } from '../../ui/components';
 import { EFFORT_OPTIONS, Segmented, ToggleChip } from '../../ui/controls';
+import { IconCheck, IconPlus } from '../../ui/icons';
 
 export interface Companion {
   profileId: UUID;
@@ -70,7 +71,7 @@ export function CompanionsPicker({
               }`}
             >
               <Avatar name={p.name} photo={p.photo} color={p.color} size="sm" />
-              {on ? '✓ ' : '+ '}
+              {on ? <IconCheck size="0.95rem" className="shrink-0" /> : <IconPlus size="0.95rem" className="shrink-0" />}
               {p.name}
             </button>
           );

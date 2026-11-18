@@ -404,7 +404,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
       </ol>
       )}
       {daysView === 'table' ? (
-        <p className="text-center text-xs text-slate-500">Päivän nimestä: lisää kerta, sairas- tai matkapäivä. Kerrasta muokkaus, ☀️ Arki -napista arkiliikunnan tarkistus.</p>
+        <p className="text-center text-xs text-slate-500">Päivän nimestä: lisää kerta, sairas- tai matkapäivä. Kerrasta muokkaus, Arki-napista arkiliikunnan tarkistus.</p>
       ) : (
         <>
           <p className="text-center text-xs text-slate-500 lg:hidden">Pitkä painallus päivään: sairas- tai matkapäivä. Pyyhkäise vaihtaaksesi viikkoa.</p>

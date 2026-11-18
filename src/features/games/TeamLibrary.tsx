@@ -20,6 +20,7 @@ import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { useFootball } from '../football/useFootball';
 import { TeamNameFields, useTeamNameSuggestions } from './TeamNameFields';
+import { IconClose } from '../../ui/icons';
 
 const OUTCOME_CLASS: Record<GameOutcome, string> = {
   W: 'bg-green-700 text-white',
@@ -388,7 +389,7 @@ function SavedSquads({ club, info }: { club: ClubEntry; info?: Club }) {
                   aria-label={`Poista tallennettu ryhmä ${text}`}
                   onClick={() => void repo.removeClubSquad(club.name, q)}
                 >
-                  ✕
+                  <IconClose size="1.1rem" />
                 </button>
               </li>
             );

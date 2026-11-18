@@ -14,7 +14,7 @@ import { earlyYearsDay, isVigorousDay } from '../../domain/aggregate';
 import { DAY_TARGET, dayGoalMet } from '../../domain/dayTarget';
 import type { ActivityType, Category, DayFlag, DayTotals, FootballDetails, ISODate, PlannedSession, RecommendationGroup, Session, UUID } from '../../domain/types';
 import { dayLabel } from '../../ui/format';
-import { IconBolt, IconBone, IconCheck, IconLeaf, IconPlus } from '../../ui/icons';
+import { IconBolt, IconBone, IconCheck, IconComment, IconLeaf, IconPlus, IconSun } from '../../ui/icons';
 import { useToast } from '../../ui/Toast';
 import { isFresh, useConfirmFeedback } from '../../ui/fresh';
 import { morphOpen } from '../../ui/morph';
@@ -380,9 +380,13 @@ export function DayTable({
                             className={`${chip} border border-dashed border-amber-300 bg-amber-50/60 text-slate-700 disabled:cursor-default dark:border-amber-800 dark:bg-amber-950/45`}
                             title={r.isFuture ? 'Arkiliikunnan arvio – tarkistetaan päivänä' : 'Arkiliikunta: vahvista, muuta tai merkitse ei tänä päivänä'}
                           >
-                            <span aria-hidden>☀️</span>
+                            <IconSun size="0.95rem" />
                             <span>Arki</span>
-                            {confirmed.length > 0 && <span className="tabular-nums text-green-800">{confirmedMin > 0 ? confirmedMin : 'ei'} ✓</span>}
+                            {confirmed.length > 0 && (
+                              <span className="inline-flex items-center gap-0.5 tabular-nums text-green-800">
+                                {confirmedMin > 0 ? confirmedMin : 'ei'} <IconCheck size="0.8rem" strokeWidth={2.5} />
+                              </span>
+                            )}
                             {pending > 0 && <span className="tabular-nums text-amber-800">{pending} arvio</span>}
                           </button>
                           {pending > 0 && !r.isFuture && r.hours && (
@@ -431,7 +435,8 @@ export function DayTable({
                       {notes.length ? (
                         notes.map((n, i) => (
                           <div key={i} className="truncate" title={n}>
-                            💬 {n}
+                            <IconComment size="0.85rem" className="mr-1 inline-block align-[-2px]" />
+                            {n}
                           </div>
                         ))
                       ) : (

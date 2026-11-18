@@ -6,6 +6,7 @@ import { computeQuick, prefillFromQuick, QUICK_HOBBIES, quickGroup, schoolQuesti
 import { RECOMMENDATIONS } from '../../domain/recommendations';
 import { today } from '../../ui/today';
 import { setQuickPrefill } from './quickPrefill';
+import { IconCheck, IconClose } from '../../ui/icons';
 
 type StepId = 'age' | 'school' | 'daycare' | 'hobbies' | 'commute' | 'recess' | 'play' | 'vigorous' | 'strength';
 
@@ -166,7 +167,7 @@ export function QuickTest({ intro, invite }: { intro: ReactNode; invite: ReactNo
 
       {step > 0 && (
         <button type="button" onClick={() => setStep(step - 1)} className="mt-5 text-sm font-semibold text-slate-500 underline-offset-2 hover:text-slate-800 hover:underline">
-          ← Edellinen
+          Edellinen
         </button>
       )}
     </div>
@@ -288,7 +289,7 @@ function HobbiesStep({ a, onNext }: { a: QuickAnswers; onNext: (h: QuickAnswers[
           disabled={sel.length === 0}
           className="press min-h-12 rounded-full bg-green-700 px-6 font-bold text-white shadow disabled:opacity-40"
         >
-          Seuraava →
+          Seuraava
         </button>
         <button type="button" onClick={() => onNext([])} className="press min-h-12 rounded-full px-4 font-semibold text-slate-600 ring-1 ring-slate-200 hover:text-slate-900">
           Ei ohjattuja harrastuksia
@@ -339,8 +340,8 @@ function CommuteStep({ school, a, onNext }: { school: boolean; a: QuickAnswers; 
 }
 
 const STATUS: Record<QuickResult['status'], { text: string; cls: string }> = {
-  meets: { text: '✓ Suositus näyttää täyttyvän', cls: 'bg-green-100 text-green-900 ring-green-300' },
-  near: { text: '≈ Lähellä suositusta', cls: 'bg-amber-100 text-amber-950 ring-amber-300' },
+  meets: { text: 'Suositus näyttää täyttyvän', cls: 'bg-green-100 text-green-900 ring-green-300' },
+  near: { text: 'Lähellä suositusta', cls: 'bg-amber-100 text-amber-950 ring-amber-300' },
   below: { text: 'Alle suosituksen', cls: 'bg-rose-100 text-rose-950 ring-rose-300' },
 };
 
@@ -356,7 +357,8 @@ function Result({ r, invite, onRestart }: { r: QuickResult; invite: ReactNode; o
       <div className="card p-5 sm:p-7" role="status" aria-live="polite">
         <span className={`inline-flex rounded-full px-3 py-1 text-sm font-bold ring-1 ${st.cls}`}>{st.text}</span>
         <p className="mt-4 flex items-baseline gap-2 text-slate-900">
-          <span className="font-display text-6xl font-semibold tabular-nums leading-none">≈ {r.headline}</span>
+          <span className="text-lg font-semibold">noin</span>
+          <span className="font-display text-6xl font-semibold tabular-nums leading-none">{r.headline}</span>
           <span className="text-lg font-semibold">min</span>
         </p>
         <p className="mt-1 text-sm text-slate-600">
@@ -372,7 +374,7 @@ function Result({ r, invite, onRestart }: { r: QuickResult; invite: ReactNode; o
           {parts.map((p) => (
             <li key={p.key} className="flex justify-between gap-3 py-1.5">
               <span className="text-slate-700">{p.label}</span>
-              <span className="shrink-0 whitespace-nowrap tabular-nums font-semibold text-slate-900">≈ {p.shown} min/pv</span>
+              <span className="shrink-0 whitespace-nowrap tabular-nums font-semibold text-slate-900">{p.shown} min/pv</span>
             </li>
           ))}
         </ul>
@@ -381,7 +383,7 @@ function Result({ r, invite, onRestart }: { r: QuickResult; invite: ReactNode; o
           {r.checks.map((c) => (
             <li key={c.label} className="flex items-center gap-2">
               <span className={`flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${c.ok ? 'bg-green-700 text-white' : 'bg-slate-200 text-slate-600'}`} aria-hidden>
-                {c.ok ? '✓' : '·'}
+                {c.ok ? <IconCheck size="0.75rem" strokeWidth={3} /> : <IconClose size="0.7rem" strokeWidth={2.5} />}
               </span>
               <span className="flex-1 text-slate-700">{c.label}</span>
               <span className="tabular-nums font-semibold text-slate-900">
@@ -421,7 +423,6 @@ function Result({ r, invite, onRestart }: { r: QuickResult; invite: ReactNode; o
             Arvio perustuu muistiin. Ohjelmassa kirjaat kerrat ja näet joka viikko, miten suositus oikeasti täyttyy ja mikä liikunta sitä kerryttää.
           </p>
           <p className="mt-3 flex gap-2 text-sm text-[var(--hero-ink)]">
-            <span aria-hidden>✨</span>
             Vastauksesi tulevat valmiiksi ohjelman aloitukseen: ikä, harrastukset ja arkiliikunta.
           </p>
           <div className="mt-5">{invite}</div>

@@ -21,6 +21,7 @@ import { TermInfo } from '../../ui/glossary';
 import { intensityNoteText } from '../week/IntensityPicker';
 import { TypeGlyph } from '../../ui/TypeGlyph';
 import { PhotoPicker } from '../../ui/Avatar';
+import { IconCheck, IconPencil } from '../../ui/icons';
 
 const STRENGTH_OPTIONS: { value: StrengthDefault; label: string }[] = [
   { value: 'yes', label: 'Esivalittu' },
@@ -93,7 +94,7 @@ export function ActivityTypesSection() {
                     {hidden.length > 0 && <span className="mt-1 block text-xs font-medium text-amber-800">Piilotettu: {hidden.join(', ')}</span>}
                   </span>
                   <span className="pt-1 text-slate-400" aria-hidden>
-                    ✎
+                    <IconPencil size="1rem" />
                   </span>
                 </button>
               </li>
@@ -361,7 +362,7 @@ function Visibility({ type, profiles }: { type: ActivityType; profiles: Profile[
                 shown ? 'bg-[var(--surface-sage)] text-green-900 ring-green-700/30' : 'bg-[var(--surface-sunk)] text-slate-500 ring-slate-200 line-through'
               }`}
             >
-              <span aria-hidden>{shown ? '✓' : '–'}</span>
+              <span aria-hidden>{shown ? <IconCheck size="0.85rem" className="inline-block align-[-2px]" /> : '–'}</span>
               {p.name}
             </button>
           );

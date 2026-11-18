@@ -8,7 +8,7 @@ function fixtureText(f?: Fixture, typeId?: UUID): string {
   const friendly = typeId === 't:football_friendly';
   if (!f) return '';
   const parts = [
-    f.infoMissing ? `⚠ tietoja puuttuu${f.missingNote ? ` (${f.missingNote})` : ''}` : undefined,
+    f.infoMissing ? `tietoja puuttuu${f.missingNote ? ` (${f.missingNote})` : ''}` : undefined,
     f.opponent ? `vs ${f.opponent}` : f.eventName ?? (friendly && f.games?.some((g) => g.opponent) ? `vs ${f.games.map((g) => g.opponent).filter(Boolean).join(', ')}` : undefined),
     f.level ? LEVEL_LABEL[f.level] : undefined,
     f.location,
@@ -22,7 +22,7 @@ import { useLongPress } from '../../ui/useLongPress';
 import { IconButton } from '../review/ReviewSheet';
 import { FLAG_LABEL } from './DaySheet';
 import { TypeIcon } from './Dashboard';
-import { IconPlus, IconSun } from '../../ui/icons';
+import { IconCheck, IconClose, IconPlus, IconSun } from '../../ui/icons';
 import { isFresh, useConfirmFeedback } from '../../ui/fresh';
 import { morphOpen } from '../../ui/morph';
 import { CATEGORY_LABEL } from '../../ui/labels';
@@ -145,7 +145,7 @@ export function DayRow({
           {flag && <span className="mt-0.5 whitespace-nowrap inline-block rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700">{FLAG_LABEL[flag.reason]}</span>}
           {earlyYears && totals && !isFuture && !flag && earlyYearsDay(totals).met && (
             <span className="mt-0.5 whitespace-nowrap inline-flex items-center gap-1 rounded-full bg-green-700 px-2 py-0.5 text-[11px] font-bold text-white" title="Päiväsuositus täyttyi: vähintään 3 h liikkumista, josta 1 h vauhdikasta">
-              ✓ Suositus
+              <IconCheck size="0.75rem" strokeWidth={3} /> Suositus
             </span>
           )}
           {schoolAge && totals && !isFuture && !flag && dayGoalMet('school_age', totals) && (
@@ -153,7 +153,7 @@ export function DayRow({
               className="mt-0.5 whitespace-nowrap inline-flex items-center gap-1 rounded-full bg-green-700 px-2 py-0.5 text-[11px] font-bold text-white"
               title={`Päivän suositus täyttyi: vähintään ${DAY_TARGET.school_age} min reipasta ja rasittavaa (kirjatut kerrat ja arkiliikunnan arvio)`}
             >
-              ✓ Suositus
+              <IconCheck size="0.75rem" strokeWidth={3} /> Suositus
             </span>
           )}
           {hours?.holiday && !flag && (
@@ -375,10 +375,10 @@ export function DayRow({
                 {!skipped && (
                   <div className="flex shrink-0 gap-1">
                     <IconButton label="Tehty kuten suunniteltu" tone="green" disabled={isFuture} onClick={() => confirmWithFeedback(p)}>
-                      ✓
+                      <IconCheck />
                     </IconButton>
                     <IconButton label="Ei tehty" tone="red" onClick={() => onPlanOpen(p)}>
-                      ✗
+                      <IconClose />
                     </IconButton>
                   </div>
                 )}
@@ -412,6 +412,6 @@ function footballSummary(kind: string | undefined, d: FootballDetails): string {
   if (d.enjoyment) parts.push(['', '🙁', '🙂', '😄'][d.enjoyment]);
   if (d.parentRating) parts.push('★'.repeat(d.parentRating));
   if (d.focusTags.length) parts.push(`${d.focusTags.length} tagia`);
-  if (d.ratingNote) parts.push(`💬 ${d.ratingNote.split(/\r?\n/)[0].slice(0, 60)}`);
+  if (d.ratingNote) parts.push(`”${d.ratingNote.split(/\r?\n/)[0].slice(0, 60)}”`);
   return parts.join(' · ');
 }

@@ -18,6 +18,7 @@ import { useFootballStatus, withoutClubFootball } from '../football/useFootballE
 import { DateInput } from '../../ui/DateInput';
 import { isClubTraining, trainingSelfText } from '../../domain/football';
 import { parseSelfMin, TrainingSelfBackfill, TrainingSelfFields } from '../football/TrainingSelf';
+import { IconClose, IconPencil } from '../../ui/icons';
 
 const WEEKDAYS: { value: Weekday; label: string }[] = [
   { value: 1, label: 'Ma' },
@@ -97,7 +98,7 @@ export function TemplateSection({ profile }: { profile: Profile }) {
                 </span>
               </span>
               <span className="text-slate-400" aria-hidden>
-                ✎
+                <IconPencil size="1rem" />
               </span>
             </button>
           </li>
@@ -258,7 +259,7 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
             <DateInput className={inputClass} value={v.validTo} min={v.validFrom} onChange={(d) => setV((c) => ({ ...c, validTo: d }))} aria-label="Päättyy" placeholder="Ei päättymispäivää" />
             {v.validTo && (
               <button type="button" onClick={() => setV((c) => ({ ...c, validTo: '' }))} className="min-h-11 shrink-0 rounded-xl px-2 text-sm text-slate-600 hover:bg-[var(--surface-sunk)]" aria-label="Poista päättymispäivä">
-                ✕
+                <IconClose size="1.1rem" />
               </button>
             )}
           </div>

@@ -2,7 +2,7 @@
 // Rivillä ✓ kuten suunniteltu, ✗ ei tehty → valinnainen syy, ✎ muokkaa kestoa.
 
 import { TypeGlyph } from '../../ui/TypeGlyph';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import type { ActivityType, PlannedSession, Profile, Session, UUID } from '../../domain/types';
 import { Button, inputClass } from '../../ui/components';
@@ -14,6 +14,7 @@ import { durationSchema } from '../week/sessionForm';
 import { SkipReasons } from './SkipReasons';
 import { usePlanActions } from './usePlanActions';
 import { loadUnconfirmed, useMinuteTick } from './unconfirmed';
+import { IconCheck, IconClose, IconPencil } from '../../ui/icons';
 
 export function ReviewSheet({
   open,
@@ -95,13 +96,13 @@ function ReviewRow({
         {mode === 'idle' && (
           <div className="flex shrink-0 gap-1">
             <IconButton label="Tehty kuten suunniteltu" onClick={() => actions.confirm(plan)} tone="green">
-              ✓
+              <IconCheck />
             </IconButton>
             <IconButton label="Ei tehty" onClick={() => setMode('skip')} tone="red">
-              ✗
+              <IconClose />
             </IconButton>
             <IconButton label="Muokkaa kestoa" onClick={() => setMode('edit')}>
-              ✎
+              <IconPencil />
             </IconButton>
           </div>
         )}
@@ -150,7 +151,7 @@ export function IconButton({
 }: {
   label: string;
   onClick: () => void;
-  children: string;
+  children: ReactNode;
   tone?: 'green' | 'red' | 'slate';
   disabled?: boolean;
 }) {

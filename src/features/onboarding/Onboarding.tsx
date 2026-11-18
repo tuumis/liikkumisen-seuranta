@@ -22,6 +22,7 @@ import { TemplateSection } from '../settings/TemplateSection';
 import { InstallHint } from '../settings/InstallHint';
 import { pickTextFile } from '../sync/fileIO';
 import { summaryText } from '../sync/useSync';
+import { IconCheck } from '../../ui/icons';
 
 type Step = 0 | 1 | 2 | 3 | 4;
 
@@ -96,7 +97,7 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
                   <span
                     className={`flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${done ? 'bg-green-700 text-white' : on ? 'bg-slate-900 text-white' : 'bg-[var(--surface-sunk)] text-slate-500'}`}
                   >
-                    {done ? '✓' : x.n}
+                    {done ? <IconCheck size="1rem" strokeWidth={2.5} /> : x.n}
                   </span>
                   <span className="min-w-0">
                     <span className={`block text-sm font-semibold ${on ? 'text-slate-900' : 'text-slate-600'}`}>{x.title}</span>
@@ -187,7 +188,7 @@ function Welcome({ onStart, onImport, onSkip, error, fromQuiz }: { onStart: () =
               onClick={onStart}
               className="press inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-[var(--hero-accent)] px-8 text-base font-bold text-[#1c2b24] shadow-lg hover:brightness-105 sm:w-auto"
             >
-              Aloita <span aria-hidden>→</span>
+              Aloita
             </button>
             <p className="text-sm text-[var(--hero-ink-soft)]">
               {fromQuiz
@@ -391,7 +392,6 @@ function DeviceStep({ message, onDone }: { message?: string; onDone: () => void 
 function QuizNote({ children }: { children: ReactNode }) {
   return (
     <p className="mb-3 flex items-start gap-2 rounded-xl bg-green-50 p-3 text-sm text-green-900 ring-1 ring-green-200">
-      <span aria-hidden>✨</span>
       <span>{children}</span>
     </p>
   );
@@ -430,7 +430,9 @@ function QuizHobbies({ profile, hobbies }: { profile: Profile; hobbies: QuickPre
                 {h.icon} {h.label} <span className="text-sm font-normal text-slate-600">· {h.perWeek} × {h.minutes} min viikossa</span>
               </span>
               {added[i] ? (
-                <span className="rounded-full bg-green-700 px-3 py-1 text-xs font-bold text-white">✓ Lisätty</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-green-700 px-3 py-1 text-xs font-bold text-white">
+                  <IconCheck size="0.8rem" strokeWidth={3} /> Lisätty
+                </span>
               ) : h.typeKey === 'other' ? null : (
                 <Button onClick={() => add(i)} disabled={days[i].length === 0}>
                   Lisää viikkorytmiin

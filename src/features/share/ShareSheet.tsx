@@ -17,6 +17,7 @@ import { useToast } from '../../ui/Toast';
 import { isShareStyle, SHARE_STYLE_LABEL, type LayerMark, type ShareSize, type ShareStyle } from './drawResult';
 import { isHexColor, isLightColor, mix, SHARE_COLORS } from './shareColors';
 import { useVideoShare } from './VideoShare';
+import { IconCheck } from '../../ui/icons';
 
 const PREFS = 'resultSharePrefs';
 type Prefs = { size: ShareSize; style: ShareStyle };
@@ -282,7 +283,7 @@ function ColorPicker({ value, onChange, team }: { value: string | undefined; onC
   const sel = (on: boolean) => (on ? 'outline outline-2 outline-offset-2 outline-[var(--focus)]' : '');
   const check = (base: string) => (
     <span aria-hidden className={`text-sm font-bold ${isLightColor(base) ? 'text-slate-900' : 'text-white'}`}>
-      ✓
+      <IconCheck size="1rem" strokeWidth={3} />
     </span>
   );
   return (

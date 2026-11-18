@@ -31,7 +31,7 @@ import { DiaryView } from './DiaryView';
 import { OpponentLibrary } from './TeamLibrary';
 import { TeamNameFields, useTeamNameSuggestions } from './TeamNameFields';
 import { FootballHero } from './FootballHero';
-import { IconCalendarClock, IconPlus, IconReport, IconShare } from '../../ui/icons';
+import { IconCalendarClock, IconPencil, IconPlus, IconReport, IconShare, IconWarning } from '../../ui/icons';
 import { InfoLink } from '../../ui/InfoLink';
 import { openPreviewShare } from '../share/PreviewShare';
 import { playSound } from '../../ui/sound';
@@ -311,7 +311,7 @@ export function MissingBadge({ f }: { f?: { infoMissing?: boolean; missingNote?:
   if (!f?.infoMissing) return null;
   return (
     <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900 ring-1 ring-amber-200" title={f.missingNote}>
-      <span aria-hidden>⚠</span>
+      <IconWarning size="0.8rem" className="shrink-0" />
       <span className="truncate">Tietoja puuttuu{f.missingNote ? `: ${f.missingNote}` : ''}</span>
     </span>
   );
@@ -537,7 +537,7 @@ function TeamsView({ profile }: { profile: Profile }) {
                 </span>
               </span>
               <span className="text-slate-400" aria-hidden>
-                ✎
+                <IconPencil size="1rem" />
               </span>
             </button>
             <Button variant="ghost" className="px-2" onClick={async () => {

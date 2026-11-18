@@ -7,6 +7,7 @@ import { useToast } from '../../ui/Toast';
 import { HEIGHT, W } from './drawResult';
 import { drawFrame, layerCollector, pickVideoFormat, recordScene, type VideoScene } from './previewVideo';
 import type { RenderOptions } from './ShareSheet';
+import { IconPlay } from '../../ui/icons';
 
 type VideoState = { k: 'idle' } | { k: 'recording'; p: number } | { k: 'ready'; file: File; seconds: number } | { k: 'error'; msg: string };
 
@@ -159,9 +160,10 @@ export function useVideoShare({
         <button
           type="button"
           onClick={() => setReplay((n) => n + 1)}
-          className="press absolute bottom-3 left-1/2 min-h-10 -translate-x-1/2 rounded-full bg-black/65 px-4 text-sm font-semibold text-white shadow"
+          className="press absolute bottom-3 left-1/2 inline-flex min-h-10 -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/65 px-4 text-sm font-semibold text-white shadow"
         >
-          ▶ Toista
+          <IconPlay size="0.9rem" />
+          Toista
         </button>
       )}
     </div>

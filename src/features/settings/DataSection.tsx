@@ -124,7 +124,7 @@ export function SyncSettingsSection() {
   const toast = useToast();
   if (!state?.role) return null;
   return (
-    <Card title="Synkronointi PC ↔ puhelin">
+    <Card title="Synkronointi PC:n ja puhelimen välillä">
       <div className="space-y-2 text-sm">
         {state.role === 'pc' ? (
           <>

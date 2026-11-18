@@ -124,7 +124,7 @@ export function HighlightsCard({ profile, week, className = '' }: { profile: Pro
                   <p className="mt-1.5 text-xs leading-snug text-slate-600">{VERDICT[verdict].text}</p>
                   <p className="mt-1 text-[11px] text-slate-500">
                     {h.rating.count} {h.rating.count === 1 ? 'arvio' : 'arviota'}
-                    {trend !== null && Math.abs(trend) >= 0.3 && ` · ${trend > 0 ? '↗ nousussa' : '↘ laskussa'} edelliseen jaksoon`}
+                    {trend !== null && Math.abs(trend) >= 0.3 && ` · ${trend > 0 ? 'nousussa' : 'laskussa'} edelliseen jaksoon`}
                     {trend !== null && Math.abs(trend) < 0.3 && ' · samaa tasoa kuin edellinen jakso'}
                   </p>
                 </div>

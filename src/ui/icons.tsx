@@ -191,6 +191,39 @@ export const IconTrophy = (p: IconProps) => (
     <path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v3.5M8.5 20h7M9.5 20l.5-3.5h4l.5 3.5" />
   </svg>
 );
+export const IconPencil = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M14.5 5.5 18.5 9.5M4.5 19.5l1-4.2L15.8 5a1.9 1.9 0 0 1 2.7 0l.5.5a1.9 1.9 0 0 1 0 2.7L8.7 18.5z" />
+  </svg>
+);
+export const IconWarning = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M10.3 4.6a2 2 0 0 1 3.4 0l7 12.2a2 2 0 0 1-1.7 3H5a2 2 0 0 1-1.7-3z" />
+    <path d="M12 9.5v4M12 16.8v.2" />
+  </svg>
+);
+/** Päällekkäisyys: kaksi limittäistä ympyrää. */
+export const IconOverlap = (p: IconProps) => (
+  <svg {...base(p)}>
+    <circle cx="9" cy="12" r="5.5" />
+    <circle cx="15" cy="12" r="5.5" />
+  </svg>
+);
+export const IconPlay = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M8 5.5v13l10.5-6.5z" fill="currentColor" />
+  </svg>
+);
+export const IconPause = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M8.5 5.5v13M15.5 5.5v13" strokeWidth={3} />
+  </svg>
+);
+export const IconComment = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v8.5a1.5 1.5 0 0 1-1.5 1.5h-7l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 5 5.5z" />
+  </svg>
+);
 export const IconExternal = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M13.5 4.5h6v6M19.5 4.5 11 13M17.5 14v3.5a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2H10" />

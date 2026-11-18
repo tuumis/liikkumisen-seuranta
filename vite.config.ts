@@ -84,7 +84,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest,woff2}'],
-        globIgnores: ['**/screenshot-*.png'], // asennusikkunan kuvat eivät kuulu välimuistiin
+        globIgnores: ['**/screenshot-*.png', '**/og-image.png'], // asennusikkunan ja linkin esikatselun kuvat eivät kuulu välimuistiin
         navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,
       },

@@ -1,14 +1,17 @@
 // Ohje: miten sovellus toimii ja mitä termit tarkoittavat, lyhyesti ja selkokielellä.
 
 import { useState } from 'react';
+import { APP_VERSION } from '../../domain/version';
 import { Sheet } from '../../ui/Sheet';
+import { CHANGELOG } from './changelog';
+import { PrivacyContent } from './Privacy';
 
 const TOPICS: { q: string; a: string[] }[] = [
   {
     q: 'Miten kirjaan liikuntaa?',
     a: [
       'Paina Viikko-näkymässä +, valitse laji ja kesto ja paina Tallenna. Päivän voi vaihtaa ylhäältä.',
-      'Toistuvat treenit kannattaa lisätä Viikkorytmiin (Asetukset). Ne näkyvät viikolla valmiina, ja ne kuitataan yhdellä ✓-painalluksella.',
+      'Toistuvat treenit kannattaa lisätä Viikkorytmiin (Asetukset). Ne näkyvät viikolla valmiina, ja ne kuitataan yhdellä painalluksella.',
     ],
   },
   {
@@ -21,7 +24,7 @@ const TOPICS: { q: string; a: string[] }[] = [
     ],
   },
   {
-    q: 'Miksi luvut ovat arvioita (≈)?',
+    q: 'Miksi luvut ovat arvioita?',
     a: [
       'Treenissä on myös taukoja, ohjeita ja kevyttä liikettä. Sovellus arvioi lajin tyypillisen tehon perusteella, kuinka suuri osa kestosta on reipasta tai rasittavaa. Esimerkiksi 60 minuutin jalkapallotreenistä noin 27 min.',
       'Kirjauksessa "Kevyempi" tai "Kovempi" ponnistelu muuttaa reippaan ja rasittavan osuutta 25 %. Pelissä peliaika lasketaan pelin teholla ja lämmittely treenin teholla.',
@@ -60,10 +63,43 @@ const TOPICS: { q: string; a: string[] }[] = [
   },
 ];
 
+type View = 'help' | 'privacy' | 'news';
+const VIEW_TITLE: Record<View, string> = { help: 'Ohje', privacy: 'Tietosuoja', news: 'Mitä uutta' };
+
 export function HelpSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [openIdx, setOpenIdx] = useState<number | null>(0);
+  const [view, setView] = useState<View>('help');
+  const close = () => {
+    onClose();
+    setView('help');
+  };
+  const latest = CHANGELOG[0];
   return (
-    <Sheet open={open} onClose={onClose} title="Ohje">
+    <Sheet open={open} onClose={close} title={VIEW_TITLE[view]}>
+      {view !== 'help' && (
+        <button type="button" onClick={() => setView('help')} className="mb-3 min-h-9 rounded-lg px-1 text-sm font-semibold text-green-800 hover:underline">
+          Takaisin ohjeeseen
+        </button>
+      )}
+      {view === 'privacy' && <PrivacyContent />}
+      {view === 'news' && (
+        <ol className="space-y-5">
+          {CHANGELOG.map((r) => (
+            <li key={r.version}>
+              <div className="text-sm font-semibold text-slate-900">
+                Versio {r.version} <span className="font-normal text-slate-500">{r.date}</span>
+              </div>
+              <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm text-slate-700">
+                {r.items.map((it) => (
+                  <li key={it}>{it}</li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ol>
+      )}
+      {view === 'help' && (
+      <>
       <ul className="space-y-2">
         {TOPICS.map((t, i) => (
           <li key={t.q} className="rounded-xl ring-1 ring-slate-200">
@@ -88,6 +124,19 @@ export function HelpSheet({ open, onClose }: { open: boolean; onClose: () => voi
           </li>
         ))}
       </ul>
+      <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-200 pt-4 text-sm">
+        <span className="text-slate-500">
+          Versio {APP_VERSION}, julkaistu {latest.date}
+        </span>
+        <button type="button" onClick={() => setView('news')} className="min-h-9 font-semibold text-green-800 hover:underline">
+          Mitä uutta
+        </button>
+        <button type="button" onClick={() => setView('privacy')} className="min-h-9 font-semibold text-green-800 hover:underline">
+          Tietosuoja
+        </button>
+      </div>
+      </>
+      )}
     </Sheet>
   );
 }

@@ -94,7 +94,7 @@ describe('varmuuskopio', () => {
     await seedData(a.repo);
     const before = await dump(a.db);
     const file = await buildBackup(a.db);
-    expect(file).toMatchObject({ format: 'liikkumisseuranta-backup', schemaVersion: 3, appVersion: '0.1.0' });
+    expect(file).toMatchObject({ format: 'liikkumisseuranta-backup', schemaVersion: 3, appVersion: '1.0.0' });
     expect(file.checksum).toMatch(/^sha256:[0-9a-f]{64}$/);
 
     await clearAll(a.db);

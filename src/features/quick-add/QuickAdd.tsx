@@ -9,7 +9,7 @@ import { addDays } from '../../domain/dates';
 import type { ActivityType, Category, Effort, IntensityMinutes, ISODate, Profile, Session } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { requestPersistentStorage } from '../../db/storage';
-import { IconBall } from '../../ui/icons';
+import { IconBall, IconChevronLeft } from '../../ui/icons';
 import { TermInfo } from '../../ui/glossary';
 import { LabelField } from '../week/LabelField';
 import { useHiddenTypes, visibleTypes } from '../week/useLoggableTypes';
@@ -464,8 +464,9 @@ export function QuickAdd({
           <div className="sticky bottom-0 -mx-5 space-y-2 bg-[linear-gradient(to_top,var(--surface)_75%,transparent)] px-5 pb-1 pt-5 lg:-mx-7 lg:px-7">
             {error && <p className="text-sm text-red-700">{error}</p>}
             <div className="flex gap-2">
-              <Button variant="ghost" className="shrink-0 px-3" onClick={() => setType(null)}>
-                ← Laji
+              <Button variant="ghost" className="shrink-0 gap-1 px-3" onClick={() => setType(null)}>
+                <IconChevronLeft size="1.05rem" className="-ml-1" />
+                Laji
               </Button>
               <Button className="min-h-12 flex-1 text-[15px]" disabled={saving || !duration} onClick={() => void save()}>
                 {duration ? `Tallenna · ${dayLabel(date)} · ${duration} min` : 'Valitse kesto'}

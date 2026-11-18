@@ -1,0 +1,21 @@
+// Mitä uutta: lyhyt muutosloki käyttäjälle (uusin ensin). Lisää rivi jokaiseen julkaisuun, jossa käyttäjä huomaa muutoksen.
+
+export interface Release {
+  version: string;
+  /** Julkaisupäivä muodossa p.k.vvvv */
+  date: string;
+  items: string[];
+}
+
+export const CHANGELOG: Release[] = [
+  {
+    version: '1.0.0',
+    date: '18.11.2026',
+    items: [
+      'Ensimmäinen virallinen versio.',
+      'Alkusivulla pikatesti, jonka vastaukset täyttävät aloituksen valmiiksi.',
+      'Yhtenäiset ikonit koko ohjelmassa.',
+      'Tietosuojaseloste ja versiotiedot Ohjeessa.',
+    ],
+  },
+];

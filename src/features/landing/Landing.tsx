@@ -5,8 +5,11 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode, type RefObject } from 'react';
 import { checkInvite } from '../../domain/invite';
+import { APP_VERSION } from '../../domain/version';
+import { PrivacySheet } from '../help/Privacy';
+import { contactAddress } from './contact';
 import { QuickTest } from './QuickTest';
-import { IconBall, IconBolt, IconChart, IconClose, IconDevices, IconLock, IconShare, IconUser, IconWeek } from '../../ui/icons';
+import { IconBall, IconBolt, IconChart, IconClock, IconClose, IconDevices, IconLock, IconPause, IconPlay, IconShare, IconUser, IconWeek } from '../../ui/icons';
 
 type ShotName =
   | 'pc-week'
@@ -55,25 +58,23 @@ interface Scene {
 
 // Esittelyn kohtaukset; merkinnät vastaavat kuvien esimerkkitietoja.
 const SCENES: Scene[] = [
-  { phone: 'phone-week', pc: 'pc-week', title: 'Viikko yhdellä silmäyksellä', text: 'Näet heti, täyttyykö ikäryhmän liikkumissuositus.', chips: ['≈ Lähellä tahtia', '49 min / päivä'] },
-  { phone: 'phone-add', pc: 'pc-week', title: 'Liikuntakerta sekunneissa', text: 'Laji, kesto ja tallenna. Viikon harrastukset tulevat valmiiksi.', chips: ['⚽ Treeni · 90 min', '✓ Tallennettu'] },
-  { phone: 'phone-analysis', pc: 'pc-analysis', title: 'Kehitys kuukausittain', text: 'Kaudet, lajit ja suositusten toteutuminen. Raportit PDF:nä.', chips: ['↑ 9 min / pv syyskuusta', '6 lajia'] },
-  { phone: 'phone-theme', pc: 'pc-theme', title: 'Oman näköinen', text: 'Vaalea tai tumma teema, neljä väriteemaa ja taustat – myös oma kuva.', chips: ['🎨 4 väriteemaa', '🌙 Tumma teema'] },
-  { phone: 'phone-football', pc: 'pc-calendar', title: 'Pelit ja tulokset', text: 'Pelikalenteri, turnaukset ja kauden tilastot koko perheelle.', chips: ['🏆 2–1–1', '⚽ Aino: 3 maalia'] },
-  { phone: 'phone-family', pc: 'pc-family', title: 'Koko perheen kalenteri', text: 'Sisarusten pelit väreittäin samassa kalenterissa. Päällekkäiset pelit näkyvät heti.', chips: ['‼ Päällekkäin', '📅 Vienti kalenteriin'] },
-  { phone: 'phone-story', pc: 'pc-story', title: 'Kauden kooste', text: 'Kauden kohokohdat tarinakortteina. Tallenna kuvana tai jaa.', chips: ['96,3 h liikuntaa', '⭐ Paras viikko'] },
-  { phone: 'phone-preview', pc: 'pc-calendar', title: 'Ennakot jakoon', text: 'Otteluennakko kuvana tai videona joukkueen WhatsAppiin.', chips: ['🎬 Kuva tai video', '📤 Jaa'] },
+  { phone: 'phone-week', pc: 'pc-week', title: 'Viikko yhdellä silmäyksellä', text: 'Näet heti, täyttyykö ikäryhmän liikkumissuositus.', chips: ['Lähellä tahtia', '49 min / päivä'] },
+  { phone: 'phone-add', pc: 'pc-week', title: 'Liikuntakerta sekunneissa', text: 'Laji, kesto ja tallenna. Viikon harrastukset tulevat valmiiksi.', chips: ['Treeni 90 min', 'Tallennettu'] },
+  { phone: 'phone-analysis', pc: 'pc-analysis', title: 'Kehitys kuukausittain', text: 'Kaudet, lajit ja suositusten toteutuminen. Raportit PDF:nä.', chips: ['+9 min / pv syyskuusta', '6 lajia'] },
+  { phone: 'phone-theme', pc: 'pc-theme', title: 'Oman näköinen', text: 'Vaalea tai tumma teema, neljä väriteemaa ja taustat – myös oma kuva.', chips: ['4 väriteemaa', 'Tumma teema'] },
+  { phone: 'phone-football', pc: 'pc-calendar', title: 'Pelit ja tulokset', text: 'Pelikalenteri, turnaukset ja kauden tilastot koko perheelle.', chips: ['Kausi 2–1–1', 'Aino: 3 maalia'] },
+  { phone: 'phone-family', pc: 'pc-family', title: 'Koko perheen kalenteri', text: 'Sisarusten pelit väreittäin samassa kalenterissa. Päällekkäiset pelit näkyvät heti.', chips: ['Päällekkäin', 'Vienti kalenteriin'] },
+  { phone: 'phone-story', pc: 'pc-story', title: 'Kauden kooste', text: 'Kauden kohokohdat tarinakortteina. Tallenna kuvana tai jaa.', chips: ['96,3 h liikuntaa', 'Paras viikko'] },
+  { phone: 'phone-preview', pc: 'pc-calendar', title: 'Ennakot jakoon', text: 'Otteluennakko kuvana tai videona joukkueen WhatsAppiin.', chips: ['Kuva tai video', 'Jaa ryhmään'] },
 ];
 const SCENE_MS = 7000;
 
-// Osoite kootaan vasta selaimessa, jottei se ole lähdekoodissa yhtenä merkkijonona (vähemmän roskapostia).
-const flip = (s: string) => s.split('').reverse().join('');
-const contactAddress = () => `${flip('44nenotsumt')}@${flip('moc.liamg')}`;
 
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFailed: boolean }) {
   const [zoom, setZoom] = useState<ShotName>();
+  const [privacy, setPrivacy] = useState(false);
   const codeRef = useRef<HTMLInputElement>(null);
   const quizCodeRef = useRef<HTMLInputElement>(null);
   const goToQuiz = () => document.getElementById('pikatesti')?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' });
@@ -122,10 +123,10 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
                 className="press mt-6 inline-flex min-h-12 items-center gap-2.5 rounded-full bg-white/10 py-2 pl-2 pr-5 text-left text-[15px] font-semibold text-[var(--hero-ink)] ring-1 ring-white/25 backdrop-blur-sm hover:bg-white/15"
               >
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--hero-accent)] text-sm text-[#1c2b24]" aria-hidden>
-                  ⏱
+                  <IconClock size="1.05rem" />
                 </span>
                 <span>
-                  Tee 1 minuutin pikatesti <span aria-hidden>→</span>
+                  Tee 1 minuutin pikatesti
                 </span>
               </button>
             </div>
@@ -251,6 +252,15 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
         </Reveal>
       </main>
 
+      <footer className="mx-auto flex max-w-[1240px] flex-wrap items-center gap-x-6 gap-y-2 border-t border-slate-200 px-4 py-6 text-sm text-slate-500 lg:px-10">
+        <span className="font-display font-semibold text-slate-700">Liikkumisen seuranta</span>
+        <span>Versio {APP_VERSION}</span>
+        <button type="button" onClick={() => setPrivacy(true)} className="min-h-9 font-semibold text-slate-700 underline-offset-2 hover:underline">
+          Tietosuoja
+        </button>
+      </footer>
+
+      <PrivacySheet open={privacy} onClose={() => setPrivacy(false)} />
       {zoom && <Zoom name={zoom} onClose={() => setZoom(undefined)} />}
     </div>
   );
@@ -386,7 +396,7 @@ function Showcase({ onZoom }: { onZoom: (n: ShotName) => void }) {
               className="press flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs text-[var(--hero-ink)] ring-1 ring-white/15 hover:bg-white/15"
               aria-label={userPaused ? 'Jatka esittelyä' : 'Pysäytä esittely'}
             >
-              <span aria-hidden>{userPaused ? '▶' : '❚❚'}</span>
+              {userPaused ? <IconPlay size="0.85rem" /> : <IconPause size="0.85rem" />}
             </button>
           )}
         </div>
@@ -484,9 +494,6 @@ function InviteForm({ inputRef, onUnlock, linkFailed, idPrefix = '' }: { inputRe
           className="press inline-flex min-h-12 shrink-0 items-center justify-center rounded-full bg-[var(--hero-accent)] px-5 text-base font-bold text-[#1c2b24] shadow-lg hover:brightness-105 disabled:opacity-70 sm:px-7"
         >
           {busy ? 'Hetki…' : 'Avaa'}
-          <span aria-hidden className="ml-1.5 hidden sm:inline">
-            →
-          </span>
         </button>
       </div>
       {error ? (

@@ -36,7 +36,7 @@ export function weekModel(report: PeriodReport, settings: Settings): WeekModel {
     label: 'Liikuntaa yhteensä',
     term: 'total' as TermId,
     value: formatHours(h.actualMin),
-    sub: `josta ${report.group.group === 'early_years' ? 'vauhdikasta' : 'reipasta ja rasittavaa'} ≈ ${formatHours(mvpaMin)}${report.group.group === 'school_age' ? ` · ${hoursBand(h.actualMin).label.toLowerCase()}` : ''}`,
+    sub: `josta ${report.group.group === 'early_years' ? 'vauhdikasta' : 'reipasta ja rasittavaa'} noin ${formatHours(mvpaMin)}${report.group.group === 'school_age' ? ` · ${hoursBand(h.actualMin).label.toLowerCase()}` : ''}`,
   };
 
   if (ev.schoolAge) {
@@ -90,7 +90,6 @@ const PILL = {
   near: 'bg-[#f3e3cc] text-[#6a4526]',
   below: 'bg-white/15 text-[var(--hero-ink)]',
 } as const;
-const ICON = { met: '✓', near: '≈', below: '○' } as const;
 
 /** Etusivun pääkortti: metsänvihreä pinta, animoitu rengas ja tunnusluvut. */
 export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: PeriodReport; profile: Profile; isCurrentWeek: boolean; onAdd: () => void }) {
@@ -115,7 +114,7 @@ export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: Pe
           </div>
           {main && ev.evaluable && (
             <span className={`anim-pop shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${PILL[main.m.status]}`} style={{ animationDelay: '0.9s' }}>
-              {ICON[main.m.status]} {statusShort(main.m, inProgress)}
+              {statusShort(main.m, inProgress)}
               {met && streak >= 2 && <span className="font-semibold opacity-80"> · {streak} vk putkeen</span>}
             </span>
           )}
@@ -188,7 +187,7 @@ export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: Pe
           </p>
         )}
         {ev.evaluable && ev.quality.lowData && <p className="mt-3 text-xs text-[var(--hero-ink-soft)]">Kirjauksia on vielä vähän, joten vertailu on suuntaa antava.</p>}
-        <p className="mt-4 text-[11px] text-[var(--hero-ink-soft)] opacity-80">≈ arvio lajin tyypillisestä tehosta · {profile.name}</p>
+        <p className="mt-4 text-[11px] text-[var(--hero-ink-soft)] opacity-80">Luvut ovat arvioita lajien tyypillisestä tehosta.</p>
       </div>
     </section>
   );

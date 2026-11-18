@@ -17,6 +17,7 @@ import { useReport } from '../analysis/useReport';
 import { useFootball } from '../football/useFootball';
 import { useFootballEnabled } from '../football/useFootballEnabled';
 import { weekModel } from './WeekSummary';
+import { IconClose } from '../../ui/icons';
 
 // Vanha laitekohtainen muisti (ennen profiiliin tallennusta); luetaan edelleen, ettei suljettu palaa.
 const KEY = 'lastWeekSeen';
@@ -36,7 +37,7 @@ function writeSeen(profileId: string, week: ISODate) {
 }
 const later = (...ds: (ISODate | undefined)[]) => ds.filter((d): d is ISODate => !!d).sort().pop();
 
-const STATUS_TEXT = { met: '✓ Suositus täyttyi', near: '≈ Lähellä suositusta', below: '○ Alle suosituksen' } as const;
+const STATUS_TEXT = { met: 'Suositus täyttyi', near: 'Lähellä suositusta', below: 'Alle suosituksen' } as const;
 const STATUS_CLASS = {
   met: 'bg-green-100 text-green-900',
   near: 'bg-amber-100 text-amber-900',
@@ -155,7 +156,7 @@ export function LastWeekCard({ profile, today, onOpenWeek }: { profile: Profile;
           aria-label="Sulje viime viikon kooste"
           title="Sulje (ei näytetä uudelleen tältä viikolta)"
         >
-          ✕
+          <IconClose size="1.1rem" />
         </button>
       </div>
 

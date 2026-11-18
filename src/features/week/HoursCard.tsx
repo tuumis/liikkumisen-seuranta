@@ -12,6 +12,7 @@ import { isoWeekday } from '../../domain/dates';
 import { CATEGORY_LABEL } from '../../ui/labels';
 import { dayLabel } from '../../ui/format';
 import { InfoTip } from '../../ui/InfoTip';
+import { IconCheck, IconSun } from '../../ui/icons';
 
 // CSS-muuttujat (index.css) vaihtuvat vaalean ja tumman teeman mukana.
 const C = {
@@ -176,7 +177,7 @@ function CategoryItems({ items }: { items: CategoryItem[] }) {
       {items.map((it) => (
         <li key={it.key} className="flex items-center gap-2.5 text-sm">
           <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-[var(--surface)] text-sm" aria-hidden>
-            {it.icon ?? (it.kind === 'estimate' ? '≈' : '✓')}
+            {it.icon ?? (it.kind === 'estimate' ? <IconSun size="1rem" /> : <IconCheck size="1rem" />)}
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-slate-800">{it.label}</span>

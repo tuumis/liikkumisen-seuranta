@@ -14,7 +14,7 @@ import type { ActivityType, ISODate, PlannedSession, Profile, Session, UUID } fr
 import { repo } from '../../db/repositories';
 import { EmptyState, SectionLabel } from '../../ui/components';
 import { dayLabel, formatDate } from '../../ui/format';
-import { IconBolt, IconBone, IconLeaf } from '../../ui/icons';
+import { IconBolt, IconBone, IconCheck, IconLeaf, IconWarning } from '../../ui/icons';
 import { useMounted } from '../../ui/motion';
 import { Term } from '../../ui/glossary';
 import { Collapse, CollapseToggle, useCollapsible } from '../../ui/Collapse';
@@ -186,7 +186,7 @@ export function DailyChart({ report, today, target: dayTarget, title }: { report
                   {WD[isoWeekday(d.date) - 1]}
                   {metDay(i) && (
                     <span className="absolute -right-1.5 -top-1.5 flex size-3.5 items-center justify-center rounded-full bg-green-700 text-[8px] font-black text-white ring-2 ring-[var(--surface)]" title="Päiväsuositus täyttyi: 3 h liikkumista, josta 1 h vauhdikasta">
-                      ✓
+                      <IconCheck size="0.6rem" strokeWidth={3.5} />
                     </span>
                   )}
                 </span>
@@ -225,7 +225,7 @@ export function DailyChart({ report, today, target: dayTarget, title }: { report
         )}
         {early && days.some((_, i) => metDay(i)) && (
           <span className="flex items-center gap-1.5">
-            <span className="flex size-3.5 items-center justify-center rounded-full bg-green-700 text-[8px] font-black text-white">✓</span> Päiväsuositus täyttyi
+            <span className="flex size-3.5 items-center justify-center rounded-full bg-green-700 text-[8px] font-black text-white"><IconCheck size="0.6rem" strokeWidth={3.5} /></span> Päiväsuositus täyttyi
           </span>
         )}
       </div>
@@ -354,7 +354,7 @@ export function UpcomingCard({
                         ? `vs ${f.opponent}`
                         : f?.eventName ?? (t?.footballKind === 'friendly' && f?.games?.some((g) => g.opponent) ? `vs ${f.games.map((g) => g.opponent).filter(Boolean).join(', ')}` : undefined) ?? p.label ?? t?.name ?? 'Laji'}</span>
                     <span className="block truncate text-xs text-slate-500">
-                      {f?.infoMissing && <span className="font-semibold text-amber-800">⚠ tietoja puuttuu · </span>}
+                      {f?.infoMissing && <span className="font-semibold text-amber-800"><IconWarning size="0.8rem" className="mr-0.5 inline-block align-[-2px]" />tietoja puuttuu · </span>}
                       {f || p.label ? `${t?.name ?? ''} · ` : ''}
                       {p.startTime ? `klo ${p.startTime} · ` : ''}
                       {p.durationMin} min

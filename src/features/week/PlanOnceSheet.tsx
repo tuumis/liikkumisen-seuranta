@@ -84,7 +84,7 @@ export function PlanOnceSheet({ profile, date, onClose }: { profile: Profile; da
           }}
         >
           <p className="text-sm text-slate-600">
-            Tiedossa oleva tapahtuma tulevalle päivälle. Se näkyy viikolla suunnitelmana, ja kuittaat sen (✓) tai muutat kestoa vasta kyseisenä päivänä.
+            Tiedossa oleva tapahtuma tulevalle päivälle. Se näkyy viikolla suunnitelmana, ja kuittaat sen tehdyksi tai muutat kestoa vasta kyseisenä päivänä.
             {footballOn && ' Pelit ja turnaukset lisätään Jalkapallo → Kalenteri.'}
           </p>
           <Field label="Laji">

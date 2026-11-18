@@ -803,6 +803,7 @@ Sovellus käsittelee lapsen henkilö- ja liikuntatietoja, joten se kerää vain 
 - **Vienti:** vientipainikkeen yhteydessä kerrotaan, että tiedosto sisältää lapsen tietoja ja se kannattaa säilyttää turvallisesti (esim. salattu pilvikansio).
 - **Poisto:** asetuksissa on "Poista profiili ja kaikki sen tiedot" sekä "Tyhjennä kaikki tiedot", kummassakin kahden vaiheen vahvistus.
 - **Lukitus:** sovellus luottaa puhelimen omaan näytön lukitukseen; erillistä PIN-koodia ei toteuteta MVP:ssä.
+- **Tietosuojaseloste** (18.11.2026; `features/help/Privacy.tsx`): käyttäjälle kerrotaan selkokielellä, mitä tallennetaan, missä tiedot ovat, synkronoinnin ja varmuuskopioiden säilytys, verkkoliikenne (julkaisupalvelimen tekniset lokit, ei analytiikkaa, mainoksia tai evästeitä), kutsukoodi ja pikatesti, tietojen poisto ja yhteystieto. Se avautuu alkusivun alalaidasta ja ohjelman Ohjeesta. Päivityspäivä näkyy selosteessa; päivitä teksti, jos tietojen käsittely muuttuu.
 - **Käyttötarkoitus:** perheen yksityinen käyttö. Tietoja ei jaeta valmentajille tai muille; mahdollinen raporttivienti on myöhempi vaihe ja aina käyttäjän käynnistämä.
 
 ## 12. Käyttöliittymä ja käyttöpolut
@@ -1447,3 +1448,14 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
       - profiili: syntymävuosi (kuluva vuosi − ikä; koulukysymyksen tapauksissa tarkka), koulun aloitusvuosi (syntymävuosi + 7, elokuu) ja jalkapallo, jos se valittiin. Ohjelma valitsee näin saman suositusryhmän kuin pikatesti kaikilla iillä ja kuukausilla (testattu).
       - viikkorytmi: kortti "Pikatestin harrastukset", jossa ehdotetut treenipäivät kertamäärän mukaan; käyttäjä vaihtaa päivät ja lisää rivin. "Muu ohjattu harrastus" lisätään itse oikealla lajilla.
       - arkiliikunta: välitunnit, päiväkoti, matkat ja leikki liukusäätimiin valmiiksi; perusarvio tallennetaan vastauksen lajin osuuksin (esim. pyöräily kouluun, aktiivinen välitunti = ulkoleikki)
+  - **Ammattimaisempi viimeistely** (käyttäjän pyyntö 18.11.2026: ohjelman ei pidä näyttää tekoälyllä tehdyltä; valinnat suositusten mukaan):
+    - **Käyttöliittymän merkit** (`ui/icons.tsx` `IconPencil`, `IconWarning`, `IconOverlap`, `IconPlay`, `IconPause`, `IconComment`):
+      - painikkeiden ja tilojen merkit (✓ ✗ ✕ ✎ ⚠ ‼ ▶ ☀️ 💬) ovat ohjelman omia SVG-ikoneita samalla viivalla kuin muutkin ikonit. Päällekkäisyydellä on oma ikoni (kaksi limittäistä ympyrää), joten se erottuu puuttuvista tiedoista muutenkin kuin värin perusteella.
+      - painikkeista on poistettu nuolet (→, ←), tilamerkinnöistä ≈- ja ○-etumerkit sekä ✨-koristeet. Arvio sanotaan sanalla "noin".
+      - jäävät: lajien emojit ja käyttäjän valitsemat lajikuvakkeet (sisältöä), fiilisnaamat ja arviotähdet, jakokuvat, tulostettavat raportit ja kalenteri, valikkopolut tekstissä (Asetukset → …), näppäinmerkit sekä trendinuolet tiiviissä tietoriveissä.
+      - korttien yläotsikot säilyvät, koska ne kertovat mm. kenen lapsen tietoja kortti näyttää. Välipisteet jäävät vain tiiviisiin tietoriveihin.
+      - alkusivun esittelyn merkinnät ovat ilman emojeja.
+    - **Versio ja Mitä uutta** (`domain/version.ts` `APP_VERSION` = 1.0.0, `package.json`, `features/help/changelog.ts`, `HelpSheet.tsx`): Ohjeen alalaidassa versio ja julkaisupäivä sekä linkit Mitä uutta- ja Tietosuoja-näkymiin (samassa ikkunassa, "Takaisin ohjeeseen"). Mitä uutta -luetteloon lisätään rivi jokaisesta julkaisusta, jonka käyttäjä huomaa. Alkusivun alalaidassa nimi, versio ja Tietosuoja.
+    - **Linkin esikatselu** (`index.html`, `public/og-image.png` 1200 × 630): Open Graph- ja Twitter-tiedot, joten WhatsAppissa, Teamsissa ja sähköpostissa jaettu linkki näyttää kuvan, nimen ja kuvauksen. Kuvan osoite on täydellinen (`https://tuumis.github.io/liikkumisen-seuranta/og-image.png`), joten se päivitetään, jos julkaisuosoite vaihtuu. Kuva ei kuulu service workerin esivälimuistiin.
+    - **Alkusivun kuvat** otettiin uudelleen siivotusta ohjelmasta.
+    - **Alkusivun uusi ilme:** erillinen esimerkki (`esimerkit/`, ei versionhallinnassa eikä julkaistu) odottaa käyttäjän päätöstä; nykyinen alkusivu on ennallaan.

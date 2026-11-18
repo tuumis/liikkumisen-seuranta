@@ -7,6 +7,7 @@ import { clubKey, parseTeamName } from '../domain/opponent';
 import { repo } from '../db/repositories';
 import type { Club } from '../domain/types';
 import { isPhotoDataUrl, resizeLogo } from './image';
+import { IconExternal } from '../ui/icons';
 
 const SIZES = {
   sm: 'size-8 rounded-lg text-xs',
@@ -178,7 +179,7 @@ export function LogoPicker({
         <div className="flex min-w-0 flex-1 flex-wrap gap-2">
           {hasName && (
             <a href={logoSearchUrl(name)} target="_blank" rel="noopener noreferrer" className={`${btn} inline-flex items-center`}>
-              Hae logo ↗
+              Hae logo <IconExternal size="0.9rem" className="ml-1" />
             </a>
           )}
           {canRead && (

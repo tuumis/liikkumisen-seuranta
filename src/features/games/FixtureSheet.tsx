@@ -20,6 +20,7 @@ import { today as todayFn } from '../../ui/today';
 import { TeamNameFields, useTeamNameSuggestions } from './TeamNameFields';
 import { OpponentHistoryCard } from './OpponentHistory';
 import { DateInput } from '../../ui/DateInput';
+import { IconClose } from '../../ui/icons';
 
 export type FixtureKind = 'game' | 'tournament' | 'friendly';
 
@@ -329,7 +330,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
                     aria-label={`Poista vastustaja ${i + 1}`}
                     onClick={() => setOpponents((cur) => cur.filter((_, j) => j !== i))}
                   >
-                    ✕
+                    <IconClose size="1.1rem" />
                   </button>
                 )}
               </div>
@@ -442,7 +443,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
                       aria-label={`Poista ottelu ${i + 1}`}
                       onClick={() => setSchedule((cur) => cur.filter((_, j) => j !== i))}
                     >
-                      ✕
+                      <IconClose size="1.1rem" />
                     </button>
                   </li>
                 ))}

@@ -19,6 +19,7 @@ import { CATEGORY_LABEL, pct } from '../../ui/labels';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { DateInput } from '../../ui/DateInput';
+import { IconPencil } from '../../ui/icons';
 
 const minutesField = z.coerce.number().int().min(0, 'Vähintään 0').max(600, 'Enintään 600');
 
@@ -78,7 +79,7 @@ export function EstimatesSection({ profile }: { profile: Profile }) {
                 </span>
               </button>
               <span className="text-slate-400" aria-hidden>
-                ✎
+                <IconPencil size="1rem" />
               </span>
             </li>
           );
@@ -365,7 +366,7 @@ function DaycareHint({ weekday, mvpa }: { weekday: number; mvpa?: number }) {
     <p className={`rounded-xl px-3 py-2 text-xs leading-relaxed ring-1 ${ok ? 'bg-green-50 text-green-900 ring-green-200' : 'bg-[var(--surface-sunk)] text-slate-700 ring-slate-200'}`}>
       <strong>Päiväkodin tavoite:</strong> varhaiskasvatuspäivässä vähintään {r.daycareMinPerDay.value / 60} h liikkumista, josta {r.daycareMvpaMinPerDay.value} min reipasta ja rasittavaa
       (Liikkuva varhaiskasvatus) – kaksi kolmasosaa koko päivän 3 h / 1 h -suosituksesta.
-      {mvpa !== undefined && ` Tällä arviolla ${weekday} min, josta reipasta ja rasittavaa ${mvpa} min${ok ? ' ✓' : ''}.`}
+      {mvpa !== undefined && ` Tällä arviolla ${weekday} min, josta reipasta ja rasittavaa ${mvpa} min${ok ? ', tavoite täyttyy' : ''}.`}
     </p>
   );
 }

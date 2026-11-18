@@ -11,7 +11,7 @@ import type { FixtureEntry } from '../../db/repositories';
 import { Button, Card } from '../../ui/components';
 import { ToggleChip } from '../../ui/controls';
 import { dayLabel, formatDate } from '../../ui/format';
-import { IconChevronLeft, IconChevronRight, IconPlus } from '../../ui/icons';
+import { IconChevronLeft, IconChevronRight, IconOverlap, IconPlus, IconWarning } from '../../ui/icons';
 import { useStoredFlag } from '../../ui/storedPref';
 import type { FixtureKind } from './FixtureSheet';
 import { useCalendarEvents } from './useCalendarEvents';
@@ -223,8 +223,14 @@ export function MonthCalendar({
           <span className="inline-flex items-center gap-1">
             <span className="size-2.5 rounded-full bg-amber-50 ring-1 ring-amber-200" /> tulos puuttuu
           </span>
-          <span>⚠ tietoja puuttuu</span>
-          {family && <span className="font-semibold text-red-700">‼ päällekkäin</span>}
+          <span className="inline-flex items-center gap-1">
+            <IconWarning size="0.8rem" className="text-amber-700" /> tietoja puuttuu
+          </span>
+          {family && (
+            <span className="inline-flex items-center gap-1 font-semibold text-red-700">
+              <IconOverlap size="0.85rem" /> päällekkäin
+            </span>
+          )}
           <span className="sm:hidden">· pyyhkäise vaihtaaksesi kuukautta</span>
         </div>
       </div>
@@ -234,7 +240,9 @@ export function MonthCalendar({
           <h3 className="text-sm font-semibold text-slate-900">{formatDate(selected, 'cccc d.M.yyyy').replace(/^./, (c) => c.toUpperCase())}</h3>
           {dayClashes.length > 0 && (
             <div className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-900 ring-1 ring-red-200" role="status">
-              <div className="font-semibold">‼ Päällekkäin</div>
+              <div className="flex items-center gap-1.5 font-semibold">
+                <IconOverlap size="1rem" /> Päällekkäin
+              </div>
               <ul className="mt-0.5 space-y-0.5 text-xs">
                 {dayClashes.map(([a, b]) => (
                   <li key={`${a.key}-${b.key}`}>
@@ -267,8 +275,8 @@ export function MonthCalendar({
                         {e.result && <span className={`rounded-full px-2 py-0.5 text-xs font-bold ring-1 ${chipClass(e)}`}>{e.result}</span>}
                         {STATE_NOTE[e.state] && <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${chipClass(e)}`}>{STATE_NOTE[e.state]}</span>}
                         {e.infoMissing && (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900 ring-1 ring-amber-200" title={e.missingNote}>
-                            ⚠ Tietoja puuttuu
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900 ring-1 ring-amber-200" title={e.missingNote}>
+                            <IconWarning size="0.8rem" /> Tietoja puuttuu
                           </span>
                         )}
                       </span>
@@ -363,12 +371,12 @@ function DayCell({
         <span className="flex items-center gap-0.5">
           {games > 0 && events.some((e) => e.infoMissing) && (
             <span className={`text-[11px] text-amber-700 ${clash ? 'hidden sm:inline' : ''}`} aria-hidden title="Tietoja puuttuu">
-              ⚠
+              <IconWarning size="0.75rem" />
             </span>
           )}
           {clash && (
             <span className="text-[11px] font-bold text-red-700" aria-hidden title="Päällekkäin">
-              ‼
+              <IconOverlap size="0.8rem" strokeWidth={2.25} />
             </span>
           )}
         </span>
@@ -397,7 +405,8 @@ function DayCell({
               className={`press block w-full truncate rounded-md px-1 py-0.5 text-left text-[11px] font-medium leading-tight ring-1 ${chipClass(e)}`}
               style={colorOf(e) ? { borderLeft: `3px solid ${colorOf(e)}` } : undefined}
             >
-              <span aria-hidden>{KIND_ICON[e.kind]}</span> {e.infoMissing && '⚠ '}
+              <span aria-hidden>{KIND_ICON[e.kind]}</span>{' '}
+              {e.infoMissing && <IconWarning size="0.7rem" className="mr-0.5 inline-block align-[-1px] text-amber-700" />}
               {chipText(e)}
             </button>
           ) : (

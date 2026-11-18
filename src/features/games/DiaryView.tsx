@@ -411,7 +411,7 @@ function DiaryEntry({ s, t, d, self, onDetails }: { s: Session; t?: ActivityType
               {s.note && <p className="mt-1 text-xs italic text-slate-500">Muistiinpano: {s.note}</p>}
               <div className="mt-2 flex flex-wrap gap-2">
                 <button type="button" className="min-h-9 rounded-lg px-2 text-sm font-medium text-green-800 hover:bg-green-50" onClick={() => setEditing(true)}>
-                  {d?.ratingNote ? '✎ Muokkaa kommenttia' : '+ Kommentti'}
+                  {d?.ratingNote ? 'Muokkaa kommenttia' : 'Lisää kommentti'}
                 </button>
                 <button type="button" className="min-h-9 rounded-lg px-2 text-sm text-slate-600 hover:bg-slate-50" onClick={onDetails}>
                   Lisätiedot

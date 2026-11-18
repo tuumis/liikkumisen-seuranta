@@ -100,7 +100,7 @@ export function PlanSheet({
 
         {!future && plan.status !== 'done' && (
           <div className="space-y-2">
-            <div className="text-sm font-medium text-slate-700">✓ Tehty – kesto</div>
+            <div className="text-sm font-medium text-slate-700">Tehty, kesto</div>
             <div className="grid grid-cols-4 gap-2">
               {durationChoices(plan.durationMin).map((m) => (
                 <button
@@ -136,7 +136,7 @@ export function PlanSheet({
           <div className="card-sunk p-3">
             {!editing ? (
               <button type="button" className="w-full text-left text-sm font-medium text-green-800" onClick={() => setEditing(true)}>
-                ✎ Muuta tätä suunnitelmaa (kesto, kellonaika)
+                Muuta tätä suunnitelmaa (kesto, kellonaika)
               </button>
             ) : (
               <form
@@ -174,7 +174,7 @@ export function PlanSheet({
 
         {plan.status === 'open' ? (
           <div>
-            <div className="mb-1 text-sm font-medium text-slate-700">✗ Ei tehty – syy (valinnainen)</div>
+            <div className="mb-1 text-sm font-medium text-slate-700">Ei tehty, syy (valinnainen)</div>
             <SkipReasons onPick={(r) => void run(() => actions.skip(plan, r))()} />
             {future && <p className="mt-1 text-xs text-slate-500">Tuleva kerta kuitataan tehdyksi sen päivänä tai myöhemmin; peruuntumisen voi merkitä jo nyt.</p>}
           </div>
