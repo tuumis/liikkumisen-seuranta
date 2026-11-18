@@ -21,7 +21,7 @@ import { TermInfo } from '../../ui/glossary';
 import { intensityNoteText } from '../week/IntensityPicker';
 import { TypeGlyph } from '../../ui/TypeGlyph';
 import { PhotoPicker } from '../../ui/Avatar';
-import { IconCheck, IconPencil } from '../../ui/icons';
+import { IconCheck, IconPencil, IconPlus } from '../../ui/icons';
 
 const STRENGTH_OPTIONS: { value: StrengthDefault; label: string }[] = [
   { value: 'yes', label: 'Esivalittu' },
@@ -60,7 +60,7 @@ export function ActivityTypesSection() {
       <p className="mt-2 text-xs text-slate-500">Jokaisen lajin kohdalla on lyhyt perustelu sen oletusjaolle.</p>
       <div className="mt-3">
         <Button variant="secondary" onClick={() => setEditing('new')}>
-          + Uusi laji
+          <IconPlus size="1rem" /> Uusi laji
         </Button>
       </div>
       {open && (

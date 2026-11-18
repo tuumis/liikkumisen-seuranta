@@ -18,7 +18,7 @@ import { useFootballStatus, withoutClubFootball } from '../football/useFootballE
 import { DateInput } from '../../ui/DateInput';
 import { isClubTraining, trainingSelfText } from '../../domain/football';
 import { parseSelfMin, TrainingSelfBackfill, TrainingSelfFields } from '../football/TrainingSelf';
-import { IconClose, IconPencil } from '../../ui/icons';
+import { IconClose, IconPencil, IconPlus } from '../../ui/icons';
 
 const WEEKDAYS: { value: Weekday; label: string }[] = [
   { value: 1, label: 'Ma' },
@@ -66,7 +66,7 @@ export function TemplateSection({ profile }: { profile: Profile }) {
       title={`Viikkorytmi · ${profile.name}`}
       action={
         <Button variant="ghost" onClick={() => setEditing('new')}>
-          + Lisää
+          <IconPlus size="1rem" /> Lisää
         </Button>
       }
     >
@@ -178,7 +178,7 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
           ? `${item ? 'Pohja päivitetty' : 'Rivi lisätty'} – ${added} mennyttä kertaa lisätty kuitattavaksi (Viikko → Käy viikko läpi)`
           : item
             ? 'Pohja päivitetty – muutos koskee tulevia avoimia kertoja'
-            : 'Rivi lisätty viikkopohjaan',
+            : 'Rivi lisätty viikkorytmiin',
         undefined,
         'success',
       );

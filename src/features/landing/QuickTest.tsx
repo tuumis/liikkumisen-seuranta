@@ -421,7 +421,7 @@ function Result({ r, invite, onRestart }: { r: QuickResult; invite: ReactNode; o
 
         <p className="mt-5 text-xs leading-snug text-slate-500">
           Karkea arvio vastaustesi perusteella, ei mittaus. Muistinvarainen arvio menee helposti yläkanttiin.{' '}
-          {school ? 'Koulun liikuntatunneiksi oletetaan 2 × 45 min viikossa. ' : ''}Lajien teho on ohjelman oma arvio. Suositus: {source}.
+          {school ? 'Koulun liikuntatunneiksi oletetaan 2 × 45 min viikossa. ' : ''}Lajien teho on sovelluksen oma arvio. Suositus: {source}.
         </p>
         <button type="button" onClick={onRestart} className="mt-3 text-sm font-semibold text-green-800 underline underline-offset-2">
           Tee testi uudelleen
@@ -432,10 +432,10 @@ function Result({ r, invite, onRestart }: { r: QuickResult; invite: ReactNode; o
         <div className="relative z-10">
           <h3 className="font-display text-2xl font-semibold leading-tight sm:text-3xl">Näe todellinen viikko</h3>
           <p className="mt-3 text-[15px] leading-relaxed text-[var(--hero-ink-soft)]">
-            Arvio perustuu muistiin. Ohjelmassa kirjaat kerrat ja näet joka viikko, miten suositus oikeasti täyttyy ja mikä liikunta sitä kerryttää.
+            Arvio perustuu muistiin. Sovelluksessa kirjaat kerrat ja näet joka viikko, miten suositus oikeasti täyttyy ja mikä liikunta sitä kerryttää.
           </p>
           <p className="mt-3 flex gap-2 text-sm text-[var(--hero-ink)]">
-            Vastauksesi tulevat valmiiksi ohjelman aloitukseen: ikä, harrastukset ja arkiliikunta.
+            Vastauksesi tulevat valmiiksi sovelluksen aloitukseen: ikä, harrastukset ja arkiliikunta.
           </p>
           <div className="mt-5">{invite}</div>
         </div>

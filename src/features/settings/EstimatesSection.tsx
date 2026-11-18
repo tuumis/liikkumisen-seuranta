@@ -19,7 +19,7 @@ import { CATEGORY_LABEL, pct } from '../../ui/labels';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { DateInput } from '../../ui/DateInput';
-import { IconPencil } from '../../ui/icons';
+import { IconPencil, IconPlus } from '../../ui/icons';
 
 const minutesField = z.coerce.number().int().min(0, 'Vähintään 0').max(600, 'Enintään 600');
 
@@ -93,12 +93,12 @@ export function EstimatesSection({ profile }: { profile: Profile }) {
       <div className="mt-3 flex flex-wrap gap-2">
         {suggestions.map((s) => (
           <Button key={s.category} variant="secondary" onClick={() => setDraft({ category: s.category, label: s.label, weekdayMin: s.weekdayMin })}>
-            + {s.label}
+            <IconPlus size="1rem" /> {s.label}
           </Button>
         ))}
         {freeCategories.length > 0 && (
           <Button variant="ghost" onClick={() => setDraft({ category: freeCategories[0], label: '' })}>
-            + Muu kategoria
+            <IconPlus size="1rem" /> Muu kategoria
           </Button>
         )}
       </div>

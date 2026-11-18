@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.6',
+    date: '18.11.2026',
+    items: ['Yhtenäisemmät tekstit: sovellus ja viikkorytmi kaikkialla, Lisätiedot-painike ja samanlaiset lisäyspainikkeet.'],
+  },
+  {
     version: '1.1.5',
     date: '18.11.2026',
     items: ['Alkusivun esittelyteksti uudistettu.'],
@@ -16,7 +21,7 @@ export const CHANGELOG: Release[] = [
   {
     version: '1.1.4',
     date: '18.11.2026',
-    items: ['Alkusivun otsikko ja esittely kertovat selkeämmin, mitä ohjelma tekee.', 'Alkusivun kuvaesittely vaihtuu nopeammin.'],
+    items: ['Alkusivun otsikko ja esittely kertovat selkeämmin, mitä sovellus tekee.', 'Alkusivun kuvaesittely vaihtuu nopeammin.'],
   },
   {
     version: '1.1.3',
@@ -53,7 +58,7 @@ export const CHANGELOG: Release[] = [
     items: [
       'Ensimmäinen virallinen versio.',
       'Alkusivulla pikatesti, jonka vastaukset täyttävät aloituksen valmiiksi.',
-      'Yhtenäiset ikonit koko ohjelmassa.',
+      'Yhtenäiset ikonit koko sovelluksessa.',
       'Tietosuojaseloste ja versiotiedot Ohjeessa.',
     ],
   },

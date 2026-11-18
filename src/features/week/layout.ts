@@ -10,7 +10,7 @@ export const WEEK_CARDS: CardDef<WeekCardId>[] = [
   { id: 'rhythm', title: 'Viikon rytmi', text: 'Rasittavat sekä lihaksia ja luustoa vahvistavat päivät' },
   { id: 'gauge', title: 'Liikuntaa viikossa', text: 'Kokonaismäärä tunteina luokiteltuna (kouluikäiset)', side: true },
   { id: 'hours', title: 'Viikon liikuntatunnit', text: 'Toteutunut ja arvio koko viikolle', side: true },
-  { id: 'hoursDetail', title: 'Tunnit päivittäin ja lajeittain', text: 'Erittely: toteuma ja arvio päivittäin, lajit ja viikkopohja', side: true },
+  { id: 'hoursDetail', title: 'Tunnit päivittäin ja lajeittain', text: 'Erittely: toteuma ja arvio päivittäin, lajit ja viikkorytmi', side: true },
   { id: 'upcoming', title: 'Tulevat kerrat', text: 'Seuraavat suunnitellut kerrat ja pelit', side: true },
   { id: 'days', title: 'Päivät', text: 'Viikon päivät kirjauksineen', locked: true },
   { id: 'recent', title: 'Viimeisimmät kirjaukset', text: 'Viisi viimeksi kirjattua kertaa', side: true },

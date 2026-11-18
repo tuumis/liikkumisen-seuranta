@@ -13,6 +13,7 @@ import { formatDate } from '../../ui/format';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { DateInput } from '../../ui/DateInput';
+import { IconPlus } from '../../ui/icons';
 
 const range = (h: Holiday) =>
   h.start === h.end ? formatDate(h.start, 'EEEEEE d.M.yyyy') : `${formatDate(h.start, 'd.M.')}–${formatDate(h.end, 'd.M.yyyy')}`;
@@ -91,7 +92,7 @@ export function HolidaysSection({ profile }: { profile: Profile }) {
         <p className="mt-3 rounded-2xl bg-[var(--surface-sunk)] p-3 text-sm text-slate-600">Ei lomajaksoja. Lisää esim. syys- tai joululoma, niin arvio ei oleta välitunteja lomalle.</p>
       )}
       <Button variant="secondary" className="mt-3" onClick={() => setDraft({ id: newId(), label: '', start: today, end: today })}>
-        + Lisää lomajakso
+        <IconPlus size="1rem" /> Lisää lomajakso
       </Button>
       {profiles.length > 1 && <p className="mt-2 text-xs text-slate-500">Jakso koskee oletuksena kaikkia profiileja; voit rajata sen esim. vain profiiliin {profile.name}.</p>}
     </Card>

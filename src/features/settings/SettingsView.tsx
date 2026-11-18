@@ -5,7 +5,7 @@ import type { Profile } from '../../domain/types';
 import { repo, type DeviceRole } from '../../db/repositories';
 import { requestPersistentStorage } from '../../db/storage';
 import { Avatar } from '../../ui/Avatar';
-import { IconChevronLeft, IconChevronRight, IconContrast, IconDevices, IconLock, IconRepeat, IconSun, IconTarget, IconUser } from '../../ui/icons';
+import { IconChevronLeft, IconChevronRight, IconContrast, IconDevices, IconLock, IconRepeat, IconSun, IconTarget, IconUser, IconPlus } from '../../ui/icons';
 import { Button, Card, EmptyState } from '../../ui/components';
 import { useToast } from '../../ui/Toast';
 import { GROUP_LABEL, MONTHS } from '../../ui/labels';
@@ -177,7 +177,7 @@ function ProfilesSection({ onProfileCreated }: { onProfileCreated: (id: string) 
       title="Profiilit"
       action={
         <Button variant="ghost" onClick={() => setEditing('new')}>
-          + Lisää
+          <IconPlus size="1rem" /> Lisää
         </Button>
       }
     >

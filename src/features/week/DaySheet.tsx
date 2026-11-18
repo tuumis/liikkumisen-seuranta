@@ -7,6 +7,7 @@ import { dayLabel } from '../../ui/format';
 import { Sheet } from '../../ui/Sheet';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
+import { IconPlus } from '../../ui/icons';
 
 export const FLAG_LABEL: Record<DayFlagReason, string> = {
   sick: 'Sairas',
@@ -64,12 +65,12 @@ export function DaySheet({
         <div className="space-y-2">
           {date <= today && (
             <Button className="w-full" onClick={() => onAdd(date)}>
-              + Lisää kerta tälle päivälle
+              <IconPlus size="1.1rem" /> Lisää kerta tälle päivälle
             </Button>
           )}
           {date > today && onPlan && (
             <Button className="w-full" onClick={() => onPlan(date)}>
-              + Suunnittele kerta tälle päivälle
+              <IconPlus size="1rem" /> Suunnittele kerta tälle päivälle
             </Button>
           )}
           {(Object.keys(FLAG_ACTION) as DayFlagReason[])

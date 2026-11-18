@@ -464,7 +464,7 @@ function TeamsView({ profile }: { profile: Profile }) {
       title={`Omat joukkueet · ${profile.name}`}
       action={
         <Button variant="ghost" onClick={() => open('new')}>
-          + Lisää
+          <IconPlus size="1rem" /> Lisää
         </Button>
       }
     >

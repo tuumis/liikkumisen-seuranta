@@ -6,6 +6,7 @@ import { supportsParts } from '../../domain/intensity';
 import type { ActivityType, SessionPart } from '../../domain/types';
 import { inputClass } from '../../ui/components';
 import { TypeGlyph } from '../../ui/TypeGlyph';
+import { IconPlus } from '../../ui/icons';
 
 export interface PartDraft {
   key: string;
@@ -103,7 +104,7 @@ export function PartsEditor({
             onClick={() => onChange([...drafts, newPartDraft(t.id)])}
             className="press inline-flex min-h-9 items-center gap-1 rounded-full bg-[var(--surface-raised)] px-3 text-xs font-semibold text-slate-800 ring-1 ring-slate-200 hover:bg-slate-50"
           >
-            + <TypeGlyph t={t} /> {t.name}
+            <IconPlus size="0.85rem" /> <TypeGlyph t={t} /> {t.name}
           </button>
         ))}
         {types.length > 0 && (
@@ -112,7 +113,7 @@ export function PartsEditor({
             onClick={() => onChange([...drafts, newPartDraft((quick[0] ?? types[0]).id)])}
             className="press inline-flex min-h-9 items-center rounded-full px-3 text-xs font-semibold text-green-800 hover:bg-[var(--surface-raised)]"
           >
-            + Muu tekeminen
+            <IconPlus size="0.85rem" /> Muu tekeminen
           </button>
         )}
       </div>

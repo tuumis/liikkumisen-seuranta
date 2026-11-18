@@ -166,7 +166,7 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
           flip
           kicker="Analyysi"
           title="Arvio perustuu lajin tehoon, ei pelkkään kestoon"
-          text="Puolentoista tunnin treenistä vain osa on reipasta liikuntaa. Ohjelma arvioi jokaisen kerran tehon lajin tyypillisen profiilin perusteella ja näyttää, miten viikko, kuukausi ja kausi vertautuvat suositukseen."
+          text="Puolentoista tunnin treenistä vain osa on reipasta liikuntaa. Sovellus arvioi jokaisen kerran tehon lajin tyypillisen profiilin perusteella ja näyttää, miten viikko, kuukausi ja kausi vertautuvat suositukseen."
           points={['Kouluikäisillä 60 minuuttia reipasta ja rasittavaa liikuntaa päivässä', 'Alle kouluikäisillä kolme tuntia liikkumista päivässä', 'Raportti kaudesta PDF-tiedostona']}
         >
           <Shot name="pc-analysis" onZoom={setZoom} className="lp-pc" />
@@ -189,9 +189,9 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
           <div className="lp-wrap">
           <figure className="lp-reveal mx-auto max-w-[712px]">
             <blockquote className="font-display text-[clamp(18px,1.75vw,21px)] font-normal italic leading-[1.55] text-[var(--lp-ink-2)]">
-              Minulta kysyttiin kerran, paljonko lapseni liikkuu viikossa, enkä osannut vastata tarkasti. Samalla tajusin, että halusin tietää muutakin: paljonko aikaa jalkapalloon oikeasti kuluu ja mitä treeneissä on tehty. Turnaukset ja ottelut piti saada yhteen selkeään paikkaan ja niiden tulokset talteen, vähän kuin oma tulospalvelu lapseni peleille. Niistä tarpeista syntyi tämä ohjelma.
+              Minulta kysyttiin kerran, paljonko lapseni liikkuu viikossa, enkä osannut vastata tarkasti. Samalla tajusin, että halusin tietää muutakin: paljonko aikaa jalkapalloon oikeasti kuluu ja mitä treeneissä on tehty. Turnaukset ja ottelut piti saada yhteen selkeään paikkaan ja niiden tulokset talteen, vähän kuin oma tulospalvelu lapseni peleille. Niistä tarpeista syntyi tämä sovellus.
             </blockquote>
-            <figcaption className="mt-[18px] text-[15px] text-[var(--lp-ink-3)]">Tuomas, ohjelman tekijä</figcaption>
+            <figcaption className="mt-[18px] text-[15px] text-[var(--lp-ink-3)]">Tuomas, sovelluksen tekijä</figcaption>
           </figure>
           </div>
         </Reveal>
@@ -346,7 +346,7 @@ function Showcase({ onZoom }: { onZoom: (n: ShotName) => void }) {
       className={`w-full min-[900px]:ml-auto min-[900px]:max-w-[620px] ${paused ? 'lp-paused' : ''}`}
       role="region"
       aria-roledescription="esittely"
-      aria-label="Kuvia ohjelmasta"
+      aria-label="Kuvia sovelluksesta"
       onPointerEnter={(e) => e.pointerType === 'mouse' && setHover(true)}
       onPointerLeave={() => setHover(false)}
       // Näppäimistöllä kohdistettu esittely pysähtyy; hiiren napautus ei pysäytä pysyvästi.
@@ -553,7 +553,7 @@ function InviteForm({
           aria-describedby={error ? ids('invite-error') : ids('invite-help')}
         />
         <button type="submit" disabled={busy} className={`lp-btn h-12 shrink-0 px-5 disabled:opacity-70 ${dark ? 'lp-btn-accent' : 'lp-btn-dark'}`}>
-          {busy ? 'Hetki…' : dark ? 'Avaa' : 'Avaa ohjelma'}
+          {busy ? 'Hetki…' : dark ? 'Avaa' : 'Avaa sovellus'}
         </button>
       </div>
       {error ? (
@@ -562,7 +562,7 @@ function InviteForm({
         </p>
       ) : (
         <p id={ids('invite-help')} className={`mt-3 text-sm ${dark ? 'text-[var(--hero-ink-soft)]' : 'text-[var(--lp-ink-3)]'}`}>
-          {dark ? 'Ei koodia? Pyydä kutsu: ' : 'Ohjelma on toistaiseksi kutsupohjainen. Pyydä kutsu: '}
+          {dark ? 'Ei koodia? Pyydä kutsu: ' : 'Sovellus on toistaiseksi kutsupohjainen. Pyydä kutsu: '}
           {link}
         </p>
       )}

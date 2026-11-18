@@ -143,7 +143,7 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
             <StepNav onNext={() => setStep(3)} />
           </>
         ) : (
-          <Skipped text="Viikkopohja lisätään profiilille. Voit tehdä sen myöhemmin Asetuksissa." onNext={() => setStep(3)} />
+          <Skipped text="Viikkorytmi lisätään profiilille. Voit tehdä sen myöhemmin Asetuksissa." onNext={() => setStep(3)} />
         ))}
 
       {step === 3 &&
@@ -226,7 +226,7 @@ function Welcome({ onStart, onImport, onSkip, error, fromQuiz }: { onStart: () =
             Tiedot pysyvät sinulla
           </h2>
           <p className="mt-3 leading-relaxed text-[var(--lp-ink-2)]">
-            Ei tiliä eikä palvelinta: tiedot ovat vain tämän laitteen selaimessa, eikä ohjelma lähetä niitä minnekään. Ne katoavat, jos selaimen tiedot tyhjennetään tai laite vaihtuu,
+            Ei tiliä eikä palvelinta: tiedot ovat vain tämän laitteen selaimessa, eikä sovellus lähetä niitä minnekään. Ne katoavat, jos selaimen tiedot tyhjennetään tai laite vaihtuu,
             joten tee varmuuskopio.
           </p>
           <ol className="mt-5 border-t border-[var(--lp-line)] text-[15px] leading-snug text-[var(--lp-ink-2)]" aria-label="Varmuuskopion teko">

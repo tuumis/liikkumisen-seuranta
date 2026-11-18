@@ -294,9 +294,9 @@ export function DayRow({
                   <button
                     type="button"
                     onClick={() => onFootball(s)}
-                    className="press min-h-9 shrink-0 rounded-full bg-amber-100 px-3 text-xs font-bold text-amber-900 hover:bg-amber-200 dark:hover:bg-amber-900"
+                    className="press inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full bg-amber-100 px-3 text-xs font-bold text-amber-900 hover:bg-amber-200 dark:hover:bg-amber-900"
                   >
-                    + tiedot
+                    <IconPlus size="0.85rem" /> Lisätiedot
                   </button>
                 )}
               </li>

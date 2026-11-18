@@ -16,6 +16,7 @@ import { useToast } from '../../ui/Toast';
 import { logoFor, TeamLogo, useClubLogos } from '../../ui/TeamLogo';
 import { GoalStepper, PlayedChips } from '../football/FootballPanel';
 import { historyLine, useGameRows } from './OpponentHistory';
+import { IconPlus } from '../../ui/icons';
 
 const TOURNAMENT = 't:football_tournament';
 const PLAYED_TEXT: Record<PlayedState, string> = { none: 'ei pelannut', part: 'osan', full: 'koko pelin' };
@@ -129,8 +130,8 @@ function TournamentEntry({ entry, profile, today }: { entry: Entry; profile: Pro
       <button type="button" onClick={() => {
         setExtra((x) => x + 1);
         setOpen(games.length);
-      }} className="mt-2 min-h-10 rounded-xl px-2 text-sm font-semibold text-green-800 hover:bg-green-50">
-        + Lisää peli
+      }} className="inline-flex items-center gap-1 mt-2 min-h-10 rounded-xl px-2 text-sm font-semibold text-green-800 hover:bg-green-50">
+        <IconPlus size="1rem" /> Lisää peli
       </button>
     </section>
   );

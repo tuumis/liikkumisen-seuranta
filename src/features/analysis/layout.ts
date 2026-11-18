@@ -16,7 +16,7 @@ export const ANALYSIS_CARDS: CardDef<AnalysisCardId>[] = [
   { id: 'football', title: 'Jalkapallo', text: 'Treenit, pelit, peliaika ja tulokset' },
   { id: 'highlights', title: 'Kohokohdat', text: 'Kommentit ja yleisarvio treeneistä ja peleistä' },
   { id: 'hours', title: 'Viikon liikuntatunnit', text: 'Toteutunut ja arvio koko viikolle' },
-  { id: 'hoursDetail', title: 'Tunnit päivittäin ja lajeittain', text: 'Toteuma ja arvio päivittäin, lajit ja viikkopohja' },
+  { id: 'hoursDetail', title: 'Tunnit päivittäin ja lajeittain', text: 'Toteuma ja arvio päivittäin, lajit ja viikkorytmi' },
   { id: 'gauge', title: 'Liikuntaa viikossa', text: 'Kokonaismäärä tunteina luokiteltuna (kouluikäiset)' },
   { id: 'heatmap', title: 'Aktiivisuuskartta', text: 'Vuoden päivät ruudukkona. Koko leveys' },
   { id: 'quality', title: 'Datan laatu', text: 'Vertailtavat päivät, kattavuus ja arvion osuus' },

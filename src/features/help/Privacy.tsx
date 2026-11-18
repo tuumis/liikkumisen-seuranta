@@ -10,11 +10,11 @@ const SECTIONS: { h: string; p: string[] }[] = [
   {
     h: 'Lyhyesti',
     p: [
-      'Ohjelma ei kerää, lähetä eikä tallenna tietojasi palvelimelle. Kaikki, mitä syötät, tallentuu vain käyttämäsi laitteen selaimeen. Tekijä ei näe tietojasi eikä pääse niihin käsiksi.',
+      'Sovellus ei kerää, lähetä eikä tallenna tietojasi palvelimelle. Kaikki, mitä syötät, tallentuu vain käyttämäsi laitteen selaimeen. Tekijä ei näe tietojasi eikä pääse niihin käsiksi.',
     ],
   },
   {
-    h: 'Mitä ohjelmaan tallennetaan',
+    h: 'Mitä sovellukseen tallennetaan',
     p: [
       'Syötät tiedot itse: profiilien nimet tai kutsumanimet, syntymävuosi ja koulun aloitus, liikuntakerrat ja arkiliikunnan arviot, jalkapallon pelit, tulokset ja päiväkirja sekä itse lisäämäsi kuvat. Asetukset, kuten teema, tallentuvat selaimen paikalliseen tallennustilaan.',
     ],
@@ -22,13 +22,13 @@ const SECTIONS: { h: string; p: string[] }[] = [
   {
     h: 'Synkronointi ja varmuuskopiot',
     p: [
-      'Jos otat synkronoinnin käyttöön, ohjelma kirjoittaa tiedoston valitsemaasi kansioon, esimerkiksi OneDriveen tai iCloud Driveen. Tiedostoa säilyttää valitsemasi palvelu omien ehtojensa mukaan. Varmuuskopio tallentuu sinne, minne sen itse tallennat.',
+      'Jos otat synkronoinnin käyttöön, sovellus kirjoittaa tiedoston valitsemaasi kansioon, esimerkiksi OneDriveen tai iCloud Driveen. Tiedostoa säilyttää valitsemasi palvelu omien ehtojensa mukaan. Varmuuskopio tallentuu sinne, minne sen itse tallennat.',
     ],
   },
   {
     h: 'Verkkoliikenne',
     p: [
-      'Ohjelma ladataan GitHub Pages -palvelusta. Kuten verkkopalvelimet yleensä, GitHub voi kirjata sivun latauksesta teknisiä tietoja, kuten IP-osoitteen. Ohjelma ei tee muita verkkopyyntöjä, eikä siinä ole analytiikkaa, mainoksia tai evästeitä.',
+      'Sovellus ladataan GitHub Pages -palvelusta. Kuten verkkopalvelimet yleensä, GitHub voi kirjata sivun latauksesta teknisiä tietoja, kuten IP-osoitteen. Sovellus ei tee muita verkkopyyntöjä, eikä siinä ole analytiikkaa, mainoksia tai evästeitä.',
       'Itse avaamasi linkit, kuten suositusten lähteet tai logon haku, avautuvat kyseiseen palveluun. Jakaminen tapahtuu laitteesi jakotoiminnolla siihen sovellukseen, jonka valitset.',
     ],
   },

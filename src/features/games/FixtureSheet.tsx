@@ -20,7 +20,7 @@ import { today as todayFn } from '../../ui/today';
 import { TeamNameFields, useTeamNameSuggestions } from './TeamNameFields';
 import { OpponentHistoryCard } from './OpponentHistory';
 import { DateInput } from '../../ui/DateInput';
-import { IconClose } from '../../ui/icons';
+import { IconClose, IconPlus } from '../../ui/icons';
 
 export type FixtureKind = 'game' | 'tournament' | 'friendly';
 
@@ -337,7 +337,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
             ))}
             <HomeAwayChips value={homeAway} onChange={setHomeAway} label="Koti- vai vieraspeli" />
             <Button variant="ghost" onClick={() => setOpponents((cur) => [...cur, ''])}>
-              + vastustaja
+              <IconPlus size="1rem" /> vastustaja
             </Button>
             <p className="text-xs text-slate-500">Esim. pelitälli kahta joukkuetta vastaan. Tulokset kirjataan halutessa pelin jälkeen; ne eivät tule V–T–H-tilastoon.</p>
           </div>
@@ -400,7 +400,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
                   })
                 }
               >
-                + ottelu
+                <IconPlus size="1rem" /> ottelu
               </Button>
             </div>
             <p className="mt-0.5 text-xs text-slate-500">Valinnainen. Pelit näkyvät valmiina, kun turnaus kuitataan: lisää vain tulokset ja kommentit.</p>

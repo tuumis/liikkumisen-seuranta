@@ -20,7 +20,7 @@ import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { useFootball } from '../football/useFootball';
 import { TeamNameFields, useTeamNameSuggestions } from './TeamNameFields';
-import { IconChevronRight, IconClose } from '../../ui/icons';
+import { IconChevronRight, IconClose, IconPlus } from '../../ui/icons';
 
 const OUTCOME_CLASS: Record<GameOutcome, string> = {
   W: 'bg-green-700 text-white',
@@ -132,7 +132,7 @@ export function OpponentLibrary({ profile }: { profile: Profile }) {
         </form>
       ) : (
         <Button variant="secondary" className="mb-3" onClick={() => setAdding(true)}>
-          + Lisää vastustaja
+          <IconPlus size="1rem" /> Lisää vastustaja
         </Button>
       )}
       {missing.length > 0 && (

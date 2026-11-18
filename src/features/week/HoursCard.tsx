@@ -100,7 +100,7 @@ export function HoursCard({ report, isCurrentWeek }: { report: PeriodReport; isC
       </div>
       <Collapse open={open}>
         {empty ? (
-          <p className="mt-2 text-sm text-slate-600">Ei vielä arviota eikä kirjauksia. Lisää viikkopohja ja arkiliikunta Asetuksissa, niin arvio näkyy tässä.</p>
+          <p className="mt-2 text-sm text-slate-600">Ei vielä arviota eikä kirjauksia. Lisää viikkorytmi ja arkiliikunta Asetuksissa, niin arvio näkyy tässä.</p>
         ) : (
           <>
             {/* Pääluvut: toteutunut ja arvio koko viikolle. */}
@@ -325,7 +325,7 @@ export function HoursDetailCard({ report, isCurrentWeek }: { report: PeriodRepor
             <div className="mt-3 space-y-0.5 border-t border-slate-100 pt-3 text-xs text-slate-500">
               {h.expectedMin > 0 && (
                 <p>
-                  Viikkopohjan suunnitelma ja arkiliikunta: {formatHours(h.expectedMin)}
+                  Viikkorytmin suunnitelma ja arkiliikunta: {formatHours(h.expectedMin)}
                   {isCurrentWeek && h.expectedToDateMin > 0 && h.expectedToDateMin < h.expectedMin && ` (tähän mennessä ${formatHours(h.expectedToDateMin)})`}.
                 </p>
               )}

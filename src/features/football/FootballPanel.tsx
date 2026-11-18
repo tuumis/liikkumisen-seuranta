@@ -19,6 +19,7 @@ import { Sheet } from '../../ui/Sheet';
 import { useToast } from '../../ui/Toast';
 import { TeamNameFields, useTeamNameSuggestions } from '../games/TeamNameFields';
 import { openResultShare } from '../share/ResultShare';
+import { IconPlus } from '../../ui/icons';
 
 const PLAYED_PICKS = [10, 15, 20, 30, 40, 50, 60];
 
@@ -509,7 +510,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
               </div>
             ))}
             <Button variant="secondary" className="w-full" onClick={() => setGames((cur) => [...cur, { opponent: '', goalsFor: '', goalsAgainst: '', playedMin: '', played: '', playerGoals: '', note: '' }])}>
-              + vastustaja
+              <IconPlus size="1rem" /> vastustaja
             </Button>
             {games.length === 0 && (
               <div>
@@ -616,7 +617,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
               </div>
             ))}
             <Button variant="secondary" className="w-full" onClick={() => setGames((cur) => [...cur, { opponent: '', goalsFor: '', goalsAgainst: '', playedMin: '', played: '', playerGoals: '', note: '' }])}>
-              + peli
+              <IconPlus size="1rem" /> peli
             </Button>
             {games.length > 0 && (
               <p className="text-xs text-slate-500">

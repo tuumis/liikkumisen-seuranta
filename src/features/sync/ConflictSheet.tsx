@@ -12,7 +12,7 @@ const TABLE_LABEL: Record<string, string> = {
   profiles: 'Profiili',
   activityTypes: 'Liikkumismuoto',
   estimates: 'Perusarvio',
-  templateItems: 'Viikkopohjan rivi',
+  templateItems: 'Viikkorytmin rivi',
   plannedSessions: 'Suunnitelma',
   sessions: 'Kerta',
   footballDetails: 'Jalkapallon lisätiedot',

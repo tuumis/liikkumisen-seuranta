@@ -155,7 +155,7 @@ export function PlanSheet({
                   </Field>
                 </div>
                 <p className="text-xs text-slate-500">
-                  Muutos koskee vain tätä kertaa{plan.templateItemId ? '; viikkopohja ja muut viikot pysyvät ennallaan' : ''}.
+                  Muutos koskee vain tätä kertaa{plan.templateItemId ? '; viikkorytmi ja muut viikot pysyvät ennallaan' : ''}.
                 </p>
                 <div className="flex gap-2">
                   <Button type="submit" className="flex-1">
@@ -188,7 +188,7 @@ export function PlanSheet({
           <div className="border-t border-slate-200 pt-4">
             {confirmDelete && (
               <p className="mb-2 text-sm text-slate-700">
-                Poistetaanko tämä kerta kokonaan? Se ei näy viikolla eikä suunnitelman toteutumassa{plan.templateItemId ? '. Viikkopohja ja muut viikot pysyvät ennallaan' : ''}.
+                Poistetaanko tämä kerta kokonaan? Se ei näy viikolla eikä suunnitelman toteutumassa{plan.templateItemId ? '. Viikkorytmi ja muut viikot pysyvät ennallaan' : ''}.
               </p>
             )}
             <div className="flex gap-2">
