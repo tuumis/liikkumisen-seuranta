@@ -58,8 +58,8 @@ interface Scene {
 
 // Esittelyn kohtaukset; merkinnät vastaavat kuvien esimerkkitietoja.
 const SCENES: Scene[] = [
+  { phone: 'phone-add', pc: 'pc-week', title: 'Liikuntakerta sekunneissa', text: 'Viikon harrastukset ovat valmiina kuitattaviksi. Muut kerrat: valitse laji ja kesto.', chips: ['Treeni 90 min', 'Tallennettu'] },
   { phone: 'phone-week', pc: 'pc-week', title: 'Viikko yhdellä silmäyksellä', text: 'Näet heti, täyttyykö ikäryhmän liikkumissuositus.', chips: ['Lähellä tahtia', '49 min / päivä'] },
-  { phone: 'phone-add', pc: 'pc-week', title: 'Liikuntakerta sekunneissa', text: 'Valitse laji ja kesto. Viikon harrastukset ovat valmiina kuitattaviksi.', chips: ['Treeni 90 min', 'Tallennettu'] },
   { phone: 'phone-analysis', pc: 'pc-analysis', title: 'Kehitys kuukausittain', text: 'Kaudet, lajit ja suositusten toteutuminen. Raportit PDF:nä.', chips: ['+9 min / pv syyskuusta', '6 lajia'] },
   { phone: 'phone-theme', pc: 'pc-theme', title: 'Oman näköinen', text: 'Vaalea tai tumma teema, neljä väriteemaa ja taustat, myös oma kuva.', chips: ['4 väriteemaa', 'Tumma teema'] },
   { phone: 'phone-football', pc: 'pc-calendar', title: 'Pelit ja tulokset', text: 'Pelikalenteri, turnaukset ja kauden tilastot.', chips: ['Kausi 2–1–1', 'Aino: 3 maalia'] },
@@ -70,10 +70,10 @@ const SCENES: Scene[] = [
 const SCENE_MS = 7000;
 
 const FACTS = [
+  ['Kuittaus yhdellä napautuksella', 'Viikon treenit ovat valmiina kirjattuina.'],
   ['Ei tiliä eikä palvelinta', 'Tiedot tallentuvat vain omalle laitteellesi.'],
-  ['PC ja puhelin', 'Laitteet synkronoidaan oman pilvikansiosi kautta.'],
+  ['PC ja puhelin', 'Synkronointi oman pilvikansion kautta, toimii myös ilman verkkoa.'],
   ['Koko perhe', 'Jokaiselle lapselle oma profiili ja suositus.'],
-  ['Toimii ilman verkkoa', 'Asennetaan kotinäytölle kuin sovellus.'],
 ] as const;
 
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -123,11 +123,11 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
       <section className="pb-10 pt-10 min-[900px]:pt-[72px]" aria-labelledby="landing-title">
         <div className="lp-wrap grid items-center gap-9 min-[900px]:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] min-[900px]:gap-14">
           <div>
-            <h1 id="landing-title" className="font-display text-[clamp(38px,4.6vw,58px)] font-medium leading-[1.06] tracking-[-0.015em]">
-              Näe lapsen liikunta suhteessa suosituksiin.
+            <h1 id="landing-title" className="font-display text-[clamp(36px,4.3vw,54px)] font-medium leading-[1.08] tracking-[-0.015em]">
+              Treeni kuitattu sekunnissa. <span className="block text-[var(--lp-ink-2)]">Viikko suhteessa suosituksiin.</span>
             </h1>
             <p className="mt-[22px] max-w-[34em] text-[17px] leading-relaxed text-[var(--lp-ink-2)] sm:text-[19px]">
-              Merkitse treenit, pelit ja arjen liikkuminen muutamalla napautuksella. Ohjelma laskee viikon reippaan ja rasittavan liikunnan ja vertaa sitä ikäryhmän liikkumissuositukseen.
+              Lisää lapsen harrastukset kerran. Sen jälkeen viikon treenit ovat valmiina, ja tehty kerta kuitataan yhdellä napautuksella. Ohjelma laskee reippaan ja rasittavan liikunnan ja näyttää, täyttyykö ikäryhmän liikkumissuositus.
             </p>
             <button type="button" onClick={() => scrollToId('pikatesti')} className="lp-btn lp-btn-quiz mt-[30px]">
               <IconClock size="1.25rem" />
@@ -176,7 +176,8 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
           id="jalkapallo"
           kicker="Jalkapalloperheille"
           title="Pelit, tulokset ja koko perheen kalenteri"
-          text="Turnaukset, ottelut ja tulokset ovat yhdessä paikassa. Sisarusten treenit ja pelit näkyvät samassa kalenterissa omilla väreillään, ja päällekkäiset pelit huomaa heti. Otteluennakon voi jakaa kuvana tai videona joukkueen WhatsApp-ryhmään."
+          text="Pelikalenteri ja tulokset on tehty jalkapalloperheen tarpeisiin. Turnaukset, ottelut ja tulokset ovat yhdessä paikassa. Sisarusten treenit ja pelit näkyvät samassa kalenterissa omilla väreillään, ja päällekkäiset pelit huomaa heti. Otteluennakon voi jakaa kuvana tai videona joukkueen WhatsApp-ryhmään."
+          points={['Muut lajit, kuten jääkiekko, salibandy, uinti ja tanssi, kirjataan samalla tavalla ja lasketaan mukaan suosituksiin']}
         >
           <div className="relative pb-[10%]">
             <Shot name="pc-family" onZoom={setZoom} className="lp-pc w-[88%]" />
