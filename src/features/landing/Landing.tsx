@@ -160,24 +160,29 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
           ))}
         </Reveal>
 
-        <section id="pikatesti" className="mt-16 scroll-mt-4 lg:mt-24" aria-labelledby="quiz-title">
+        {/* Pikatesti iltamaiseman päällä (public/landing/quiz-bg.svg: järvi, kuusikko ja kenttä). */}
+        <section id="pikatesti" className="relative mt-16 scroll-mt-4 overflow-hidden rounded-[2rem] bg-[#0c2230] px-4 py-9 sm:px-8 lg:mt-24 lg:rounded-[2.5rem] lg:px-14 lg:py-16" aria-labelledby="quiz-title">
+          <div className="lp-scene absolute inset-0 bg-cover bg-bottom" style={{ backgroundImage: 'url(./landing/quiz-bg.svg)' }} aria-hidden />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgb(8_26_36/0.55),rgb(8_26_36/0.1)_50%,transparent)] lg:bg-[linear-gradient(90deg,rgb(8_26_36/0.72),rgb(8_26_36/0.15)_55%,transparent)]" aria-hidden />
+          <div className="relative z-10">
           <QuickTest
             intro={
           <div className="max-w-2xl">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-green-800">Pikatesti · noin minuutti</p>
-            <h2 id="quiz-title" className="mt-2 font-display text-3xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-4xl">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--hero-accent)]">Pikatesti · noin minuutti</p>
+            <h2 id="quiz-title" className="mt-2 font-display text-3xl font-semibold leading-tight tracking-tight text-[var(--hero-ink)] sm:text-4xl lg:text-5xl">
               Liikkuuko oma lapsesi tarpeeksi?
             </h2>
-            <p className="mt-3 text-base leading-relaxed text-slate-600">
+            <p className="mt-3 text-base leading-relaxed text-[var(--hero-ink-soft)] sm:text-lg">
               Muutama kysymys arjesta, ja saat arvion suhteessa suomalaisiin liikkumissuosituksiin sekä vinkit helpoimpiin lisäyksiin.
             </p>
-            <p className="mt-2 flex items-center gap-2 text-sm font-medium text-green-800">
+            <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-sm font-medium text-[var(--hero-ink)] ring-1 ring-white/15 backdrop-blur-sm">
               <IconLock size="0.95rem" /> Vastauksesi eivät lähde tältä sivulta.
             </p>
           </div>
             }
             invite={<InviteForm idPrefix="quiz" inputRef={quizCodeRef} onUnlock={onUnlock} linkFailed={false} />}
           />
+          </div>
         </section>
 
         <Reveal as="section" className="mt-16 lg:mt-24" aria-labelledby="features-title">

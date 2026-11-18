@@ -1342,7 +1342,18 @@ html.morphing .bottom-nav {
   opacity: 1;
   transform: none;
 }
+/* Pikatestin maisema liikkuu hyvin hitaasti (lähestyy ja loittonee). */
+.lp-scene {
+  transform-origin: 70% 75%;
+  animation: lp-scene 40s ease-in-out infinite alternate;
+}
+@keyframes lp-scene {
+  to {
+    transform: scale(1.07);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
+  .lp-scene,
   .lp-blob,
   .lp-enter,
   .lp-float,

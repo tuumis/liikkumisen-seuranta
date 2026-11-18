@@ -1421,6 +1421,7 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
   - **Alkusivun pikatesti** (käyttäjän toive 18.11.2026; `domain/quickCheck.ts`, `features/landing/QuickTest.tsx`):
     - **Tarkoitus:** kävijä saa noin minuutissa karkean arvion siitä, liikkuuko oma lapsi tarpeeksi. Lopuksi kehotus pyytää kutsukoodi ja seurata todellista viikkoa.
     - **Sijainti:** oma osio luottamusmerkkien alla (`#pikatesti`); ensimmäisessä näkymässä painike "Tee 1 minuutin pikatesti".
+    - **Ulkoasu** (käyttäjän toive 18.11.2026: "taustakuvalla vakuuttavammalta"): osio on pyöreäkulmainen paneeli piirretyn iltamaiseman päällä (`public/landing/quiz-bg.svg`: tähtitaivas, laskeva aurinko, kuusimetsä, järvi ja etualalla jalkapallokenttä maaleineen). Otsikko vaalealla tekstillä tummennuksen päällä, kysymykset valkoisella kortilla. Maisema lähestyy hyvin hitaasti (40 s); vähennetyllä liikkeellä paikallaan.
     - **Kysymykset** yksi kerrallaan, valinta vie eteenpäin; "← Edellinen" palaa:
       - kaikille: ikä (1–17 v), ohjatut harrastukset (enintään 3: laji, kertaa viikossa, kesto), koulu- tai päiväkotimatka (auto/kävellen/pyörällä ja minuutit päivässä), vapaa-ajan leikki (kolme tasoa)
       - koululainen (7 v täyttänyt): välitunnit (kolme tasoa), rasittavat päivät ja hyppiminen/juoksu/kiipeily päivinä viikossa (0–7)
