@@ -320,7 +320,7 @@ function Showcase({ onZoom }: { onZoom: (n: ShotName) => void }) {
             <span className="size-1.5 rounded-full bg-amber-400/80 sm:size-2" />
             <span className="size-1.5 rounded-full bg-green-500/80 sm:size-2" />
           </span>
-          <span className="relative block aspect-[1280/800] overflow-hidden">
+          <span className="relative isolate block aspect-[1280/800] overflow-hidden">
             {pcShots.map((n) => (
               <span key={n} className="lp-slide" data-state={n === scene.pc ? 'active' : prev !== undefined && n === SCENES[prev].pc ? 'prev' : 'idle'} aria-hidden={n !== scene.pc}>
                 <img src={src(n)} srcSet={srcSet(n)} sizes="(min-width: 640px) 540px, 86vw" width={1280} height={800} alt="" decoding="async" />
@@ -337,7 +337,7 @@ function Showcase({ onZoom }: { onZoom: (n: ShotName) => void }) {
             className="relative block w-full rounded-[1.7rem] bg-[#121a16] p-[5px] shadow-[0_40px_70px_-20px_rgb(0_0_0/0.7)] ring-1 ring-white/20 sm:rounded-[2.2rem] sm:p-[7px]"
             aria-label={`Suurenna: ${SHOTS[scene.phone].alt}`}
           >
-            <span className="relative block aspect-[390/844] overflow-hidden rounded-[1.35rem] bg-[var(--bg)] sm:rounded-[1.75rem]">
+            <span className="relative isolate block aspect-[390/844] overflow-hidden rounded-[1.35rem] bg-[var(--bg)] sm:rounded-[1.75rem]">
               {SCENES.map((s, i) => (
                 <span key={s.phone} className="lp-slide" data-state={state(i)} aria-hidden={i !== idx}>
                   <img src={src(s.phone)} srcSet={srcSet(s.phone)} sizes="(min-width: 640px) 245px, 44vw" width={390} height={844} alt="" decoding="async" />

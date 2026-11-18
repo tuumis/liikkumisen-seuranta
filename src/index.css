@@ -1242,15 +1242,16 @@ html.morphing .bottom-nav {
 }
 /* Näkymän vaihto laitteen ruudulla: uusi nousee alhaalta, vanha väistyy ylös. */
 /* Näkymän vaihto laitteen ruudulla: uusi häivyttyy esiin pienellä nousulla vanhan päälle, vanha pysyy paikallaan. */
+/* Ruudun rajaavalla elementillä on oltava oma pinoamiskonteksti (Tailwind isolate): muuten Chromium sijoittaa pyöristetyn
+   rajauksen z-indexin kanssa väärin ja puhelimen näyttö siirtyy kehyksen päälle (käyttäjän kuvakaappaus 18.11.2026). */
 .lp-slide {
   position: absolute;
   inset: 0;
   opacity: 0;
-  transform: translate3d(0, 14px, 0);
+  transform: translateY(14px);
   transition:
     opacity 0.55s ease-out,
     transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
-  backface-visibility: hidden;
 }
 .lp-slide[data-state='active'] {
   z-index: 1;
@@ -1275,7 +1276,7 @@ html.morphing .bottom-nav {
 @keyframes lp-pop {
   from {
     opacity: 0;
-    transform: translate3d(0, 10px, 0) scale(0.96);
+    transform: translateY(10px) scale(0.96);
   }
 }
 .lp-caption {
