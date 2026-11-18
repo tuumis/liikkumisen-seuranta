@@ -224,6 +224,12 @@ export const IconComment = (p: IconProps) => (
     <path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v8.5a1.5 1.5 0 0 1-1.5 1.5h-7l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 5 5.5z" />
   </svg>
 );
+export const IconImport = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 4v10.5M7.5 10.5 12 15l4.5-4.5" />
+    <path d="M4.5 14.5v3A2.5 2.5 0 0 0 7 20h10a2.5 2.5 0 0 0 2.5-2.5v-3" />
+  </svg>
+);
 export const IconExternal = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M13.5 4.5h6v6M19.5 4.5 11 13M17.5 14v3.5a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2H10" />

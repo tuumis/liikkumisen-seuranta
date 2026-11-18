@@ -22,7 +22,7 @@ import { TemplateSection } from '../settings/TemplateSection';
 import { InstallHint } from '../settings/InstallHint';
 import { pickTextFile } from '../sync/fileIO';
 import { summaryText } from '../sync/useSync';
-import { IconCheck } from '../../ui/icons';
+import { IconBall, IconChart, IconCheck, IconImport, IconLock, IconPencil, IconSync } from '../../ui/icons';
 
 type Step = 0 | 1 | 2 | 3 | 4;
 
@@ -182,7 +182,7 @@ function Welcome({ onStart, onImport, onSkip, error, fromQuiz }: { onStart: () =
               Lapsen ja perheen liikunta yhdessä paikassa. Kirjaa kerrat muutamalla napautuksella ja näe, miten viikko vertautuu suomalaisiin liikkumissuosituksiin.
             </p>
           </div>
-          <div className="relative z-10 mt-8 space-y-3">
+          <div className="relative z-10 mt-8">
             <button
               type="button"
               onClick={onStart}
@@ -190,38 +190,49 @@ function Welcome({ onStart, onImport, onSkip, error, fromQuiz }: { onStart: () =
             >
               Aloita
             </button>
-            <p className="text-sm text-[var(--hero-ink-soft)]">
+            <p className="mt-3 text-sm text-[var(--hero-ink-soft)]">
               {fromQuiz
                 ? 'Pikatestin vastaukset ovat valmiina: ikä, harrastukset ja arkiliikunta. Tarkistat ne vaiheissa.'
                 : 'Aloitus vie muutaman minuutin. Kaiken voi muuttaa myöhemmin Asetuksissa.'}
             </p>
-            <p className="text-sm text-[var(--hero-ink-soft)]">
-              Onko tiedot jo toisella laitteella?{' '}
-              <button type="button" onClick={onImport} className="font-semibold text-[var(--hero-ink)] underline underline-offset-2">
+            {/* Toinen tapa aloittaa: tiedot toiselta laitteelta (synkronointi- tai varmuuskopiotiedosto). */}
+            <div className="mt-6 border-t border-white/15 pt-5">
+              <p className="text-sm font-semibold text-[var(--hero-ink)]">Onko tiedot jo toisella laitteella?</p>
+              <button
+                type="button"
+                onClick={onImport}
+                className="press mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2.5 rounded-full bg-white/10 px-6 text-[15px] font-semibold text-[var(--hero-ink)] ring-1 ring-white/30 hover:bg-white/15 sm:w-auto"
+              >
+                <IconImport size="1.15rem" />
                 Tuo tiedosto
               </button>
-            </p>
-            {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-900">{error}</p>}
+              <p className="mt-2.5 text-xs leading-snug text-[var(--hero-ink-soft)]">PC:n synkronointitiedosto tai varmuuskopio. Tiedot siirtyvät tälle laitteelle.</p>
+            </div>
+            {error && (
+              <p className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-900" role="alert">
+                {error}
+              </p>
+            )}
           </div>
         </section>
 
         <div className="grid content-start gap-4 sm:grid-cols-2">
-          <Info icon="📝" title="Kirjaa ja kuittaa">
+          <Info icon={<IconPencil size="1.15rem" />} title="Kirjaa ja kuittaa">
             Lisää kerta +-painikkeella. Viikkorytmin harrastukset tulevat valmiiksi, ja kuittaat ne tehdyiksi yhdellä napautuksella.
           </Info>
-          <Info icon="📈" title="Vertaa suosituksiin">
+          <Info icon={<IconChart size="1.15rem" />} title="Vertaa suosituksiin">
             Viikko suhteessa ikäryhmän suositukseen: reipas ja rasittava liikunta sekä lihaksia ja luustoa vahvistavat päivät.
           </Info>
-          <Info icon="⚽" title="Jalkapallo valinnaisena">
+          <Info icon={<IconBall size="1.15rem" />} title="Jalkapallo valinnaisena">
             Pelikalenteri, tulokset, turnaukset ja päiväkirja, jos lapsi pelaa. Muille lajeille tavallinen kirjaus riittää.
           </Info>
-          <Info icon="🔄" title="PC ja puhelin">
+          <Info icon={<IconSync size="1.15rem" />} title="PC ja puhelin">
             PC on päälaite. Yhteisen pilvikansion kautta laitteet vaihtavat tiedot: puhelimella kirjaat ja painat "Lähetä PC:lle". Yksikin laite riittää.
           </Info>
           <div className="card anim-rise p-5 ring-1 ring-green-700/25 sm:col-span-2">
             <div className="flex items-start gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-green-50 text-lg" aria-hidden>
-                🔒
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-green-50 text-green-800" aria-hidden>
+                <IconLock size="1.15rem" />
               </span>
               <div className="min-w-0 flex-1">
                 <h2 className="font-display text-lg font-semibold leading-tight text-slate-900">Tiedot pysyvät sinulla – varmuuskopioi ne pilveen</h2>
@@ -256,11 +267,11 @@ function Welcome({ onStart, onImport, onSkip, error, fromQuiz }: { onStart: () =
   );
 }
 
-function Info({ icon, title, children }: { icon: string; title: string; children: ReactNode }) {
+function Info({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
   return (
     <div className="card anim-rise p-5">
       <div className="flex items-start gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface-sunk)] text-lg" aria-hidden>
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface-sunk)] text-green-800" aria-hidden>
           {icon}
         </span>
         <div className="min-w-0">
