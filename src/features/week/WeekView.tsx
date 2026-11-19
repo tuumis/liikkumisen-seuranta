@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { addDays, datesBetween, isoWeek, startOfIsoWeek, weekPeriod } from '../../domain/dates';
+import { addDays, datesBetween, isoWeek, isoWeekday, startOfIsoWeek, weekPeriod } from '../../domain/dates';
+import { dayGoalMet } from '../../domain/dayTarget';
 import { planAdherence } from '../../domain/adherence';
 import { farWeekPlanning, planningThroughForWeek } from '../../domain/planning';
 import { RECOMMENDATIONS } from '../../domain/recommendations';
@@ -23,6 +24,7 @@ import { BackupReminder, SyncBar } from '../sync/SyncBar';
 import { UpdateBanner } from '../update/appUpdate';
 import { FootballPanel } from '../football/FootballPanel';
 import { DayRow } from './DayRow';
+import { DayStrip, type StripDay } from './DayStrip';
 import { DayTable, fmtUnit, type MinuteUnit } from './DayTable';
 import { WeekDetails, WeekHero } from './WeekSummary';
 import { DailyChart, RecentCard, RhythmCard, UpcomingCard } from './Dashboard';
@@ -66,6 +68,8 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     if (!weekBody.current) return;
     return hideUntilSettled(weekBody.current);
   }, [weekStart]);
+  // Päivänauhan valittu päivä (puhelin ja tabletti); oletuksena tänään.
+  const [selDay, setSelDay] = useState<ISODate>(today);
   const [quickAdd, setQuickAdd] = useState<{ date?: ISODate } | null>(null);
   const [editing, setEditing] = useState<Session | null>(null);
   const [dayMenu, setDayMenu] = useState<ISODate | null>(null);
@@ -86,6 +90,9 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
   const dates = useMemo(() => datesBetween(period.start, period.end), [period.start, period.end]);
   const wk = isoWeek(weekStart);
   const isCurrent = weekStart === startOfIsoWeek(today);
+  // Viikkoa vaihdettaessa valinta pysyy samassa viikonpäivässä; kuluvalla viikolla tänään.
+  const day: ISODate =
+    selDay >= period.start && selDay <= period.end ? selDay : isCurrent ? today : addDays(period.start, isoWeekday(selDay) - 1);
 
   const types = useLiveQuery(() => repo.listActivityTypes({ includeArchived: true }), []);
   const typeMap = useMemo(() => new Map<string, ActivityType>((types ?? []).map((t) => [t.id, t])), [types]);
@@ -120,6 +127,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     () =>
       subscribeWeekRequest((review) => {
         setWeekStart(startOfIsoWeek(todayFn()));
+        setSelDay(todayFn());
         if (review) setReviewOpen(true);
       }),
     [],
@@ -158,6 +166,32 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
   const simple = viewMode === 'simple';
   // +-painike väistyy vierityksen ajaksi ja palaa, kun vieritys pysähtyy.
   const scrolling = useScrolling();
+  // +-painike väistyy myös, kun se peittäisi valitun päivän kortin painikkeita (19.11.2026);
+  // kortissa on oma +-painike, joten lisääminen onnistuu silti.
+  const fabRef = useRef<HTMLButtonElement>(null);
+  const dayCardRef = useRef<HTMLOListElement>(null);
+  const [fabCovers, setFabCovers] = useState(false);
+  useEffect(() => {
+    if (scrolling) return;
+    const check = () => {
+      // Paikka ilman siirtymää (offset* ei huomioi transformia), ettei piilotus itse muuta tulosta.
+      const el = fabRef.current;
+      const card = dayCardRef.current;
+      if (!el || !card || !el.offsetWidth) return setFabCovers(false);
+      const fab = { left: el.offsetLeft, top: el.offsetTop, right: el.offsetLeft + el.offsetWidth, bottom: el.offsetTop + el.offsetHeight };
+      const hit = [...card.querySelectorAll('button')].some((b) => {
+        const r = b.getBoundingClientRect();
+        return r.width > 0 && r.left < fab.right && r.right > fab.left && r.top < fab.bottom && r.bottom > fab.top;
+      });
+      setFabCovers(hit);
+    };
+    const raf = requestAnimationFrame(check);
+    window.addEventListener('resize', check);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', check);
+    };
+  });
   // Liikuntamäärän luokat (7 h = 60 min/pv) koskevat kouluikäisiä.
   const showGauge = report?.group.group === 'school_age';
   // Muokattava näkymä (Kattava); yksinkertaisessa vain tilanne ja päivät.
@@ -223,7 +257,10 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
         if (c.kind === 'add') setQuickAdd({});
         else if (c.kind === 'review') setReviewOpen(true);
         else if (c.kind === 'week') {
-          if (c.delta === 0) setWeekStart(startOfIsoWeek(todayFn()));
+          if (c.delta === 0) {
+            setWeekStart(startOfIsoWeek(todayFn()));
+            setSelDay(todayFn());
+          }
           else setWeekStart((w) => addDays(w, c.delta * 7));
         }
       }),
@@ -240,6 +277,23 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     const dx = e.changedTouches[0].clientX - s.x;
     const dy = e.changedTouches[0].clientY - s.y;
     if (Math.abs(dx) > 60 && Math.abs(dy) < 40) go(dx < 0 ? 1 : -1);
+  };
+
+  // Päivän kortin pyyhkäisy vaihtaa päivää; viikon rajalla myös viikko vaihtuu.
+  const pickDay = (d: ISODate) => {
+    setSelDay(d);
+    const ws = startOfIsoWeek(d);
+    if (ws !== weekStart) setWeekStart(ws);
+  };
+  const dayTouch = useRef<{ x: number; y: number } | null>(null);
+  const onDayTouchStart = (e: TouchEvent) => (dayTouch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY });
+  const onDayTouchEnd = (e: TouchEvent) => {
+    const s = dayTouch.current;
+    dayTouch.current = null;
+    if (!s) return;
+    const dx = e.changedTouches[0].clientX - s.x;
+    const dy = e.changedTouches[0].clientY - s.y;
+    if (Math.abs(dx) > 60 && Math.abs(dy) < 40) pickDay(addDays(day, dx < 0 ? 1 : -1));
   };
 
   const reviewButton = profile && (unconfirmed?.length ?? 0) > 0 && (
@@ -264,6 +318,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     // Puhelimella (18.11.2026) viikon valitsin on omalla rivillään ja painikkeet sen alla: muuten "Tämä viikko"
     // työnsi Muokkaa näkymää -painikkeen ruudun ulkopuolelle, ja nuolet siirtyivät viikkoa vaihdettaessa.
     <div className="anim-fade flex flex-wrap items-center gap-2 sm:flex-nowrap">
+      {isLg && (
       <div className="flex flex-1 basis-full items-center gap-1 rounded-2xl bg-[var(--surface)] p-1 shadow-sm sm:basis-auto lg:flex-none">
         <button type="button" onClick={() => go(-1)} className="press flex size-10 items-center justify-center rounded-xl text-slate-600 hover:bg-[var(--surface-sunk)] hover:text-slate-900" aria-label="Edellinen viikko">
           <IconChevronLeft />
@@ -278,6 +333,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
           <IconChevronRight />
         </button>
       </div>
+      )}
       {!isCurrent && (
         <Button variant="secondary" className="shrink-0 whitespace-nowrap" onClick={() => setWeekStart(startOfIsoWeek(today))}>
           Tämä viikko
@@ -418,6 +474,64 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
 
   const chartTitle = info?.group === 'early_years' ? 'Vauhdikas liikkuminen' : 'Reipas ja rasittava';
 
+  // Päivänauha ja valitun päivän kortti (puhelin ja tabletti, 19.11.2026).
+  const pendingByDate = new Map<ISODate, number>();
+  for (const p of unconfirmed ?? []) pendingByDate.set(p.date, (pendingByDate.get(p.date) ?? 0) + 1);
+  const stripDays: StripDay[] = dates.map((d, i) => {
+    const t = report?.allDays[i];
+    const open = (plans ?? []).some((p) => p.date === d && p.status === 'open');
+    const state = t && info && dayGoalMet(info.group, t) ? 'met' : t && t.mvpaCombined > 0 && (sessions ?? []).some((s) => s.date === d) ? 'some' : open && d >= today ? 'plan' : 'none';
+    return { date: d, state, pending: pendingByDate.get(d) ?? 0 };
+  });
+  const dayStrip = (
+    <DayStrip
+      days={stripDays}
+      today={today}
+      selected={day}
+      onSelect={setSelDay}
+      week={wk.week}
+      start={period.start}
+      end={period.end}
+      onPrev={() => go(-1)}
+      onNext={() => go(1)}
+    />
+  );
+  const di = dates.indexOf(day);
+  const dayCard = profile && di >= 0 && (
+    <div className="space-y-1.5">
+      <ol ref={dayCardRef} aria-label="Valittu päivä" onTouchStart={onDayTouchStart} onTouchEnd={onDayTouchEnd}>
+        <DayRow
+          key={day}
+          index={0}
+          date={day}
+          isToday={day === today}
+          isFuture={day > today}
+          totals={report?.allDays[di]}
+          hours={report?.hours.days[di]}
+          sessions={(sessions ?? []).filter((s) => s.date === day)}
+          plans={(plans ?? []).filter((p) => p.date === day && p.status !== 'done')}
+          plannedById={plannedById}
+          fixtures={fixtureByPlan}
+          footballDetails={footballDetails}
+          onFootball={footballOn ? setFootball : () => undefined}
+          onPlanOpen={setPlanOpen}
+          onPlanConfirm={(p) => void planActions.confirm(p)}
+          types={typeMap}
+          flag={flagByDate.get(day)}
+          barTarget={DAY_BAR_TARGET[info?.group ?? 'school_age']}
+          earlyYears={info?.group === 'early_years'}
+          schoolAge={info?.group === 'school_age'}
+          onOpenMenu={() => setDayMenu(day)}
+          onAdd={() => setQuickAdd({ date: day })}
+          onPlan={() => setPlanOnce(day)}
+          onEdit={setEditing}
+          onEstimate={() => setEstimateDay(day)}
+        />
+      </ol>
+      <p className="text-center text-xs text-slate-500">Pyyhkäise vaihtaaksesi päivää. Pitkä painallus päivään: sairas- tai matkapäivä.</p>
+    </div>
+  );
+
   return (
     <div className="space-y-5">
       <div className="space-y-3 empty:hidden">
@@ -426,6 +540,8 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
         <BackupReminder onOpenSettings={() => onOpenSettings('devices')} />
       </div>
 
+      {!isLg && profile && dayStrip}
+      {!isLg && profile && dayCard}
       {weekSwitcher}
       {!profile && <Card>Lisää profiili Asetukset-välilehdellä.</Card>}
 
@@ -454,7 +570,8 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             case 'upcoming':
               return <UpcomingCard profile={profile} today={today} types={typeMap} onOpen={setPlanOpen} />;
             case 'days':
-              return dayList;
+              // Puhelimella ja tabletilla päivät ovat päivänauhassa (19.11.2026).
+              return isLg ? dayList : null;
             case 'recent':
               return <RecentCard profile={profile} today={today} types={typeMap} onOpen={setEditing} />;
             case 'details':
@@ -509,11 +626,12 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
       {profile && (
         <>
           <button
+            ref={fabRef}
             type="button"
             onClick={() => setQuickAdd({})}
-            tabIndex={scrolling ? -1 : 0}
+            tabIndex={scrolling || fabCovers ? -1 : 0}
             className={`fixed bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+5.5rem)] right-5 z-20 flex size-16 items-center justify-center rounded-[1.4rem] bg-green-700 text-white shadow-[0_14px_30px_-10px_rgb(var(--accent-rgb)/0.8)] transition-[transform,opacity] duration-300 [transition-timing-function:var(--ease-out)] hover:bg-green-800 active:scale-95 sm:right-[max(1.25rem,calc(50%-19rem))] md:right-[max(1.25rem,calc(50%-21rem))] lg:hidden ${
-              scrolling ? 'pointer-events-none translate-y-6 scale-90 opacity-0' : 'opacity-100'
+              scrolling || fabCovers ? 'pointer-events-none translate-y-6 scale-90 opacity-0' : 'opacity-100'
             }`}
             aria-label="Lisää kerta"
           >
