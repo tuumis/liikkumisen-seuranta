@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.24',
+    date: '19.11.2026',
+    items: ['Korjattu: päiväkortin alalaidan mittarin harmaa pohja erottuu nyt taustasta.'],
+  },
+  {
     version: '1.1.23',
     date: '19.11.2026',
     items: ['Korjattu: päiväkortin alalaidan tiedot mahtuvat nyt puhelimellakin yhdelle riville palkin sisään.'],

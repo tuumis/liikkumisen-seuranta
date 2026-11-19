@@ -140,6 +140,8 @@
   /* Arkiliikunnan vahvistamaton arvio: sama oranssi vinoviivoituksena (tekstuuri erottaa vahvistetusta). */
   --viz-estimate-soft: repeating-linear-gradient(135deg, #c4823f 0 2.5px, rgb(196 130 63 / 0.32) 2.5px 5px);
   --viz-track: #ebe8df;
+  /* Mittarin pohja upotetulla taustalla (päiväkortin tietorivi): tavallinen pohja sulautuisi taustaan. */
+  --viz-track-sunk: #d9d5c8;
   --viz-track-line: #b9b5a8;
   --viz-track-fill: #f7f5ef;
 
@@ -201,6 +203,7 @@
   --viz-estimate: #b97a33;
   --viz-estimate-soft: repeating-linear-gradient(135deg, #b97a33 0 2.5px, rgb(185 122 51 / 0.32) 2.5px 5px);
   --viz-track: #25302a;
+  --viz-track-sunk: #2c3832;
   --viz-track-line: #5d6b63;
   --viz-track-fill: #121a16;
 

@@ -373,7 +373,7 @@ export function DayRow({
               </InfoTip>
             )}
             <div className="ml-auto flex min-w-0 items-center gap-2">
-            <div className="flex h-1.5 w-14 min-w-6 shrink sm:w-20 gap-[2px] overflow-hidden rounded-full bg-[var(--viz-track)]" aria-hidden>
+            <div className="flex h-1.5 w-14 min-w-6 shrink sm:w-20 gap-[2px] overflow-hidden rounded-full bg-[var(--viz-track-sunk)]" aria-hidden>
               <div className="anim-grow-x h-full rounded-full" style={{ width: `${loggedPct}%`, background: 'var(--viz-logged)', transition: 'width 0.7s var(--ease-out)' }} />
               {estPct > 0 && <div className="anim-grow-x h-full rounded-full" style={{ width: `${estPct}%`, background: 'var(--viz-estimate)', transition: 'width 0.7s var(--ease-out)' }} />}
             </div>
