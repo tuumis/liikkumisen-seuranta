@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.21',
+    date: '19.11.2026',
+    items: ['Korjattu: puhelimen +-painike ei enää välähdä näkyviin, kun selaus pysähtyy päiväkortin kohdalle.'],
+  },
+  {
     version: '1.1.20',
     date: '19.11.2026',
     items: ['Puhelimella synkronointi on nyt yläpalkin kuvakkeessa. Oranssi piste kertoo, kun jotain odottaa siirtoa, ja Viikko-näkymä alkaa suoraan päivistä.'],

@@ -171,27 +171,40 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
   const fabRef = useRef<HTMLButtonElement>(null);
   const dayCardRef = useRef<HTMLOListElement>(null);
   const [fabCovers, setFabCovers] = useState(false);
+  // Tarkistus pidetään ajan tasalla myös vierityksen aikana ja tehdään ennen ruudun piirtoa: kun vieritys
+  // pysähtyy kortin kohdalle, painike pysyy piilossa eikä välähdä näkyviin (korjaus 19.11.2026).
+  const checkFabCover = () => {
+    // Paikka ilman siirtymää (offset* ei huomioi transformia), ettei piilotus itse muuta tulosta.
+    const el = fabRef.current;
+    const card = dayCardRef.current;
+    if (!el || !card || !el.offsetWidth) return setFabCovers(false);
+    const fab = { left: el.offsetLeft, top: el.offsetTop, right: el.offsetLeft + el.offsetWidth, bottom: el.offsetTop + el.offsetHeight };
+    const hit = [...card.querySelectorAll('button')].some((b) => {
+      const r = b.getBoundingClientRect();
+      return r.width > 0 && r.left < fab.right && r.right > fab.left && r.top < fab.bottom && r.bottom > fab.top;
+    });
+    setFabCovers(hit);
+  };
+  const checkFabRef = useRef(checkFabCover);
+  checkFabRef.current = checkFabCover;
+  useLayoutEffect(() => checkFabRef.current());
   useEffect(() => {
-    if (scrolling) return;
-    const check = () => {
-      // Paikka ilman siirtymää (offset* ei huomioi transformia), ettei piilotus itse muuta tulosta.
-      const el = fabRef.current;
-      const card = dayCardRef.current;
-      if (!el || !card || !el.offsetWidth) return setFabCovers(false);
-      const fab = { left: el.offsetLeft, top: el.offsetTop, right: el.offsetLeft + el.offsetWidth, bottom: el.offsetTop + el.offsetHeight };
-      const hit = [...card.querySelectorAll('button')].some((b) => {
-        const r = b.getBoundingClientRect();
-        return r.width > 0 && r.left < fab.right && r.right > fab.left && r.top < fab.bottom && r.bottom > fab.top;
+    let raf = 0;
+    const onMove = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        checkFabRef.current();
       });
-      setFabCovers(hit);
     };
-    const raf = requestAnimationFrame(check);
-    window.addEventListener('resize', check);
+    window.addEventListener('scroll', onMove, { passive: true });
+    window.addEventListener('resize', onMove);
     return () => {
       cancelAnimationFrame(raf);
-      window.removeEventListener('resize', check);
+      window.removeEventListener('scroll', onMove);
+      window.removeEventListener('resize', onMove);
     };
-  });
+  }, []);
   // Liikuntamäärän luokat (7 h = 60 min/pv) koskevat kouluikäisiä.
   const showGauge = report?.group.group === 'school_age';
   // Muokattava näkymä (Kattava); yksinkertaisessa vain tilanne ja päivät.
