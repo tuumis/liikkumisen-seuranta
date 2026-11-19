@@ -2,6 +2,7 @@
 // automaattinen eteneminen, kortin tallennus kuvaksi ja jakaminen (laitteella, ei verkkoa).
 
 import { useEffect, useRef, useState } from 'react';
+import { useBackClose } from '../../ui/backClose';
 import { createPortal } from 'react-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { minDate, seasonPeriod } from '../../domain/dates';
@@ -51,6 +52,7 @@ function useStory(profile: Profile): StorySlide[] | undefined {
 }
 
 function StoryViewer({ profile, onClose }: { profile: Profile; onClose: () => void }) {
+  useBackClose(true, onClose);
   const slides = useStory(profile);
   const toast = useToast();
   const [i, setI] = useState(0);

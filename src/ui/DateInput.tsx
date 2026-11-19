@@ -3,6 +3,7 @@
 // Kuukausinäkymä, viikko alkaa maanantaista, min/max-rajat. Ei lisäkirjastoja.
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useBackClose } from './backClose';
 import { IconChevronLeft, IconChevronRight } from './icons';
 import { createPortal } from 'react-dom';
 import { addDays, isISODate, isoWeekday, parseISODate, startOfIsoWeek, toISODate } from '../domain/dates';
@@ -45,6 +46,7 @@ export function DateInput({
   const btn = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
+  useBackClose(open, () => setOpen(false));
   const valid = isISODate(value);
   const base = valid ? value : todayFn();
   const [view, setView] = useState(() => ({ year: parseISODate(base).year, month: parseISODate(base).month }));

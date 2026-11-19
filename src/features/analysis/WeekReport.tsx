@@ -4,6 +4,7 @@
 // Aina vaalea paperi myös tummassa teemassa; värit kuten sovelluksen kaavioissa (reportPalette.ts).
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useBackClose } from '../../ui/backClose';
 import { createPortal } from 'react-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { addDays, isoWeek, isoWeekday, weekPeriod } from '../../domain/dates';
@@ -56,6 +57,7 @@ function targetText(group: RecommendationGroup): string {
 }
 
 export function WeekReport({ profile, weekStart, onClose }: { profile: Profile; weekStart: ISODate; onClose: () => void }) {
+  useBackClose(true, onClose);
   const cur = useWeekReport(profile, weekStart);
   const prev = useWeekReport(profile, addDays(weekStart, -7));
   const period = weekPeriod(weekStart);

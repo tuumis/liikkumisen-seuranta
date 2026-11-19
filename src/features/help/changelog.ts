@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.13',
+    date: '19.11.2026',
+    items: ['Puhelimella takaisin-ele sulkee nyt avoimen ikkunan, ja ikkunan voi sulkea myös vetämällä sen yläosasta alas.'],
+  },
+  {
     version: '1.1.12',
     date: '19.11.2026',
     items: ['Tuloskuvasta voi nyt tehdä myös videon: valitse Jaa tulos -kohdassa Video. Tulos ponnahtaa näkyviin joukkueiden jälkeen.'],

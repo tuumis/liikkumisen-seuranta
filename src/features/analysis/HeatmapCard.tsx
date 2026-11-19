@@ -2,6 +2,7 @@
 // ottaminen ja jakso valitaan kortissa; kartan voi suurentaa koko näytölle.
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useBackClose } from '../../ui/backClose';
 import { createPortal } from 'react-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { repo } from '../../db/repositories';
@@ -278,6 +279,7 @@ export function HeatmapCard({ profile, focus }: { profile: Profile; focus?: Heat
 }
 
 function FullScreen({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  useBackClose(true, onClose);
   const close = useRef(onClose);
   close.current = onClose;
   const panel = useRef<HTMLDivElement>(null);

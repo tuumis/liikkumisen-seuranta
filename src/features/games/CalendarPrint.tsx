@@ -4,6 +4,7 @@
 // jos käyttäjä valitsee sen.
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useBackClose } from '../../ui/backClose';
 import { createPortal } from 'react-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { repo } from '../../db/repositories';
@@ -65,6 +66,7 @@ const cleanOpts = (v: Partial<PrintOpts>): PrintOpts => ({
 const WD = ['Ma', 'Ti', 'Ke', 'To', 'Pe', 'La', 'Su'];
 const hhmm = clockText;
 export function CalendarPrint({ profile, today, startMonth, onClose }: { profile: Profile; today: ISODate; startMonth: MonthKey; onClose: () => void }) {
+  useBackClose(true, onClose);
   const familyProfiles = useFootballProfiles();
   const canFamily = (familyProfiles?.length ?? 0) > 1;
   const [opts, setOptsState] = useState<PrintOpts>(() => readStoredJson(OPTS_KEY, DEFAULT_OPTS, cleanOpts));

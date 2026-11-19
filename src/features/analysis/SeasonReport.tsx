@@ -3,6 +3,7 @@
 // tulostuksessa näkyy vain se (index.css @media print).
 
 import { useEffect, useMemo, type ReactNode } from 'react';
+import { useBackClose } from '../../ui/backClose';
 import { createPortal } from 'react-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { footballPeriodSummary, gameRows, playSummary, POSITION_LABEL, POSITIONS } from '../../domain/football';
@@ -44,6 +45,7 @@ function useExtras(profile: Profile, period: Period) {
 }
 
 export function SeasonReport({ profile, s, p, onClose }: { profile: Profile; s: LongTermSummary; p?: LongTermSummary; onClose: () => void }) {
+  useBackClose(true, onClose);
   const extras = useExtras(profile, s.period);
   const name = periodName(s.period);
   const prevName = p ? periodName(p.period) : '';

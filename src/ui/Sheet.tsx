@@ -1,4 +1,5 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode, type TouchEvent } from 'react';
+import { useBackClose } from './backClose';
 import { createPortal } from 'react-dom';
 import { IconClose } from './icons';
 import { takeMorph } from './morph';
@@ -29,7 +30,8 @@ export function unlockScroll() {
 
 /**
  * Alapaneeli (bottom sheet). Piirretään suoraan <body>-elementtiin (portaali), jotta se on aina
- * alapalkin ja muun sisällön päällä. Sulkeutuu taustan napautuksella ja Esc-näppäimellä.
+ * alapalkin ja muun sisällön päällä. Sulkeutuu taustan napautuksella, Esc-näppäimellä, puhelimen
+ * takaisin-eleellä ja vetämällä yläosasta (kahva ja otsikkorivi) alas (19.11.2026).
  */
 export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
   const panel = useRef<HTMLDivElement>(null);
@@ -41,6 +43,42 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   if (open && !wasOpen.current) morph.current = takeMorph();
   if (!open) morph.current = false;
   wasOpen.current = open;
+  useBackClose(open, onClose);
+
+  // Alas vetäminen yläosasta: paneeli seuraa sormea; riittävän pitkä tai nopea veto sulkee.
+  const drag = useRef<{ y0: number; dy: number; lastY: number; lastT: number; v: number } | null>(null);
+  const onDragStart = (e: TouchEvent) => {
+    if ((e.target as HTMLElement).closest('button')) return;
+    const y = e.touches[0].clientY;
+    drag.current = { y0: y, dy: 0, lastY: y, lastT: performance.now(), v: 0 };
+    if (panel.current) panel.current.style.transition = 'none';
+  };
+  const onDragMove = (e: TouchEvent) => {
+    const d = drag.current;
+    const el = panel.current;
+    if (!d || !el) return;
+    const y = e.touches[0].clientY;
+    const now = performance.now();
+    d.v = (y - d.lastY) / Math.max(1, now - d.lastT);
+    d.lastY = y;
+    d.lastT = now;
+    d.dy = Math.max(0, y - d.y0);
+    el.style.transform = d.dy ? `translateY(${d.dy}px)` : '';
+  };
+  const onDragEnd = () => {
+    const d = drag.current;
+    const el = panel.current;
+    drag.current = null;
+    if (!d || !el) return;
+    if (d.dy > 110 || (d.dy > 24 && d.v > 0.5)) {
+      el.style.transition = 'transform 0.18s ease-in';
+      el.style.transform = 'translateY(100%)';
+      window.setTimeout(() => close.current(), 170);
+    } else {
+      el.style.transition = 'transform 0.22s var(--ease-out)';
+      el.style.transform = '';
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -68,7 +106,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
         className={`${morph.current ? '' : 'anim-sheet'} relative flex max-h-[90dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-[2rem] bg-[var(--surface)] shadow-xl focus:outline-none lg:rounded-[2rem]`}
       >
         {/* Otsikko pysyy paikallaan; vain sisältö vierii (ohut palkki pyöristettyjen kulmien sisällä). */}
-        <div className="shrink-0 px-5 pt-3 lg:px-7 lg:pt-6">
+        <div className="shrink-0 touch-none px-5 pt-3 lg:touch-auto lg:px-7 lg:pt-6" onTouchStart={onDragStart} onTouchMove={onDragMove} onTouchEnd={onDragEnd} onTouchCancel={onDragEnd}>
           <div className="mx-auto mb-3 h-1.5 w-11 rounded-full bg-slate-300 lg:hidden" aria-hidden />
           <div className="flex items-center justify-between gap-2 pb-3">
             <h2 className="font-display text-xl font-semibold leading-tight text-slate-900">{title}</h2>
