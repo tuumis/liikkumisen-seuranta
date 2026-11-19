@@ -61,5 +61,6 @@ describe('joukkueittain', () => {
     expect(shortTeamName(G, [A, B, G])).toBe('Pienryhmä');
     expect(shortTeamName(A, [A, team('c', 'HJK · Musta · 2016')])).toBe('FC Testi Sininen 2016');
     expect(shortTeamName(team('d', 'FC Testi'), [A])).toBe('FC Testi');
+    expect(shortTeamName(team('e', 'FC Testi · 2018'), [team('e', 'FC Testi · 2018'), A])).toBe('FC Testi 2018');
   });
 });

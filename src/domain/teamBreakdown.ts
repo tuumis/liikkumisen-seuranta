@@ -76,14 +76,15 @@ export function teamBreakdown(input: FootballInput, period: Period, teams: Team[
 }
 
 /**
- * Lyhyt nimi viikkonäkymään: treeniryhmä omalla nimellään; joukkue ryhmä ja ikäluokka ("Sininen 2016"), kun
- * kaikki omat joukkueet ovat samaa seuraa, muuten seura, ryhmä ja ikäluokka.
+ * Lyhyt nimi (Analyysi, Kauden kooste): treeniryhmä omalla nimellään; joukkue ryhmä ja ikäluokka ("Sininen 2016"), kun
+ * kaikki omat joukkueet ovat samaa seuraa ja ryhmä on annettu, muuten seura, ryhmä ja ikäluokka ("FC Testi 2018").
  */
 export function shortTeamName(team: Team, teams: Team[]): string {
   if (team.kind === 'group') return team.name;
   const p = parseTeamName(team.name);
   const clubs = new Set(teams.filter((t) => t.kind !== 'group').map((t) => clubKey(parseTeamName(t.name).club)));
-  const squad = [p.group, p.age].filter(Boolean).join(' ');
+  // Pelkkä ikäluokka ("2018") ei kerro joukkuetta: seura mukaan, kun ryhmää ei ole.
+  const squad = p.group ? [p.group, p.age].filter(Boolean).join(' ') : '';
   if (squad && clubs.size <= 1) return squad;
   return [p.club, p.group, p.age].filter(Boolean).join(' ') || displayTeamName(team.name);
 }

@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.32',
+    date: '19.11.2026',
+    items: ['Viikko-näkymän treenissä näkyy nyt joukkueen koko nimi omalla rivillään (aiemmin esim. pelkkä ikäluokka "2018").'],
+  },
+  {
     version: '1.1.31',
     date: '19.11.2026',
     items: [

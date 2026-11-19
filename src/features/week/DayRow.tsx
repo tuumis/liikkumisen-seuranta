@@ -224,12 +224,12 @@ export function DayRow({
                         (t?.name ?? 'Tuntematon laji')
                       )}
                     </span>
+                    {team && <span className="block truncate text-xs font-semibold text-slate-700">{team}</span>}
                     <span className="block truncate text-xs text-slate-500">
                       {s.durationMin === 0 ? (
                         'Ei tänä päivänä (merkitty) – arkiliikuntaa ei lasketa'
                       ) : (
                         <>
-                          {team && <span className="font-semibold text-slate-700">{team} · </span>}
                           {s.durationMin} min
                       {plan && plan.durationMin !== s.durationMin && ` (suunn. ${plan.durationMin})`}
                       {s.playedMin !== undefined && ` · pelattu ${s.playedMin}`}
@@ -326,13 +326,11 @@ export function DayRow({
                     <span className={`block truncate text-sm font-semibold text-slate-600 ${skipped ? 'line-through' : ''}`}>
                       {p.label ? `${p.label} · ${t?.name ?? 'Laji'}` : (t?.name ?? 'Laji')}
                     </span>
+                    {team && <span className="block truncate text-xs font-semibold text-slate-600">{team}</span>}
                     <span className="block truncate text-xs text-slate-500">
                       {skipped
                         ? `Ei tehty${p.skipReason ? ` · ${SKIP_REASON_LABEL[p.skipReason].toLowerCase()}` : ''}`
-                        : team
-                          ? // Joukkueen nimi edellä: "Suunniteltu" jää pois, jotta kellonaika mahtuu (katkoviiva kertoo suunnitelman).
-                            `${team}${p.startTime ? ` · klo ${p.startTime}` : ''} · ${p.durationMin} min`
-                          : fixtureText(fixtures?.get(p.id), p.activityTypeId) + `Suunniteltu${p.startTime ? ` klo ${p.startTime}` : ''} · ${p.durationMin} min`}
+                        : fixtureText(fixtures?.get(p.id), p.activityTypeId) + `Suunniteltu${p.startTime ? ` klo ${p.startTime}` : ''} · ${p.durationMin} min`}
                     </span>
                   </span>
                 </button>
