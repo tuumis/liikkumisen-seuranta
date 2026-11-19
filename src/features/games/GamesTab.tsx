@@ -1,7 +1,8 @@
 // Pelit-välilehti: pelikalenteri (tulevat pelit ja turnaukset), tulosta odottavat, tulokset ja
 // analyysi sekä omat joukkueet. Tulokset ovat joukkueen tuloksia eivätkä vaikuta lapsen arvioihin.
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import { Sheet } from '../../ui/Sheet';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { GAME_FORMATS, HOME_AWAY_LABEL, LEVEL_LABEL } from '../../domain/football';
 import type { ActivityType, GameFormat, GameLevel, ISODate, Profile, Session, Team } from '../../domain/types';
@@ -53,64 +54,72 @@ export function GamesTab({ profile }: { profile?: Profile }) {
   const [view, setViewState] = useState<View>('diary');
   // Kerran avatut näkymät pysyvät taustalla valmiina: vaihto ei näytä latautumista (sivu ei hetkeksi lyhene).
   const [visited, setVisited] = useState<ReadonlySet<View>>(() => new Set(['diary']));
+  // Puhelimella ja tabletilla välilehdet kiinnittyvät yläpalkin alle (19.11.2026). Jos ne ovat kiinni vaihdettaessa,
+  // sivu vieritetään niin, että uuden näkymän alku on heti välilehtien alla.
+  const tabsRef = useRef<HTMLDivElement>(null);
   const setView = (v: View) => {
+    const el = tabsRef.current;
+    if (el && getComputedStyle(el).position === 'sticky') {
+      const prev = el.previousElementSibling as HTMLElement | null;
+      const stickTop = parseFloat(getComputedStyle(el).top) || 0;
+      if (prev && el.getBoundingClientRect().top <= stickTop + 1) {
+        const gap = (parseFloat(getComputedStyle(prev).marginBottom) || 0) + (parseFloat(getComputedStyle(el).marginTop) || 0);
+        const natural = prev.getBoundingClientRect().bottom + window.scrollY + gap;
+        window.scrollTo({ top: Math.max(0, natural - stickTop) });
+      }
+    }
     setVisited((s) => (s.has(v) ? s : new Set([...s, v])));
     setViewState(v);
   };
   const [draft, setDraft] = useState<FixtureDraft | null>(null);
+  const [adding, setAdding] = useState(false);
   if (!profile) return <Card>Lisää profiili Asetukset-välilehdellä.</Card>;
   return (
     <div className="space-y-5">
       <FootballHero profile={profile} />
 
-      {/* Selkeät lisäystoiminnot: mitä painike tekee ja milloin sitä käytetään. */}
-      <section className="card p-4 sm:p-5" aria-labelledby="fx-add-title">
+      {/* Selkeät lisäystoiminnot: mitä painike tekee ja milloin sitä käytetään. PC:llä näkyvissä suoraan;
+          puhelimella ja tabletilla yksi Lisää kalenteriin -painike avaa samat valinnat (19.11.2026). */}
+      <section className="card hidden p-4 sm:p-5 lg:block" aria-labelledby="fx-add-title">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 id="fx-add-title" className="font-display text-lg font-semibold text-slate-900">
             Lisää kalenteriin
           </h2>
           <span className="text-xs text-slate-500">Tulevat pelit näkyvät myös Viikko-näkymässä</span>
         </div>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-          {(
-            [
-              ['game', '⚽', 'Tuleva peli', 'Yksi ottelu: päivä, kellonaika, vastustaja ja taso.'],
-              ['friendly', '🤝', 'Tuleva harjoituspeli', 'Pelitälli yhtä tai useampaa joukkuetta vastaan; tulos ei tilastoihin.'],
-              ['tournament', '🏆', 'Tuleva turnaus', 'Useita pelejä: otteluohjelma valmiiksi, tulokset pelien jälkeen.'],
-            ] as const
-          ).map(([kind, icon, title, text]) => (
-            <button
-              key={kind}
-              type="button"
-              onClick={() => setDraft({ kind })}
-              className={`press card-interactive flex items-center gap-3 rounded-[1.25rem] p-3 text-left ${kind === 'game' ? 'bg-green-700 text-white shadow-md' : 'card-sunk'}`}
-            >
-              <span className={`flex size-11 shrink-0 items-center justify-center rounded-2xl text-xl ${kind === 'game' ? 'bg-white/15' : 'bg-[var(--surface-raised)] shadow-xs'}`} aria-hidden>
-                {icon}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-1 font-semibold">
-                  <IconPlus size="0.95rem" /> {title}
-                </span>
-                <span className={`block text-xs leading-snug ${kind === 'game' ? 'text-white/80' : 'text-slate-500'}`}>{text}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-        <p className="mt-2 text-xs text-slate-500">Jo pelatun pelin tai treenin kirjaat Viikko-näkymän +-painikkeella. Kalenterin pelille tulos kirjataan Kalenteri-kohdan "Kirjaa tulos" -painikkeella.</p>
+        <AddChoices className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3" onPick={(kind) => setDraft({ kind })} />
+        <p className="mt-2 text-xs text-slate-500">{ADD_HINT}</p>
       </section>
+      <Button className="w-full shadow-md lg:hidden" onClick={() => setAdding(true)}>
+        <IconPlus size="1.05rem" /> Lisää kalenteriin
+      </Button>
+      <Sheet open={adding} onClose={() => setAdding(false)} title="Lisää kalenteriin">
+        <AddChoices
+          className="grid gap-2"
+          onPick={(kind) => {
+            setAdding(false);
+            setDraft({ kind });
+          }}
+        />
+        <p className="mt-3 text-[13px] leading-relaxed text-slate-500">{ADD_HINT} Tulevat pelit näkyvät myös Viikko-näkymässä.</p>
+      </Sheet>
 
-      <Segmented<View>
-        label="Jalkapallon näkymä"
-        value={view}
-        onChange={setView}
-        options={[
-          { value: 'diary', label: 'Päiväkirja' },
-          { value: 'calendar', label: 'Kalenteri' },
-          { value: 'results', label: 'Tulokset' },
-          { value: 'teams', label: 'Joukkueet' },
-        ]}
-      />
+      <div
+        ref={tabsRef}
+        className="sticky top-[var(--mobile-header-h,0px)] z-10 -mx-4 bg-[color-mix(in_oklab,var(--bg)_82%,transparent)] px-4 py-2 backdrop-blur-xl lg:static lg:mx-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none"
+      >
+        <Segmented<View>
+          label="Jalkapallon näkymä"
+          value={view}
+          onChange={setView}
+          options={[
+            { value: 'diary', label: 'Päiväkirja' },
+            { value: 'calendar', label: 'Kalenteri' },
+            { value: 'results', label: 'Tulokset' },
+            { value: 'teams', label: 'Joukkueet' },
+          ]}
+        />
+      </div>
 
       {/* Vähintään näytön korkuinen: lyhyempi näkymä ei vedä vierityskohtaa ylös, joten valitsin pysyy paikallaan. */}
       <div className="min-h-screen">
@@ -138,6 +147,40 @@ export function GamesTab({ profile }: { profile?: Profile }) {
       </div>
 
       <FixtureSheet profile={profile} draft={draft} onClose={() => setDraft(null)} />
+    </div>
+  );
+}
+
+const ADD_HINT = 'Jo pelatun pelin tai treenin kirjaat Viikko-näkymän +‑painikkeella. Kalenterin pelille tulos kirjataan Kalenteri-kohdan "Kirjaa tulos" -painikkeella.';
+
+/** Tulevan pelin, harjoituspelin ja turnauksen lisäysvalinnat (PC:llä sivulla, puhelimella valikossa). */
+function AddChoices({ className, onPick }: { className: string; onPick: (kind: FixtureKind) => void }) {
+  return (
+    <div className={className}>
+      {(
+        [
+          ['game', '⚽', 'Tuleva peli', 'Yksi ottelu: päivä, kellonaika, vastustaja ja taso.'],
+          ['friendly', '🤝', 'Tuleva harjoituspeli', 'Pelitälli yhtä tai useampaa joukkuetta vastaan; tulos ei tilastoihin.'],
+          ['tournament', '🏆', 'Tuleva turnaus', 'Useita pelejä: otteluohjelma valmiiksi, tulokset pelien jälkeen.'],
+        ] as const
+      ).map(([kind, icon, title, text]) => (
+        <button
+          key={kind}
+          type="button"
+          onClick={() => onPick(kind)}
+          className={`press card-interactive flex items-center gap-3 rounded-[1.25rem] p-3 text-left ${kind === 'game' ? 'bg-green-700 text-white shadow-md' : 'card-sunk'}`}
+        >
+          <span className={`flex size-11 shrink-0 items-center justify-center rounded-2xl text-xl ${kind === 'game' ? 'bg-white/15' : 'bg-[var(--surface-raised)] shadow-xs'}`} aria-hidden>
+            {icon}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-1 font-semibold">
+              <IconPlus size="0.95rem" /> {title}
+            </span>
+            <span className={`block text-xs leading-snug ${kind === 'game' ? 'text-white/80' : 'text-slate-500'}`}>{text}</span>
+          </span>
+        </button>
+      ))}
     </div>
   );
 }

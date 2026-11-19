@@ -59,6 +59,19 @@ const store = {
   },
 };
 
+// Puhelimen yläpalkin korkeus muuttujaan --mobile-header-h: sivujen kiinnittyvät osat asettuvat sen alle (19.11.2026).
+// PC:llä palkki on piilossa, jolloin arvo on 0.
+let headerObserver: ResizeObserver | null = null;
+function trackHeader(el: HTMLElement | null) {
+  headerObserver?.disconnect();
+  headerObserver = null;
+  if (!el || typeof ResizeObserver === 'undefined') return;
+  const set = () => document.documentElement.style.setProperty('--mobile-header-h', `${el.offsetHeight}px`);
+  set();
+  headerObserver = new ResizeObserver(set);
+  headerObserver.observe(el);
+}
+
 export default function App() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string>();
@@ -325,7 +338,7 @@ export default function App() {
       </aside>
 
       {/* Puhelin ja tabletti: läpikuultava yläpalkki profiilisiruineen. */}
-      <header className="sticky top-0 z-20 bg-[color-mix(in_oklab,var(--bg)_82%,transparent)] px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl lg:hidden">
+      <header ref={trackHeader} className="sticky top-0 z-20 bg-[color-mix(in_oklab,var(--bg)_82%,transparent)] px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl lg:hidden">
         <div className="mx-auto flex max-w-xl items-center justify-between md:max-w-2xl">
           <div className="flex items-center gap-2">
             <BrandMark className="size-7" />

@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.15',
+    date: '19.11.2026',
+    items: [
+      'Jalkapallo-sivu puhelimella: kauden luvut mahtuvat yhdelle riville, ja uuden pelin tai turnauksen lisäät yhdellä Lisää kalenteriin -painikkeella.',
+      'Päiväkirja-, Kalenteri-, Tulokset- ja Joukkueet-valinnat näkyvät heti ja pysyvät ylhäällä, kun selaat alaspäin.',
+    ],
+  },
+  {
     version: '1.1.14',
     date: '19.11.2026',
     items: ['Jakoikkunan Jaa- ja Tallenna-painikkeet pysyvät nyt aina näkyvissä ikkunan alareunassa, vaikka tyylejä ja värejä selaisi.'],
