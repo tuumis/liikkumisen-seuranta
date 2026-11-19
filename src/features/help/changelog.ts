@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.30',
+    date: '19.11.2026',
+    items: ['Korjattu: Viikko-näkymän päivänauha näytti tulevalle päivälle valintamerkin, vaikka päivä ei ollut vielä alkanut.'],
+  },
+  {
     version: '1.1.29',
     date: '19.11.2026',
     items: [

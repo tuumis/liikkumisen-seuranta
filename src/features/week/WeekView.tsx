@@ -504,7 +504,9 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
   const stripDays: StripDay[] = dates.map((d, i) => {
     const t = report?.allDays[i];
     const open = (plans ?? []).some((p) => p.date === d && p.status === 'open');
-    const state = t && info && dayGoalMet(info.group, t) ? 'met' : t && t.mvpaCombined > 0 && (sessions ?? []).some((s) => s.date === d) ? 'some' : open && d >= today ? 'plan' : 'none';
+    // Tulevalle päivälle ei merkkiä suosituksesta: arkiliikunnan arvio ei ole vielä toteutunut (19.11.2026).
+    const past = d <= today;
+    const state = past && t && info && dayGoalMet(info.group, t) ? 'met' : past && t && t.mvpaCombined > 0 && (sessions ?? []).some((s) => s.date === d) ? 'some' : open && d >= today ? 'plan' : 'none';
     return { date: d, state, pending: pendingByDate.get(d) ?? 0 };
   });
   const dayStrip = (
