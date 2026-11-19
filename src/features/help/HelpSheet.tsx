@@ -60,7 +60,7 @@ const TOPICS: { q: string; a: string[] }[] = [
     q: 'Jalkapallo',
     a: [
       'Jalkapallo-välilehdellä ovat päiväkirja (kommentit treeneistä), pelikalenteri, tulokset ja joukkueet. Tulevat pelit näkyvät myös viikolla, ja pelin jälkeen kirjataan tulos.',
-      'Jos pelaaja treenaa useammassa joukkueessa tai ryhmässä, valitse treenin joukkue tai ryhmä viikkorytmissä tai treenin lisätiedoissa. Treeniryhmä (esim. pienryhmävalmennus tai taitokoulu) lisätään Joukkueet-näkymässä omalla nimellä, eikä se näy peleissä. Jos joukkueita ja ryhmiä on yhteensä yksi, treenit merkitään sille automaattisesti. Aiemmat treenit voi merkitä kerralla kohdassa Jalkapallo → Joukkueet. Samassa näkymässä Joukkueittain-kortti kertoo treenit ja pelit joukkueittain ja ryhmittäin.',
+      'Jos pelaaja treenaa useammassa joukkueessa tai ryhmässä, valitse treenin joukkue tai ryhmä viikkorytmissä tai treenin lisätiedoissa. Treeniryhmä (esim. pienryhmävalmennus tai taitokoulu) lisätään Joukkueet-näkymässä omalla nimellä, eikä se näy peleissä. Jos joukkueita ja ryhmiä on yhteensä yksi, treenit merkitään sille automaattisesti. Aiemmat treenit voi merkitä kerralla kohdassa Jalkapallo → Joukkueet. Samassa näkymässä Treeni- ja pelihistoria kertoo treenit ja pelit joukkueittain ja ryhmittäin.',
       'Jalkapallo on valinnainen profiileittain: Asetukset → Profiilit → Muokkaa → "Pelaako … jalkapalloa?". Pois päältä välilehti, joukkueet, pelit ja jalkapallon lisätiedot piilotetaan; kirjatut kerrat säilyvät ja lasketaan liikuntaan.',
     ],
   },

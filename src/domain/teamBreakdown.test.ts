@@ -25,6 +25,7 @@ describe('joukkueittain', () => {
       session({ id: 't3', date: '2026-10-03', activityTypeId: TRAINING, minutes: M(45), teamId: 'g' }),
       session({ id: 't4', date: '2026-10-04', activityTypeId: TRAINING, minutes: M(75) }),
       session({ id: 't5', date: '2026-10-04', activityTypeId: TRAINING, minutes: M(10), teamId: 'a', linkedTo: 't1' }),
+      session({ id: 'self', date: '2026-10-04', activityTypeId: activityTypeId('football_self'), minutes: M(30) }),
       session({ id: 'old', date: '2026-08-01', activityTypeId: TRAINING, minutes: M(60), teamId: 'a' }),
       session({ id: 'g1', date: '2026-10-05', activityTypeId: GAME, minutes: M(50) }),
       session({ id: 'g2', date: '2026-10-06', activityTypeId: GAME, minutes: M(50) }),
@@ -43,6 +44,7 @@ describe('joukkueittain', () => {
     expect(r.teams[1].games).toMatchObject({ games: 1, draws: 1 });
     expect(r.groups.map((t) => [t.team.id, t.training.count, t.games.games])).toEqual([['g', 1, 0]]);
     expect(r.unassigned.training).toEqual({ count: 1, minutes: 75 });
+    expect(r.unassignedDates).toEqual(['2026-10-04']);
     expect(r.unassigned.games).toMatchObject({ games: 1, losses: 1 });
   });
 

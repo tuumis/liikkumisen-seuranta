@@ -2,7 +2,7 @@
 // Treenit tulevat kerran joukkueesta (Session.teamId), pelit pelin lisätiedoista (joukkue tai sen nimi).
 // Joukkueet ja treeniryhmät pidetään erillään. Puhtaita funktioita.
 
-import { footballKindOf, gameRows, isTrainingSelf, normalizeName, summarizeGames, type FootballInput, type GameRow, type GameSummary } from './football';
+import { gameRows, isClubTraining, isTrainingSelf, normalizeName, summarizeGames, type FootballInput, type GameRow, type GameSummary } from './football';
 import { parseTeamName, clubKey, displayTeamName } from './opponent';
 import type { Period, Team, UUID } from './types';
 
@@ -23,6 +23,8 @@ export interface TeamBreakdown {
   groups: TeamBreakdownRow[];
   /** Treenit ja pelit, joita ei ole merkitty millekään omalle joukkueelle tai ryhmälle. */
   unassigned: TeamTotals;
+  /** Merkitsemättömien seuran treenien päivät, uusin ensin (omatoimiset eivät ole mukana). */
+  unassignedDates: string[];
   /** Näytetäänkö erittely: vähintään kaksi joukkuetta tai ryhmää, joilla on toimintaa tai jotka ovat käytössä. */
   show: boolean;
 }
@@ -43,9 +45,12 @@ export function teamBreakdown(input: FootballInput, period: Period, teams: Team[
   const sessions = input.sessions.filter((s) => !s.deletedAt && within(s.date));
   const known = new Set(teams.map((t) => t.id));
   const trainingBy = new Map<UUID | '', { count: number; minutes: number }>();
+  const unassignedDates: string[] = [];
   for (const s of sessions) {
-    if (isTrainingSelf(s) || footballKindOf(s, input.types) !== 'training') continue;
+    // Vain seuran treenit: omatoiminen jalkapallo (lajityyppi 'training', omaehtoinen) ei kuulu joukkueelle.
+    if (isTrainingSelf(s) || !isClubTraining(input.types.get(s.activityTypeId))) continue;
     const key = s.teamId && known.has(s.teamId) ? s.teamId : '';
+    if (!key) unassignedDates.push(s.date);
     const t = trainingBy.get(key) ?? { count: 0, minutes: 0 };
     t.count++;
     t.minutes += s.durationMin;
@@ -67,7 +72,7 @@ export function teamBreakdown(input: FootballInput, period: Period, teams: Team[
     .sort((a, b) => activity(b) - activity(a) || a.team.name.localeCompare(b.team.name, 'fi'));
   const squads = rows.filter((r) => !r.group);
   const groups = rows.filter((r) => r.group);
-  return { teams: squads, groups, unassigned: totals(''), show: rows.length >= 2 };
+  return { teams: squads, groups, unassigned: totals(''), unassignedDates: unassignedDates.sort().reverse(), show: rows.length >= 2 };
 }
 
 /**

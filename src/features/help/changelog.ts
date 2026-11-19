@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.31',
+    date: '19.11.2026',
+    items: [
+      'Joukkueittain-kortin nimi on nyt Treeni- ja pelihistoria. Se on Omat joukkueet ja ryhmät -kortin alla ja oletuksena suljettu, ja se näkyy myös, kun joukkueita on vain yksi.',
+      'Korjattu: omatoimiset jalkapalloharjoitukset näkyivät historiassa seuran treeneinä ilman joukkuetta. Merkitsemättömien treenien päivämäärät näkyvät nyt kortissa.',
+    ],
+  },
+  {
     version: '1.1.30',
     date: '19.11.2026',
     items: ['Korjattu: Viikko-näkymän päivänauha näytti tulevalle päivälle valintamerkin, vaikka päivä ei ollut vielä alkanut.'],

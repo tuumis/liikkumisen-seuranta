@@ -142,8 +142,8 @@ export function GamesTab({ profile }: { profile?: Profile }) {
         )}
         {visited.has('teams') && (
           <div hidden={view !== 'teams'} className="space-y-5">
-            <TeamBreakdownCard profile={profile} />
             <TeamsView profile={profile} />
+            <TeamBreakdownCard profile={profile} />
             <OpponentLibrary profile={profile} />
           </div>
         )}
