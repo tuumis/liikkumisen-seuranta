@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { useCompactHeader } from './ui/useCompactHeader';
 import { flushSync } from 'react-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { repo } from './db/repositories';
@@ -81,6 +82,13 @@ export default function App() {
   const [visited, setVisited] = useState<Set<Tab>>(() => new Set());
   useEffect(() => setVisited((v) => (v.has(rawTab) ? v : new Set(v).add(rawTab))), [rawTab]);
   const [helpOpen, setHelpOpen] = useState(false);
+  // Puhelimen yläpalkki: nimirivi piiloutuu alaspäin vieritettäessä. Palkin alle jätetään yhtä suuri
+  // marginaali, joten sisältö ei siirry (vain palkki pienenee) ja kiinnittyvät osat seuraavat palkkia.
+  const headerCompact = useCompactHeader();
+  const [brandH, setBrandH] = useState(40);
+  const measureBrand = useCallback((el: HTMLDivElement | null) => {
+    if (el) setBrandH(el.offsetHeight);
+  }, []);
   const openSettings = (section?: SettingsSectionId) => {
     setSettingsSection(section);
     setTab('settings');
@@ -338,15 +346,25 @@ export default function App() {
       </aside>
 
       {/* Puhelin ja tabletti: läpikuultava yläpalkki profiilisiruineen. */}
-      <header ref={trackHeader} className="sticky top-0 z-20 bg-[color-mix(in_oklab,var(--bg)_82%,transparent)] px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl lg:hidden">
-        <div className="mx-auto flex max-w-xl items-center justify-between md:max-w-2xl">
-          <div className="flex items-center gap-2">
-            <BrandMark className="size-7" />
-            <span className="font-display text-[15px] font-semibold text-slate-900">Liikkumisen seuranta</span>
+      <header
+        ref={trackHeader}
+        style={{ marginBottom: headerCompact ? brandH : 0 }}
+        className="sticky top-0 z-20 bg-[color-mix(in_oklab,var(--bg)_82%,transparent)] px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl transition-[margin] duration-200 ease-out motion-reduce:transition-none lg:hidden"
+      >
+        <div
+          style={{ height: headerCompact ? 0 : brandH, opacity: headerCompact ? 0 : 1 }}
+          className="overflow-hidden transition-[height,opacity] duration-200 ease-out motion-reduce:transition-none"
+          inert={headerCompact}
+        >
+          <div ref={measureBrand} className="mx-auto flex max-w-xl items-center justify-between md:max-w-2xl">
+            <div className="flex items-center gap-2">
+              <BrandMark className="size-7" />
+              <span className="font-display text-[15px] font-semibold text-slate-900">Liikkumisen seuranta</span>
+            </div>
+            <button type="button" onClick={() => setHelpOpen(true)} className="press hit -mr-1 flex size-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100" aria-label="Ohje">
+              <IconHelp size="1.35rem" />
+            </button>
           </div>
-          <button type="button" onClick={() => setHelpOpen(true)} className="press hit -mr-1 flex size-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100" aria-label="Ohje">
-            <IconHelp size="1.35rem" />
-          </button>
         </div>
         {profiles && profiles.length > 1 && (
           <div className="mx-auto -mx-4 mt-1.5 flex max-w-xl gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] md:max-w-2xl" role="tablist" aria-label="Profiilit">

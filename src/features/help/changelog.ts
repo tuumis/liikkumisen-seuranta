@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.19',
+    date: '19.11.2026',
+    items: ['Puhelimella yläpalkki pienenee alaspäin selatessa, jolloin sisällölle jää enemmän tilaa. Profiilien vaihto pysyy näkyvissä.'],
+  },
+  {
     version: '1.1.18',
     date: '19.11.2026',
     items: ['Puhelimella suunnitelman voi kuitata pyyhkäisemällä: oikealle tehty, vasemmalle ei tehty. Toimii päiväkortissa ja Käy viikko läpi -kohdassa.'],

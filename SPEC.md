@@ -1542,3 +1542,8 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
       - Lyhyempi veto palauttaa rivin paikalleen; pystysuuntainen veto vierittää sivua normaalisti. Vedon jälkeen rivi ei avaudu napautuksena.
       - Ei tulevilla eikä jo ohitetuilla suunnitelmilla; niillä pyyhkäisy vaihtaa päivää kuten muualla kortissa. Suunnitelmarivin pyyhkäisy ei vaihda päivää.
       - Päiväkortin ohjeteksti mainitsee eleen. Painikkeet toimivat ennallaan (myös hiirellä ja ruudunlukijalla).
+    - **Yläpalkki pienenee vieritettäessä** (puhelinkäytön läpikäynti 19.11.2026, kohta 8; puhelin ja tabletti, alle 1024 px):
+      - Alaspäin vieritettäessä (yli 24 px yhtäjaksoisesti, kun sivun alusta on yli 80 px) sovelluksen nimirivi ja Ohje-painike piiloutuvat; profiilisirut jäävät näkyviin. Palkki noin 112 → 72 px (yhdellä profiililla pelkkä yläreunan tausta).
+      - Ylöspäin vieritettäessä (yli 40 px) tai sivun alussa palkki palaa täyteen kokoon.
+      - Sisältö ei siirry: palkin alle jää piilotetun rivin korkuinen tila. Kiinnittyvät osat (Jalkapallo-välilehdet) seuraavat palkin korkeutta.
+      - Paneelin ollessa auki tila ei muutu. Kerralla yli 400 px:n siirto (ohjelman tekemä, esim. välilehden vaihto) ei muuta palkkia. Liikettä vähentävä asetus poistaa animaation.

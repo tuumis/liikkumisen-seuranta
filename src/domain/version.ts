@@ -1,5 +1,5 @@
 /** Sovelluksen versio varmuuskopio- ja synkronointitiedostoihin (pidä samana kuin package.json). */
-export const APP_VERSION = '1.1.18';
+export const APP_VERSION = '1.1.19';
 
 export const BACKUP_FORMAT = 'liikkumisseuranta-backup';
 export const SYNC_FORMAT = 'liikkumisseuranta-sync';
