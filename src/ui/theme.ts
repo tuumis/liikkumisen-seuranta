@@ -177,7 +177,7 @@ export function useViewMode(): [ViewMode, (m: ViewMode) => void] {
  * (localStorage); oma kuva ei siirry synkronoinnissa eikä varmuuskopiossa. public/theme-init.js asettaa
  * taustan ennen käynnistystä.
  */
-export type BackgroundId = 'default' | 'grass' | 'fjord' | 'forest' | 'snow' | 'paper' | 'photo';
+export type BackgroundId = 'default' | 'grass' | 'fjord' | 'forest' | 'snow' | 'paper' | 'aurora' | 'floodlight' | 'photo';
 export const BACKGROUNDS: { id: Exclude<BackgroundId, 'photo'>; label: string }[] = [
   { id: 'default', label: 'Oletus' },
   { id: 'grass', label: 'Nurmi' },
@@ -185,12 +185,14 @@ export const BACKGROUNDS: { id: Exclude<BackgroundId, 'photo'>; label: string }[
   { id: 'forest', label: 'Metsä' },
   { id: 'snow', label: 'Lumi' },
   { id: 'paper', label: 'Paperi' },
+  { id: 'aurora', label: 'Revontulet' },
+  { id: 'floodlight', label: 'Kenttävalot' },
 ];
 const BG_KEY = 'background';
 const BG_PHOTO_KEY = 'bgPhoto';
 const BG_DIM_KEY = 'bgDim';
 export const DEFAULT_BG_DIM = 65;
-const BG_IDS: readonly BackgroundId[] = ['default', 'grass', 'fjord', 'forest', 'snow', 'paper', 'photo'];
+const BG_IDS: readonly BackgroundId[] = ['default', 'grass', 'fjord', 'forest', 'snow', 'paper', 'aurora', 'floodlight', 'photo'];
 
 function read(key: string): string | null {
   try {

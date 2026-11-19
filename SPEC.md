@@ -1165,7 +1165,7 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
   - **Sovelluksen tausta** (käyttäjän lista 17.11.2026, vaihe 7; `ui/theme.ts` `useBackground`/`applyBackground`, `public/theme-init.js`, `index.css` "taustat", `features/settings/AppearanceSection.tsx`, `ui/image.ts` `resizeBackground`):
     - Asetukset → Ulkoasu → **Tausta**. Vaihtoehdot:
       - **Oletus:** nykyinen hento hehku.
-      - Piirretyt **Nurmi** (leikkuuraidat ja kentän viivat), **Vuono** (vuorisiluetit ja persikkainen hehku), **Metsä** (kuusirivit), **Lumi** (lumihiutaleet ja kinokset) ja **Paperi** (paperin rakeisuus).
+      - Piirretyt **Nurmi** (leikkuuraidat ja kentän viivat), **Vuono** (vuorisiluetit ja persikkainen hehku), **Metsä** (kuusirivit), **Lumi** (lumihiutaleet ja kinokset), **Paperi** (paperin rakeisuus), **Revontulet** ja **Kenttävalot** (lisätty 19.11.2026, ks. Revontulet ja Kenttävalot -taustat).
       - **Oma kuva.**
     - Piirretyt taustat ovat CSS:ää ja SVG-data-URI:ta (ei verkkoa, CSP sallii). Jokaisella on vaalea ja tumma versio, joka seuraa teemaa. Kuviot ovat hillittyjä, jotta kortit ja kaaviot erottuvat.
     - Tausta piirretään kiinteään kerrokseen `body::before`; se toimii myös iOS:ssä, jossa `background-attachment: fixed` ei toimi. Valinta näkyy esikatselukuvina, joissa on sama kuvio.
@@ -1557,3 +1557,9 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
       - Kahden sarakkeen päivälistassa vierekkäiset kortit ovat yhtä korkeita, ja tietorivi on kortin pohjassa, joten rivit ovat vierekkäin samalla korkeudella.
       - Korjaus 19.11.2026 (käyttäjän havainto: puhelimella teksti meni palkin yli; käyttäjän toive: yksi yhtenäinen malli, rivit eivät saa hyppiä, PC:n yhden rivin malli ennallaan): puhelimella (alle 640 px) kokonaismäärä on pelkkä "135 min" – teksti "yhteensä" tai "josta arvio 60" näkyy vain leveällä näytöllä, ja arvion osuus selviää vihjeestä ja arvio-merkistä. Mittari kapenee tarvittaessa, joten rivi mahtuu aina palkkiin, myös 320 px:n näytöllä.
       - Korjaus 19.11.2026 (käyttäjän havainto: mittarin harmaa osa sulautui taustaan): tietorivin mittarin pohja on tummempi harmaa (oma väri upotetulle taustalle, vaalea ja tumma teema), joten täyttymätön osa erottuu.
+    - **Revontulet ja Kenttävalot -taustat** (käyttäjän pyyntö 19.11.2026: tyylikäs tausta varsinkin tummalle teemalle, joka korostaa sovelluksen elementtejä; puhelin ensin, sitten PC; käyttäjä valitsi kolmesta ehdotuksesta A:n ja B:n; `index.css` "taustat", `ui/theme.ts` `BACKGROUNDS`, `public/theme-init.js`):
+      - **Revontulet:** pehmeät, sumeat valonauhat (vihreä, sininen, violetti) ylhäällä ja alempana oikealla.
+      - **Kenttävalot:** kaksi pehmeää valokeilaa yläkulmista ja hento keskiympyrä ja keskiviiva alhaalla.
+      - **Pohja:** tummassa teemassa teeman taustaväriä selvästi tummempi (seuraa korostevärin sävyä), joten kortit erottuvat ja kuvio näkyy korttien väleissä. Vaaleassa teemassa vaalea, hennosti sävytetty versio.
+      - **Mitoitus:** puhelimelle pystykuva, leveälle näytölle (vähintään 1024 px) oma vaakakuva, jossa kuviot on sijoitettu sisältöalueen mukaan. Hieno rae estää liukuvärien raidoittumisen.
+      - Asetukset → Ulkoasu → Tausta -listassa on nyt yhdeksän vaihtoehtoa (3 × 3 -ruudukko puhelimella). Kuten muutkin piirretyt taustat: CSS ja SVG-data-URI, ei verkkoa.

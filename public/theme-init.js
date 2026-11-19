@@ -22,7 +22,7 @@
     var photo = localStorage.getItem('bgPhoto');
     var dim = Number(localStorage.getItem('bgDim'));
     if (bg === 'photo' && !photo) bg = null;
-    if (bg === 'grass' || bg === 'fjord' || bg === 'forest' || bg === 'snow' || bg === 'paper' || bg === 'photo') root.setAttribute('data-bg', bg);
+    if (bg === 'grass' || bg === 'fjord' || bg === 'forest' || bg === 'snow' || bg === 'paper' || bg === 'aurora' || bg === 'floodlight' || bg === 'photo') root.setAttribute('data-bg', bg);
     if (photo) root.style.setProperty('--bg-photo', 'url("' + photo + '")');
     root.style.setProperty('--bg-dim', (dim >= 20 && dim <= 95 ? dim : 65) + '%');
   } catch (e) {}

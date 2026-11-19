@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.25',
+    date: '19.11.2026',
+    items: ['Uudet taustat Revontulet ja Kenttävalot (Asetukset → Ulkoasu → Tausta). Ne on suunniteltu erityisesti tummalle teemalle, jossa kortit erottuvat syvää taustaa vasten.'],
+  },
+  {
     version: '1.1.24',
     date: '19.11.2026',
     items: ['Korjattu: päiväkortin alalaidan mittarin harmaa pohja erottuu nyt taustasta.'],
