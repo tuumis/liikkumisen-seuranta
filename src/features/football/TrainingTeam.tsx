@@ -14,16 +14,35 @@ import { Sheet } from '../../ui/Sheet';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 
+const ADD_HINT = 'Joukkueen tai treeniryhmän (esim. pienryhmävalmennus, taitokoulu) lisäät kohdassa Jalkapallo → Joukkueet.';
+
 /**
- * Joukkueen valinta seuran treenille. Näkyy, kun aktiivisia joukkueita on vähintään `min` (oletus 2: yhden
- * joukkueen treenit merkitään sille automaattisesti) tai kun treenillä on jo joukkue.
+ * Joukkueen valinta seuran treenille. Viikkorytmissä ja suunnitelmassa kohta näkyy aina (käyttäjän palaute
+ * 19.11.2026: valintaa ei löytänyt): ilman joukkueita ohje, yhdellä joukkueella tai ryhmällä tieto automaattisesta
+ * valinnasta, useammalla valinta. Lisätiedoissa (`inPanel`) valinta näkyy, kun joukkueita on vähintään yksi.
  */
-export function TrainingTeamField({ profileId, value, onChange, min = 2, hint }: { profileId: UUID; value: string; onChange: (id: string) => void; min?: number; hint?: string }) {
+export function TrainingTeamField({ profileId, value, onChange, inPanel = false, hint }: { profileId: UUID; value: string; onChange: (id: string) => void; inPanel?: boolean; hint?: string }) {
   const teams = useLiveQuery(() => repo.listTeams(profileId, { includeArchived: true, groups: true }), [profileId]);
   if (!teams) return null;
   const active = teams.filter((t) => !t.archived);
   const current = teams.find((t) => t.id === value);
-  if (active.length < min && !current) return null;
+  const anyGroup = teams.some((t) => t.kind === 'group');
+  const label = anyGroup ? 'Joukkue tai ryhmä' : 'Joukkue';
+  if (!current && active.length === 0) {
+    if (inPanel) return null;
+    return (
+      <Field label={label}>
+        <span className="block rounded-xl bg-[var(--surface-sunk)] px-3.5 py-2.5 text-sm text-slate-600 ring-1 ring-inset ring-[var(--line)]">Ei vielä joukkueita. {ADD_HINT}</span>
+      </Field>
+    );
+  }
+  if (!current && active.length === 1 && !inPanel) {
+    return (
+      <Field label={label} hint={`Ainoa ${active[0]!.kind === 'group' ? 'ryhmä' : 'joukkue'} valitaan treeneille automaattisesti. Jos treenaat myös muualla, lisää joukkue tai treeniryhmä (esim. pienryhmävalmennus, taitokoulu) kohdassa Jalkapallo → Joukkueet; sen jälkeen voit valita tässä.`}>
+        <span className="flex min-h-11 items-center rounded-xl bg-[var(--surface-sunk)] px-3.5 text-base text-slate-900 ring-1 ring-inset ring-[var(--line)]">{displayTeamName(active[0]!.name)}</span>
+      </Field>
+    );
+  }
   const options: Team[] = current?.archived ? [...active, current] : active;
   const squads = options.filter((t) => t.kind !== 'group');
   const groups = options.filter((t) => t.kind === 'group');
@@ -34,9 +53,9 @@ export function TrainingTeamField({ profileId, value, onChange, min = 2, hint }:
     </option>
   );
   return (
-    <Field label={groups.length ? 'Joukkue tai ryhmä' : 'Joukkue'} hint={hint}>
+    <Field label={label} hint={hint ?? (inPanel ? undefined : ADD_HINT)}>
       <select className={inputClass} value={current ? value : ''} onChange={(e) => onChange(e.target.value)}>
-        <option value="">{groups.length ? '– ei joukkuetta tai ryhmää –' : '– ei joukkuetta –'}</option>
+        <option value="">{anyGroup ? '– ei joukkuetta tai ryhmää –' : '– ei joukkuetta –'}</option>
         {groups.length && squads.length ? (
           <>
             <optgroup label="Joukkueet">{squads.map(option)}</optgroup>

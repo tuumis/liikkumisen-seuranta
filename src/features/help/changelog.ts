@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.27',
+    date: '19.11.2026',
+    items: ['Viikkorytmin treenissä näkyy nyt aina Joukkue-kohta: yhdellä joukkueella se kertoo automaattisesta valinnasta ja neuvoo, missä toisen joukkueen tai treeniryhmän voi lisätä.'],
+  },
+  {
     version: '1.1.26',
     date: '19.11.2026',
     items: [

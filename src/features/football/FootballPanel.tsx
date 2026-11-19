@@ -267,7 +267,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
       >
         <p className="text-xs text-slate-500">Kaikki tiedot ovat valinnaisia. Kerta on jo tallennettu.</p>
 
-        {showTeam && <TrainingTeamField profileId={session.profileId} value={trainingTeam} onChange={setTrainingTeam} min={1} />}
+        {showTeam && <TrainingTeamField profileId={session.profileId} value={trainingTeam} onChange={setTrainingTeam} inPanel />}
 
         <div>
           <div className="mb-1 text-sm font-medium text-slate-700">Viihtyminen</div>

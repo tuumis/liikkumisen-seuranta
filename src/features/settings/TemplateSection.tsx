@@ -275,7 +275,7 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
           profileId={profile.id}
           value={v.teamId}
           onChange={(id) => setV((c) => ({ ...c, teamId: id }))}
-          hint="Kuitattu treeni merkitään tälle joukkueelle tai ryhmälle. Yksittäisen treenin valintaa voi muuttaa sen lisätiedoista."
+          hint="Kuitattu treeni merkitään tälle joukkueelle tai ryhmälle; yksittäisen treenin valintaa voi muuttaa sen lisätiedoista. Uuden joukkueen tai treeniryhmän lisäät kohdassa Jalkapallo → Joukkueet."
         />
       )}
 
