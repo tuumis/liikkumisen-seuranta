@@ -528,7 +528,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
           onEstimate={() => setEstimateDay(day)}
         />
       </ol>
-      <p className="text-center text-xs text-slate-500">Pyyhkäise vaihtaaksesi päivää. Pitkä painallus päivään: sairas- tai matkapäivä.</p>
+      <p className="text-center text-xs text-slate-500">Pyyhkäise vaihtaaksesi päivää. Suunnitelman kuittaat tehdyksi pyyhkäisemällä sitä oikealle. Pitkä painallus päivään: sairas- tai matkapäivä.</p>
     </div>
   );
 

@@ -23,6 +23,7 @@ import { IconButton } from '../review/ReviewSheet';
 import { FLAG_LABEL } from './DaySheet';
 import { TypeIcon } from './Dashboard';
 import { IconCheck, IconClose, IconPlus, IconSun } from '../../ui/icons';
+import { SwipeRow } from '../../ui/SwipeRow';
 import { isFresh, useConfirmFeedback } from '../../ui/fresh';
 import { morphOpen } from '../../ui/morph';
 import { CATEGORY_LABEL } from '../../ui/labels';
@@ -354,10 +355,15 @@ export function DayRow({
           {plans.map((p) => {
             const t = types.get(p.activityTypeId);
             const skipped = p.status === 'skipped';
+            // Pyyhkäisy (kosketus): oikealle = tehty, vasemmalle = ei tehty. Ei tulevilla eikä ohitetuilla.
+            const swipe = !skipped && !isFuture;
             return (
-              <li
+              <SwipeRow
                 key={p.id}
-                className={`flex items-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-[color-mix(in_oklab,var(--surface)_60%,transparent)] pr-1 ${leaving.has(p.id) ? 'plan-leaving' : ''}`}
+                right={swipe ? { label: 'Tehty', icon: <IconCheck />, tone: 'green', run: () => confirmWithFeedback(p) } : undefined}
+                left={swipe ? { label: 'Ei tehty', icon: <IconClose />, tone: 'red', run: () => onPlanOpen(p) } : undefined}
+                className={`rounded-2xl border border-dashed border-slate-300 bg-[color-mix(in_oklab,var(--surface)_60%,transparent)] ${leaving.has(p.id) ? 'plan-leaving' : ''}`}
+                innerClassName="flex items-center gap-2 pr-1"
               >
                 <button type="button" onClick={(e) => morphOpen(e.currentTarget.closest('li'), () => onPlanOpen(p))} className="press flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-2 py-2 text-left">
                   <TypeIcon t={t} size="sm" muted />
@@ -382,7 +388,7 @@ export function DayRow({
                     </IconButton>
                   </div>
                 )}
-              </li>
+              </SwipeRow>
             );
           })}
         </ul>

@@ -15,6 +15,7 @@ import { SkipReasons } from './SkipReasons';
 import { usePlanActions } from './usePlanActions';
 import { loadUnconfirmed, useMinuteTick } from './unconfirmed';
 import { IconCheck, IconClose, IconPencil } from '../../ui/icons';
+import { SwipeRow } from '../../ui/SwipeRow';
 
 export function ReviewSheet({
   open,
@@ -80,8 +81,15 @@ function ReviewRow({
   const [duration, setDuration] = useState(String(plan.durationMin));
   const [error, setError] = useState<string>();
 
+  // Pyyhkäisy (kosketus): oikealle = tehty, vasemmalle = ei tehty (syyn valinta); vain perustilassa.
+  const idle = mode === 'idle';
   return (
-    <li className="card-sunk p-3">
+    <SwipeRow
+      className="card-sunk"
+      innerClassName="p-3"
+      right={idle ? { label: 'Tehty', icon: <IconCheck />, tone: 'green', run: () => void actions.confirm(plan) } : undefined}
+      left={idle ? { label: 'Ei tehty', icon: <IconClose />, tone: 'red', run: () => setMode('skip') } : undefined}
+    >
       <div className="flex items-center gap-3">
         <span className="text-xl" aria-hidden>
           <TypeGlyph t={type} />
@@ -138,7 +146,7 @@ function ReviewRow({
         </form>
       )}
       {error && <p className="mt-1 text-sm text-red-700">{error}</p>}
-    </li>
+    </SwipeRow>
   );
 }
 

@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.18',
+    date: '19.11.2026',
+    items: ['Puhelimella suunnitelman voi kuitata pyyhkäisemällä: oikealle tehty, vasemmalle ei tehty. Toimii päiväkortissa ja Käy viikko läpi -kohdassa.'],
+  },
+  {
     version: '1.1.17',
     date: '19.11.2026',
     items: ['Viikko-näkymän pienimmät tekstit ovat nyt isompia ja helpompia lukea puhelimella.'],
