@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.35',
+    date: '19.11.2026',
+    items: [
+      'Asetusten Viikkorytmi-listassa näkyy treenin joukkue tai ryhmä, ja puuttuvasta valinnasta tulee muistutus.',
+      'Viikkorytmin riveillä merkintä, jos rivi on päättynyt tai alkaa myöhemmin.',
+    ],
+  },
+  {
     version: '1.1.34',
     date: '19.11.2026',
     items: [

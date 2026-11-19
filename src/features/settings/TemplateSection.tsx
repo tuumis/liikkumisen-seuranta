@@ -20,6 +20,7 @@ import { isClubTraining, trainingSelfText } from '../../domain/football';
 import { parseSelfMin, TrainingSelfBackfill, TrainingSelfFields } from '../football/TrainingSelf';
 import { IconClose, IconPencil, IconPlus } from '../../ui/icons';
 import { TrainingTeamField } from '../football/TrainingTeam';
+import { displayTeamName } from '../../domain/opponent';
 
 const WEEKDAYS: { value: Weekday; label: string }[] = [
   { value: 1, label: 'Ma' },
@@ -47,7 +48,21 @@ const schema = z
 export function TemplateSection({ profile }: { profile: Profile }) {
   const items = useLiveQuery(() => repo.listTemplateItems(profile.id), [profile.id]);
   const types = useLiveQuery(() => repo.listActivityTypes({ includeArchived: true }), []);
+  const teams = useLiveQuery(() => repo.listTeams(profile.id, { includeArchived: true, groups: true }), [profile.id]);
   const [editing, setEditing] = useState<TemplateItem | 'new' | null>(null);
+  const today = todayFn();
+  // Seuran treenin joukkue tai ryhmä listan rivillä (19.11.2026). Ilman valintaa ainoa joukkue tulee kuitatessa
+  // (ja jää riville, jos toinen lisätään), joten se näytetään valittuna.
+  const activeTeams = teams?.filter((t) => !t.archived) ?? [];
+  const teamLine = (i: TemplateItem): { text: string; warn?: boolean } | undefined => {
+    if (!teams?.length || !isClubTraining(types?.find((t) => t.id === i.activityTypeId))) return undefined;
+    const name = (t: { kind?: string; name: string }) => (t.kind === 'group' ? `Ryhmä: ${t.name}` : displayTeamName(t.name));
+    const t = i.teamId ? teams.find((x) => x.id === i.teamId) : undefined;
+    if (t) return { text: t.archived ? `${name(t)} (arkistoitu)` : name(t) };
+    if (activeTeams.length === 1) return { text: name(activeTeams[0]) };
+    if (activeTeams.length > 1) return { text: 'Joukkue tai ryhmä valitsematta', warn: true };
+    return undefined;
+  };
   const typeName = (id: string) => {
     const t = types?.find((x) => x.id === id);
     return t ? `${t.icon} ${t.name}` : '?';
@@ -80,14 +95,23 @@ export function TemplateSection({ profile }: { profile: Profile }) {
         </EmptyState>
       )}
       <ul className="mt-2 divide-y divide-slate-100">
-        {items?.map((i) => (
+        {items?.map((i) => {
+          const team = teamLine(i);
+          const ended = !!i.validTo && i.validTo < today;
+          const upcoming = i.validFrom > today;
+          return (
           <li key={i.id}>
             <button type="button" onClick={() => setEditing(i)} className="flex w-full items-center gap-3 py-3 text-left active:bg-slate-50">
-              <span className="min-w-0 flex-1">
-                <span className="block truncate font-medium text-slate-900">
+              <span className={`min-w-0 flex-1 ${ended ? 'opacity-60' : ''}`}>
+                <span className="block font-medium leading-relaxed text-slate-900">
                   {typeName(i.activityTypeId)}
-                  {i.label && <span className="ml-1.5 rounded-full bg-[var(--surface-sage)] px-2 py-0.5 text-xs font-semibold text-green-900">{i.label}</span>}
+                  {i.label && <span className="ml-1.5 inline-block whitespace-nowrap rounded-full bg-[var(--surface-sage)] px-2 py-0.5 text-xs font-semibold text-green-900">{i.label}</span>}
+                  {ended && <span className="ml-1.5 inline-block whitespace-nowrap rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">päättynyt</span>}
+                  {upcoming && <span className="ml-1.5 inline-block whitespace-nowrap rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">alkaa {formatDate(i.validFrom, 'd.M.')}</span>}
                 </span>
+                {team && (
+                  <span className={`block text-xs font-semibold ${team.warn ? 'text-amber-800' : 'text-slate-700'}`}>{team.text}</span>
+                )}
                 <span className="block text-xs text-slate-600">
                   {i.weekdays.map((d) => WEEKDAYS[d - 1].label).join(', ')}
                   {i.startTime && ` klo ${i.startTime}`} · {i.durationMin} min
@@ -103,7 +127,8 @@ export function TemplateSection({ profile }: { profile: Profile }) {
               </span>
             </button>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </Card>
     <TrainingSelfBackfill profile={profile} />
