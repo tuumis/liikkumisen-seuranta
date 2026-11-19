@@ -324,7 +324,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
           <IconChevronLeft />
         </button>
         <div className="min-w-0 flex-1 px-2 text-center lg:w-56 lg:flex-none">
-          <div className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500">Viikko {wk.week}</div>
+          <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">Viikko {wk.week}</div>
           <div className="truncate text-sm font-bold text-slate-900">
             {formatDate(period.start, 'd.M.')} – {formatDate(period.end, 'd.M.yyyy')}
           </div>

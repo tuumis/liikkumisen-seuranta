@@ -72,7 +72,7 @@ function DayBars({ days, valid, target, group }: { days: DayTotals[]; valid: Set
           );
         })}
       </div>
-      <div className="mt-1 flex gap-1.5 text-center text-[10px] font-semibold uppercase text-slate-500" aria-hidden>
+      <div className="mt-1 flex gap-1.5 text-center text-[11px] font-semibold uppercase text-slate-500" aria-hidden>
         {WD.map((w) => (
           <span key={w} className="flex-1">
             {w}
@@ -167,7 +167,7 @@ export function LastWeekCard({ profile, today, onOpenWeek }: { profile: Profile;
             <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
               <span className="stat text-[2.5rem] font-semibold leading-none tabular-nums text-slate-900">{Math.round(main.value)}</span>
               <span className="text-sm font-semibold text-slate-600">{main.unit}</span>
-              <span className={`ml-1 self-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold ${STATUS_CLASS[main.m.status]}`}>{STATUS_TEXT[main.m.status]}</span>
+              <span className={`ml-1 self-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-bold ${STATUS_CLASS[main.m.status]}`}>{STATUS_TEXT[main.m.status]}</span>
             </div>
             <div className="mt-1 text-xs text-slate-500">
               {main.target}
@@ -184,7 +184,7 @@ export function LastWeekCard({ profile, today, onOpenWeek }: { profile: Profile;
         <div className="flex min-w-0 flex-col gap-1">
           <DayBars days={report.allDays} valid={valid} target={target} group={report.group.group} />
           {best && best.mvpaCombined > 0 && (
-            <div className="text-[11px] leading-tight text-slate-500">
+            <div className="text-xs leading-tight text-slate-500">
               {metDays}/7 päivää tavoitteessa · paras {formatDate(best.date, 'EEEEEE')} {Math.round(best.mvpaCombined)} min
             </div>
           )}

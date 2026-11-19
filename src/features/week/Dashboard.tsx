@@ -105,11 +105,11 @@ export function DailyChart({ report, today, target: dayTarget, title }: { report
             {ad ? ad.total : '–'}
             <span className="ml-1 font-sans text-xs font-semibold tracking-normal text-slate-500">min</span>
           </div>
-          <div className="text-[11px] text-slate-500">{ad ? dayLabel(ad.date) : '\u00a0'}</div>
+          <div className="text-xs text-slate-500">{ad ? dayLabel(ad.date) : '\u00a0'}</div>
         </div>
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-        <div className="inline-flex shrink-0 rounded-xl bg-[var(--surface-sunk)] p-0.5 text-[11px] font-bold" role="radiogroup" aria-label="Kaavion sisältö">
+        <div className="inline-flex shrink-0 rounded-xl bg-[var(--surface-sunk)] p-0.5 text-xs font-bold" role="radiogroup" aria-label="Kaavion sisältö">
           {(
             [
               ['mvpa', report.group.group === 'early_years' ? 'Vauhdikas' : 'Reipas + rasittava'],
@@ -129,13 +129,13 @@ export function DailyChart({ report, today, target: dayTarget, title }: { report
           ))}
         </div>
       </div>
-      <p className="mb-6 mt-2 h-4 truncate text-[11px] text-slate-500">{detail || '\u00a0'}</p>
+      <p className="mb-6 mt-2 h-4 truncate text-xs text-slate-500">{detail || '\u00a0'}</p>
 
       <div className="relative" style={{ height: h + 28 }} onMouseLeave={() => setHover(null)}>
         {/* tavoiteviiva */}
         {showTarget && (
           <div className="absolute inset-x-0 border-t-2 border-dashed border-[var(--viz-track-line)]" style={{ bottom: 28 + y(target) }} aria-hidden>
-            <span className="absolute -top-5 right-0 rounded-md bg-[var(--surface)] px-1 text-[10.5px] font-semibold text-slate-500">tavoite {Math.round(target)}</span>
+            <span className="absolute -top-5 right-0 rounded-md bg-[var(--surface)] px-1 text-[11px] font-semibold text-slate-500">tavoite {Math.round(target)}</span>
           </div>
         )}
         <div className="absolute inset-x-0 bottom-0 grid grid-cols-7 gap-1.5 sm:gap-3" role="list" aria-label={mode === 'mvpa' ? 'Reipas ja rasittava liikunta päivittäin' : 'Kaikki liikunta päivittäin'}>
@@ -177,12 +177,12 @@ export function DailyChart({ report, today, target: dayTarget, title }: { report
                         />
                       ))}
                       {d.total > max && (
-                        <span className="absolute -top-5 left-1/2 -translate-x-1/2 rounded-md bg-[var(--surface)] px-1 text-[10px] font-bold text-slate-700 tabular-nums">{d.total}</span>
+                        <span className="absolute -top-5 left-1/2 -translate-x-1/2 rounded-md bg-[var(--surface)] px-1 text-[11px] font-bold text-slate-700 tabular-nums">{d.total}</span>
                       )}
                     </div>
                   )}
                 </div>
-                <span className={`relative flex h-5 min-w-7 items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${isToday ? 'bg-green-700 text-white' : active === i ? 'text-slate-900' : 'text-slate-500'}`}>
+                <span className={`relative flex h-5 min-w-7 items-center justify-center rounded-full px-1.5 text-xs font-bold ${isToday ? 'bg-green-700 text-white' : active === i ? 'text-slate-900' : 'text-slate-500'}`}>
                   {WD[isoWeekday(d.date) - 1]}
                   {metDay(i) && (
                     <span className="absolute -right-1.5 -top-1.5 flex size-3.5 items-center justify-center rounded-full bg-green-700 text-[8px] font-black text-white ring-2 ring-[var(--surface)]" title="Päiväsuositus täyttyi: 3 h liikkumista, josta 1 h vauhdikasta">
@@ -196,7 +196,7 @@ export function DailyChart({ report, today, target: dayTarget, title }: { report
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-semibold text-slate-600">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-slate-600">
         <span className="flex items-center gap-1.5">
           <span className="size-2.5 rounded-[3px]" style={{ background: 'var(--viz-logged)' }} /> Kerrat
         </span>
@@ -276,7 +276,7 @@ export function RhythmCard({ report, today }: { report: PeriodReport; today: ISO
                   return (
                     <div
                       key={d.date}
-                      className={`anim-pop flex h-8 items-center justify-center rounded-xl text-[10.5px] font-bold ${
+                      className={`anim-pop flex h-8 items-center justify-center rounded-xl text-[11px] font-bold ${
                         on ? 'bg-green-700 text-white shadow-[0_4px_10px_-4px_rgb(var(--accent-rgb)/0.6)]' : future ? 'border border-dashed border-slate-300 text-slate-400' : 'bg-[var(--surface-sunk)] text-slate-500'
                       }`}
                       style={{ animationDelay: `${ri * 120 + i * 40 + 200}ms` }}
@@ -345,7 +345,7 @@ export function UpcomingCard({
               <li key={p.id}>
                 <button type="button" onClick={() => onOpen(p)} className="press flex w-full items-center gap-3 rounded-2xl p-2 text-left hover:bg-[var(--surface-sunk)]">
                   <span className={`flex w-12 shrink-0 flex-col items-center rounded-xl py-1 ${isToday ? 'bg-green-700 text-white' : 'bg-[var(--surface-sunk)] text-slate-700'}`}>
-                    <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">{isToday ? 'tänään' : formatDate(p.date, 'EEEEEE')}</span>
+                    <span className={`font-bold uppercase opacity-80 ${isToday ? 'text-[10.5px] tracking-normal' : 'text-[11px] tracking-wider'}`}>{isToday ? 'tänään' : formatDate(p.date, 'EEEEEE')}</span>
                     <span className="stat text-lg font-semibold">{Number(p.date.slice(8, 10))}</span>
                   </span>
                   <TypeIcon t={t} size="sm" />
@@ -411,9 +411,9 @@ export function RecentCard({ profile, today, types, onOpen }: { profile: Profile
                   <span className="text-right">
                     <span className="stat block text-base font-semibold text-slate-900">
                       {s.durationMin}
-                      <span className="font-sans text-[11px] font-semibold tracking-normal text-slate-500"> min</span>
+                      <span className="font-sans text-xs font-semibold tracking-normal text-slate-500"> min</span>
                     </span>
-                    <span className="block text-[11px] text-slate-500">{s.intensitySource === 'manual' ? '' : 'arvio '}reipas+ {mvpaOf(s.minutes)}</span>
+                    <span className="block text-xs text-slate-500">{s.intensitySource === 'manual' ? '' : 'arvio '}reipas+ {mvpaOf(s.minutes)}</span>
                   </span>
                 </button>
               </li>

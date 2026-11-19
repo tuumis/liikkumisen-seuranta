@@ -133,7 +133,7 @@ export function DayRow({
     >
       <div {...press.handlers} className="no-callout flex select-none flex-wrap items-center gap-x-3 gap-y-1.5 px-4 pb-1.5 pt-3">
         <div className={`flex size-11 shrink-0 flex-col items-center justify-center rounded-2xl leading-none ${isToday ? 'bg-green-700 text-white shadow-[0_6px_14px_-6px_rgb(var(--accent-rgb)/0.7)]' : isFuture ? 'bg-[var(--surface-sunk)] text-slate-400' : 'bg-[var(--surface-sunk)] text-slate-800'}`}>
-          <span className="text-[9.5px] font-bold uppercase tracking-wider opacity-80">{weekday}</span>
+          <span className="text-[10.5px] font-bold uppercase tracking-wider opacity-80">{weekday}</span>
           <span className="stat text-[17px] font-semibold">{dayNo}</span>
         </div>
         {/* Päivän nimi näkyy aina kokonaan (17.11.2026): jos tila ei riitä, oikean reunan mittarit siirtyvät omalle rivilleen. */}
@@ -142,22 +142,22 @@ export function DayRow({
             {isToday ? 'Tänään' : weekdayName}
             {isToday && <span className="sr-only"> ({dayLabel(date)})</span>}
           </div>
-          {flag && <span className="mt-0.5 whitespace-nowrap inline-block rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700">{FLAG_LABEL[flag.reason]}</span>}
+          {flag && <span className="mt-0.5 whitespace-nowrap inline-block rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700">{FLAG_LABEL[flag.reason]}</span>}
           {earlyYears && totals && !isFuture && !flag && earlyYearsDay(totals).met && (
-            <span className="mt-0.5 whitespace-nowrap inline-flex items-center gap-1 rounded-full bg-green-700 px-2 py-0.5 text-[11px] font-bold text-white" title="Päiväsuositus täyttyi: vähintään 3 h liikkumista, josta 1 h vauhdikasta">
+            <span className="mt-0.5 whitespace-nowrap inline-flex items-center gap-1 rounded-full bg-green-700 px-2 py-0.5 text-xs font-bold text-white" title="Päiväsuositus täyttyi: vähintään 3 h liikkumista, josta 1 h vauhdikasta">
               <IconCheck size="0.75rem" strokeWidth={3} /> Suositus
             </span>
           )}
           {schoolAge && totals && !isFuture && !flag && dayGoalMet('school_age', totals) && (
             <span
-              className="mt-0.5 whitespace-nowrap inline-flex items-center gap-1 rounded-full bg-green-700 px-2 py-0.5 text-[11px] font-bold text-white"
+              className="mt-0.5 whitespace-nowrap inline-flex items-center gap-1 rounded-full bg-green-700 px-2 py-0.5 text-xs font-bold text-white"
               title={`Päivän suositus täyttyi: vähintään ${DAY_TARGET.school_age} min reipasta ja rasittavaa (kirjatut kerrat ja arkiliikunnan arvio)`}
             >
               <IconCheck size="0.75rem" strokeWidth={3} /> Suositus
             </span>
           )}
           {hours?.holiday && !flag && (
-            <span className="mt-0.5 whitespace-nowrap inline-block rounded-full bg-[var(--surface-sunk)] px-2 py-0.5 text-[11px] font-semibold text-slate-700 ring-1 ring-slate-200" title="Lomapäivä: arkiliikunta viikonlopun arvoilla">
+            <span className="mt-0.5 whitespace-nowrap inline-block rounded-full bg-[var(--surface-sunk)] px-2 py-0.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200" title="Lomapäivä: arkiliikunta viikonlopun arvoilla">
               Loma
             </span>
           )}
@@ -183,7 +183,7 @@ export function DayRow({
                   }
                 >
                   <span className="stat text-[15px]">{hours.actualMin}</span>
-                  <span className="text-[11px] font-semibold text-slate-500">
+                  <span className="text-xs font-semibold text-slate-500">
                     min{hours.actualMin > hours.actualLoggedMin ? `, josta arvio ${hours.actualMin - hours.actualLoggedMin}` : ' yhteensä'}
                   </span>
                 </InfoTip>
@@ -194,7 +194,7 @@ export function DayRow({
                 {estPct > 0 && <div className="anim-grow-x h-full rounded-full" style={{ width: `${estPct}%`, background: 'var(--viz-estimate)', transition: 'width 0.7s var(--ease-out)' }} />}
               </div>
               <InfoTip
-                className="shrink-0 whitespace-nowrap text-[11px] font-semibold text-slate-700"
+                className="shrink-0 whitespace-nowrap text-xs font-semibold text-slate-700"
                 tip={
                   <>
                     <strong className="block text-[13px]">Reipas ja rasittava liikunta</strong>
@@ -211,7 +211,7 @@ export function DayRow({
                 <span className="tabular-nums">{logged}</span>
                 {est > 0 && <span className="text-slate-500">+{est}</span>}
                 <span className="font-medium text-slate-500">reipas+</span>
-                {(estimated || est > 0) && <span className="rounded-full bg-amber-100 px-1.5 text-[10px] font-bold text-amber-900">arvio</span>}
+                {(estimated || est > 0) && <span className="rounded-full bg-amber-100 px-1.5 text-[11px] font-bold text-amber-900">arvio</span>}
               </InfoTip>
               </div>
             </div>

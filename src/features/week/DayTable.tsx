@@ -177,8 +177,8 @@ export function DayTable({
     <div className="card p-0">
       {/* Työkalurivi: yksikkö ja (PC) lisäsarakkeet. */}
       <div className="flex items-center gap-2 border-b border-slate-200/70 px-3 py-2">
-        <span className="text-[11px] font-semibold text-slate-500">Summat</span>
-        <div className="flex rounded-lg bg-[var(--surface-sunk)] p-0.5 text-[11px] font-semibold" role="radiogroup" aria-label="Summien yksikkö">
+        <span className="text-xs font-semibold text-slate-500">Summat</span>
+        <div className="flex rounded-lg bg-[var(--surface-sunk)] p-0.5 text-xs font-semibold" role="radiogroup" aria-label="Summien yksikkö">
           {(['min', 'h'] as const).map((u) => (
             <button
               key={u}
@@ -206,7 +206,7 @@ export function DayTable({
           </button>
           {colMenu && (
             <div className="absolute right-0 top-full z-30 mt-1.5 w-72 rounded-2xl bg-[var(--surface-raised)] p-2 shadow-xl ring-1 ring-slate-200">
-              <p className="px-2 pb-1.5 pt-1 text-[11px] font-semibold text-slate-500">Lisäsarakkeet (PC)</p>
+              <p className="px-2 pb-1.5 pt-1 text-xs font-semibold text-slate-500">Lisäsarakkeet (PC)</p>
               {EXTRA_COLS.filter((c) => c.id !== 'football' || footballDetails).map((c) => (
                 <label key={c.id} className="flex cursor-pointer items-start gap-2.5 rounded-xl px-2 py-2 hover:bg-[var(--surface-sunk)]">
                   <input type="checkbox" className="mt-0.5 size-4 accent-green-700" checked={cols.has(c.id)} onChange={() => toggleCol(c.id)} />
@@ -243,7 +243,7 @@ export function DayTable({
             <col className="w-[4.5rem] sm:w-24" />
           </colgroup>
           <thead>
-            <tr className="text-left text-[10.5px] font-bold uppercase tracking-wider text-slate-500">
+            <tr className="text-left text-[11px] font-bold uppercase tracking-wider text-slate-500">
               <th scope="col" className="px-3 py-2.5 font-bold">
                 Päivä
               </th>
@@ -308,7 +308,7 @@ export function DayTable({
                   <th scope="row" className="p-0 text-left font-normal">
                     <button type="button" onClick={() => onOpenMenu(r.date)} className="press flex w-full flex-col items-start px-3 py-2.5 text-left" aria-label={`Päivän ${dayLabel(r.date)} toiminnot`}>
                       <span className={`text-sm font-bold leading-tight ${r.isToday ? 'text-green-800' : r.isFuture || r.flag ? 'text-slate-500' : 'text-slate-900'}`}>{wd}</span>
-                      <span className="text-[11px] leading-tight text-slate-500">{r.isToday ? 'tänään' : dm}</span>
+                      <span className="text-xs leading-tight text-slate-500">{r.isToday ? 'tänään' : dm}</span>
                       {!r.isFuture && marks.some((m) => m.on(r.totals)) && (
                         <span className="mt-1 flex gap-0.5">
                           {marks

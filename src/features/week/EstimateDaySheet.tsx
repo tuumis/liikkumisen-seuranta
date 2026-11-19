@@ -171,7 +171,7 @@ export function EstimateDaySheet({ date, profile, onClose }: { date: ISODate | n
                       {conf && ` · merkitty ${conf.durationMin} min`}
                     </div>
                   </div>
-                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${status === 'arvio' ? 'bg-amber-100 text-amber-900' : 'bg-green-100 text-green-800'}`}>{status}</span>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${status === 'arvio' ? 'bg-amber-100 text-amber-900' : 'bg-green-100 text-green-800'}`}>{status}</span>
                 </div>
                 {extra.length > 0 && manual.length === 0 && (
                   <p className="text-xs text-slate-600">

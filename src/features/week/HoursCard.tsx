@@ -42,7 +42,7 @@ function HowCounted({ isCurrentWeek }: { isCurrentWeek: boolean }) {
   return (
     <InfoTip
       align="left"
-      className="text-[11px] font-semibold text-slate-500"
+      className="text-xs font-semibold text-slate-500"
       tip={
         <>
           <strong className="block text-[13px]">Miten tunnit lasketaan</strong>
@@ -181,7 +181,7 @@ function CategoryItems({ items }: { items: CategoryItem[] }) {
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-slate-800">{it.label}</span>
-            <span className={`block text-[11px] ${it.kind === 'estimate' ? 'text-amber-800' : 'text-slate-500'}`}>{ITEM_KIND[it.kind](it.count)}</span>
+            <span className={`block text-xs ${it.kind === 'estimate' ? 'text-amber-800' : 'text-slate-500'}`}>{ITEM_KIND[it.kind](it.count)}</span>
           </span>
           <span className="shrink-0 tabular-nums font-semibold text-slate-900">{fmtMin(it.minutes)}</span>
         </li>
@@ -246,7 +246,7 @@ export function HoursDetailCard({ report, isCurrentWeek }: { report: PeriodRepor
                         ))}
                       </div>
                     </div>
-                    <span className={`text-[11px] ${d.future ? 'text-slate-400' : 'text-slate-700'} ${d.flagged ? 'line-through' : ''}`}>{WD[isoWeekday(d.date) - 1]}</span>
+                    <span className={`text-xs ${d.future ? 'text-slate-400' : 'text-slate-700'} ${d.flagged ? 'line-through' : ''}`}>{WD[isoWeekday(d.date) - 1]}</span>
                   </div>
                 );
               })}

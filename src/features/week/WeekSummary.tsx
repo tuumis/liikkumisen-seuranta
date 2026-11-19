@@ -164,7 +164,7 @@ export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: Pe
               <dl className="grid grid-cols-3 gap-2 sm:mt-5 sm:gap-3">
                 {tiles.map((t, i) => (
                   <div key={t.label} className="anim-rise rounded-2xl bg-white/[0.08] px-3 py-2.5 ring-1 ring-white/[0.08]" style={{ ['--i' as string]: i + 2 }}>
-                    <dt className="min-h-[2lh] text-[10px] font-bold uppercase leading-tight tracking-wide text-[var(--hero-ink-soft)] sm:min-h-0 sm:text-[10.5px]">
+                    <dt className="min-h-[2lh] text-[11px] font-bold uppercase leading-tight tracking-wide text-[var(--hero-ink-soft)] sm:min-h-0 sm:text-[11px]">
                       {t.term ? (
                         <Term id={t.term} vigorousMin={report.vigorousDay.min} className="!decoration-white/40 text-left" align={i === 2 ? 'right' : 'left'}>
                           {t.label}
@@ -174,7 +174,7 @@ export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: Pe
                       )}
                     </dt>
                     <dd className="stat mt-1.5 text-[22px] font-semibold lg:text-[26px]">{t.value}</dd>
-                    {t.sub && <dd className="mt-1 line-clamp-2 text-[11px] leading-snug text-[var(--hero-ink-soft)]">{t.sub}</dd>}
+                    {t.sub && <dd className="mt-1 line-clamp-2 text-[11px] leading-snug text-[var(--hero-ink-soft)] sm:text-xs">{t.sub}</dd>}
                   </div>
                 ))}
               </dl>
@@ -187,7 +187,7 @@ export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: Pe
           </p>
         )}
         {ev.evaluable && ev.quality.lowData && <p className="mt-3 text-xs text-[var(--hero-ink-soft)]">Kirjauksia on vielä vähän, joten vertailu on suuntaa antava.</p>}
-        <p className="mt-4 text-[11px] text-[var(--hero-ink-soft)] opacity-80">Luvut ovat arvioita lajien tyypillisestä tehosta.</p>
+        <p className="mt-4 text-xs text-[var(--hero-ink-soft)] opacity-80">Luvut ovat arvioita lajien tyypillisestä tehosta.</p>
       </div>
     </section>
   );

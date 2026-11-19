@@ -51,7 +51,7 @@ export function DayStrip({
           <IconChevronLeft />
         </button>
         <div className="min-w-0 flex-1 truncate text-center text-sm font-bold text-slate-900">
-          <span className="mr-2 text-[10.5px] uppercase tracking-[0.14em] text-slate-500">Viikko {week}</span>
+          <span className="mr-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Viikko {week}</span>
           {formatDate(start, 'd.M.')} – {formatDate(end, 'd.M.yyyy')}
         </div>
         <button type="button" onClick={onNext} className="press hit flex size-9 items-center justify-center rounded-xl text-slate-600 hover:bg-[var(--surface-sunk)] hover:text-slate-900" aria-label="Seuraava viikko">
@@ -81,7 +81,7 @@ export function DayStrip({
                     : `${future ? 'text-slate-500' : 'text-slate-800'} hover:bg-[var(--surface-sunk)]`
               }`}
             >
-              <span className="text-[10px] font-bold tracking-wider opacity-75">{wd}</span>
+              <span className="text-[11px] font-bold tracking-wider opacity-75">{wd}</span>
               <span className="stat text-[19px] font-semibold">{Number(d.date.slice(8, 10))}</span>
               <span className="flex h-4 items-center" aria-hidden>
                 {d.state === 'met' ? (
@@ -95,7 +95,7 @@ export function DayStrip({
                 ) : null}
               </span>
               {d.pending > 0 && (
-                <span className="absolute -top-1 right-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 text-[10px] font-bold tabular-nums text-amber-950" aria-hidden>
+                <span className="absolute -top-1 right-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 text-[11px] font-bold tabular-nums text-amber-950" aria-hidden>
                   {d.pending}
                 </span>
               )}

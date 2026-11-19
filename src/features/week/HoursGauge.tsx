@@ -84,12 +84,12 @@ export function HoursGauge({ hours, isCurrentWeek, className = '' }: { hours: We
           <div className="absolute -top-1.5 h-7 border-l-2 border-dashed border-slate-500" style={{ left: `${xOf(hours.forecastMin)}%` }} title={`Viikon arvio ${formatHours(hours.forecastMin)}`} />
         )}
         <div className="absolute -top-6 flex -translate-x-1/2 flex-col items-center" style={{ left: `${x}%` }}>
-          <span className="rounded bg-slate-900 px-1.5 text-[11px] font-semibold leading-5 text-white tabular-nums dark:bg-slate-800 dark:text-slate-50">{formatHours(hours.actualMin)}</span>
+          <span className="rounded bg-slate-900 px-1.5 text-xs font-semibold leading-5 text-white tabular-nums dark:bg-slate-800 dark:text-slate-50">{formatHours(hours.actualMin)}</span>
           <span className="h-0 w-0 border-x-[5px] border-t-[6px] border-x-transparent border-t-slate-900 dark:border-t-slate-800" aria-hidden />
         </div>
         <div className="absolute top-0 h-4 w-1 -translate-x-1/2 rounded-full bg-slate-900 ring-2 ring-white dark:bg-slate-900 dark:ring-[var(--surface)]" style={{ left: `${x}%` }} aria-hidden />
         {/* Asteikko: luokkien rajat. */}
-        <div className="relative mt-1 h-4 text-[10px] tabular-nums text-slate-500" aria-hidden>
+        <div className="relative mt-1 h-4 text-[11px] tabular-nums text-slate-500" aria-hidden>
           {HOURS_BANDS.map((b) => (
             <span key={b.key} className="absolute -translate-x-1/2" style={{ left: `${(b.fromH / SCALE_H) * 100}%` }}>
               {b.fromH === 0 ? '' : b.fromH}
@@ -108,14 +108,14 @@ export function HoursGauge({ hours, isCurrentWeek, className = '' }: { hours: We
               <span className="size-3 shrink-0 rounded-sm" style={{ background: bandColor(i) }} aria-hidden />
               <span className="w-14 shrink-0 tabular-nums text-xs text-slate-500">{b.range}</span>
               <span className="min-w-0 flex-1 truncate">{b.label}</span>
-              {showExpected && i === actualIdx && i !== expectedIdx && <span className="shrink-0 rounded-full border border-slate-400 px-1.5 text-[10px] font-medium text-slate-500">nyt</span>}
-              {showExpected && i === expectedIdx && <span className="shrink-0 rounded-full border border-dashed border-slate-400 px-1.5 text-[10px] font-medium text-slate-500">arvio</span>}
+              {showExpected && i === actualIdx && i !== expectedIdx && <span className="shrink-0 rounded-full border border-slate-400 px-1.5 text-[11px] font-medium text-slate-500">nyt</span>}
+              {showExpected && i === expectedIdx && <span className="shrink-0 rounded-full border border-dashed border-slate-400 px-1.5 text-[11px] font-medium text-slate-500">arvio</span>}
             </li>
           );
         })}
       </ul>
 
-      <p className="mt-3 text-[11px] text-slate-500">
+      <p className="mt-3 text-xs text-slate-500">
         Kesto kellotunteina: kirjatut kerrat + arkiliikunnan arvio{isCurrentWeek ? ' tähän päivään asti' : ''}. Luokitus on sovelluksen arvio kokonaismäärästä{showExpected ? ' ja tehdään kesken viikon koko viikon arviosta' : ''}; kouluikäisten suositus 60 min päivässä = 7 h viikossa.
         Reippaan ja rasittavan liikunnan vertailu näkyy erikseen.
       </p>
