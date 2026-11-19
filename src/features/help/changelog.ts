@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.20',
+    date: '19.11.2026',
+    items: ['Puhelimella synkronointi on nyt yläpalkin kuvakkeessa. Oranssi piste kertoo, kun jotain odottaa siirtoa, ja Viikko-näkymä alkaa suoraan päivistä.'],
+  },
+  {
     version: '1.1.19',
     date: '19.11.2026',
     items: ['Puhelimella yläpalkki pienenee alaspäin selatessa, jolloin sisällölle jää enemmän tilaa. Profiilien vaihto pysyy näkyvissä.'],

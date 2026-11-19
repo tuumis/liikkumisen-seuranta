@@ -35,7 +35,7 @@ export function Switch({ on, onChange, label, text, disabled, children }: { on: 
 
 const SYNC_STATUS: Record<string, string> = {
   ok: 'Kansion käyttölupa on voimassa – synkronointi toimii automaattisesti.',
-  'no-folder': 'Valitse ensin synkronointikansio painamalla sivupalkin "Synkronoi" (kapeassa ikkunassa Viikko-sivulla).',
+  'no-folder': 'Valitse ensin synkronointikansio painamalla sivupalkin "Synkronoi" (kapeassa ikkunassa yläpalkin synkronointikuvakkeesta).',
   'no-permission': 'Kansion käyttölupa pitää vahvistaa: paina kerran sivupalkin "Synkronoi". Jos selain tarjoaa vaihtoehdon "Salli aina", lupa säilyy myös uudelleenkäynnistyksen jälkeen.',
   unsupported: 'Tämä selain ei tue kansion käsittelyä (käytä Chromea tai Edgeä).',
 };

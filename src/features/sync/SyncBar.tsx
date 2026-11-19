@@ -1,5 +1,7 @@
-// Synkronointi (SPEC 12 "Synkronointi") ja muistutukset (SPEC 10): PC:n leveällä näytöllä sivupalkin alaosassa,
-// muuten (puhelin, kapea ikkuna) Viikko-näkymän palkkina.
+// Synkronointi (SPEC 12 "Synkronointi") ja muistutukset (SPEC 10): PC:n leveällä näytöllä sivupalkin alaosassa.
+// Puhelimella ja kapeassa ikkunassa (alle 1024 px) yläpalkin kuvakkeena, joka avaa toiminnot paneeliin; merkki
+// kuvakkeessa, kun jokin odottaa (19.11.2026, puhelinkäytön läpikäynti kohta 9). Leveällä näytöllä puhelinroolissa
+// Viikko-näkymän palkkina kuten ennen.
 
 import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -8,6 +10,7 @@ import { repo } from '../../db/repositories';
 import { SYNC_FILE_NAME } from '../../domain/version';
 import { Button } from '../../ui/components';
 import { IconSync } from '../../ui/icons';
+import { Sheet } from '../../ui/Sheet';
 import { useMinuteTick } from '../review/unconfirmed';
 import { useToast } from '../../ui/Toast';
 import { ConflictSheet } from './ConflictSheet';
@@ -31,8 +34,8 @@ export function ago(ts?: string): string {
   return `${Math.round(h / 24)} pv sitten`;
 }
 
-/** variant 'bar' = Viikko-näkymä (PC:llä vain kapeassa ikkunassa), 'sidebar' = PC:n sivupalkki (vain PC-rooli). */
-export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' }) {
+/** variant 'bar' = Viikko-näkymä (leveä näyttö, puhelinrooli), 'sidebar' = PC:n sivupalkki (vain PC-rooli), 'header' = puhelimen yläpalkin kuvake + paneeli. */
+export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' | 'header' }) {
   useMinuteTick(); // "Synkronoitu N min sitten" pysyy ajan tasalla
   const state = useSyncState();
   const actions = useSyncActions();
@@ -41,7 +44,8 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' }) {
   const [conflicts, setConflicts] = useState<MergeSummary | null>(null);
   const [phoneHasNew, setPhoneHasNew] = useState(false);
   const [showPending, setShowPending] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement & HTMLButtonElement>(null);
   // "Synkronoi"-komento (pikanäppäin, komentovalikko, tehtäväpalkki): vain näkyvissä oleva instanssi suorittaa.
   const runRef = useRef<() => void>(() => {});
   useEffect(
@@ -150,8 +154,8 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' }) {
     );
   }
 
-  return (
-    <div ref={rootRef} className="space-y-2 empty:hidden">
+  const body = (
+    <>
       {state.role === 'pc' ? (
         <div className="space-y-2 lg:hidden">
           {phoneHasNew && <div className="rounded-2xl bg-sky-50 p-3 text-sm text-sky-950 ring-1 ring-sky-200">Puhelimella on uusia kirjauksia – synkronoi</div>}
@@ -195,8 +199,100 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' }) {
           </div>
         </div>
       )}
+    </>
+  );
+  const sheets = (
+    <>
       <ConflictSheet summary={conflicts} onClose={() => setConflicts(null)} />
       <PendingSheet open={showPending} onClose={() => setShowPending(false)} />
+    </>
+  );
+
+  if (variant === 'header') {
+    const attention = state.role === 'pc' ? phoneHasNew : state.pending > 0 || stale;
+    const status =
+      state.role === 'pc'
+        ? phoneHasNew
+          ? 'Puhelimella uusia kirjauksia'
+          : synced(state.lastSyncRunAt)
+        : state.pending > 0
+          ? `${state.pending} odottaa siirtoa PC:lle`
+          : stale
+            ? `Tiedot PC:ltä ${pcDays ?? '?'} päivän takaa`
+            : state.lastSyncAt
+              ? 'PC:ltä ' + ago(state.lastSyncAt)
+              : 'Ei vielä tietoja PC:ltä';
+    return (
+      <>
+        <button
+          ref={rootRef}
+          type="button"
+          onClick={() => setSheetOpen(true)}
+          className="press hit relative flex size-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100"
+          aria-label={`Synkronointi: ${status}`}
+          title={status}
+        >
+          <IconSync size="1.3rem" className={busy ? 'animate-spin [animation-direction:reverse]' : ''} />
+          {attention && !busy && <span className="absolute right-1.5 top-1.5 size-2.5 rounded-full bg-amber-500 ring-2 ring-[var(--bg)]" aria-hidden />}
+        </button>
+        <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title="Synkronointi">
+          {state.role === 'pc' ? (
+            <div className="space-y-3 pb-1">
+              {phoneHasNew && <div className="rounded-2xl bg-sky-50 p-3 text-sm text-sky-950 ring-1 ring-sky-200">Puhelimella on uusia kirjauksia – synkronoi</div>}
+              <p className="text-sm text-slate-600">{synced(state.lastSyncRunAt)}</p>
+              <div className="flex gap-2">
+                {supportsFolder() ? (
+                  <Button className="flex-1" disabled={busy} onClick={() => run(actions.pcSync)}>
+                    {busy ? 'Synkronoidaan…' : 'Synkronoi'}
+                  </Button>
+                ) : (
+                  <>
+                    <Button variant="secondary" className="flex-1" disabled={busy} onClick={() => run(actions.importFile)}>
+                      Tuo puhelimelta
+                    </Button>
+                    <Button className="flex-1" disabled={busy} onClick={() => run(async () => (await actions.downloadPcFile(), 'PC:n tiedosto ladattu – siirrä se pilvikansioon'))}>
+                      Lataa
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3 pb-1">
+              {stale && <div className="rounded-2xl bg-sky-50 p-3 text-sm text-sky-950 ring-1 ring-sky-200">Tiedot PC:ltä {pcDays ?? '?'} päivän takaa</div>}
+              <p className="text-sm text-slate-600">
+                {state.lastSyncAt ? 'Tiedot PC:ltä ' + ago(state.lastSyncAt) : 'Ei vielä tietoja PC:ltä'}
+                {state.pending > 0 && (
+                  <>
+                    {' · '}
+                    <button type="button" onClick={() => setShowPending(true)} className="hit font-semibold text-slate-800 underline decoration-dotted underline-offset-2">
+                      {state.pending} odottaa siirtoa PC:lle
+                    </button>
+                  </>
+                )}
+              </p>
+              <div className="flex gap-2">
+                <Button variant="secondary" className="flex-1" disabled={busy} onClick={() => run(actions.importFile)}>
+                  Päivitä PC:ltä
+                </Button>
+                {state.pending > 0 && (
+                  <Button className="flex-1" disabled={busy} onClick={() => run(actions.phoneSend)}>
+                    Lähetä PC:lle
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </Sheet>
+        {sheets}
+      </>
+    );
+  }
+
+  return (
+    <div ref={rootRef} className="space-y-2 empty:hidden">
+      {body}
+      {sheets}
     </div>
   );
 }

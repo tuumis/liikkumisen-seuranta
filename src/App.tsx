@@ -361,9 +361,12 @@ export default function App() {
               <BrandMark className="size-7" />
               <span className="font-display text-[15px] font-semibold text-slate-900">Liikkumisen seuranta</span>
             </div>
-            <button type="button" onClick={() => setHelpOpen(true)} className="press hit -mr-1 flex size-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100" aria-label="Ohje">
-              <IconHelp size="1.35rem" />
-            </button>
+            <div className="-mr-1 flex items-center gap-1">
+              <SyncBar variant="header" />
+              <button type="button" onClick={() => setHelpOpen(true)} className="press hit flex size-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100" aria-label="Ohje">
+                <IconHelp size="1.35rem" />
+              </button>
+            </div>
           </div>
         </div>
         {profiles && profiles.length > 1 && (

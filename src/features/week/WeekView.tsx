@@ -536,7 +536,8 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     <div className="space-y-5">
       <div className="space-y-3 empty:hidden">
         <UpdateBanner />
-        <SyncBar />
+        {/* Puhelimella synkronointi on yläpalkin kuvakkeessa (19.11.2026). */}
+        {isLg && <SyncBar />}
         <BackupReminder onOpenSettings={() => onOpenSettings('devices')} />
       </div>
 
