@@ -113,6 +113,33 @@ describe('treenin joukkue', () => {
     expect(back.format).toBe('5v5');
   });
 
+  it('toinen joukkue tai ryhmä: viikkorytmin ja suunnitelmien treenit jäävät aiemmalle ainoalle joukkueelle', async () => {
+    const { db, repo } = await device();
+    const a = await repo.saveTeam('p1', { name: 'FC Testi · 2018' });
+    const item = await repo.createTemplateItem('p1', { activityTypeId: TRAINING, weekdays: [2], durationMin: 60, validFrom: '2026-11-02' }, TODAY);
+    expect(item.teamId).toBeUndefined();
+    const once = await repo.createPlannedOnce('p1', { activityTypeId: TRAINING, date: '2026-11-20', durationMin: 60 });
+    const self = await repo.createTemplateItem('p1', { activityTypeId: 't:football_self', weekdays: [3], durationMin: 30, validFrom: '2026-11-02' }, TODAY);
+    await repo.saveTeam('p1', { name: 'Talentti', kind: 'group' });
+    expect((await db.templateItems.get(item.id))!.teamId).toBe(a.id);
+    expect((await db.plannedSessions.get(once.id))!.teamId).toBe(a.id);
+    expect((await db.templateItems.get(self.id))!.teamId).toBeUndefined();
+    // Kuitattu viikkorytmin treeni saa edelleen ensimmäisen joukkueen.
+    await repo.backfillTemplateItem(item.id, TODAY);
+    const { session } = await repo.confirmPlanned(`p:${item.id}:2026-11-10`, TODAY);
+    expect(session.teamId).toBe(a.id);
+  });
+
+  it('arkistoidun palautus toiseksi joukkueeksi säilyttää valinnat', async () => {
+    const { db, repo } = await device();
+    const a = await repo.saveTeam('p1', { name: 'P11' });
+    const b = await repo.saveTeam('p1', { name: 'P12' });
+    await repo.setTeamArchived(b.id, true);
+    const item = await repo.createTemplateItem('p1', { activityTypeId: TRAINING, weekdays: [2], durationMin: 60, validFrom: '2026-11-02' }, TODAY);
+    await repo.setTeamArchived(b.id, false);
+    expect((await db.templateItems.get(item.id))!.teamId).toBe(a.id);
+  });
+
   it('aiemmat treenit tarkenteen mukaan', async () => {
     const { db, repo } = await device();
     const team = await repo.saveTeam('p1', { name: 'P11 Musta' });

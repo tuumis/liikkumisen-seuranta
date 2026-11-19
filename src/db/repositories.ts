@@ -1750,13 +1750,37 @@ export function createRepositories(db: AppDB = defaultDb) {
     if (group) team.kind = 'group';
     else if (isGameFormat(input.format)) team.format = input.format;
     if (share !== undefined) team.playShare = share;
+    const prevSole = await soleTeamId(profileId);
     await db.teams.add(team);
+    await keepSoleTeam(profileId, prevSole);
     return team;
+  }
+
+  /**
+   * Yhden joukkueen aikana viikkorytmin treenit ja yksittäiset suunnitelmat tallentuvat ilman joukkuetta (ainoa valitaan
+   * kuitattaessa). Kun toinen joukkue tai ryhmä tulee käyttöön (19.11.2026), ne merkitään aiemmalle ainoalle joukkueelle,
+   * jotteivät tulevat treenit jää ilman joukkuetta.
+   */
+  async function keepSoleTeam(profileId: UUID, prevSole: UUID | undefined): Promise<void> {
+    if (!prevSole || (await soleTeamId(profileId))) return;
+    const types = new Map((await db.activityTypes.toArray()).map((t) => [t.id, t]));
+    const club = (id: UUID) => isClubTraining(types.get(id));
+    const items = live(await db.templateItems.where('profileId').equals(profileId).toArray()).filter((i) => i.active && !i.teamId && club(i.activityTypeId));
+    const plans = live(await db.plannedSessions.where('profileId').equals(profileId).toArray()).filter(
+      (p) => p.status === 'open' && !p.templateItemId && !p.teamId && club(p.activityTypeId),
+    );
+    if (!items.length && !plans.length) return;
+    noteLocalChange();
+    for (const i of items) await db.templateItems.put({ ...(await stamp(i)), teamId: prevSole });
+    for (const p of plans) await db.plannedSessions.put({ ...(await stamp(p)), teamId: prevSole });
   }
 
   async function setTeamArchived(id: UUID, archived: boolean): Promise<void> {
     const current = await db.teams.get(id);
-    if (current) await db.teams.put(await stamp({ ...current, archived }));
+    if (!current) return;
+    const prevSole = archived ? undefined : await soleTeamId(current.profileId);
+    await db.teams.put(await stamp({ ...current, archived }));
+    await keepSoleTeam(current.profileId, prevSole);
   }
 
   // ---------- pelikalenteri: tulevat pelit ja turnaukset (skeema v2) ----------
@@ -1791,8 +1815,10 @@ export function createRepositories(db: AppDB = defaultDb) {
     const sessions = (await sessionsInRange(profileId, from, to)).filter((s) => isTraining(s.activityTypeId) && !s.linkedTo);
     const items = live(await db.templateItems.where('profileId').equals(profileId).toArray());
     const itemTeam = new Map(items.filter((i) => i.teamId).map((i) => [i.id, i.teamId!]));
+    // Suunnitelmalle ainoa aktiivinen joukkue tai ryhmä, kuten kuitattaessa.
+    const sole = await soleTeamId(profileId);
     const team = (x: { teamId?: UUID; templateItemId?: UUID }) => {
-      const id = x.teamId ?? (x.templateItemId ? itemTeam.get(x.templateItemId) : undefined);
+      const id = x.teamId ?? (x.templateItemId ? itemTeam.get(x.templateItemId) : undefined) ?? sole;
       return id ? { teamId: id } : {};
     };
     const out: CalendarTraining[] = sessions.map((s) => ({ id: s.id, date: s.date, startTime: s.startTime, durationMin: s.durationMin, label: s.label, done: true, ...(s.teamId ? { teamId: s.teamId } : {}) }));
@@ -1811,7 +1837,7 @@ export function createRepositories(db: AppDB = defaultDb) {
         for (const date of templateItemDates(item, start, to)) {
           if (taken.has(plannedSessionId(item.id, date))) continue;
           const p = newPlanned(item, date, item.updatedAt, item.updatedBy);
-          out.push({ id: p.id, date, startTime: p.startTime, durationMin: p.durationMin, label: p.label, done: false, ...(item.teamId ? { teamId: item.teamId } : {}) });
+          out.push({ id: p.id, date, startTime: p.startTime, durationMin: p.durationMin, label: p.label, done: false, ...team({ teamId: item.teamId }) });
         }
       }
     }

@@ -152,14 +152,18 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     [footballIds],
   );
   const footballDetails = footballOn ? fbDetails : undefined;
-  // Treenin joukkue (19.11.2026): koko nimi treeniriville (käyttäjän toive: pelkkä ikäluokka hämää), kun omia joukkueita ja ryhmiä on vähintään kaksi.
+  // Treenin joukkue (19.11.2026): koko nimi treeniriville (käyttäjän toive: pelkkä ikäluokka hämää), myös yhdellä joukkueella.
+  // Suunnitelmalle: oma valinta, viikkorytmin rivi tai ainoa aktiivinen joukkue tai ryhmä (sama kuin kuitattaessa).
   const teamsAll = useLiveQuery(() => (profile && footballOn ? repo.listTeams(profile.id, { includeArchived: true, groups: true }) : Promise.resolve([])), [profile?.id, footballOn]);
   const templateItems = useLiveQuery(() => (profile && footballOn ? repo.listTemplateItems(profile.id) : Promise.resolve([])), [profile?.id, footballOn]);
   const teamName = useMemo(() => {
-    if (!teamsAll || teamsAll.length < 2) return undefined;
+    if (!teamsAll?.length) return undefined;
     const names = new Map(teamsAll.map((t) => [t.id, t.kind === 'group' ? t.name : displayTeamName(t.name)]));
     const itemTeam = new Map((templateItems ?? []).filter((i) => i.teamId).map((i) => [i.id, i.teamId!]));
-    return (x: { teamId?: UUID; templateItemId?: UUID }) => names.get(x.teamId ?? (x.templateItemId ? itemTeam.get(x.templateItemId) : undefined) ?? '');
+    const active = teamsAll.filter((t) => !t.archived);
+    const sole = active.length === 1 ? active[0].id : undefined;
+    return (x: { teamId?: UUID; templateItemId?: UUID }, planned = false) =>
+      names.get(x.teamId ?? (x.templateItemId ? itemTeam.get(x.templateItemId) : undefined) ?? (planned ? sole : undefined) ?? '');
   }, [teamsAll, templateItems]);
 
   // Aloitusopas näytetään, kunnes profiililla on ensimmäinen kirjaus.
@@ -596,12 +600,12 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             case 'hoursDetail':
               return <HoursDetailCard report={report} isCurrentWeek={isCurrent} />;
             case 'upcoming':
-              return <UpcomingCard profile={profile} today={today} types={typeMap} onOpen={setPlanOpen} />;
+              return <UpcomingCard profile={profile} today={today} types={typeMap} onOpen={setPlanOpen} teamName={teamName} />;
             case 'days':
               // Puhelimella ja tabletilla päivät ovat päivänauhassa (19.11.2026).
               return isLg ? dayList : null;
             case 'recent':
-              return <RecentCard profile={profile} today={today} types={typeMap} onOpen={setEditing} />;
+              return <RecentCard profile={profile} today={today} types={typeMap} onOpen={setEditing} teamName={teamName} />;
             case 'details':
               return <WeekDetails report={report} isCurrentWeek={isCurrent} />;
           }

@@ -97,12 +97,10 @@ export function MonthCalendar({
     trainings,
   );
   const own = (e: CalEvent) => !e.profileId || e.profileId === profile.id;
-  // Treenin joukkue tai ryhmä (19.11.2026), kun profiililla on niitä vähintään kaksi.
+  // Treenin joukkue tai ryhmä (19.11.2026), myös yhdellä joukkueella (kuten Viikko-näkymässä).
   const trainingTeam = (e: CalEvent) => {
     const t = e.kind === 'training' && e.teamId ? data?.teams.get(e.teamId) : undefined;
-    if (!t) return undefined;
-    const mine = [...(data?.teams.values() ?? [])].filter((x) => x.profileId === t.profileId);
-    return mine.length > 1 ? (t.kind === 'group' ? t.name : teamNameFor(t.name, 'compact')) : undefined;
+    return t ? (t.kind === 'group' ? t.name : teamNameFor(t.name, 'compact')) : undefined;
   };
   const colorOf = (e: CalEvent) => (family && e.profileId ? memberById.get(e.profileId)?.color : undefined);
   // Päällekkäisyydet vain tästä päivästä eteenpäin (menneet eivät enää vaadi järjestelyjä).

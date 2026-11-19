@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.33',
+    date: '19.11.2026',
+    items: [
+      'Treenin joukkue näkyy nyt myös, kun joukkueita on vain yksi: Viikko-näkymässä, Tulevat kerrat- ja Viimeisimmät kirjaukset -korteissa sekä kalenterissa, myös tuleville päiville.',
+      'Kun lisäät toisen joukkueen tai treeniryhmän, aiemmat viikkorytmin treenit pysyvät ensimmäisellä joukkueella eivätkä jää ilman joukkuetta.',
+    ],
+  },
+  {
     version: '1.1.32',
     date: '19.11.2026',
     items: ['Viikko-näkymän treenissä näkyy nyt joukkueen koko nimi omalla rivillään (aiemmin esim. pelkkä ikäluokka "2018").'],

@@ -75,8 +75,8 @@ export function DayRow({
   fixtures?: Map<UUID, Fixture>;
   /** Jalkapallokertojen lisätiedot (puuttuva → "Lisää tiedot"). */
   footballDetails?: Map<UUID, FootballDetails>;
-  /** Treenin joukkueen tai ryhmän lyhyt nimi (vain, kun niitä on vähintään kaksi). */
-  teamName?: (x: { teamId?: UUID; templateItemId?: UUID }) => string | undefined;
+  /** Treenin joukkueen tai ryhmän nimi; `planned` = suunnitelma (ainoa joukkue oletuksena). */
+  teamName?: (x: { teamId?: UUID; templateItemId?: UUID }, planned?: boolean) => string | undefined;
   onFootball: (s: Session) => void;
   types: Map<UUID, ActivityType>;
   flag?: DayFlag;
@@ -311,7 +311,7 @@ export function DayRow({
             const skipped = p.status === 'skipped';
             // Pyyhkäisy (kosketus): oikealle = tehty, vasemmalle = ei tehty. Ei tulevilla eikä ohitetuilla.
             const swipe = !skipped && !isFuture;
-            const team = isClubTraining(t) ? teamName?.(p) : undefined;
+            const team = isClubTraining(t) ? teamName?.(p, p.status === 'open') : undefined;
             return (
               <SwipeRow
                 key={p.id}

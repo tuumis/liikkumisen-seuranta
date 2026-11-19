@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { addDays, isoWeekday } from '../../domain/dates';
 import { mvpaOf } from '../../domain/intensity';
+import { isClubTraining } from '../../domain/football';
 import { earlyYearsDay, isVigorousDay } from '../../domain/aggregate';
 import { RECOMMENDATIONS } from '../../domain/recommendations';
 import type { PeriodReport } from '../../domain/report';
@@ -302,11 +303,14 @@ export function UpcomingCard({
   today,
   types,
   onOpen,
+  teamName,
 }: {
   profile: Profile;
   today: ISODate;
   types: Map<UUID, ActivityType>;
   onOpen: (p: PlannedSession) => void;
+  /** Treenin joukkue tai ryhmä (19.11.2026). */
+  teamName?: (x: { teamId?: UUID; templateItemId?: UUID }, planned?: boolean) => string | undefined;
 }) {
   const to = addDays(today, 13);
   const plans = useLiveQuery(() => repo.plansInRange(profile.id, today, to), [profile.id, today, to]);
@@ -341,6 +345,7 @@ export function UpcomingCard({
             const t = types.get(p.activityTypeId);
             const f = fx.get(p.id);
             const isToday = p.date === today;
+            const team = isClubTraining(t) ? teamName?.(p, true) : undefined;
             return (
               <li key={p.id}>
                 <button type="button" onClick={() => onOpen(p)} className="press flex w-full items-center gap-3 rounded-2xl p-2 text-left hover:bg-[var(--surface-sunk)]">
@@ -353,6 +358,7 @@ export function UpcomingCard({
                     <span className="block truncate text-sm font-semibold text-slate-900">{f?.opponent
                         ? `vs ${f.opponent}`
                         : f?.eventName ?? (t?.footballKind === 'friendly' && f?.games?.some((g) => g.opponent) ? `vs ${f.games.map((g) => g.opponent).filter(Boolean).join(', ')}` : undefined) ?? p.label ?? t?.name ?? 'Laji'}</span>
+                    {team && <span className="block truncate text-xs font-semibold text-slate-600">{team}</span>}
                     <span className="block truncate text-xs text-slate-500">
                       {f?.infoMissing && <span className="font-semibold text-amber-800"><IconWarning size="0.8rem" className="mr-0.5 inline-block align-[-2px]" />tietoja puuttuu · </span>}
                       {f || p.label ? `${t?.name ?? ''} · ` : ''}
@@ -373,7 +379,7 @@ export function UpcomingCard({
 
 // ---------- viimeisimmät kirjaukset ----------
 
-export function RecentCard({ profile, today, types, onOpen }: { profile: Profile; today: ISODate; types: Map<UUID, ActivityType>; onOpen: (s: Session) => void }) {
+export function RecentCard({ profile, today, types, onOpen, teamName }: { profile: Profile; today: ISODate; types: Map<UUID, ActivityType>; onOpen: (s: Session) => void; teamName?: (x: { teamId?: UUID }) => string | undefined }) {
   const from = addDays(today, -30);
   const sessions = useLiveQuery(() => repo.sessionsInRange(profile.id, from, today), [profile.id, from, today]);
   const [open, toggle] = useCollapsible('recent');
@@ -397,6 +403,7 @@ export function RecentCard({ profile, today, types, onOpen }: { profile: Profile
         <ul className="mt-3 space-y-1">
           {list.map((s) => {
             const t = types.get(s.activityTypeId);
+            const team = isClubTraining(t) ? teamName?.({ teamId: s.teamId }) : undefined;
             return (
               <li key={s.id}>
                 <button type="button" onClick={() => onOpen(s)} className="press flex w-full items-center gap-3 rounded-2xl p-2 text-left hover:bg-[var(--surface-sunk)]">
@@ -406,6 +413,7 @@ export function RecentCard({ profile, today, types, onOpen }: { profile: Profile
                     <span className="block truncate text-xs text-slate-500">
                       {dayLabel(s.date)}
                       {s.label && ` · ${t?.name ?? ''}`}
+                      {team && ` · ${team}`}
                     </span>
                   </span>
                   <span className="text-right">
