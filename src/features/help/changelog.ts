@@ -9,6 +9,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.34',
+    date: '19.11.2026',
+    items: [
+      'Viikko-näkymän peleissä ja turnauksissa näkyy nyt oma joukkue, sekä menneissä että tulevissa.',
+      'Viikkorytmin treeni, jolle ei ole valittu joukkuetta, saa sen aiemmista treeneistä: jos riviltä kuitatut tai samalla tarkenteella merkityt treenit ovat kaikki samaa joukkuetta tai ryhmää, tulevat treenit merkitään sille.',
+      'Paneelit avautuvat sulavammin: liike ja taustan himmennys alkavat alusta eivätkä enää nyki.',
+    ],
+  },
+  {
     version: '1.1.33',
     date: '19.11.2026',
     items: [

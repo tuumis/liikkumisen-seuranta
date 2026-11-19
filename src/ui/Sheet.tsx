@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode, type TouchEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, type ReactNode, type TouchEvent } from 'react';
 import { useBackClose } from './backClose';
 import { createPortal } from 'react-dom';
 import { IconClose } from './icons';
@@ -44,6 +44,34 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   if (!open) morph.current = false;
   wasOpen.current = open;
   useBackClose(open, onClose);
+
+  // Avausanimaatio käynnistyy vasta, kun paneeli on piirretty ensimmäisen kerran (19.11.2026, käyttäjän havainto:
+  // avautuminen ja taustan himmennys töksähtivät). Raskaan sisällön rakentaminen ei näin vie animaation alkua.
+  const scrim = useRef<HTMLDivElement>(null);
+  const hold = useRef(false);
+  const shownOnce = useRef(false);
+  if (open && !shownOnce.current) {
+    shownOnce.current = true;
+    hold.current = true;
+  }
+  if (!open) shownOnce.current = hold.current = false;
+  useLayoutEffect(() => {
+    if (!open || !hold.current) return;
+    let r2 = 0;
+    const release = () => {
+      hold.current = false;
+      panel.current?.classList.remove('anim-hold');
+      scrim.current?.classList.remove('anim-hold');
+    };
+    const r1 = requestAnimationFrame(() => (r2 = requestAnimationFrame(release)));
+    // Varmistus: jos ruutua ei piirretä (esim. välilehti taustalla), paneeli näytetään silti.
+    const t = window.setTimeout(release, 400);
+    return () => {
+      cancelAnimationFrame(r1);
+      cancelAnimationFrame(r2);
+      window.clearTimeout(t);
+    };
+  }, [open]);
 
   // Alas vetäminen yläosasta: paneeli seuraa sormea; riittävän pitkä tai nopea veto sulkee.
   const drag = useRef<{ y0: number; dy: number; lastY: number; lastT: number; v: number } | null>(null);
@@ -95,7 +123,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   if (!open) return null;
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center lg:items-center lg:p-6" role="presentation">
-      <div className="scrim absolute inset-0" onClick={onClose} aria-hidden />
+      <div ref={scrim} className={`scrim absolute inset-0 ${hold.current ? 'anim-hold' : ''}`} onClick={onClose} aria-hidden />
       <div
         ref={panel}
         role="dialog"
@@ -103,7 +131,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
         aria-label={title}
         tabIndex={-1}
         style={morph.current ? { viewTransitionName: 'morph' } : undefined}
-        className={`${morph.current ? '' : 'anim-sheet'} relative flex max-h-[90dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-[2rem] bg-[var(--surface)] shadow-xl focus:outline-none lg:rounded-[2rem]`}
+        className={`${morph.current ? '' : 'anim-sheet'} ${hold.current ? 'anim-hold' : ''} relative flex max-h-[90dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-[2rem] bg-[var(--surface)] shadow-xl focus:outline-none lg:rounded-[2rem]`}
       >
         {/* Otsikko pysyy paikallaan; vain sisältö vierii (ohut palkki pyöristettyjen kulmien sisällä). */}
         <div className="shrink-0 touch-none px-5 pt-3 lg:touch-auto lg:px-7 lg:pt-6" onTouchStart={onDragStart} onTouchMove={onDragMove} onTouchEnd={onDragEnd} onTouchCancel={onDragEnd}>

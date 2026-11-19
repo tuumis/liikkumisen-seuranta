@@ -345,7 +345,7 @@ export function UpcomingCard({
             const t = types.get(p.activityTypeId);
             const f = fx.get(p.id);
             const isToday = p.date === today;
-            const team = isClubTraining(t) ? teamName?.(p, true) : undefined;
+            const team = isClubTraining(t) ? teamName?.(p, true) : f?.teamId ? teamName?.({ teamId: f.teamId }) : undefined;
             return (
               <li key={p.id}>
                 <button type="button" onClick={() => onOpen(p)} className="press flex w-full items-center gap-3 rounded-2xl p-2 text-left hover:bg-[var(--surface-sunk)]">

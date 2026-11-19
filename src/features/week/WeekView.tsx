@@ -142,6 +142,8 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     const far = farWeekPlanning(today, weekStart);
     void (async () => {
       await repo.ensurePlanned(profile.id, planningThroughForWeek(today, weekStart), today);
+      // Viikkorytmin rivin joukkue aiemmista treeneistä, jos rivi on tallennettu ennen joukkuevalintaa.
+      await repo.inferTemplateTeams(profile.id);
       if (far) await repo.ensurePlanned(profile.id, far.through, today, { from: far.from });
     })();
   }, [profile?.id, weekStart, today]);

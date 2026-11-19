@@ -140,6 +140,27 @@ describe('treenin joukkue', () => {
     expect((await db.templateItems.get(item.id))!.teamId).toBe(a.id);
   });
 
+  it('viikkorytmin rivi saa joukkueen aiemmista treeneistä (rivi tai tarkenne)', async () => {
+    const { db, repo } = await device();
+    const team = await repo.saveTeam('p1', { name: 'FC Testi · 2018' });
+    const g = await repo.saveTeam('p1', { name: 'Talenttiryhmä', kind: 'group' });
+    const item = await repo.createTemplateItem('p1', { activityTypeId: TRAINING, weekdays: [2], durationMin: 60, validFrom: '2026-11-02', label: 'Joukkuetreenit' }, TODAY);
+    const other = await repo.createTemplateItem('p1', { activityTypeId: TRAINING, weekdays: [4], durationMin: 60, validFrom: '2026-11-02', label: 'Talentti' }, TODAY);
+    const mixed = await repo.createTemplateItem('p1', { activityTypeId: TRAINING, weekdays: [5], durationMin: 60, validFrom: '2026-11-02' }, TODAY);
+    await repo.backfillTemplateItem(item.id, TODAY);
+    const { session } = await repo.confirmPlanned(`p:${item.id}:2026-11-10`, TODAY);
+    expect(session.teamId).toBeUndefined();
+    await repo.setSessionTeam(session.id, team.id);
+    await repo.createSession({ profileId: 'p1', activityTypeId: TRAINING, date: '2026-11-05', durationMin: 60, ...base, label: 'talentti', teamId: g.id });
+    // Ilman tarkennetta ja eri joukkueilla: ei päätellä.
+    await repo.createSession({ profileId: 'p1', activityTypeId: TRAINING, date: '2026-11-06', durationMin: 60, ...base, teamId: g.id });
+    expect(await repo.inferTemplateTeams('p1')).toBe(2);
+    expect((await db.templateItems.get(item.id))!.teamId).toBe(team.id);
+    expect((await db.templateItems.get(other.id))!.teamId).toBe(g.id);
+    expect((await db.templateItems.get(mixed.id))!.teamId).toBeUndefined();
+    expect(await repo.inferTemplateTeams('p1')).toBe(0);
+  });
+
   it('aiemmat treenit tarkenteen mukaan', async () => {
     const { db, repo } = await device();
     const team = await repo.saveTeam('p1', { name: 'P11 Musta' });

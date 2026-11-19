@@ -1,7 +1,7 @@
 import type { ActivityType, DayFlag, DayTotals, Fixture, FootballDetails, ISODate, PlannedSession, Session, UUID } from '../../domain/types';
 import type { DayHours } from '../../domain/hours';
 import { InfoTip } from '../../ui/InfoTip';
-import { foldTrainingSelves, isClubTraining, LEVEL_LABEL, OUTCOME_LABEL, outcomeOf, trainingSelfText } from '../../domain/football';
+import { foldTrainingSelves, isClubFootball, isClubTraining, LEVEL_LABEL, OUTCOME_LABEL, outcomeOf, trainingSelfText } from '../../domain/football';
 
 /** "vs HJK · Elite · " tulevan pelin suunnitelmariville; "⚠ tietoja puuttuu" ensin (17.11.2026). */
 function fixtureText(f?: Fixture, typeId?: UUID): string {
@@ -16,6 +16,7 @@ function fixtureText(f?: Fixture, typeId?: UUID): string {
   return parts.length ? `${parts.join(' · ')} · ` : '';
 }
 import { mvpaOf } from '../../domain/intensity';
+import { displayTeamName } from '../../domain/opponent';
 import { dayLabel, formatDate } from '../../ui/format';
 import { SKIP_REASON_LABEL } from '../../ui/labels';
 import { useLongPress } from '../../ui/useLongPress';
@@ -200,7 +201,14 @@ export function DayRow({
             const isFootball = t?.sport === 'football';
             const fd = isFootball ? footballDetails?.get(s.id) : undefined;
             const fbText = fd ? footballSummary(t?.footballKind, fd) : '';
-            const team = isClubTraining(t) && !s.linkedTo ? teamName?.({ teamId: s.teamId }) : undefined;
+            // Joukkue: treenille kerran joukkue, peleille ja turnauksille lisätietojen joukkue (19.11.2026).
+            const team = s.linkedTo
+              ? undefined
+              : isClubTraining(t)
+                ? teamName?.({ teamId: s.teamId })
+                : isClubFootball(t)
+                  ? (fd?.teamId ? teamName?.({ teamId: fd.teamId }) : undefined) ?? (fd?.team ? displayTeamName(fd.team) : undefined)
+                  : undefined;
             return (
               <li key={s.id} className={`flex items-center gap-1 rounded-2xl ${isFresh(s.id) ? 'row-fresh' : ''}`}>
                 <button type="button" onClick={(e) => morphOpen(e.currentTarget.closest('li'), () => onEdit(s))} className="press flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-2 py-2 text-left hover:bg-[color-mix(in_oklab,var(--surface-sunk)_70%,transparent)]">
@@ -311,7 +319,8 @@ export function DayRow({
             const skipped = p.status === 'skipped';
             // Pyyhkäisy (kosketus): oikealle = tehty, vasemmalle = ei tehty. Ei tulevilla eikä ohitetuilla.
             const swipe = !skipped && !isFuture;
-            const team = isClubTraining(t) ? teamName?.(p, p.status === 'open') : undefined;
+            const fixture = fixtures?.get(p.id);
+            const team = isClubTraining(t) ? teamName?.(p, p.status === 'open') : isClubFootball(t) && fixture?.teamId ? teamName?.({ teamId: fixture.teamId }) : undefined;
             return (
               <SwipeRow
                 key={p.id}

@@ -708,6 +708,36 @@ export function createRepositories(db: AppDB = defaultDb) {
     return rows.map((s) => s.id);
   }
 
+  /**
+   * Viikkorytmin rivin joukkue aiemmista treeneistä (19.11.2026, käyttäjän havainto: ennen joukkuevalintaa tallennetun
+   * rivin tämän päivän treenissä ei näkynyt joukkuetta). Rivi ilman joukkuetta saa joukkueen, jos sen viimeisimmät
+   * (enintään viisi) merkityt treenit, jotka on kuitattu riviltä tai joilla on sama tarkenne, ovat kaikki samaa
+   * joukkuetta tai ryhmää. Palauttaa päivitettyjen rivien määrän.
+   */
+  async function inferTemplateTeams(profileId: UUID): Promise<number> {
+    const types = new Map((await db.activityTypes.toArray()).map((t) => [t.id, t]));
+    const club = (id: UUID) => isClubTraining(types.get(id));
+    const items = live(await db.templateItems.where('profileId').equals(profileId).toArray()).filter((i) => i.active && !i.teamId && club(i.activityTypeId));
+    if (!items.length) return 0;
+    const teams = new Set(live(await db.teams.where('profileId').equals(profileId).toArray()).filter((t) => !t.archived).map((t) => t.id));
+    const sessions = live(await db.sessions.where('profileId').equals(profileId).toArray())
+      .filter((s) => !s.linkedTo && s.teamId && teams.has(s.teamId) && club(s.activityTypeId))
+      .sort((a, b) => b.date.localeCompare(a.date));
+    let n = 0;
+    for (const item of items) {
+      const key = labelKey(item.label);
+      const prefix = `p:${item.id}:`;
+      const own = sessions.filter((s) => s.plannedSessionId?.startsWith(prefix));
+      const recent = (own.length ? own : key ? sessions.filter((s) => labelKey(s.label) === key) : []).slice(0, 5);
+      const ids = new Set(recent.map((s) => s.teamId));
+      if (!recent.length || ids.size !== 1) continue;
+      if (!n) noteLocalChange();
+      await db.templateItems.put({ ...(await stamp(item)), teamId: recent[0].teamId! });
+      n++;
+    }
+    return n;
+  }
+
   /** Kumoaa kerralla merkitsemisen: joukkue pois annetuilta kerroilta. */
   async function clearTrainingsTeam(ids: UUID[]): Promise<void> {
     const rows = (await db.sessions.bulkGet(ids)).filter((s): s is Session => !!s && !s.deletedAt && !!s.teamId);
@@ -2483,6 +2513,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     trainingsWithoutTeam,
     assignTrainingsTeam,
     clearTrainingsTeam,
+    inferTemplateTeams,
     listClubs,
     saveClub,
     saveClubLogo,
