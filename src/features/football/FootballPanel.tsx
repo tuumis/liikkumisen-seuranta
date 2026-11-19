@@ -20,6 +20,7 @@ import { useToast } from '../../ui/Toast';
 import { TeamNameFields, useTeamNameSuggestions } from '../games/TeamNameFields';
 import { openResultShare } from '../share/ResultShare';
 import { IconPlus } from '../../ui/icons';
+import { TrainingTeamField } from './TrainingTeam';
 
 const PLAYED_PICKS = [10, 15, 20, 30, 40, 50, 60];
 
@@ -104,6 +105,9 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
   const [selfBefore, setSelfBefore] = useState<string | null>(null);
   const [selfAfter, setSelfAfter] = useState<string | null>(null);
   const self = useLiveQuery(() => (session ? repo.getTrainingSelf(session.id) : undefined), [session?.id]);
+  // Seuran treenin joukkue (19.11.2026) on kerralla, ei lisätiedoissa.
+  const [trainingTeam, setTrainingTeam] = useState('');
+  useEffect(() => setTrainingTeam(session?.teamId ?? ''), [session?.id, session?.teamId]);
 
   // Avattaessa: olemassa olevat tiedot tai oletukset (oma joukkue = viimeksi käytetty).
   const existing = useLiveQuery(async () => (session ? (await repo.getFootballDetails(session.id)) ?? null : undefined), [session?.id]);
@@ -165,6 +169,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
   const shareText = `~${Math.round((session.playShare ?? DEFAULT_PLAY_SHARE) * 100)} %`;
   const goals = goalsLabel(playerName);
   const showSelf = kind === 'training' && isClubTraining(type) && !session.linkedTo;
+  const showTeam = showSelf;
 
   async function save() {
     const nums = { gf: toNum(gf), ga: toNum(ga), played: toNum(played), count: toNum(gamesCount), own: toNum(playerGoals) };
@@ -226,6 +231,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
     setSaving(true);
     try {
       await repo.saveFootballDetails(session!.id, input);
+      if (showTeam && trainingTeam !== (session!.teamId ?? '')) await repo.setSessionTeam(session!.id, trainingTeam || undefined);
       if (showSelf && sb !== null && sa !== null && (selfBefore !== null || selfAfter !== null) && (sb !== (self?.before ?? 0) || sa !== (self?.after ?? 0))) {
         await repo.setTrainingSelf(session!.id, { before: sb, after: sa });
       }
@@ -260,6 +266,8 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
         }}
       >
         <p className="text-xs text-slate-500">Kaikki tiedot ovat valinnaisia. Kerta on jo tallennettu.</p>
+
+        {showTeam && <TrainingTeamField profileId={session.profileId} value={trainingTeam} onChange={setTrainingTeam} min={1} />}
 
         <div>
           <div className="mb-1 text-sm font-medium text-slate-700">Viihtyminen</div>

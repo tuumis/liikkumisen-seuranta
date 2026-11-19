@@ -96,6 +96,8 @@ export interface SessionInput {
   label?: string;
   /** Arkiliikunnan vahvistus päiväkohtaisesti (säilyy muokattaessa). */
   estimateConfirmed?: boolean;
+  /** Seuran treeni: oma joukkue. Puuttuu → ainoa aktiivinen joukkue (uusi kerta) tai entinen (muokkaus). */
+  teamId?: UUID;
   /**
    * Tehoprofiili lajin profiilin sijaan (17.11.2026): arkiliikunnan vahvistus käyttää arvion omaa profiilia,
    * jotta vahvistus sellaisenaan ei muuta päivän reipasta ja rasittavaa. Tallentuu snapshotiksi.
@@ -213,6 +215,8 @@ export interface TemplateItemInput {
   /** Jalkapallotreeni: omatoiminen alku- ja loppuverryttely (min) oletuksena kuittauksessa. */
   selfBeforeMin?: number;
   selfAfterMin?: number;
+  /** Seuran treeni: oma joukkue (19.11.2026). */
+  teamId?: UUID;
 }
 
 /** Poistetun kerran ja siihen liittyneiden tietueiden aiemmat versiot. */
@@ -641,8 +645,77 @@ export function createRepositories(db: AppDB = defaultDb) {
     const label = cleanLabel(input.label);
     if (label) session.label = label;
     if (input.estimateConfirmed) session.estimateConfirmed = true;
+    if (isClubTraining(type)) {
+      const team = input.teamId !== undefined ? await liveTeamId(input.profileId, input.teamId) : await soleTeamId(input.profileId);
+      if (team) session.teamId = team;
+    }
     await db.sessions.add(session);
     return session;
+  }
+
+  /** Treenin joukkue (19.11.2026): ainoa aktiivinen oma joukkue tai treeniryhmä, jos niitä on yhteensä täsmälleen yksi. */
+  async function soleTeamId(profileId: UUID): Promise<UUID | undefined> {
+    const rows = live(await db.teams.where('profileId').equals(profileId).toArray()).filter((t) => !t.archived);
+    return rows.length === 1 ? rows[0]!.id : undefined;
+  }
+
+  /** Profiilin oma joukkue (myös arkistoitu), jos se on olemassa. */
+  async function liveTeamId(profileId: UUID, id: UUID | undefined): Promise<UUID | undefined> {
+    if (!id) return undefined;
+    const t = await db.teams.get(id);
+    return t && !t.deletedAt && t.profileId === profileId ? t.id : undefined;
+  }
+
+  /** Kirjatun treenin joukkue (jalkapallon lisätiedoista); undefined poistaa joukkueen. */
+  async function setSessionTeam(sessionId: UUID, teamId: UUID | undefined): Promise<void> {
+    const current = await db.sessions.get(sessionId);
+    if (!current || current.deletedAt) throw new Error('Kertaa ei löydy');
+    const next = await liveTeamId(current.profileId, teamId);
+    if ((current.teamId ?? undefined) === next) return;
+    noteLocalChange();
+    const row = await stamp({ ...current });
+    if (next) row.teamId = next;
+    else delete row.teamId;
+    await db.sessions.put(row);
+  }
+
+  /** Seuran treenit ilman joukkuetta (aikaväli mukaan luettuna), uusimmat ensin. */
+  async function trainingsWithoutTeam(profileId: UUID, from?: ISODate, to?: ISODate): Promise<Session[]> {
+    const types = new Map((await db.activityTypes.toArray()).map((t) => [t.id, t]));
+    const teams = new Set(live(await db.teams.where('profileId').equals(profileId).toArray()).map((t) => t.id));
+    return live(await db.sessions.where('profileId').equals(profileId).toArray())
+      .filter((s) => isClubTraining(types.get(s.activityTypeId)) && !s.linkedTo && !(s.teamId && teams.has(s.teamId)))
+      .filter((s) => (!from || s.date >= from) && (!to || s.date <= to))
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }
+
+  /** Merkitsee aiemmat treenit, joilta joukkue puuttuu, kerralla joukkueelle (19.11.2026). Palauttaa merkityt kerrat. */
+  async function assignTrainingsTeam(profileId: UUID, teamId: UUID, from?: ISODate, to?: ISODate): Promise<UUID[]> {
+    const team = await liveTeamId(profileId, teamId);
+    if (!team) throw new Error('Joukkuetta ei löydy');
+    const rows = await trainingsWithoutTeam(profileId, from, to);
+    if (!rows.length) return [];
+    noteLocalChange();
+    const ts = nowTimestamp();
+    const by = await deviceId();
+    await db.sessions.bulkPut(rows.map((s) => ({ ...s, teamId: team, updatedAt: ts, updatedBy: by })));
+    return rows.map((s) => s.id);
+  }
+
+  /** Kumoaa kerralla merkitsemisen: joukkue pois annetuilta kerroilta. */
+  async function clearTrainingsTeam(ids: UUID[]): Promise<void> {
+    const rows = (await db.sessions.bulkGet(ids)).filter((s): s is Session => !!s && !s.deletedAt && !!s.teamId);
+    if (!rows.length) return;
+    noteLocalChange();
+    const ts = nowTimestamp();
+    const by = await deviceId();
+    await db.sessions.bulkPut(
+      rows.map((s) => {
+        const next = { ...s, updatedAt: ts, updatedBy: by };
+        delete next.teamId;
+        return next;
+      }),
+    );
   }
 
   async function updateSession(id: UUID, input: SessionInput): Promise<Session> {
@@ -675,6 +748,13 @@ export function createRepositories(db: AppDB = defaultDb) {
       const label = cleanLabel(input.label);
       if (label) next.label = label;
       if (current.linkedTo) splitSelfDuration(next);
+      // Joukkue säilyy, ellei sitä anneta; se kuuluu vain seuran treenille (lajin vaihto poistaa sen).
+      if (!isClubTraining(type)) delete next.teamId;
+      else if (input.teamId !== undefined) {
+        const team = await liveTeamId(next.profileId, input.teamId);
+        if (team) next.teamId = team;
+        else delete next.teamId;
+      }
       await db.sessions.put(next);
       const companion = await db.sessions.get(trainingSelfId(id));
       if (companion && !companion.deletedAt && companion.linkedTo === id) await putTrainingSelf(next, { before: companion.selfBeforeMin ?? 0, after: companion.selfAfterMin ?? 0 });
@@ -875,7 +955,8 @@ export function createRepositories(db: AppDB = defaultDb) {
       durationMin: input.durationMin,
       validFrom: input.validFrom,
     };
-    for (const k of ['startTime', 'validTo', 'note', 'label', 'selfBeforeMin', 'selfAfterMin'] as const) delete next[k];
+    for (const k of ['startTime', 'validTo', 'note', 'label', 'selfBeforeMin', 'selfAfterMin', 'teamId'] as const) delete next[k];
+    if (input.teamId) next.teamId = input.teamId;
     if (selfMin(input.selfBeforeMin)) next.selfBeforeMin = selfMin(input.selfBeforeMin);
     if (selfMin(input.selfAfterMin)) next.selfAfterMin = selfMin(input.selfAfterMin);
     if (input.startTime) next.startTime = input.startTime;
@@ -1050,6 +1131,12 @@ export function createRepositories(db: AppDB = defaultDb) {
       if (plan.startTime) session.startTime = plan.startTime;
       if (plan.label) session.label = plan.label;
       setFootballTiming(session, type, input.warmupMin, input.playShare);
+      // Seuran treeni: joukkue yksittäiseltä suunnitelmalta tai viikkorytmin riviltä, muuten ainoa oma joukkue (19.11.2026).
+      if (isClubTraining(type)) {
+        const item = plan.templateItemId ? await db.templateItems.get(plan.templateItemId) : undefined;
+        const team = (await liveTeamId(plan.profileId, plan.teamId ?? item?.teamId)) ?? (await soleTeamId(plan.profileId));
+        if (team) session.teamId = team;
+      }
       await db.sessions.put(session); // put herättää poistomerkityn henkiin
       // Seuran treeni: viikkorytmin omatoiminen alku- ja loppuverryttely linkitetyksi kerraksi.
       if (isClubTraining(type) && plan.templateItemId) {
@@ -1610,16 +1697,18 @@ export function createRepositories(db: AppDB = defaultDb) {
     await db.footballDetails.put(await stamp(row));
   }
 
-  async function listTeams(profileId: UUID, opts: { includeArchived?: boolean } = {}): Promise<Team[]> {
-    const rows = live(await db.teams.where('profileId').equals(profileId).toArray());
+  /** Omat joukkueet; `groups` mukaan myös treeniryhmät (treenien valinnat), muuten vain joukkueet (pelit). */
+  async function listTeams(profileId: UUID, opts: { includeArchived?: boolean; groups?: boolean } = {}): Promise<Team[]> {
+    const rows = live(await db.teams.where('profileId').equals(profileId).toArray()).filter((t) => opts.groups || t.kind !== 'group');
     return (opts.includeArchived ? rows : rows.filter((t) => !t.archived)).sort((a, b) => a.name.localeCompare(b.name, 'fi'));
   }
 
   /** `photo`: undefined poistaa kuvan, kenttä puuttuu = kuva ennallaan. */
-  async function saveTeam(profileId: UUID, input: { name: string; photo?: string; format?: GameFormat; playShare?: number }, id?: UUID): Promise<Team> {
-    const share = input.playShare !== undefined && input.playShare > 0 && input.playShare <= 1 ? input.playShare : undefined;
+  async function saveTeam(profileId: UUID, input: { name: string; photo?: string; format?: GameFormat; playShare?: number; kind?: 'team' | 'group' }, id?: UUID): Promise<Team> {
+    const group = input.kind === 'group';
+    const share = !group && input.playShare !== undefined && input.playShare > 0 && input.playShare <= 1 ? input.playShare : undefined;
     const name = input.name.trim().replace(/\s+/g, ' ');
-    if (!name) throw new Error('Anna joukkueen nimi');
+    if (!name) throw new Error(group ? 'Anna ryhmän nimi' : 'Anna joukkueen nimi');
     if (id) {
       const current = await db.teams.get(id);
       if (!current || current.deletedAt) throw new Error('Joukkuetta ei löydy');
@@ -1637,13 +1726,23 @@ export function createRepositories(db: AppDB = defaultDb) {
         if (share !== undefined) next.playShare = share;
         else delete next.playShare;
       }
+      if ('kind' in input) {
+        if (group) next.kind = 'group';
+        else delete next.kind;
+      }
+      if (next.kind === 'group') {
+        // Treeniryhmällä ei ole pelien tietoja.
+        delete next.format;
+        delete next.playShare;
+      }
       await db.teams.put(next);
       return next;
     }
     const ts = nowTimestamp();
     const team: Team = { id: newId(), profileId, name, archived: false, createdAt: ts, updatedAt: ts, updatedBy: await deviceId() };
     if (input.photo) team.photo = input.photo;
-    if (isGameFormat(input.format)) team.format = input.format;
+    if (group) team.kind = 'group';
+    else if (isGameFormat(input.format)) team.format = input.format;
     if (share !== undefined) team.playShare = share;
     await db.teams.add(team);
     return team;
@@ -1767,7 +1866,7 @@ export function createRepositories(db: AppDB = defaultDb) {
    */
   async function createPlannedOnce(
     profileId: UUID,
-    input: { activityTypeId: UUID; date: ISODate; durationMin: number; startTime?: HHmm; label?: string },
+    input: { activityTypeId: UUID; date: ISODate; durationMin: number; startTime?: HHmm; label?: string; teamId?: UUID },
   ): Promise<PlannedSession> {
     if (!isISODate(input.date)) throw new Error('Tarkista päivä');
     if (!Number.isInteger(input.durationMin) || input.durationMin < 1 || input.durationMin > 1440) throw new Error('Tarkista kesto (min)');
@@ -1786,6 +1885,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     if (input.startTime) plan.startTime = input.startTime;
     const label = input.label?.trim();
     if (label) plan.label = label;
+    if (input.teamId) plan.teamId = input.teamId;
     await db.plannedSessions.add(plan);
     return plan;
   }
@@ -2341,6 +2441,10 @@ export function createRepositories(db: AppDB = defaultDb) {
     updatePlannedOccurrence,
     reopenPlanned,
     listTeams,
+    setSessionTeam,
+    trainingsWithoutTeam,
+    assignTrainingsTeam,
+    clearTrainingsTeam,
     listClubs,
     saveClub,
     saveClubLogo,

@@ -13,7 +13,7 @@ import { opponentHistory } from '../../domain/opponentLibrary';
 import { historyLine, useGameRows } from './OpponentHistory';
 import { Flag, OriginFields } from '../../ui/Flag';
 import { clubFor, clubNameOf, LogoPicker, TeamLogo, useClubLogos, useClubs } from '../../ui/TeamLogo';
-import { Button, Card, EmptyState } from '../../ui/components';
+import { Button, Card, EmptyState, Field, inputClass } from '../../ui/components';
 import { Segmented, ToggleChip } from '../../ui/controls';
 import { dayLabel, formatDate } from '../../ui/format';
 import { SKIP_REASON_LABEL } from '../../ui/labels';
@@ -32,6 +32,7 @@ import { DiaryView } from './DiaryView';
 import { OpponentLibrary } from './TeamLibrary';
 import { TeamNameFields, useTeamNameSuggestions } from './TeamNameFields';
 import { FootballHero } from './FootballHero';
+import { UnassignedTrainings } from '../football/TrainingTeam';
 import { IconCalendarClock, IconPencil, IconPlus, IconReport, IconShare, IconWarning } from '../../ui/icons';
 import { InfoLink } from '../../ui/InfoLink';
 import { openPreviewShare } from '../share/PreviewShare';
@@ -451,8 +452,11 @@ function FixtureRow({ e, team, today, history, onClick }: { e: FixtureEntry; tea
 
 function TeamsView({ profile }: { profile: Profile }) {
   const toast = useToast();
-  const teams = useLiveQuery(() => repo.listTeams(profile.id, { includeArchived: true }), [profile.id]);
+  const teams = useLiveQuery(() => repo.listTeams(profile.id, { includeArchived: true, groups: true }), [profile.id]);
   const [editing, setEditing] = useState<Team | 'new' | null>(null);
+  // Joukkue (pelit ja treenit) vai treeniryhmä (vain treenit, oma nimi), 19.11.2026.
+  const [kind, setKind] = useState<'team' | 'group'>('team');
+  const group = kind === 'group';
   const [name, setName] = useState('');
   const [photo, setPhoto] = useState<string | undefined>();
   const [format, setFormat] = useState<GameFormat | ''>('');
@@ -474,6 +478,7 @@ function TeamsView({ profile }: { profile: Profile }) {
 
   const open = (t: Team | 'new') => {
     setEditing(t);
+    setKind(t !== 'new' && t.kind === 'group' ? 'group' : 'team');
     setName(t === 'new' ? '' : t.name);
     setPhoto(t === 'new' ? undefined : t.photo);
     setLogo(undefined);
@@ -487,15 +492,19 @@ function TeamsView({ profile }: { profile: Profile }) {
 
   async function save() {
     try {
-      const hasClub = !!club && /[/·|]/.test(name);
+      const hasClub = !group && !!club && /[/·|]/.test(name);
       // Logo seuralle (näkyy kaikissa seuran joukkueissa ja peleissä); ilman seuraa joukkueen kuvaksi.
       if (logoTouched && hasClub) await repo.saveClubLogo(club, logo);
       // Maa ja kotipaikkakunta seuralle (ilman erotettua seuraa koko nimelle).
       const info = clubFor(clubs, name);
-      if ((country ?? '') !== (info?.country ?? '') || city.trim() !== (info?.city ?? '')) await repo.saveClub(clubNameOf(name), { country, city });
+      if (!group && ((country ?? '') !== (info?.country ?? '') || city.trim() !== (info?.city ?? ''))) await repo.saveClub(clubNameOf(name), { country, city });
       const teamPhoto = logoTouched && !hasClub ? logo : logoTouched && hasClub ? undefined : photo;
-      await repo.saveTeam(profile.id, { name, photo: teamPhoto, format: format || undefined, playShare: share === 70 ? undefined : share / 100 }, editing && editing !== 'new' ? editing.id : undefined);
-      toast('Joukkue tallennettu');
+      await repo.saveTeam(
+        profile.id,
+        group ? { name, photo: teamPhoto, kind } : { name, photo: teamPhoto, format: format || undefined, playShare: share === 70 ? undefined : share / 100, kind },
+        editing && editing !== 'new' ? editing.id : undefined,
+      );
+      toast(group ? 'Ryhmä tallennettu' : 'Joukkue tallennettu');
       setEditing(null);
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e));
@@ -504,7 +513,7 @@ function TeamsView({ profile }: { profile: Profile }) {
 
   return (
     <Card
-      title={`Omat joukkueet · ${profile.name}`}
+      title={`Omat joukkueet ja ryhmät · ${profile.name}`}
       action={
         <Button variant="ghost" onClick={() => open('new')}>
           <IconPlus size="1rem" /> Lisää
@@ -519,7 +528,29 @@ function TeamsView({ profile }: { profile: Profile }) {
             void save();
           }}
         >
-          <TeamNameFields own value={name} onChange={setName} suggestions={suggestions} label="Oma joukkue" />
+          <Segmented<'team' | 'group'>
+            label="Tyyppi"
+            value={kind}
+            onChange={setKind}
+            options={[
+              { value: 'team', label: 'Joukkue' },
+              { value: 'group', label: 'Treeniryhmä' },
+            ]}
+          />
+          <p className="text-xs text-slate-500">
+            {group
+              ? 'Treeniryhmä on vain treenejä varten, esim. pienryhmävalmennus, taitokoulu tai futsal-koulu. Anna sille nimi, jolla tunnistat treenit. Ryhmä ei näy pelien joukkuevalinnassa.'
+              : 'Joukkue pelaa pelejä ja treenaa. Treenit voi merkitä joukkueelle viikkorytmissä tai treenin lisätiedoissa.'}
+          </p>
+          {group ? (
+            <Field label="Ryhmän nimi">
+              <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="esim. Pienryhmävalmennus, Taitokoulu" />
+            </Field>
+          ) : (
+            <TeamNameFields own value={name} onChange={setName} suggestions={suggestions} label="Oma joukkue" />
+          )}
+          {!group && (
+          <>
           <div>
             <div className="mb-1 text-sm font-medium text-slate-700">Pelimuoto (oletus peleille)</div>
             <div className="flex flex-wrap gap-2">
@@ -541,8 +572,10 @@ function TeamsView({ profile }: { profile: Profile }) {
             </p>
           </div>
           <OriginFields country={country} city={city} onCountry={setCountry} onCity={setCity} />
+          </>
+          )}
           <LogoPicker
-            label={club && /[/·|]/.test(name) ? `Seuran logo (${club})` : 'Logo tai joukkuekuva'}
+            label={group ? 'Kuva (valinnainen)' : club && /[/·|]/.test(name) ? `Seuran logo (${club})` : 'Logo tai joukkuekuva'}
             name={name}
             value={shownLogo}
             onChange={(v) => {
@@ -562,21 +595,23 @@ function TeamsView({ profile }: { profile: Profile }) {
       )}
       {teams?.length === 0 && !editing && (
         <EmptyState art="shirt" title="Ei vielä joukkueita" compact>
-          Lisää lapsen joukkue, niin se esitäyttyy peleihin.
+          Lisää lapsen joukkue, niin se esitäyttyy peleihin. Treeniryhmän (esim. pienryhmävalmennus) voi lisätä samasta painikkeesta.
         </EmptyState>
       )}
       <ul className="divide-y divide-slate-100">
-        {teams?.map((t) => (
+        {teams && [...teams.filter((t) => t.kind !== 'group'), ...teams.filter((t) => t.kind === 'group')].map((t) => (
           <li key={t.id} className={`flex items-center gap-3 py-3 ${t.archived ? 'opacity-50' : ''}`}>
             <button type="button" className="flex min-w-0 flex-1 items-center gap-3 text-left" onClick={() => open(t)} aria-label={`Muokkaa: ${t.name}`}>
-              <TeamLogo logo={logoFor(t.name) ?? t.photo} name={t.name} size="lg" />
+              <TeamLogo logo={(t.kind === 'group' ? undefined : logoFor(t.name)) ?? t.photo} name={t.name} size="lg" />
               <span className="min-w-0 flex-1">
                 <span className="flex min-w-0 items-center gap-1.5">
-                  <Flag code={clubFor(clubs, t.name)?.country} />
+                  <Flag code={t.kind === 'group' ? undefined : clubFor(clubs, t.name)?.country} />
                   <span className="truncate font-medium text-slate-900">{displayTeamName(t.name)}</span>
                 </span>
                 <span className="mt-0.5 block truncate text-xs text-slate-500">
-                  {[clubFor(clubs, t.name)?.city, t.format, `peliaika ~${Math.round((t.playShare ?? 0.7) * 100)} %`].filter(Boolean).join(' · ')}
+                  {t.kind === 'group'
+                    ? 'Treeniryhmä · vain treenit'
+                    : [clubFor(clubs, t.name)?.city, t.format, `peliaika ~${Math.round((t.playShare ?? 0.7) * 100)} %`].filter(Boolean).join(' · ')}
                 </span>
               </span>
               <span className="text-slate-400" aria-hidden>
@@ -593,6 +628,7 @@ function TeamsView({ profile }: { profile: Profile }) {
           </li>
         ))}
       </ul>
+      <UnassignedTrainings profile={profile} />
     </Card>
   );
 }

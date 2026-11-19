@@ -9,6 +9,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.26',
+    date: '19.11.2026',
+    items: [
+      'Treenille voi nyt valita joukkueen tai treeniryhmän: viikkorytmissä, yksittäisessä suunnitelmassa ja treenin lisätiedoissa. Jos joukkueita ja ryhmiä on yhteensä yksi, treenit merkitään sille automaattisesti.',
+      'Uusi treeniryhmä omalla nimellä, esim. pienryhmävalmennus tai taitokoulu: Jalkapallo → Joukkueet → Lisää → Treeniryhmä. Ryhmä on vain treenejä varten eikä näy peleissä.',
+      'Aiemmat treenit voi merkitä joukkueelle tai ryhmälle kerralla: Jalkapallo → Joukkueet → Merkitse aiemmat treenit.',
+    ],
+  },
+  {
     version: '1.1.25',
     date: '19.11.2026',
     items: ['Uudet taustat Revontulet ja Kenttävalot (Asetukset → Ulkoasu → Tausta). Ne on suunniteltu erityisesti tummalle teemalle, jossa kortit erottuvat syvää taustaa vasten.'],

@@ -19,6 +19,7 @@ import { DateInput } from '../../ui/DateInput';
 import { isClubTraining, trainingSelfText } from '../../domain/football';
 import { parseSelfMin, TrainingSelfBackfill, TrainingSelfFields } from '../football/TrainingSelf';
 import { IconClose, IconPencil, IconPlus } from '../../ui/icons';
+import { TrainingTeamField } from '../football/TrainingTeam';
 
 const WEEKDAYS: { value: Weekday; label: string }[] = [
   { value: 1, label: 'Ma' },
@@ -129,6 +130,7 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
     label: item?.label ?? '',
     selfBefore: item?.selfBeforeMin ? String(item.selfBeforeMin) : '',
     selfAfter: item?.selfAfterMin ? String(item.selfAfterMin) : '',
+    teamId: item?.teamId ?? '',
   });
   const clubTraining = isClubTraining(types?.find((t) => t.id === v.activityTypeId));
   // Uuden rivin oletuslaji, kun jalkapallon päättely ja lajit ovat valmiina.
@@ -169,6 +171,7 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
       label: r.data.label,
       selfBeforeMin: sb || undefined,
       selfAfterMin: sa || undefined,
+      teamId: clubTraining ? v.teamId || undefined : undefined,
     };
     try {
       const saved = item ? await repo.updateTemplateItem(item.id, input, today) : await repo.createTemplateItem(profile.id, input, today);
@@ -266,6 +269,15 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
           {err('validTo')}
         </Field>
       </div>
+
+      {clubTraining && (
+        <TrainingTeamField
+          profileId={profile.id}
+          value={v.teamId}
+          onChange={(id) => setV((c) => ({ ...c, teamId: id }))}
+          hint="Kuitattu treeni merkitään tälle joukkueelle tai ryhmälle. Yksittäisen treenin valintaa voi muuttaa sen lisätiedoista."
+        />
+      )}
 
       {clubTraining && (
         <TrainingSelfFields

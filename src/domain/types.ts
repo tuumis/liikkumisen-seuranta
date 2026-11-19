@@ -151,6 +151,8 @@ export interface TemplateItem extends SyncFields {
    */
   selfBeforeMin?: number;
   selfAfterMin?: number;
+  /** Seuran jalkapallotreeni (19.11.2026): oma joukkue (Team.id), jonka kanssa treenataan; siirtyy kuitattuun kertaan. */
+  teamId?: UUID;
   createdAt: Timestamp;
 }
 
@@ -172,6 +174,8 @@ export interface PlannedSession extends SyncFields {
   overridden?: boolean;
   /** Tarkenne viikkopohjasta (esim. "Futsal"). */
   label?: string;
+  /** Yksittäin suunniteltu seuran treeni (19.11.2026): oma joukkue. Viikkorytmin kerroilla joukkue luetaan pohjariviltä. */
+  teamId?: UUID;
   createdAt: Timestamp;
 }
 
@@ -214,6 +218,12 @@ export interface Session extends SyncFields {
   linkedTo?: UUID;
   selfBeforeMin?: number;
   selfAfterMin?: number;
+  /**
+   * Seuran jalkapallotreeni (19.11.2026): oma joukkue (Team.id), jonka kanssa treenattiin. Pelien joukkue on
+   * jalkapallon lisätiedoissa (FootballDetails.teamId); treenillä joukkue on kerralla, jotta lisätietojen
+   * puuttuminen (Lisätiedot-painike) ei muutu.
+   */
+  teamId?: UUID;
   createdAt: Timestamp;
 }
 
@@ -316,6 +326,11 @@ export interface Team extends SyncFields {
   id: UUID;
   profileId: UUID;
   name: string;
+  /**
+   * Treeniryhmä (19.11.2026): vain treenejä, ei pelejä (esim. pienryhmävalmennus, taitokoulu), aina käyttäjän
+   * omalla nimellä. Puuttuu = joukkue. Ryhmä ei näy pelien joukkuevalinnoissa.
+   */
+  kind?: 'group';
   /** Vanha sarjataso: ei enää käytössä (taso on peli- ja turnauskohtainen); säilyy vanhoissa riveissä. */
   level?: GameLevel;
   /** Joukkuekuva pienennettynä (JPEG data URL), valinnainen. */

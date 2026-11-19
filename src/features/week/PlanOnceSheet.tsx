@@ -17,6 +17,8 @@ import { useFootballEnabled, withoutClubFootball } from '../football/useFootball
 import { LabelField } from './LabelField';
 import { useHiddenTypes, visibleTypes } from './useLoggableTypes';
 import { CompanionsPicker, companionDuration, type Companion } from './Companions';
+import { isClubTraining } from '../../domain/football';
+import { TrainingTeamField } from '../football/TrainingTeam';
 
 export function PlanOnceSheet({ profile, date, onClose }: { profile: Profile; date: ISODate | null; onClose: () => void }) {
   const toast = useToast();
@@ -34,6 +36,8 @@ export function PlanOnceSheet({ profile, date, onClose }: { profile: Profile; da
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
   const [companions, setCompanions] = useState<Companion[]>([]);
+  const [teamId, setTeamId] = useState('');
+  const clubTraining = isClubTraining(types?.find((t) => t.id === typeId));
 
   useEffect(() => {
     if (!date) return;
@@ -42,6 +46,7 @@ export function PlanOnceSheet({ profile, date, onClose }: { profile: Profile; da
     setDuration('60');
     setLabel('');
     setCompanions([]);
+    setTeamId('');
     setError(undefined);
   }, [date]);
   const firstId = types?.[0]?.id;
@@ -58,7 +63,7 @@ export function PlanOnceSheet({ profile, date, onClose }: { profile: Profile; da
     setSaving(true);
     try {
       const base = { activityTypeId: typeId, date: day, startTime: (time || undefined) as HHmm | undefined, label };
-      const p = await repo.createPlannedOnce(profile.id, { ...base, durationMin: d });
+      const p = await repo.createPlannedOnce(profile.id, { ...base, durationMin: d, teamId: clubTraining ? teamId || undefined : undefined });
       // Mukana myös: jokaiselle oma suunnitelma (kesto profiileittain), kuitataan kukin erikseen.
       const extra = [];
       for (const [i, c] of companions.entries()) extra.push(await repo.createPlannedOnce(c.profileId, { ...base, durationMin: mins[i]! }));
@@ -109,6 +114,7 @@ export function PlanOnceSheet({ profile, date, onClose }: { profile: Profile; da
               </Field>
             </div>
           </div>
+          {clubTraining && <TrainingTeamField profileId={profile.id} value={teamId} onChange={setTeamId} />}
           {typeId && <LabelField profileId={profile.id} activityTypeId={typeId} value={label} onChange={setLabel} placeholder="esim. Uintikoulu, Leiri" />}
           <CompanionsPicker mainProfileId={profile.id} value={companions} onChange={setCompanions} defaults={{ effort: 0, muscle: false, bone: false }} mainDuration={duration} />
           {error && (
