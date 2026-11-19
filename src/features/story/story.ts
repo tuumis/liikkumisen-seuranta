@@ -5,7 +5,8 @@ import { formatHours, isEstimateConfirmation } from '../../domain/hours';
 import { footballKindOf, gameRows, summarizeGames, typeTotals } from '../../domain/football';
 import { isoWeek, startOfIsoWeek } from '../../domain/dates';
 import type { PeriodReport } from '../../domain/report';
-import type { ActivityType, FocusTag, FootballDetails, Session, UUID } from '../../domain/types';
+import { shortTeamName, teamBreakdown } from '../../domain/teamBreakdown';
+import type { ActivityType, FocusTag, FootballDetails, Session, Team, UUID } from '../../domain/types';
 import { ENJOYMENT_LABEL, focusTagLabel } from '../../ui/labels';
 
 export interface StoryBar {
@@ -38,6 +39,8 @@ export interface StoryInput {
   footballDetails: Map<UUID, FootballDetails>;
   /** Jalkapallo-ominaisuus profiilille (SPEC 16); false = ei jalkapallo- eikä harjoitellut asiat -korttia. */
   football?: boolean;
+  /** Omat joukkueet ja treeniryhmät (19.11.2026): kortti joukkueittain, kun niitä on vähintään kaksi. */
+  teams?: Team[];
 }
 
 const fi = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
@@ -117,6 +120,29 @@ export function buildStory(input: StoryInput): StorySlide[] {
     if (g.playedMinTotal > 0) lines.push(`Peliaikaa kirjattu ${fi(g.playedMinTotal)} min`);
     if (g.goalsFor + g.goalsAgainst > 0) lines.push(`Joukkueen maalit ${g.goalsFor}–${g.goalsAgainst}`);
     slides.push({ id: 'football', kicker: 'Jalkapallo', title: g.games ? 'Kentällä' : 'Treeneissä', stats, lines });
+
+    // Joukkueittain (19.11.2026): treenit ja pelit joukkueittain, treeniryhmät perässä.
+    const teams = input.teams ?? [];
+    const dates = football.map((s) => s.date).sort();
+    const tb = teams.length && dates.length ? teamBreakdown({ sessions: football, details: input.footballDetails, types, planned: [], today: dates.at(-1)! }, { kind: 'season', start: dates[0], end: dates.at(-1)! }, teams) : undefined;
+    const rows = tb ? [...tb.teams, ...tb.groups].filter((r) => r.training.count + r.games.games > 0) : [];
+    if (tb?.show && rows.length >= 2) {
+      const act = (r: (typeof rows)[number]) => r.training.count + r.games.games;
+      const shown = rows.slice(0, 4);
+      const max = Math.max(...shown.map(act));
+      const part = (n: number, one: string, many: string) => (n ? `${n} ${n === 1 ? one : many}` : '');
+      slides.push({
+        id: 'teams',
+        kicker: 'Jalkapallo',
+        title: 'Joukkueittain',
+        lines: [[part(tb.teams.filter(act).length, 'joukkue', 'joukkuetta'), part(tb.groups.filter(act).length, 'treeniryhmä', 'treeniryhmää')].filter(Boolean).join(' ja ')],
+        bars: shown.map((r) => ({
+          label: shortTeamName(r.team, teams),
+          value: [part(r.training.count, 'treeni', 'treeniä'), part(r.games.games, 'peli', 'peliä')].filter(Boolean).join(' · '),
+          pct: act(r) / max,
+        })),
+      });
+    }
 
     const tagCount = new Map<FocusTag, number>();
     let enjoySum = 0;

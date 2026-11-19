@@ -11,6 +11,9 @@ import {
   type Trend,
 } from '../../domain/football';
 import type { FocusTag, Period, SkipReason } from '../../domain/types';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { repo } from '../../db/repositories';
+import { shortTeamName, teamBreakdown } from '../../domain/teamBreakdown';
 import { Button, Card, EmptyState } from '../../ui/components';
 import { ENJOYMENT_LABEL, FOCUS_TAG_LABEL, focusTagLabel, RATING_LABEL, SKIP_REASON_LABEL } from '../../ui/labels';
 import { num1, percent } from '../../ui/statusText';
@@ -31,6 +34,7 @@ export function FootballSection({ profileId, week, onOpenGames }: { profileId: s
   const ref = trendRefDate(period, today);
   const season = seasonPeriod(ref);
   const data = useFootball(profileId, minDate(period.start, season.start), maxDate(period.end, ref));
+  const teams = useLiveQuery(() => repo.listTeams(profileId, { includeArchived: true, groups: true }), [profileId]);
 
   if (!data) return null;
   if (data.sessions.length === 0 && !data.planned.some((p) => data.types.get(p.activityTypeId)?.sport === 'football')) return null;
@@ -41,6 +45,10 @@ export function FootballSection({ profileId, week, onOpenGames }: { profileId: s
   const seasonTags = footballPeriodSummary(data, { ...season, end: ref });
   const p = sum.participation;
   const reasons = (Object.keys(SKIP_REASON_LABEL) as SkipReason[]).filter((r) => p.skippedByReason[r] > 0);
+  // Joukkueittain (19.11.2026): valitun viikon treenit ja pelit, kun omia joukkueita ja ryhmiä on vähintään kaksi.
+  const tb = teams ? teamBreakdown(data, period, teams) : undefined;
+  const tbRows = tb?.show ? [...tb.teams, ...tb.groups].filter((r) => r.training.count + r.games.games > 0) : [];
+  const many = (n: number, one: string, more: string) => (n ? `${n} ${n === 1 ? one : more}` : '');
 
   return (
     <Card title="⚽ Jalkapallo">
@@ -91,6 +99,33 @@ export function FootballSection({ profileId, week, onOpenGames }: { profileId: s
           )}
           {sum.withoutDetails > 0 && <p className="mt-1 text-xs text-slate-500">{sum.withoutDetails} kerralta puuttuvat lisätiedot.</p>}
         </section>
+
+        {tb && teams && tbRows.length > 0 && (
+          <section>
+            <h3 className="mb-1 text-sm font-semibold text-slate-800">Joukkueittain</h3>
+            <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 text-sm">
+              {tbRows.map((r) => (
+                <div key={r.team.id} className="contents">
+                  <dt className="truncate text-slate-600">
+                    {shortTeamName(r.team, teams)}
+                    {r.group && <span className="text-slate-400"> · ryhmä</span>}
+                  </dt>
+                  <dd className="text-right tabular-nums">
+                    {[r.training.count ? `${many(r.training.count, 'treeni', 'treeniä')} · ${r.training.minutes} min` : '', many(r.games.games, 'peli', 'peliä')].filter(Boolean).join(' · ')}
+                  </dd>
+                </div>
+              ))}
+              {tb.unassigned.training.count + tb.unassigned.games.games > 0 && (
+                <>
+                  <dt className="text-slate-500">Ei merkitty</dt>
+                  <dd className="text-right tabular-nums text-slate-500">
+                    {[many(tb.unassigned.training.count, 'treeni', 'treeniä'), many(tb.unassigned.games.games, 'peli', 'peliä')].filter(Boolean).join(' · ')}
+                  </dd>
+                </>
+              )}
+            </dl>
+          </section>
+        )}
 
         <section>
           <h3 className="mb-1 text-sm font-semibold text-slate-800">Viihtyminen</h3>

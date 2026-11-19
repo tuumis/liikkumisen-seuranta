@@ -73,7 +73,7 @@ function IcsExportBody({ profile, today, startMonth, onDone }: { profile: Profil
   const events: CalEvent[] = ready ? eventsBetween(data.events, from, to, opts.trainings) : [];
   const games = events.filter((e) => e.kind !== 'training').length;
   const labels = memberLabeler(members, data?.teams ?? new Map(), opts.childName);
-  const ownTeams = [...(data?.teams.values() ?? [])].filter((t) => t.profileId === profile.id && !t.archived);
+  const ownTeams = [...(data?.teams.values() ?? [])].filter((t) => t.profileId === profile.id && !t.archived && t.kind !== 'group');
   const calName = family ? 'Perheen pelit' : ownTeams.length === 1 ? ownTeams[0].name : 'Pelikalenteri';
 
   const file = () => {

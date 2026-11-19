@@ -23,7 +23,7 @@ import {
   type CalEvent,
   type MonthKey,
 } from '../../domain/monthCalendar';
-import type { ISODate, Profile, Team } from '../../domain/types';
+import type { ISODate, Profile, Team, UUID } from '../../domain/types';
 import { Segmented, ToggleChip } from '../../ui/controls';
 import { dayLabel, formatDate } from '../../ui/format';
 import { readStoredJson, writeStoredJson } from '../../ui/storedPref';
@@ -78,12 +78,14 @@ export function CalendarPrint({ profile, today, startMonth, onClose }: { profile
     });
   const [start, setStart] = useState<MonthKey>(startMonth);
   const [year, setYear] = useState(Number(startMonth.slice(0, 4)));
-  const teams = useLiveQuery(() => repo.listTeams(profile.id), [profile.id]);
+  // Joukkueet ja treeniryhmät (19.11.2026): suodatus koskee myös treenejä; ryhmää ei valita suodattimeksi.
+  const allTeams = useLiveQuery(() => repo.listTeams(profile.id, { includeArchived: true, groups: true }), [profile.id]);
   const [teamId, setTeamId] = useState<string | undefined>();
-  const activeTeams = useMemo(() => (teams ?? []).filter((t) => !t.archived), [teams]);
+  const activeTeams = useMemo(() => (allTeams ?? []).filter((t) => !t.archived && t.kind !== 'group'), [allTeams]);
+  const activeAll = useMemo(() => (allTeams ?? []).filter((t) => !t.archived), [allTeams]);
   // Oletus: ainoa joukkue; useammalla kaikki joukkueet.
   const team: Team | undefined = activeTeams.find((t) => t.id === (teamId ?? (activeTeams.length === 1 ? activeTeams[0].id : '')));
-  const teamById = useMemo(() => new Map((teams ?? []).map((t) => [t.id, t])), [teams]);
+  const teamById = useMemo(() => new Map((allTeams ?? []).map((t) => [t.id, t])), [allTeams]);
   const logos = useClubLogos();
   const logo = team ? logoFor(logos, team.name) : undefined;
   const pal = useMemo(currentReportPalette, []);
@@ -102,11 +104,22 @@ export function CalendarPrint({ profile, today, startMonth, onClose }: { profile
   );
   const ready = !!data && data.from === from && data.to === to;
   const labels = memberLabeler(members, data?.teams ?? new Map(), opts.childName);
-  const visible = (e: CalEvent) => family || e.kind === 'training' || !team || !e.teamId || e.teamId === team.id;
+  // Itse valittu joukkue rajaa myös treenit: sen treenit ja treenit ilman joukkuetta, ei muiden joukkueiden eikä
+  // ryhmien treenejä. Ainoa joukkue (oletus) ei rajaa treenejä, jottei treeniryhmän treenit katoa.
+  const picked = teamId ? team : undefined;
+  const visible = (e: CalEvent) => {
+    if (family || !e.teamId) return true;
+    const by = e.kind === 'training' ? picked : team;
+    return !by || e.teamId === by.id;
+  };
   const eventsOn = (d: ISODate) => (ready ? (data.events.get(d) ?? []).filter(visible) : []);
   // Perheessä jokaisella rivillä lapsi tai joukkue; muuten joukkue, jos tulosteessa on useampi joukkue.
+  const shortOf = (id: UUID) => {
+    const t = teamById.get(id);
+    return t ? (t.kind === 'group' ? t.name : teamNameFor(t.name, 'short')) || undefined : undefined;
+  };
   const teamPrefix = (e: CalEvent) =>
-    family ? labels.event(e) : !team && activeTeams.length > 1 && e.teamId ? teamNameFor(teamById.get(e.teamId)?.name ?? '', 'short') || undefined : undefined;
+    family ? labels.event(e) : activeAll.length > 1 && e.teamId && (!team || (e.kind === 'training' && e.teamId !== team.id)) ? shortOf(e.teamId) : undefined;
   const colorOf = (e: CalEvent) => (family ? labels.color(e.profileId) : undefined);
 
   useEffect(() => {

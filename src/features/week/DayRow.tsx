@@ -1,7 +1,7 @@
 import type { ActivityType, DayFlag, DayTotals, Fixture, FootballDetails, ISODate, PlannedSession, Session, UUID } from '../../domain/types';
 import type { DayHours } from '../../domain/hours';
 import { InfoTip } from '../../ui/InfoTip';
-import { foldTrainingSelves, LEVEL_LABEL, OUTCOME_LABEL, outcomeOf, trainingSelfText } from '../../domain/football';
+import { foldTrainingSelves, isClubTraining, LEVEL_LABEL, OUTCOME_LABEL, outcomeOf, trainingSelfText } from '../../domain/football';
 
 /** "vs HJK · Elite · " tulevan pelin suunnitelmariville; "⚠ tietoja puuttuu" ensin (17.11.2026). */
 function fixtureText(f?: Fixture, typeId?: UUID): string {
@@ -43,6 +43,7 @@ export function DayRow({
   plannedById,
   fixtures,
   footballDetails,
+  teamName,
   onFootball,
   types,
   flag,
@@ -74,6 +75,8 @@ export function DayRow({
   fixtures?: Map<UUID, Fixture>;
   /** Jalkapallokertojen lisätiedot (puuttuva → "Lisää tiedot"). */
   footballDetails?: Map<UUID, FootballDetails>;
+  /** Treenin joukkueen tai ryhmän lyhyt nimi (vain, kun niitä on vähintään kaksi). */
+  teamName?: (x: { teamId?: UUID; templateItemId?: UUID }) => string | undefined;
   onFootball: (s: Session) => void;
   types: Map<UUID, ActivityType>;
   flag?: DayFlag;
@@ -197,6 +200,7 @@ export function DayRow({
             const isFootball = t?.sport === 'football';
             const fd = isFootball ? footballDetails?.get(s.id) : undefined;
             const fbText = fd ? footballSummary(t?.footballKind, fd) : '';
+            const team = isClubTraining(t) && !s.linkedTo ? teamName?.({ teamId: s.teamId }) : undefined;
             return (
               <li key={s.id} className={`flex items-center gap-1 rounded-2xl ${isFresh(s.id) ? 'row-fresh' : ''}`}>
                 <button type="button" onClick={(e) => morphOpen(e.currentTarget.closest('li'), () => onEdit(s))} className="press flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-2 py-2 text-left hover:bg-[color-mix(in_oklab,var(--surface-sunk)_70%,transparent)]">
@@ -225,6 +229,7 @@ export function DayRow({
                         'Ei tänä päivänä (merkitty) – arkiliikuntaa ei lasketa'
                       ) : (
                         <>
+                          {team && <span className="font-semibold text-slate-700">{team} · </span>}
                           {s.durationMin} min
                       {plan && plan.durationMin !== s.durationMin && ` (suunn. ${plan.durationMin})`}
                       {s.playedMin !== undefined && ` · pelattu ${s.playedMin}`}
@@ -306,6 +311,7 @@ export function DayRow({
             const skipped = p.status === 'skipped';
             // Pyyhkäisy (kosketus): oikealle = tehty, vasemmalle = ei tehty. Ei tulevilla eikä ohitetuilla.
             const swipe = !skipped && !isFuture;
+            const team = isClubTraining(t) ? teamName?.(p) : undefined;
             return (
               <SwipeRow
                 key={p.id}
@@ -323,7 +329,10 @@ export function DayRow({
                     <span className="block truncate text-xs text-slate-500">
                       {skipped
                         ? `Ei tehty${p.skipReason ? ` · ${SKIP_REASON_LABEL[p.skipReason].toLowerCase()}` : ''}`
-                        : fixtureText(fixtures?.get(p.id), p.activityTypeId) + `Suunniteltu${p.startTime ? ` klo ${p.startTime}` : ''} · ${p.durationMin} min`}
+                        : team
+                          ? // Joukkueen nimi edellä: "Suunniteltu" jää pois, jotta kellonaika mahtuu (katkoviiva kertoo suunnitelman).
+                            `${team}${p.startTime ? ` · klo ${p.startTime}` : ''} · ${p.durationMin} min`
+                          : fixtureText(fixtures?.get(p.id), p.activityTypeId) + `Suunniteltu${p.startTime ? ` klo ${p.startTime}` : ''} · ${p.durationMin} min`}
                     </span>
                   </span>
                 </button>

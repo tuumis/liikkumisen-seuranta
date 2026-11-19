@@ -113,7 +113,8 @@ export { selectClass as periodSelectClass };
  */
 export function memberLabeler(profiles: Profile[], teams: ReadonlyMap<UUID, Team>, childName: boolean) {
   const own = new Map<UUID, Team[]>();
-  for (const t of teams.values()) if (!t.archived) own.set(t.profileId, [...(own.get(t.profileId) ?? []), t]);
+  // Lapsen tunnisteeksi vain joukkueet (treeniryhmä ei kuvaa lasta).
+  for (const t of teams.values()) if (!t.archived && t.kind !== 'group') own.set(t.profileId, [...(own.get(t.profileId) ?? []), t]);
   const profileLabel = (p: Profile, i: number) => {
     if (childName) return p.name;
     const list = own.get(p.id) ?? [];
@@ -130,7 +131,7 @@ export function memberLabeler(profiles: Profile[], teams: ReadonlyMap<UUID, Team
       if (!x) return undefined;
       if (childName) return x.p.name;
       const t = e.teamId ? teams.get(e.teamId) : undefined;
-      return t ? teamNameFor(t.name, 'short') : profileLabel(x.p, x.i);
+      return t && t.kind !== 'group' ? teamNameFor(t.name, 'short') : profileLabel(x.p, x.i);
     },
     color: (id: UUID | undefined) => (id ? byId.get(id)?.p.color : undefined),
   };

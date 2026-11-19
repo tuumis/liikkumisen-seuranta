@@ -186,6 +186,8 @@ export interface CalendarTraining {
   durationMin: number;
   label?: string;
   done: boolean;
+  /** Treenin joukkue tai ryhmä (19.11.2026): kerralta, suunnitelmalta tai viikkorytmin riviltä. */
+  teamId?: UUID;
 }
 
 export interface FixtureEntry {
@@ -1787,23 +1789,29 @@ export function createRepositories(db: AppDB = defaultDb) {
       .between([profileId, from], [profileId, to], true, true)
       .toArray();
     const sessions = (await sessionsInRange(profileId, from, to)).filter((s) => isTraining(s.activityTypeId) && !s.linkedTo);
-    const out: CalendarTraining[] = sessions.map((s) => ({ id: s.id, date: s.date, startTime: s.startTime, durationMin: s.durationMin, label: s.label, done: true }));
+    const items = live(await db.templateItems.where('profileId').equals(profileId).toArray());
+    const itemTeam = new Map(items.filter((i) => i.teamId).map((i) => [i.id, i.teamId!]));
+    const team = (x: { teamId?: UUID; templateItemId?: UUID }) => {
+      const id = x.teamId ?? (x.templateItemId ? itemTeam.get(x.templateItemId) : undefined);
+      return id ? { teamId: id } : {};
+    };
+    const out: CalendarTraining[] = sessions.map((s) => ({ id: s.id, date: s.date, startTime: s.startTime, durationMin: s.durationMin, label: s.label, done: true, ...(s.teamId ? { teamId: s.teamId } : {}) }));
     // Kuittaamaton suunnitelma päivälle, jolle sama treeni on jo kirjattu suoraan: näytetään vain kirjaus.
     const recorded = new Set(sessions.map((s) => `${s.activityTypeId}|${s.date}`));
     for (const p of live(rows)) {
-      if (isTraining(p.activityTypeId) && p.status === 'open' && !recorded.has(`${p.activityTypeId}|${p.date}`)) out.push({ id: p.id, date: p.date, startTime: p.startTime, durationMin: p.durationMin, label: p.label, done: false });
+      if (isTraining(p.activityTypeId) && p.status === 'open' && !recorded.has(`${p.activityTypeId}|${p.date}`)) out.push({ id: p.id, date: p.date, startTime: p.startTime, durationMin: p.durationMin, label: p.label, done: false, ...team(p) });
     }
     const done = await planner.getPlannedThrough(profileId);
     const start = maxDate(maxDate(from, today), done ? addDays(done, 1) : undefined);
     if (start <= to) {
       // Myös poistetut lasketaan: käyttäjän poistama kerta ei palaa johdettuna.
       const taken = new Set(rows.map((p) => p.id));
-      for (const item of live(await db.templateItems.where('profileId').equals(profileId).toArray())) {
+      for (const item of items) {
         if (!item.active || !isTraining(item.activityTypeId)) continue;
         for (const date of templateItemDates(item, start, to)) {
           if (taken.has(plannedSessionId(item.id, date))) continue;
           const p = newPlanned(item, date, item.updatedAt, item.updatedBy);
-          out.push({ id: p.id, date, startTime: p.startTime, durationMin: p.durationMin, label: p.label, done: false });
+          out.push({ id: p.id, date, startTime: p.startTime, durationMin: p.durationMin, label: p.label, done: false, ...(item.teamId ? { teamId: item.teamId } : {}) });
         }
       }
     }

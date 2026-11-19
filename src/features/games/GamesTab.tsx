@@ -32,6 +32,7 @@ import { DiaryView } from './DiaryView';
 import { OpponentLibrary } from './TeamLibrary';
 import { TeamNameFields, useTeamNameSuggestions } from './TeamNameFields';
 import { FootballHero } from './FootballHero';
+import { TeamBreakdownCard } from '../football/TeamBreakdownCard';
 import { UnassignedTrainings } from '../football/TrainingTeam';
 import { IconCalendarClock, IconPencil, IconPlus, IconReport, IconShare, IconWarning } from '../../ui/icons';
 import { InfoLink } from '../../ui/InfoLink';
@@ -141,6 +142,7 @@ export function GamesTab({ profile }: { profile?: Profile }) {
         )}
         {visited.has('teams') && (
           <div hidden={view !== 'teams'} className="space-y-5">
+            <TeamBreakdownCard profile={profile} />
             <TeamsView profile={profile} />
             <OpponentLibrary profile={profile} />
           </div>

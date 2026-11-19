@@ -5,7 +5,8 @@ import { dayGoalMet } from '../../domain/dayTarget';
 import { planAdherence } from '../../domain/adherence';
 import { farWeekPlanning, planningThroughForWeek } from '../../domain/planning';
 import { RECOMMENDATIONS } from '../../domain/recommendations';
-import type { ActivityType, DayFlag, ISODate, PlannedSession, Profile, RecommendationGroup, Session } from '../../domain/types';
+import type { ActivityType, DayFlag, ISODate, PlannedSession, Profile, RecommendationGroup, Session, UUID } from '../../domain/types';
+import { shortTeamName } from '../../domain/teamBreakdown';
 import { repo } from '../../db/repositories';
 import { Button, Card } from '../../ui/components';
 import { formatDate } from '../../ui/format';
@@ -151,6 +152,15 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     [footballIds],
   );
   const footballDetails = footballOn ? fbDetails : undefined;
+  // Treenin joukkue (19.11.2026): lyhyt nimi treeniriville, kun omia joukkueita ja ryhmiä on vähintään kaksi.
+  const teamsAll = useLiveQuery(() => (profile && footballOn ? repo.listTeams(profile.id, { includeArchived: true, groups: true }) : Promise.resolve([])), [profile?.id, footballOn]);
+  const templateItems = useLiveQuery(() => (profile && footballOn ? repo.listTemplateItems(profile.id) : Promise.resolve([])), [profile?.id, footballOn]);
+  const teamName = useMemo(() => {
+    if (!teamsAll || teamsAll.length < 2) return undefined;
+    const names = new Map(teamsAll.map((t) => [t.id, shortTeamName(t, teamsAll)]));
+    const itemTeam = new Map((templateItems ?? []).filter((i) => i.teamId).map((i) => [i.id, i.teamId!]));
+    return (x: { teamId?: UUID; templateItemId?: UUID }) => names.get(x.teamId ?? (x.templateItemId ? itemTeam.get(x.templateItemId) : undefined) ?? '');
+  }, [teamsAll, templateItems]);
 
   // Aloitusopas näytetään, kunnes profiililla on ensimmäinen kirjaus.
   const hasAnySessions = useLiveQuery(
@@ -457,6 +467,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             plannedById={plannedById}
             fixtures={fixtureByPlan}
             footballDetails={footballDetails}
+            teamName={teamName}
             onFootball={footballOn ? setFootball : () => undefined}
             onPlanOpen={setPlanOpen}
             onPlanConfirm={(p) => void planActions.confirm(p)}
@@ -526,6 +537,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
           plannedById={plannedById}
           fixtures={fixtureByPlan}
           footballDetails={footballDetails}
+          teamName={teamName}
           onFootball={footballOn ? setFootball : () => undefined}
           onPlanOpen={setPlanOpen}
           onPlanConfirm={(p) => void planActions.confirm(p)}

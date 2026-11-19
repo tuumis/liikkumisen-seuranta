@@ -114,6 +114,8 @@ export interface CalTraining {
   durationMin: number;
   /** Tarkenne tai lajin nimi. */
   name: string;
+  /** Treenin joukkue tai ryhmä (19.11.2026). */
+  teamId?: UUID;
 }
 
 export interface MonthEventsInput {
@@ -262,7 +264,7 @@ export function monthEvents(input: MonthEventsInput): Map<ISODate, CalEvent[]> {
   }
 
   for (const t of input.trainings ?? []) {
-    add({ key: t.id, date: t.date, kind: 'training', state: 'planned', time: t.startTime, title: t.name, durationMin: t.durationMin });
+    add({ key: t.id, date: t.date, kind: 'training', state: 'planned', time: t.startTime, title: t.name, durationMin: t.durationMin, ...(t.teamId ? { teamId: t.teamId } : {}) });
   }
   for (const list of out.values()) list.sort(byTime);
   return out;

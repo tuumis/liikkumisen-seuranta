@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildStory } from './story';
 import type { PeriodReport } from '../../domain/report';
-import type { ActivityType, DayTotals, FootballDetails, Session } from '../../domain/types';
+import type { ActivityType, DayTotals, FootballDetails, Session, Team } from '../../domain/types';
 
 const day = (date: string, total: number, mvpa: number) => ({ date, movingCombined: total, mvpaCombined: mvpa }) as DayTotals;
 const type = (id: string, name: string, extra: Partial<ActivityType> = {}) => ({ id, name, icon: '⚽', ...extra }) as ActivityType;
@@ -26,6 +26,29 @@ describe('kauden kooste', () => {
     // Jalkapallo pois käytöstä: ei jalkapallo- eikä harjoitellut asiat -korttia; lajit ja liikunta säilyvät.
     const off = buildStory({ name: 'Aino', seasonLabel: 'Syksy 2026', report, sessions, types, footballDetails: details, football: false });
     expect(off.map((s) => s.id)).toEqual(['cover', 'total', 'types', 'best', 'outro']);
+  });
+
+  it('joukkueittain-kortti, kun treenejä on kahdessa joukkueessa tai ryhmässä', () => {
+    const types = new Map([['t:football_training', type('t:football_training', 'Jalkapallo – treeni', { sport: 'football', footballKind: 'training' })]]);
+    const sessions = [
+      { ...ses('a', 't:football_training', '2026-11-02', 90), teamId: 'A' },
+      { ...ses('b', 't:football_training', '2026-11-03', 60), teamId: 'A' },
+      { ...ses('c', 't:football_training', '2026-11-04', 60), teamId: 'G' },
+    ];
+    const teams = [
+      { id: 'A', profileId: 'p', name: 'FC Testi · Sininen · 2016' },
+      { id: 'G', profileId: 'p', name: 'Pienryhmä', kind: 'group' as const },
+    ] as Team[];
+    const report = { days: [day('2026-11-02', 90, 60)] } as PeriodReport;
+    const slides = buildStory({ name: 'Aino', seasonLabel: 'Syksy 2026', report, sessions, types, footballDetails: new Map(), teams });
+    const t = slides.find((s) => s.id === 'teams')!;
+    expect(t.lines).toEqual(['1 joukkue ja 1 treeniryhmä']);
+    expect(t.bars!.map((b) => [b.label, b.value])).toEqual([
+      ['Sininen 2016', '2 treeniä'],
+      ['Pienryhmä', '1 treeni'],
+    ]);
+    // Yksi joukkue: ei korttia.
+    expect(buildStory({ name: 'Aino', seasonLabel: 'Syksy 2026', report, sessions, types, footballDetails: new Map(), teams: teams.slice(0, 1) }).some((s) => s.id === 'teams')).toBe(false);
   });
 
   it('ilman kirjauksia vain kansi ja lopetus', () => {

@@ -17,7 +17,7 @@ export interface CalendarData {
   fixtures: Map<UUID, FixtureEntry>;
   sessions: Map<UUID, Session>;
   types: Map<UUID, ActivityType>;
-  /** Kaikkien mukana olevien profiilien joukkueet (myös arkistoidut). */
+  /** Kaikkien mukana olevien profiilien joukkueet ja treeniryhmät (myös arkistoidut). */
   teams: Map<UUID, Team>;
 }
 
@@ -34,7 +34,7 @@ export function useCalendarEvents(profileIds: UUID[], from: ISODate, to: ISODate
           repo.footballDetailsFor(sessions.map((s) => s.id)),
           repo.listFixtures(profileId, from, to),
           trainings ? repo.calendarTrainings(profileId, from, to, today) : Promise.resolve([]),
-          repo.listTeams(profileId, { includeArchived: true }),
+          repo.listTeams(profileId, { includeArchived: true, groups: true }),
         ]);
         return { profileId, sessions, details, fixtures, plans, teams };
       }),
@@ -57,7 +57,7 @@ export function useCalendarEvents(profileIds: UUID[], from: ISODate, to: ISODate
         rows: [...gameRows(p.sessions, p.details, types), ...friendlyRows(p.sessions, p.details, types)],
         sessionStart: new Map(p.sessions.map((s) => [s.id, s.startTime])),
         sessionDuration: new Map(p.sessions.map((s) => [s.id, s.durationMin])),
-        trainings: p.plans.map((t) => ({ id: t.id, date: t.date, startTime: t.startTime, durationMin: t.durationMin, name: t.label ?? 'Treeni' })),
+        trainings: p.plans.map((t) => ({ id: t.id, date: t.date, startTime: t.startTime, durationMin: t.durationMin, name: t.label ?? 'Treeni', ...(t.teamId ? { teamId: t.teamId } : {}) })),
       }),
     }));
     return {

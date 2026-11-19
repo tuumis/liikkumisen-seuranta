@@ -8,6 +8,8 @@ import { createPortal } from 'react-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { footballPeriodSummary, gameRows, playSummary, POSITION_LABEL, POSITIONS } from '../../domain/football';
 import { highlights } from '../../domain/highlights';
+import { displayTeamName } from '../../domain/opponent';
+import { teamBreakdown } from '../../domain/teamBreakdown';
 import { periodName, type LongTermSummary } from '../../domain/longTerm';
 import type { ActivityType, Context, Period, Profile } from '../../domain/types';
 import { repo } from '../../db/repositories';
@@ -27,10 +29,11 @@ function useExtras(profile: Profile, period: Period) {
   // Jalkapallo pois käytöstä: ei jalkapallo-osiota eikä jalkapallon arvioita/kommentteja kohokohdissa.
   const footballOn = useFootballEnabled(profile);
   return useLiveQuery(async () => {
-    const [sessions, typesList, planned] = await Promise.all([
+    const [sessions, typesList, planned, teams] = await Promise.all([
       repo.sessionsInRange(profile.id, period.start, period.end),
       repo.listActivityTypes({ includeArchived: true }),
       repo.plansInRange(profile.id, period.start, period.end),
+      repo.listTeams(profile.id, { includeArchived: true, groups: true }),
     ]);
     const types = new Map<string, ActivityType>(typesList.map((t) => [t.id, t]));
     const live = sessions.filter((s) => !s.deletedAt);
@@ -39,8 +42,10 @@ function useExtras(profile: Profile, period: Period) {
     const details = await repo.footballDetailsFor(fbSessions.map((s) => s.id));
     const fb = fbSessions.length ? footballPeriodSummary({ sessions: fbSessions, details, types, planned, today }, period) : undefined;
     const play = fb ? playSummary(gameRows(fbSessions, details, types)) : undefined;
+    // Joukkueittain (19.11.2026): näkyy, kun omia joukkueita ja ryhmiä on vähintään kaksi.
+    const tb = fb ? teamBreakdown({ sessions: fbSessions, details, types, planned, today }, period, teams) : undefined;
     const hl = highlights(live, details, period.start, period.end);
-    return { fb, play, hl, types };
+    return { fb, play, hl, types, tb: tb?.show ? tb : undefined };
   }, [profile.id, period.start, period.end, today, footballOn]);
 }
 
@@ -271,6 +276,49 @@ export function SeasonReport({ profile, s, p, onClose }: { profile: Profile; s: 
               )}
               {tags.length > 0 && <li>Treenien sisältö: {tags.map(([t, n]) => `${focusTagLabel(t).toLowerCase()} ${n}`).join(', ')}</li>}
             </ul>
+            {extras?.tb && (
+              <table className="mt-2 w-full border-collapse tabular-nums text-[12.5px]">
+                <thead>
+                  <tr className="text-left text-[10.5px] uppercase tracking-wide text-[#5a645d]">
+                    <th className="py-1 font-semibold">Joukkue tai ryhmä</th>
+                    <th className="py-1 text-right font-semibold">Treenit</th>
+                    <th className="py-1 text-right font-semibold">Pelit</th>
+                    <th className="py-1 text-right font-semibold">V–T–H</th>
+                    <th className="py-1 text-right font-semibold">Maalit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...extras.tb.teams, ...extras.tb.groups]
+                    .filter((r) => r.training.count + r.games.games > 0)
+                    .map((r) => {
+                      const res = r.games.wins + r.games.draws + r.games.losses;
+                      return (
+                        <tr key={r.team.id} className="border-t border-[#e5e2d8]">
+                          <td className="py-1">
+                            {displayTeamName(r.team.name)}
+                            {r.group && <span className="text-[#5a645d]"> · treeniryhmä</span>}
+                          </td>
+                          <td className="py-1 text-right">
+                            {r.training.count} <span className="text-[#5a645d]">({hours(r.training.minutes)})</span>
+                          </td>
+                          <td className="py-1 text-right">{r.group ? '' : r.games.games}</td>
+                          <td className="py-1 text-right">{res ? `${r.games.wins}–${r.games.draws}–${r.games.losses}` : r.group ? '' : '–'}</td>
+                          <td className="py-1 text-right">{res ? `${r.games.goalsFor}–${r.games.goalsAgainst}` : r.group ? '' : '–'}</td>
+                        </tr>
+                      );
+                    })}
+                  {extras.tb.unassigned.training.count + extras.tb.unassigned.games.games > 0 && (
+                    <tr className="border-t border-[#e5e2d8] text-[#5a645d]">
+                      <td className="py-1">Ei merkitty</td>
+                      <td className="py-1 text-right">{extras.tb.unassigned.training.count || ''}</td>
+                      <td className="py-1 text-right">{extras.tb.unassigned.games.games || ''}</td>
+                      <td />
+                      <td />
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            )}
             <p className="mt-1 text-[11px] text-[#5a645d]">Tulokset ovat joukkueen tuloksia; ne eivät arvioi lasta.</p>
           </Section>
         )}

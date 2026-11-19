@@ -46,9 +46,10 @@ function chipText(e: CalEvent): string {
 }
 
 /** Valitun päivän rivin lisätiedot. */
-function detailLine(e: CalEvent): string {
+function detailLine(e: CalEvent, team?: string): string {
   const parts: (string | undefined | false)[] = [
     e.kind !== 'training' && KIND_LABEL[e.kind],
+    team,
     e.time && `klo ${hhmm(e.time)}`,
     e.arrival && e.state !== 'played' && `paikalla ${hhmm(e.arrival)}`,
     e.durationMin !== undefined && e.kind === 'training' && `${e.durationMin} min`,
@@ -96,6 +97,13 @@ export function MonthCalendar({
     trainings,
   );
   const own = (e: CalEvent) => !e.profileId || e.profileId === profile.id;
+  // Treenin joukkue tai ryhmä (19.11.2026), kun profiililla on niitä vähintään kaksi.
+  const trainingTeam = (e: CalEvent) => {
+    const t = e.kind === 'training' && e.teamId ? data?.teams.get(e.teamId) : undefined;
+    if (!t) return undefined;
+    const mine = [...(data?.teams.values() ?? [])].filter((x) => x.profileId === t.profileId);
+    return mine.length > 1 ? (t.kind === 'group' ? t.name : teamNameFor(t.name, 'compact')) : undefined;
+  };
   const colorOf = (e: CalEvent) => (family && e.profileId ? memberById.get(e.profileId)?.color : undefined);
   // Päällekkäisyydet vain tästä päivästä eteenpäin (menneet eivät enää vaadi järjestelyjä).
   const clashOn = (d: ISODate) => (family && d >= today ? clashes(data?.events.get(d) ?? []) : []);
@@ -280,7 +288,7 @@ export function MonthCalendar({
                           </span>
                         )}
                       </span>
-                      <span className="block text-xs text-slate-600">{detailLine(e)}</span>
+                      <span className="block text-xs text-slate-600">{detailLine(e, trainingTeam(e))}</span>
                       {e.games && e.kind === 'tournament' && (
                         <span className="mt-0.5 block text-xs text-slate-500">
                           {e.games.map((g, i) => [hhmm(g.time), g.opponent ? teamNameFor(g.opponent, 'compact') : 'vastustaja ?', g.result].filter(Boolean).join(' ') + (i < e.games!.length - 1 ? ' · ' : ''))}

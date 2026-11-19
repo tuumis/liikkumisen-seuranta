@@ -9,6 +9,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.29',
+    date: '19.11.2026',
+    items: [
+      'Uusi Joukkueittain-kortti kohdassa Jalkapallo → Joukkueet: treenit, treeniaika, pelit, V–T–H ja maalit joukkueittain ja treeniryhmittäin (kausi, vuosi tai kaikki).',
+      'Joukkueittain-erittely näkyy myös Analyysin jalkapallokortissa, tulostettavassa raportissa ja Kauden koosteessa.',
+      'Viikko-näkymän ja kalenterin treeneissä näkyy joukkueen tai ryhmän nimi, ja tulosteen joukkuevalinta rajaa nyt myös treenit.',
+    ],
+  },
+  {
     version: '1.1.28',
     date: '19.11.2026',
     items: ['Aiempien treenien merkitsemisessä voi nyt valita tarkenteen, esim. kaikki Talenttitreenit treeniryhmälle ja Joukkuetreenit joukkueelle. Paneeli pysyy auki, joten merkinnät voi tehdä peräkkäin.'],

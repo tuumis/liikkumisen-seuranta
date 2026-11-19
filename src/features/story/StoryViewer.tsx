@@ -35,19 +35,20 @@ function useStory(profile: Profile): StorySlide[] | undefined {
   const end = minDate(season.end, today);
   const footballOn = useFootballEnabled(profile);
   return useLiveQuery(async () => {
-    const [sessions, estimates, flags, planned, typesList, settings] = await Promise.all([
+    const [sessions, estimates, flags, planned, typesList, settings, teams] = await Promise.all([
       repo.sessionsInRange(profile.id, season.start, end),
       repo.listEstimates(profile.id),
       repo.dayFlagsInRange(profile.id, season.start, end),
       repo.plansInRange(profile.id, season.start, end),
       repo.listActivityTypes({ includeArchived: true }),
       repo.getSettings(),
+      repo.listTeams(profile.id, { includeArchived: true, groups: true }),
     ]);
     const types = new Map<string, ActivityType>(typesList.map((t) => [t.id, t]));
     const footballIds = sessions.filter((s) => types.get(s.activityTypeId)?.sport === 'football').map((s) => s.id);
     const footballDetails = await repo.footballDetailsFor(footballIds);
     const report = periodReport({ profile, period: { ...season, end }, sessions, estimates, flags, planned, types, settings, today });
-    return buildStory({ name: profile.name, seasonLabel: seasonKey(today), report, sessions, types, footballDetails, football: footballOn });
+    return buildStory({ name: profile.name, seasonLabel: seasonKey(today), report, sessions, types, footballDetails, football: footballOn, teams });
   }, [profile, season.start, end, today, footballOn]);
 }
 
