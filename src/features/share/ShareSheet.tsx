@@ -221,20 +221,24 @@ export function ShareImageSheet({
           )}
           <ColorPicker value={color} onChange={pickColor} team={clubNameOf(teamName)} />
           {children}
-          {isVideo ? (
-            vid.actions
-          ) : (
-            <div className="flex gap-2">
-              {canShare && (
-                <Button className="flex-1" onClick={() => void share()} disabled={!src}>
-                  Jaa
+          {/* Jaa- ja Tallenna-painikkeet pysyvät paneelin alareunassa vieritettäessä (19.11.2026): puhelimella
+              esikatselu täyttää ruudun, ja painikkeisiin pääsi vasta tyylien ja värien ohi vierittämällä. */}
+          <div className="sticky bottom-[calc(-1*max(1.25rem,env(safe-area-inset-bottom)))] z-10 -mx-5 -mb-[max(1.25rem,env(safe-area-inset-bottom))] border-t border-[var(--line)] bg-[var(--surface)] px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-10px_18px_-14px_rgb(0_0_0/0.35)] lg:-bottom-7 lg:-mx-7 lg:-mb-7 lg:px-7 lg:pb-6">
+            {isVideo ? (
+              vid.actions
+            ) : (
+              <div className="flex gap-2">
+                {canShare && (
+                  <Button className="flex-1" onClick={() => void share()} disabled={!src}>
+                    Jaa
+                  </Button>
+                )}
+                <Button variant="secondary" className={canShare ? '' : 'flex-1'} onClick={() => void save()} disabled={!src}>
+                  Tallenna kuva
                 </Button>
-              )}
-              <Button variant="secondary" className={canShare ? '' : 'flex-1'} onClick={() => void save()} disabled={!src}>
-                Tallenna kuva
-              </Button>
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         children

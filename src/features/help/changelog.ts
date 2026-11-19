@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.14',
+    date: '19.11.2026',
+    items: ['Jakoikkunan Jaa- ja Tallenna-painikkeet pysyvät nyt aina näkyvissä ikkunan alareunassa, vaikka tyylejä ja värejä selaisi.'],
+  },
+  {
     version: '1.1.13',
     date: '19.11.2026',
     items: ['Puhelimella takaisin-ele sulkee nyt avoimen ikkunan, ja ikkunan voi sulkea myös vetämällä sen yläosasta alas.'],
