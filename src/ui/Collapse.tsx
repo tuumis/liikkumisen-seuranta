@@ -35,7 +35,7 @@ export function CollapseToggle({ open, onToggle, label }: { open: boolean; onTog
       aria-expanded={open}
       aria-label={`${open ? 'Pienennä' : 'Avaa'}: ${label}`}
       title={open ? 'Pienennä' : 'Avaa'}
-      className="press -mr-1 flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-sunk)] text-slate-600 hover:text-slate-900"
+      className="press hit -mr-1 flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-sunk)] text-slate-600 hover:text-slate-900"
     >
       <svg viewBox="0 0 24 24" className={`size-4 transition-transform duration-300 ${open ? '' : '-rotate-90'}`} fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden>
         <path d="m6 9 6 6 6-6" />

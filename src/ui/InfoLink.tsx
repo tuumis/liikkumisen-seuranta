@@ -14,7 +14,7 @@ export function InfoLink({ href, compact, className = '' }: { href: string; comp
       rel="noopener noreferrer"
       onClick={(e) => e.stopPropagation()}
       className={`press inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full text-xs font-semibold text-slate-700 hover:text-slate-900 ${
-        compact ? 'relative size-8 before:absolute before:-inset-1.5 hover:bg-[var(--surface-sunk)]' : 'min-h-9 bg-[var(--surface-raised)] px-3 ring-1 ring-slate-200'
+        compact ? 'hit size-8 hover:bg-[var(--surface-sunk)]' : 'hit min-h-9 bg-[var(--surface-raised)] px-3 ring-1 ring-slate-200'
       } ${className}`}
       aria-label={`Avaa tiedot: ${host} (uusi välilehti)`}
       title={`Avaa ${host}`}

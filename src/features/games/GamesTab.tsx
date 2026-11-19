@@ -439,7 +439,7 @@ function FixtureRow({ e, team, today, history, onClick }: { e: FixtureEntry; tea
         <button
           type="button"
           onClick={() => openPreviewShare(e.plan.id)}
-          className="press inline-flex min-h-9 items-center gap-1.5 rounded-full bg-[var(--surface-raised)] px-3 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:text-slate-900"
+          className="press hit inline-flex min-h-9 items-center gap-1.5 rounded-full bg-[var(--surface-raised)] px-3 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:text-slate-900"
           title="Ennakko kuvana (esim. Instagram)"
         >
           <IconShare size="0.9rem" /> Ennakko

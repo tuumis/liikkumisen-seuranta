@@ -22,7 +22,7 @@ export function Segmented<T extends string | number>({
           role="radio"
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
-          className={`press min-h-10 rounded-xl px-2 text-sm font-semibold ${value === o.value ? 'bg-[var(--surface-raised)] text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+          className={`press hit min-h-10 rounded-xl px-2 text-sm font-semibold ${value === o.value ? 'bg-[var(--surface-raised)] text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
         >
           {o.label}
         </button>
@@ -44,7 +44,7 @@ export function ToggleChip({ on, onChange, children }: { on: boolean; onChange: 
       type="button"
       aria-pressed={on}
       onClick={() => onChange(!on)}
-      className={`press inline-flex min-h-10 items-center gap-1 rounded-full px-3.5 text-sm font-semibold ${
+      className={`press hit inline-flex min-h-10 items-center gap-1 rounded-full px-3.5 text-sm font-semibold ${
         on ? 'bg-green-700 text-white shadow-[0_4px_12px_-4px_rgb(var(--accent-rgb)/0.5)]' : 'bg-[var(--surface-sunk)] text-slate-700 shadow-[inset_0_0_0_1px_var(--line)] hover:text-slate-900'
       }`}
     >

@@ -220,7 +220,7 @@ export function DayRow({
             <button
               type="button"
               onClick={isFuture ? onPlan : onAdd}
-              className="press relative flex size-7 shrink-0 items-center justify-center rounded-full border border-dashed border-slate-300 text-slate-500 before:absolute before:-inset-1.5 hover:border-slate-400 hover:bg-[var(--surface-sunk)] hover:text-slate-900"
+              className="press hit flex size-7 shrink-0 items-center justify-center rounded-full border border-dashed border-slate-300 text-slate-500 hover:border-slate-400 hover:bg-[var(--surface-sunk)] hover:text-slate-900"
               aria-label={isFuture ? `Suunnittele kerta: ${dayLabel(date)}` : `Lisää kerta: ${dayLabel(date)}`}
               title={isFuture ? 'Suunnittele kerta tälle päivälle (kuitataan päivänä)' : 'Lisää kerta tälle päivälle'}
             >
@@ -230,7 +230,7 @@ export function DayRow({
           <button
             type="button"
             onClick={onOpenMenu}
-            className="press flex size-9 shrink-0 items-center justify-center rounded-full text-lg leading-none text-slate-500 hover:bg-[var(--surface-sunk)]"
+            className="press hit ml-1.5 flex size-9 shrink-0 items-center justify-center rounded-full text-lg leading-none text-slate-500 hover:bg-[var(--surface-sunk)] lg:ml-0"
             aria-label={`Päivän ${dayLabel(date)} toiminnot`}
           >
             ⋯

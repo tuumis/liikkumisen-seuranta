@@ -445,6 +445,22 @@ html[data-bg] body::before {
   transform: scale(0.97);
 }
 
+/* Kosketusalue (19.11.2026): pienen painikkeen napautusalue laajenee näkymättömästi vähintään 44 x 44 px:iin
+   (suositeltu sormikoko). Ulkoasu ei muutu. Components-kerroksessa, jotta absolute/fixed-apuluokat voittavat. */
+@layer components {
+  .hit {
+    position: relative;
+  }
+  .hit::before {
+    content: '';
+    position: absolute;
+    top: min(0px, calc((100% - 44px) / 2));
+    bottom: min(0px, calc((100% - 44px) / 2));
+    left: min(0px, calc((100% - 44px) / 2));
+    right: min(0px, calc((100% - 44px) / 2));
+  }
+}
+
 /* Lataustila: hento hohtava luuranko. */
 .skeleton {
   border-radius: var(--radius-xl);

@@ -122,7 +122,7 @@ export function DailyChart({ report, today, target: dayTarget, title }: { report
               role="radio"
               aria-checked={mode === k}
               onClick={() => setMode(k)}
-              className={`press min-h-8 whitespace-nowrap rounded-[10px] px-3 py-1.5 ${mode === k ? 'bg-[var(--surface-raised)] text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+              className={`press hit min-h-8 whitespace-nowrap rounded-[10px] px-3 py-1.5 ${mode === k ? 'bg-[var(--surface-raised)] text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
             >
               {l}
             </button>

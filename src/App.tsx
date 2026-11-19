@@ -344,12 +344,12 @@ export default function App() {
             <BrandMark className="size-7" />
             <span className="font-display text-[15px] font-semibold text-slate-900">Liikkumisen seuranta</span>
           </div>
-          <button type="button" onClick={() => setHelpOpen(true)} className="press -mr-1 flex size-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100" aria-label="Ohje">
+          <button type="button" onClick={() => setHelpOpen(true)} className="press hit -mr-1 flex size-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100" aria-label="Ohje">
             <IconHelp size="1.35rem" />
           </button>
         </div>
         {profiles && profiles.length > 1 && (
-          <div className="mx-auto -mx-4 mt-2 flex max-w-xl gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:max-w-2xl" role="tablist" aria-label="Profiilit">
+          <div className="mx-auto -mx-4 mt-1.5 flex max-w-xl gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] md:max-w-2xl" role="tablist" aria-label="Profiilit">
             {profiles.map((p) => {
               const active = p.id === selected?.id;
               return (
@@ -359,7 +359,7 @@ export default function App() {
                   role="tab"
                   aria-selected={active}
                   onClick={() => select(p.id)}
-                  className={`press flex min-h-9 shrink-0 items-center gap-2 rounded-full pl-1 pr-3.5 text-sm font-semibold ${
+                  className={`press flex min-h-11 shrink-0 items-center gap-2 rounded-full pl-1.5 pr-3.5 text-sm font-semibold ${
                     active ? 'bg-green-700 text-white shadow-[0_6px_16px_-6px_rgb(var(--accent-rgb)/0.6)]' : 'bg-[var(--surface)] text-slate-800 shadow-xs ring-1 ring-slate-200'
                   }`}
                 >

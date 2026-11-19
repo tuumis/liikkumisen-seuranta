@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.16',
+    date: '19.11.2026',
+    items: ['Pienet painikkeet on nyt helpompi osua puhelimella: napautusalue on vähintään sormen kokoinen, vaikka painike näyttää samalta.'],
+  },
+  {
     version: '1.1.15',
     date: '19.11.2026',
     items: [

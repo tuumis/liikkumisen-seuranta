@@ -265,7 +265,7 @@ function ShareButton({ sessionId }: { sessionId: string }) {
     <button
       type="button"
       onClick={() => openResultShare(sessionId)}
-      className="press relative flex size-8 shrink-0 items-center justify-center rounded-full text-slate-500 before:absolute before:-inset-1.5 hover:bg-[var(--surface-sunk)] hover:text-slate-900"
+      className="press hit flex size-8 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-[var(--surface-sunk)] hover:text-slate-900"
       aria-label="Jaa tuloskuva"
       title="Jaa tuloskuva (esim. Instagram)"
     >

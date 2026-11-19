@@ -47,14 +47,14 @@ export function DayStrip({
   return (
     <div className="card anim-fade rounded-[1.5rem] p-2">
       <div className="flex items-center gap-1">
-        <button type="button" onClick={onPrev} className="press flex size-9 items-center justify-center rounded-xl text-slate-600 hover:bg-[var(--surface-sunk)] hover:text-slate-900" aria-label="Edellinen viikko">
+        <button type="button" onClick={onPrev} className="press hit flex size-9 items-center justify-center rounded-xl text-slate-600 hover:bg-[var(--surface-sunk)] hover:text-slate-900" aria-label="Edellinen viikko">
           <IconChevronLeft />
         </button>
         <div className="min-w-0 flex-1 truncate text-center text-sm font-bold text-slate-900">
           <span className="mr-2 text-[10.5px] uppercase tracking-[0.14em] text-slate-500">Viikko {week}</span>
           {formatDate(start, 'd.M.')} – {formatDate(end, 'd.M.yyyy')}
         </div>
-        <button type="button" onClick={onNext} className="press flex size-9 items-center justify-center rounded-xl text-slate-600 hover:bg-[var(--surface-sunk)] hover:text-slate-900" aria-label="Seuraava viikko">
+        <button type="button" onClick={onNext} className="press hit flex size-9 items-center justify-center rounded-xl text-slate-600 hover:bg-[var(--surface-sunk)] hover:text-slate-900" aria-label="Seuraava viikko">
           <IconChevronRight />
         </button>
       </div>

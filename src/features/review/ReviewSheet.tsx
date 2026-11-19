@@ -167,7 +167,7 @@ export function IconButton({
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className={`press flex size-10 items-center justify-center rounded-xl text-base font-bold disabled:opacity-30 disabled:shadow-none ${tones[tone]}`}
+      className={`press hit flex size-10 items-center justify-center rounded-xl text-base font-bold disabled:opacity-30 disabled:shadow-none ${tones[tone]}`}
     >
       {children}
     </button>

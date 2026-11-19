@@ -152,7 +152,7 @@ function LayoutSwitch({ value, onChange }: { value: Layout; onChange: (v: Layout
           aria-checked={value === v}
           aria-label={l}
           onClick={() => onChange(v)}
-          className={`press flex min-h-10 items-center gap-1.5 rounded-[0.6rem] px-2.5 ${value === v ? 'bg-[var(--surface-raised)] text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
+          className={`press hit flex min-h-10 items-center gap-1.5 rounded-[0.6rem] px-2.5 ${value === v ? 'bg-[var(--surface-raised)] text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
         >
           <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round" aria-hidden>
             <path d={d} />
@@ -410,10 +410,10 @@ function DiaryEntry({ s, t, d, self, onDetails }: { s: Session; t?: ActivityType
               {d?.ratingNote && <p className="mt-2 whitespace-pre-line text-sm text-slate-800">{d.ratingNote}</p>}
               {s.note && <p className="mt-1 text-xs italic text-slate-500">Muistiinpano: {s.note}</p>}
               <div className="mt-2 flex flex-wrap gap-2">
-                <button type="button" className="min-h-9 rounded-lg px-2 text-sm font-medium text-green-800 hover:bg-green-50" onClick={() => setEditing(true)}>
+                <button type="button" className="hit min-h-9 rounded-lg px-2 text-sm font-medium text-green-800 hover:bg-green-50" onClick={() => setEditing(true)}>
                   {d?.ratingNote ? 'Muokkaa kommenttia' : 'Lisää kommentti'}
                 </button>
-                <button type="button" className="min-h-9 rounded-lg px-2 text-sm text-slate-600 hover:bg-slate-50" onClick={onDetails}>
+                <button type="button" className="hit min-h-9 rounded-lg px-2 text-sm text-slate-600 hover:bg-slate-50" onClick={onDetails}>
                   Lisätiedot
                 </button>
               </div>

@@ -342,7 +342,7 @@ function TrendChart({ buckets, target, group }: { buckets: TrendBucket[]; target
       )}
       <div className="mt-1 flex items-center justify-between gap-2">
         <span className="text-xs text-slate-500">Keskiarvo vertailtavista päivistä. Haalea palkki: alle puolella päivistä kirjauksia.</span>
-        <button type="button" className="min-h-9 shrink-0 rounded-lg px-2 text-xs font-medium text-green-800 active:bg-green-50" onClick={() => setTable(!table)}>
+        <button type="button" className="hit min-h-9 shrink-0 rounded-lg px-2 text-xs font-medium text-green-800 active:bg-green-50" onClick={() => setTable(!table)}>
           {table ? 'Kaavio' : 'Taulukko'}
         </button>
       </div>

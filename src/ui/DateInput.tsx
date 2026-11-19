@@ -186,10 +186,10 @@ export function DateInput({
               })}
             </div>
             <div className="mt-2 flex items-center justify-between">
-              <button type="button" disabled={!allowed(today)} onClick={() => pick(today)} className="min-h-9 rounded-lg px-2 text-sm font-semibold text-green-800 hover:bg-green-50 disabled:opacity-30">
+              <button type="button" disabled={!allowed(today)} onClick={() => pick(today)} className="hit min-h-9 rounded-lg px-2 text-sm font-semibold text-green-800 hover:bg-green-50 disabled:opacity-30">
                 Tänään
               </button>
-              <button type="button" onClick={() => setOpen(false)} className="min-h-9 rounded-lg px-2 text-sm font-medium text-slate-600 hover:bg-[var(--surface-sunk)]">
+              <button type="button" onClick={() => setOpen(false)} className="hit min-h-9 rounded-lg px-2 text-sm font-medium text-slate-600 hover:bg-[var(--surface-sunk)]">
                 Sulje
               </button>
             </div>

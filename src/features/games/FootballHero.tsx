@@ -54,7 +54,7 @@ export function FootballHero({ profile }: { profile: Profile }) {
             <button
               type="button"
               onClick={() => dispatchCommand({ kind: 'story' })}
-              className="press inline-flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--hero-accent)] px-3 text-xs sm:gap-2 sm:px-3.5 font-bold text-[#1c2b24] shadow-md hover:brightness-105 sm:mt-3"
+              className="press hit inline-flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--hero-accent)] px-3 text-xs sm:gap-2 sm:px-3.5 font-bold text-[#1c2b24] shadow-md hover:brightness-105 sm:mt-3"
             >
               <IconSparkle size="0.95rem" /> Kauden kooste
             </button>

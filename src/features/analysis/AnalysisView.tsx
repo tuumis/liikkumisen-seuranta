@@ -87,7 +87,7 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
         <button
           type="button"
           onClick={() => dispatchCommand({ kind: 'story' })}
-          className="press inline-flex min-h-10 items-center gap-2 rounded-full bg-[var(--surface-raised)] px-3.5 text-sm font-semibold text-slate-800 shadow-xs ring-1 ring-slate-200 hover:bg-slate-100"
+          className="press hit inline-flex min-h-10 items-center gap-2 rounded-full bg-[var(--surface-raised)] px-3.5 text-sm font-semibold text-slate-800 shadow-xs ring-1 ring-slate-200 hover:bg-slate-100"
         >
           <IconSparkle size="0.95rem" /> Kauden kooste
         </button>
@@ -110,7 +110,7 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
       {/* Jakson valinta */}
       <div className="anim-fade flex flex-wrap items-center gap-2">
         <div className="flex flex-1 items-center gap-1 rounded-2xl bg-[var(--surface)] p-1 shadow-sm sm:flex-none">
-          <button type="button" onClick={() => setWeekStart(addDays(weekStart, -7))} className="press flex size-10 items-center justify-center rounded-xl text-slate-600 hover:bg-[var(--surface-sunk)]" aria-label="Edellinen viikko">
+          <button type="button" onClick={() => setWeekStart(addDays(weekStart, -7))} className="press hit flex size-10 items-center justify-center rounded-xl text-slate-600 hover:bg-[var(--surface-sunk)]" aria-label="Edellinen viikko">
             <IconChevronLeft />
           </button>
           <div className="min-w-0 flex-1 px-2 text-center sm:w-56 sm:flex-none">
@@ -119,7 +119,7 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
               {formatDate(period.start, 'd.M.')} – {formatDate(period.end, 'd.M.yyyy')}
             </div>
           </div>
-          <button type="button" onClick={() => setWeekStart(addDays(weekStart, 7))} className="press flex size-10 items-center justify-center rounded-xl text-slate-600 hover:bg-[var(--surface-sunk)]" aria-label="Seuraava viikko">
+          <button type="button" onClick={() => setWeekStart(addDays(weekStart, 7))} className="press hit flex size-10 items-center justify-center rounded-xl text-slate-600 hover:bg-[var(--surface-sunk)]" aria-label="Seuraava viikko">
             <IconChevronRight />
           </button>
         </div>

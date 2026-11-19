@@ -320,7 +320,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     <div className="anim-fade flex flex-wrap items-center gap-2 sm:flex-nowrap">
       {isLg && (
       <div className="flex flex-1 basis-full items-center gap-1 rounded-2xl bg-[var(--surface)] p-1 shadow-sm sm:basis-auto lg:flex-none">
-        <button type="button" onClick={() => go(-1)} className="press flex size-10 items-center justify-center rounded-xl text-slate-600 hover:bg-[var(--surface-sunk)] hover:text-slate-900" aria-label="Edellinen viikko">
+        <button type="button" onClick={() => go(-1)} className="press hit flex size-10 items-center justify-center rounded-xl text-slate-600 hover:bg-[var(--surface-sunk)] hover:text-slate-900" aria-label="Edellinen viikko">
           <IconChevronLeft />
         </button>
         <div className="min-w-0 flex-1 px-2 text-center lg:w-56 lg:flex-none">
@@ -329,7 +329,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             {formatDate(period.start, 'd.M.')} – {formatDate(period.end, 'd.M.yyyy')}
           </div>
         </div>
-        <button type="button" onClick={() => go(1)} className="press flex size-10 items-center justify-center rounded-xl text-slate-600 hover:bg-[var(--surface-sunk)] hover:text-slate-900" aria-label="Seuraava viikko">
+        <button type="button" onClick={() => go(1)} className="press hit flex size-10 items-center justify-center rounded-xl text-slate-600 hover:bg-[var(--surface-sunk)] hover:text-slate-900" aria-label="Seuraava viikko">
           <IconChevronRight />
         </button>
       </div>
@@ -388,7 +388,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
               role="radio"
               aria-checked={daysView === v}
               onClick={() => setDaysView(v)}
-              className={`press flex min-h-9 items-center gap-1.5 rounded-[0.6rem] px-2.5 ${daysView === v ? 'bg-[var(--surface-raised)] text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
+              className={`press hit flex min-h-9 items-center gap-1.5 rounded-[0.6rem] px-2.5 ${daysView === v ? 'bg-[var(--surface-raised)] text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
             >
               <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round" aria-hidden>
                 <path d={d} />

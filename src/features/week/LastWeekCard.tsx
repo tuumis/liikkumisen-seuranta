@@ -146,13 +146,13 @@ export function LastWeekCard({ profile, today, onOpenWeek }: { profile: Profile;
             {formatDate(period.start, 'd.M.')}–{formatDate(period.end, 'd.M.')}
           </span>
         </span>
-        <button type="button" onClick={open} className="press min-h-10 shrink-0 rounded-xl px-2.5 text-sm font-semibold text-green-800 hover:bg-green-50">
+        <button type="button" onClick={open} className="press hit min-h-10 shrink-0 rounded-xl px-2.5 text-sm font-semibold text-green-800 hover:bg-green-50">
           Avaa viikko
         </button>
         <button
           type="button"
           onClick={close}
-          className="press flex size-10 shrink-0 items-center justify-center rounded-xl text-slate-500 hover:bg-[var(--surface-sunk)] hover:text-slate-900"
+          className="press hit flex size-10 shrink-0 items-center justify-center rounded-xl text-slate-500 hover:bg-[var(--surface-sunk)] hover:text-slate-900"
           aria-label="Sulje viime viikon kooste"
           title="Sulje (ei näytetä uudelleen tältä viikolta)"
         >
