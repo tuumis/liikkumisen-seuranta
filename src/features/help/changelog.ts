@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.12',
+    date: '19.11.2026',
+    items: ['Tuloskuvasta voi nyt tehdä myös videon: valitse Jaa tulos -kohdassa Video. Tulos ponnahtaa näkyviin joukkueiden jälkeen.'],
+  },
+  {
     version: '1.1.11',
     date: '19.11.2026',
     items: ['Puhelimella viikon päivät ovat nyt nauhana sivun yläosassa: valitse päivä napauttamalla, ja sen kerrat näkyvät heti alla kuitattavina. Pyyhkäisy vaihtaa päivää.'],

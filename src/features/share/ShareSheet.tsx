@@ -33,7 +33,7 @@ function readPrefs(key: string, styles: readonly ShareStyle[]): Prefs {
 
 export interface RenderOptions extends Prefs {
   color?: string;
-  /** Videon kerrokset (vain ennakkovideossa). */
+  /** Videon kerrokset (ennakko- ja tulosvideo). */
   mark?: LayerMark;
 }
 
@@ -68,7 +68,7 @@ export function ShareImageSheet({
   styles?: readonly ShareStyle[];
   /** Muodon ja tyylin muistipaikka laitteella. */
   prefsKey?: string;
-  /** Kuva | Video -valinta (otteluennakko, 19.11.2026); kuva on aina oletus. */
+  /** Kuva | Video -valinta (otteluennakko ja tulos, 19.11.2026); kuva on aina oletus. */
   video?: boolean;
 }) {
   const toast = useToast();

@@ -139,6 +139,7 @@ export function ResultShareSheet({ sessionId, onClose }: { sessionId: UUID | nul
   return (
     <ShareImageSheet
       open={!!sessionId}
+      video
       onClose={onClose}
       title="Jaa tulos"
       alt="Tuloskuvan esikatselu"

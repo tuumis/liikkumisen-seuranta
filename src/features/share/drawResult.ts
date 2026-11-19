@@ -515,9 +515,12 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
   const maxW = W - PAD * 2;
   const dateLabel = dateLabelOf(card.date);
   const origins = opts.origins;
+  // Tulosvideon kerrokset (19.11.2026) samoin kuin ennakossa (drawPreview: mark).
+  const mark = (name: string) => opts.mark?.(name, ctx);
 
   // Yläosa: tunniste, otsikko ja päivä.
   let y = story ? 170 : 104;
+  mark('kicker');
   ctx.font = `700 ${story ? 32 : 28}px ${p.sans}`;
   ctx.fillStyle = p.accent;
   ctx.fillText(spaced(card.kind === 'tournament' ? 'Turnaus' : 'Ottelu'), PAD, y);
@@ -527,12 +530,14 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
     const titlePx = story ? 104 : 84;
     ctx.font = `${heavyOf(opts.style)} ${titlePx}px ${p.display}`;
     const lines = wrap(ctx, card.eventName ?? 'Turnaus', maxW, 2);
+    mark('title');
     ctx.fillStyle = p.ink;
     lines.forEach((l) => {
       y += titlePx * 1.04;
       ctx.fillText(l, PAD, y);
     });
     y += story ? 74 : 58;
+    mark('date');
     ctx.font = `500 ${story ? 40 : 34}px ${p.sans}`;
     ctx.fillStyle = p.soft;
     ctx.fillText(dateLabel, PAD, y);
@@ -559,6 +564,7 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
     const listH = n * rowH + (n - 1) * gap;
     y += Math.max(0, (bottom - y - fixedH - listH) / 2);
 
+    mark('team');
     drawLogo(ctx, opts.logos.team, card.team, PAD, y, ls, p.sans);
     ctx.fillStyle = p.ink;
     const teamText = fit(ctx, card.team ?? 'Oma joukkue', maxW - ls - 32, nameFont(p), story ? 52 : 46, 30);
@@ -566,14 +572,17 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
     ctx.fillText(teamText, PAD + ls + 32, y + ls / 2 + (teamOrigin ? -4 : 17));
     if (teamOrigin) drawOrigin(ctx, origins?.team, PAD + ls + 32, y + ls / 2 + (story ? 46 : 40), story ? 30 : 26, p, 'left', maxW - ls - 32);
     y += ls + teamGap;
+    mark('label');
     ctx.font = `700 ${story ? 28 : 24}px ${p.sans}`;
     ctx.fillStyle = p.accent;
     ctx.fillText(spaced('Tulokset'), PAD, y + (story ? 30 : 24));
     y += labelH;
     const sumTop = y + listH + commentH + sumGap + (playerH ? playerH + playerGap : 0);
+    mark('comment');
     if (comment.h) drawComment(ctx, comment, y + listH + commentGap, p);
     card.games.forEach((g, k) => {
       const top = y + k * (rowH + gap);
+      mark(`row:${k}`);
       ctx.fillStyle = p.panel;
       rr(ctx, PAD, top, maxW, rowH, Math.min(36, rowH * 0.28));
       ctx.fill();
@@ -623,6 +632,7 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
     });
 
     if (playerH) {
+      mark('player');
       const py = sumTop - playerH - playerGap;
       drawPlayer(ctx, opts.player!, card.playerGoals, PAD, py, playerH, p);
     }
@@ -633,6 +643,7 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
       ['Maalit', `${card.goalsFor}–${card.goalsAgainst}`],
     ];
     const cw = (maxW - 2 * 20) / 3;
+    mark('stats');
     stats.forEach(([label, value], k) => {
       const x = PAD + k * (cw + 20);
       ctx.fillStyle = p.panel;
@@ -654,6 +665,7 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
   const scale = p.displayScale ?? 1;
   const display = (px: number) => `${heavy} ${Math.round(px * scale)}px ${p.display}`;
   y += story ? 92 : 70;
+  mark('date');
   ctx.font = display(story ? 64 : 54);
   ctx.fillStyle = p.ink;
   ctx.fillText(fit(ctx, dateLabel, maxW, display, story ? 64 : 54, 36), PAD, y);
@@ -677,7 +689,7 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
 
   const tags = homeAwayTags(g.homeAway, opts.homeAway);
   const below = comment.h && !comment.panel ? comment.h + plainGap : 0;
-  const nameBottom = drawMatchup(ctx, { team: card.team, opponent: g.opponent, logos: opts.logos, origins, y, boxesTop: commentTop, story, p, tags, belowH: below }, (top, ls) => {
+  const nameBottom = drawMatchup(ctx, { team: card.team, opponent: g.opponent, logos: opts.logos, origins, y, boxesTop: commentTop, story, p, tags, belowH: below, mark }, (top, ls) => {
     // Tulos logojen välissä, tulossana sen alla.
     const midW = W - PAD * 2 - ls * 2 - 70;
     const score = `${g.goalsFor ?? '–'}–${g.goalsAgainst ?? '–'}`;
@@ -695,14 +707,18 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
     ctx.textAlign = 'left';
     if (g.outcome) chip(ctx, OUTCOME_WORD[g.outcome].toUpperCase(), OUTCOME_COLOR[g.outcome], W / 2, scoreBase + (story ? 34 : 28), chipH, p, 'center');
   });
+  mark('comment');
   if (comment.h) drawComment(ctx, comment, comment.panel ? commentTop : nameBottom + plainGap, p, comment.panel ? 'left' : 'center');
 
+  mark('player');
   if (playerH) drawPlayer(ctx, opts.player!, card.playerGoals, PAD, playerTop, playerH, p);
   let by = boxesTop;
+  mark('times');
   if (times.length) {
     infoBoxes(ctx, times, by, boxH, story, p, display);
     by += boxH + 20;
   }
+  mark('place');
   if (card.location) placeBox(ctx, card.location, by, placeH, story, p);
   return canvas;
 }

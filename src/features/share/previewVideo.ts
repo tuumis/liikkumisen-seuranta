@@ -1,4 +1,4 @@
-// Ennakkovideo (19.11.2026): piirto erotetaan osiin (tausta, tunniste, joukkueet, VS, rivit, laatikot),
+// Ennakko- ja tulosvideo (19.11.2026): piirto erotetaan osiin (tausta, tunniste, joukkueet, VS, rivit, laatikot),
 // osat animoidaan ajoituksen mukaan ja video tehdään kuva kerrallaan (WebCodecs + Mediabunny, 19.11.2026).
 // Vanhoissa selaimissa varatienä kangas tallennetaan reaaliajassa MediaRecorderilla.
 // Kaikki tapahtuu laitteella; mitään ei lähetetä ennen kuin käyttäjä jakaa tiedoston.

@@ -337,7 +337,10 @@ export function drawBrandResult(card: ResultCard, opts: DrawOptions): HTMLCanvas
     ];
     lowTop = infoGrid(ctx, stats, undefined, bottom, k, p, mark);
   }
-  if (player) lowTop = drawPlayerLine(ctx, player, card.playerGoals, lowTop, k, p, card.kind === 'tournament');
+  if (player) {
+    mark('player');
+    lowTop = drawPlayerLine(ctx, player, card.playerGoals, lowTop, k, p, card.kind === 'tournament');
+  }
   const comment = commentLayout(ctx, card.comment, story, p, opts.commentPanel !== false);
   const commentGap = Math.round(36 * k);
   const contentBottom = comment.h ? lowTop - commentGap - comment.h - commentGap : lowTop - Math.round(40 * k);
