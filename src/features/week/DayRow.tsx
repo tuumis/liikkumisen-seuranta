@@ -345,11 +345,13 @@ export function DayRow({
         <div className="px-4 pb-3 pl-[4.5rem] text-xs text-slate-400">{isFuture ? 'Ei suunnitelmia' : 'Ei kirjauksia'}</div>
       )}
         {totals && !isFuture && (logged > 0 || est > 0 || (hours?.actualMin ?? 0) > 0) && (
-          <div className="mx-4 mb-3 mt-auto flex items-center justify-between gap-3 rounded-xl bg-[var(--surface-sunk)] px-3 py-1.5 ring-1 ring-inset ring-[var(--line)]">
-            {/* Kokonaismäärä (kaikki liikunta kestona) vasemmalla, reipas ja rasittava mittareineen oikealla. */}
+          <div className="mx-4 mb-3 mt-auto flex items-center gap-3 rounded-xl bg-[var(--surface-sunk)] px-3 py-1.5 ring-1 ring-inset ring-[var(--line)]">
+            {/* Aina yksi rivi: kokonaismäärä (kaikki liikunta kestona) vasemmalla, reipas ja rasittava mittareineen oikealla.
+                Puhelimella pelkkä "135 min" (arvion osuus vihjeessä), ja mittari kapenee tarvittaessa, joten rivi mahtuu
+                aina palkin sisään (korjaus 19.11.2026). */}
             {hours && hours.actualMin > 0 && (
               <InfoTip
-                className="whitespace-nowrap text-[13px] font-bold text-slate-900"
+                className="shrink-0 whitespace-nowrap text-[13px] font-bold text-slate-900"
                 tip={
                   <>
                     <strong className="block text-[13px]">Liikuntaa yhteensä {hours.actualMin} min</strong>
@@ -365,12 +367,13 @@ export function DayRow({
               >
                 <span className="stat text-[15px]">{hours.actualMin}</span>
                 <span className="text-xs font-semibold text-slate-500">
-                  min{hours.actualMin > hours.actualLoggedMin ? `, josta arvio ${hours.actualMin - hours.actualLoggedMin}` : ' yhteensä'}
+                  min
+                  <span className="hidden sm:inline">{hours.actualMin > hours.actualLoggedMin ? `, josta arvio ${hours.actualMin - hours.actualLoggedMin}` : ' yhteensä'}</span>
                 </span>
               </InfoTip>
             )}
-            <div className="ml-auto flex items-center gap-2">
-            <div className="flex h-1.5 w-14 shrink-0 sm:w-20 gap-[2px] overflow-hidden rounded-full bg-[var(--viz-track)]" aria-hidden>
+            <div className="ml-auto flex min-w-0 items-center gap-2">
+            <div className="flex h-1.5 w-14 min-w-6 shrink sm:w-20 gap-[2px] overflow-hidden rounded-full bg-[var(--viz-track)]" aria-hidden>
               <div className="anim-grow-x h-full rounded-full" style={{ width: `${loggedPct}%`, background: 'var(--viz-logged)', transition: 'width 0.7s var(--ease-out)' }} />
               {estPct > 0 && <div className="anim-grow-x h-full rounded-full" style={{ width: `${estPct}%`, background: 'var(--viz-estimate)', transition: 'width 0.7s var(--ease-out)' }} />}
             </div>
