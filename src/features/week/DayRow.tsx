@@ -123,7 +123,7 @@ export function DayRow({
 
   return (
     <li
-      className={`anim-rise relative rounded-[1.5rem] focus-within:z-10 hover:z-10 ${
+      className={`anim-rise relative flex flex-col rounded-[1.5rem] focus-within:z-10 hover:z-10 ${
         isToday
           ? 'bg-[linear-gradient(160deg,var(--surface-sage),var(--surface))] shadow-md ring-2 ring-green-700/70'
           : flag
@@ -132,91 +132,40 @@ export function DayRow({
       }`}
       style={{ ['--i' as string]: index + 3 }}
     >
-      <div {...press.handlers} className="no-callout flex select-none flex-wrap items-center gap-x-3 gap-y-1.5 px-4 pb-1.5 pt-3">
+      {/* Otsikkorivi on joka kortissa samanlainen (19.11.2026): päivä, nimi ja merkit, oikealla + ja ⋯.
+          Päivän luvut ovat kortin alalaidan tietorivillä. */}
+      <div {...press.handlers} className="no-callout grid select-none grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 px-4 pb-1.5 pt-3">
         <div className={`flex size-11 shrink-0 flex-col items-center justify-center rounded-2xl leading-none ${isToday ? 'bg-green-700 text-white shadow-[0_6px_14px_-6px_rgb(var(--accent-rgb)/0.7)]' : isFuture ? 'bg-[var(--surface-sunk)] text-slate-400' : 'bg-[var(--surface-sunk)] text-slate-800'}`}>
           <span className="text-[10.5px] font-bold uppercase tracking-wider opacity-80">{weekday}</span>
           <span className="stat text-[17px] font-semibold">{dayNo}</span>
         </div>
-        {/* Päivän nimi näkyy aina kokonaan (17.11.2026): jos tila ei riitä, oikean reunan mittarit siirtyvät omalle rivilleen. */}
-        <div className="min-w-0 flex-[1_0_auto]">
+        {/* Päivän nimi näkyy aina kokonaan (17.11.2026); merkki nimen vieressä, kapealla näytöllä tarvittaessa alla. */}
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
           <div className={`whitespace-nowrap text-sm font-bold ${isToday ? 'text-green-800' : isFuture ? 'text-slate-500' : 'text-slate-900'}`}>
             {isToday ? 'Tänään' : weekdayName}
             {isToday && <span className="sr-only"> ({dayLabel(date)})</span>}
           </div>
-          {flag && <span className="mt-0.5 whitespace-nowrap inline-block rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700">{FLAG_LABEL[flag.reason]}</span>}
+          {flag && <span className="whitespace-nowrap inline-block rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700">{FLAG_LABEL[flag.reason]}</span>}
           {earlyYears && totals && !isFuture && !flag && earlyYearsDay(totals).met && (
-            <span className="mt-0.5 whitespace-nowrap inline-flex items-center gap-1 rounded-full bg-green-700 px-2 py-0.5 text-xs font-bold text-white" title="Päiväsuositus täyttyi: vähintään 3 h liikkumista, josta 1 h vauhdikasta">
+            <span className="whitespace-nowrap inline-flex items-center gap-1 rounded-full bg-green-700 px-2 py-0.5 text-xs font-bold text-white" title="Päiväsuositus täyttyi: vähintään 3 h liikkumista, josta 1 h vauhdikasta">
               <IconCheck size="0.75rem" strokeWidth={3} /> Suositus
             </span>
           )}
           {schoolAge && totals && !isFuture && !flag && dayGoalMet('school_age', totals) && (
             <span
-              className="mt-0.5 whitespace-nowrap inline-flex items-center gap-1 rounded-full bg-green-700 px-2 py-0.5 text-xs font-bold text-white"
+              className="whitespace-nowrap inline-flex items-center gap-1 rounded-full bg-green-700 px-2 py-0.5 text-xs font-bold text-white"
               title={`Päivän suositus täyttyi: vähintään ${DAY_TARGET.school_age} min reipasta ja rasittavaa (kirjatut kerrat ja arkiliikunnan arvio)`}
             >
               <IconCheck size="0.75rem" strokeWidth={3} /> Suositus
             </span>
           )}
           {hours?.holiday && !flag && (
-            <span className="mt-0.5 whitespace-nowrap inline-block rounded-full bg-[var(--surface-sunk)] px-2 py-0.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200" title="Lomapäivä: arkiliikunta viikonlopun arvoilla">
+            <span className="whitespace-nowrap inline-block rounded-full bg-[var(--surface-sunk)] px-2 py-0.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200" title="Lomapäivä: arkiliikunta viikonlopun arvoilla">
               Loma
             </span>
           )}
         </div>
-        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-          {totals && !isFuture && (logged > 0 || est > 0 || (hours?.actualMin ?? 0) > 0) && (
-            <div className="flex flex-col items-end gap-1">
-              {/* Kokonaismäärä (kaikki liikunta kestona) mittarin yläpuolella. */}
-              {hours && hours.actualMin > 0 && (
-                <InfoTip
-                  className="whitespace-nowrap text-[13px] font-bold text-slate-900"
-                  tip={
-                    <>
-                      <strong className="block text-[13px]">Liikuntaa yhteensä {hours.actualMin} min</strong>
-                      Kaikki liikunta kestona: kevyt, reipas ja rasittava. {hours.actualLoggedMin} min kirjatuista kerroista
-                      {hours.actualMin > hours.actualLoggedMin && `, ${hours.actualMin - hours.actualLoggedMin} min arkiliikunnan perusarviosta`}.
-                      {earlyYears && totals && (
-                        <span className="mt-1 block">
-                          Alle kouluikäisen päiväsuositus: 3 h liikkumista ({Math.round(earlyYearsDay(totals).moving)}/180 min) ja siitä 1 h vauhdikasta ({Math.round(earlyYearsDay(totals).mvpa)}/60 min).
-                        </span>
-                      )}
-                    </>
-                  }
-                >
-                  <span className="stat text-[15px]">{hours.actualMin}</span>
-                  <span className="text-xs font-semibold text-slate-500">
-                    min{hours.actualMin > hours.actualLoggedMin ? `, josta arvio ${hours.actualMin - hours.actualLoggedMin}` : ' yhteensä'}
-                  </span>
-                </InfoTip>
-              )}
-              <div className="flex items-center gap-1.5">
-              <div className="flex h-1.5 w-12 shrink-0 gap-[2px] overflow-hidden rounded-full bg-[var(--viz-track)]" aria-hidden>
-                <div className="anim-grow-x h-full rounded-full" style={{ width: `${loggedPct}%`, background: 'var(--viz-logged)', transition: 'width 0.7s var(--ease-out)' }} />
-                {estPct > 0 && <div className="anim-grow-x h-full rounded-full" style={{ width: `${estPct}%`, background: 'var(--viz-estimate)', transition: 'width 0.7s var(--ease-out)' }} />}
-              </div>
-              <InfoTip
-                className="shrink-0 whitespace-nowrap text-xs font-semibold text-slate-700"
-                tip={
-                  <>
-                    <strong className="block text-[13px]">Reipas ja rasittava liikunta</strong>
-                    {logged} min kirjatuista kerroista{estimated ? ' (arvio lajin tyypillisestä tehosta)' : ''}.
-                    {est > 0 && (
-                      <>
-                        {' '}
-                        <strong>+{est} min</strong> on arkiliikunnan perusarviota (esim. välitunnit, koulumatkat), joka lasketaan mukaan, kun päivälle ei ole kirjattu sen kategorian liikuntaa.
-                      </>
-                    )}
-                  </>
-                }
-              >
-                <span className="tabular-nums">{logged}</span>
-                {est > 0 && <span className="text-slate-500">+{est}</span>}
-                <span className="font-medium text-slate-500">reipas+</span>
-                {(estimated || est > 0) && <span className="rounded-full bg-amber-100 px-1.5 text-[11px] font-bold text-amber-900">arvio</span>}
-              </InfoTip>
-              </div>
-            </div>
-          )}
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           {(isFuture ? onPlan : onAdd) && (
             <button
               type="button"
@@ -395,6 +344,59 @@ export function DayRow({
       ) : (
         <div className="px-4 pb-3 pl-[4.5rem] text-xs text-slate-400">{isFuture ? 'Ei suunnitelmia' : 'Ei kirjauksia'}</div>
       )}
+        {totals && !isFuture && (logged > 0 || est > 0 || (hours?.actualMin ?? 0) > 0) && (
+          <div className="mx-4 mb-3 mt-auto flex items-center justify-between gap-3 rounded-xl bg-[var(--surface-sunk)] px-3 py-1.5 ring-1 ring-inset ring-[var(--line)]">
+            {/* Kokonaismäärä (kaikki liikunta kestona) vasemmalla, reipas ja rasittava mittareineen oikealla. */}
+            {hours && hours.actualMin > 0 && (
+              <InfoTip
+                className="whitespace-nowrap text-[13px] font-bold text-slate-900"
+                tip={
+                  <>
+                    <strong className="block text-[13px]">Liikuntaa yhteensä {hours.actualMin} min</strong>
+                    Kaikki liikunta kestona: kevyt, reipas ja rasittava. {hours.actualLoggedMin} min kirjatuista kerroista
+                    {hours.actualMin > hours.actualLoggedMin && `, ${hours.actualMin - hours.actualLoggedMin} min arkiliikunnan perusarviosta`}.
+                    {earlyYears && totals && (
+                      <span className="mt-1 block">
+                        Alle kouluikäisen päiväsuositus: 3 h liikkumista ({Math.round(earlyYearsDay(totals).moving)}/180 min) ja siitä 1 h vauhdikasta ({Math.round(earlyYearsDay(totals).mvpa)}/60 min).
+                      </span>
+                    )}
+                  </>
+                }
+              >
+                <span className="stat text-[15px]">{hours.actualMin}</span>
+                <span className="text-xs font-semibold text-slate-500">
+                  min{hours.actualMin > hours.actualLoggedMin ? `, josta arvio ${hours.actualMin - hours.actualLoggedMin}` : ' yhteensä'}
+                </span>
+              </InfoTip>
+            )}
+            <div className="ml-auto flex items-center gap-2">
+            <div className="flex h-1.5 w-14 shrink-0 sm:w-20 gap-[2px] overflow-hidden rounded-full bg-[var(--viz-track)]" aria-hidden>
+              <div className="anim-grow-x h-full rounded-full" style={{ width: `${loggedPct}%`, background: 'var(--viz-logged)', transition: 'width 0.7s var(--ease-out)' }} />
+              {estPct > 0 && <div className="anim-grow-x h-full rounded-full" style={{ width: `${estPct}%`, background: 'var(--viz-estimate)', transition: 'width 0.7s var(--ease-out)' }} />}
+            </div>
+            <InfoTip
+              className="shrink-0 whitespace-nowrap text-xs font-semibold text-slate-700"
+              tip={
+                <>
+                  <strong className="block text-[13px]">Reipas ja rasittava liikunta</strong>
+                  {logged} min kirjatuista kerroista{estimated ? ' (arvio lajin tyypillisestä tehosta)' : ''}.
+                  {est > 0 && (
+                    <>
+                      {' '}
+                      <strong>+{est} min</strong> on arkiliikunnan perusarviota (esim. välitunnit, koulumatkat), joka lasketaan mukaan, kun päivälle ei ole kirjattu sen kategorian liikuntaa.
+                    </>
+                  )}
+                </>
+              }
+            >
+              <span className="tabular-nums">{logged}</span>
+              {est > 0 && <span className="text-slate-500">+{est}</span>}
+              <span className="font-medium text-slate-500">reipas+</span>
+              {(estimated || est > 0) && <span className="rounded-full bg-amber-100 px-1.5 text-[11px] font-bold text-amber-900">arvio</span>}
+            </InfoTip>
+            </div>
+          </div>
+        )}
     </li>
   );
 }
