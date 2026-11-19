@@ -112,4 +112,21 @@ describe('treenin joukkue', () => {
     expect(back.kind).toBeUndefined();
     expect(back.format).toBe('5v5');
   });
+
+  it('aiemmat treenit tarkenteen mukaan', async () => {
+    const { db, repo } = await device();
+    const team = await repo.saveTeam('p1', { name: 'P11 Musta' });
+    const g = await repo.saveTeam('p1', { name: 'Talentti', kind: 'group' });
+    const add = (date: string, label?: string) => repo.createSession({ profileId: 'p1', activityTypeId: TRAINING, date, durationMin: 60, ...base, label });
+    await add('2026-10-01', 'Talenttitreenit');
+    await add('2026-10-02', ' talenttitreenit ');
+    await add('2026-10-03', 'Joukkuetreenit');
+    await add('2026-10-04');
+    const ids = await repo.assignTrainingsTeam('p1', g.id, undefined, TODAY, 'TALENTTITREENIT');
+    expect(ids).toHaveLength(2);
+    expect(await repo.assignTrainingsTeam('p1', team.id, undefined, TODAY, 'Joukkuetreenit')).toHaveLength(1);
+    expect(await repo.assignTrainingsTeam('p1', team.id, undefined, TODAY, '')).toHaveLength(1);
+    const byDate = new Map((await db.sessions.toArray()).map((s) => [s.date, s.teamId]));
+    expect([...['2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04'].map((d) => byDate.get(d))]).toEqual([g.id, g.id, team.id, team.id]);
+  });
 });

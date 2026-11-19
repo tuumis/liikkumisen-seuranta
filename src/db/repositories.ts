@@ -50,7 +50,7 @@ import type {
   Timestamp,
   UUID,
   Weekday, SessionPart, HomeAway } from '../domain/types';
-import { cleanSeries, isClubFootball, isClubTraining, isGameFormat, isHomeAway, LEVEL_EFFORT, POSITIONS, selfMin, trainingSelfLabel, trainingSelfStart } from '../domain/football';
+import { cleanSeries, isClubFootball, isClubTraining, isGameFormat, isHomeAway, labelKey, LEVEL_EFFORT, POSITIONS, selfMin, trainingSelfLabel, trainingSelfStart } from '../domain/football';
 import { BUILT_IN_ACTIVITY_TYPES, BUILT_IN_RENAMES, ESTIMATE_DEFAULT_TYPE_KEY } from '../seed/activityTypes';
 import { nowTimestamp } from './clock';
 import { createPlanner } from './ensurePlanned';
@@ -689,11 +689,15 @@ export function createRepositories(db: AppDB = defaultDb) {
       .sort((a, b) => b.date.localeCompare(a.date));
   }
 
-  /** Merkitsee aiemmat treenit, joilta joukkue puuttuu, kerralla joukkueelle (19.11.2026). Palauttaa merkityt kerrat. */
-  async function assignTrainingsTeam(profileId: UUID, teamId: UUID, from?: ISODate, to?: ISODate): Promise<UUID[]> {
+  /**
+   * Merkitsee aiemmat treenit, joilta joukkue puuttuu, kerralla joukkueelle (19.11.2026). `label`: vain tämän
+   * tarkenteen treenit ('' = ilman tarkennetta, puuttuu = kaikki). Palauttaa merkityt kerrat.
+   */
+  async function assignTrainingsTeam(profileId: UUID, teamId: UUID, from?: ISODate, to?: ISODate, label?: string): Promise<UUID[]> {
     const team = await liveTeamId(profileId, teamId);
     if (!team) throw new Error('Joukkuetta ei löydy');
-    const rows = await trainingsWithoutTeam(profileId, from, to);
+    const key = label === undefined ? undefined : labelKey(label);
+    const rows = (await trainingsWithoutTeam(profileId, from, to)).filter((s) => key === undefined || labelKey(s.label) === key);
     if (!rows.length) return [];
     noteLocalChange();
     const ts = nowTimestamp();

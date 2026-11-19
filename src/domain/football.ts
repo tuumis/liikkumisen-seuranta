@@ -36,6 +36,9 @@ export const isClubFootball = (t: Pick<ActivityType, 'sport' | 'category'> | und
 /** Seuran jalkapallotreeni (ei omatoiminen): näille voi lisätä omatoimisen alku- ja loppuverryttelyn (17.11.2026). */
 export const isClubTraining = (t: Pick<ActivityType, 'sport' | 'category' | 'footballKind'> | undefined): boolean => isClubFootball(t) && t?.footballKind === 'training';
 
+/** Tarkenteen vertailuavain (19.11.2026): kirjainkoosta ja välilyönneistä riippumaton; '' = ei tarkennetta. */
+export const labelKey = (label: string | undefined): string => (label ?? '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('fi');
+
 /** Treeniin linkitetty omatoiminen verryttely (ei lasketa erilliseksi treenikerraksi). */
 export const isTrainingSelf = (s: Pick<Session, 'linkedTo'>): boolean => !!s.linkedTo;
 

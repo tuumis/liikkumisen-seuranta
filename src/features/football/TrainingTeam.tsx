@@ -13,6 +13,8 @@ import { formatDate } from '../../ui/format';
 import { Sheet } from '../../ui/Sheet';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
+import { ToggleChip } from '../../ui/controls';
+import { labelKey } from '../../domain/football';
 
 const ADD_HINT = 'Joukkueen tai treeniryhmän (esim. pienryhmävalmennus, taitokoulu) lisäät kohdassa Jalkapallo → Joukkueet.';
 
@@ -103,6 +105,8 @@ function AssignTrainingsSheet({ profile, open, onClose }: { profile: Profile; op
   const [from, setFrom] = useState<ISODate | ''>('');
   const [to, setTo] = useState<ISODate>(today);
   const [saving, setSaving] = useState(false);
+  // Tarkenne (käyttäjän pyyntö 19.11.2026): esim. vain "Talenttitreenit"-treenit ryhmälle; null = kaikki.
+  const [label, setLabel] = useState<string | null>(null);
   const earliest = all?.length ? all[all.length - 1]!.date : undefined;
 
   // Avattaessa: koko aikaväli ja ainoa joukkue valmiiksi valittuna.
@@ -111,23 +115,38 @@ function AssignTrainingsSheet({ profile, open, onClose }: { profile: Profile; op
     setTeamId(teams?.length === 1 ? teams[0]!.id : '');
     setFrom(earliest ?? today);
     setTo(today);
+    setLabel(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
   useEffect(() => {
     if (open && !from && earliest) setFrom(earliest);
   }, [open, from, earliest]);
 
-  const inRange = (all ?? []).filter((s) => (!from || s.date >= from) && s.date <= to);
+  const inDates = (all ?? []).filter((s) => (!from || s.date >= from) && s.date <= to);
+  // Tarkenteet aikavälin treeneistä, yleisin ensin; näytetään ensimmäinen kirjoitusasu.
+  const labels = new Map<string, { text: string; n: number }>();
+  for (const s of inDates) {
+    const k = labelKey(s.label);
+    const cur = labels.get(k);
+    if (cur) cur.n++;
+    else labels.set(k, { text: k ? s.label!.trim() : 'Ei tarkennetta', n: 1 });
+  }
+  const labelList = [...labels.entries()].sort((a, b) => (a[0] === '' ? 1 : b[0] === '' ? -1 : b[1].n - a[1].n || a[1].text.localeCompare(b[1].text, 'fi')));
+  const activeLabel = label !== null && labels.has(label) ? label : null;
+  const inRange = activeLabel === null ? inDates : inDates.filter((s) => labelKey(s.label) === activeLabel);
   const n = inRange.length;
 
   async function save() {
     if (!teamId || !n) return;
     setSaving(true);
     try {
-      const ids = await repo.assignTrainingsTeam(profile.id, teamId, from || undefined, to);
+      const ids = await repo.assignTrainingsTeam(profile.id, teamId, from || undefined, to, activeLabel ?? undefined);
       const name = displayTeamName(teams?.find((t) => t.id === teamId)?.name ?? '');
       toast(`${ids.length} treeniä merkitty: ${name}`, { label: 'Kumoa', run: () => repo.clearTrainingsTeam(ids) }, 'success');
-      onClose();
+      // Paneeli jää auki seuraavaa merkintää varten (esim. ensin talenttitreenit, sitten joukkuetreenit);
+      // kun merkittäviä ei enää ole, paneeli sulkeutuu Joukkueet-kortin rivin mukana.
+      setLabel(null);
+      setTeamId('');
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e));
     } finally {
@@ -139,7 +158,7 @@ function AssignTrainingsSheet({ profile, open, onClose }: { profile: Profile; op
     <Sheet open={open} onClose={onClose} title="Merkitse aiemmat treenit">
       <div className="space-y-4">
         <p className="text-sm text-slate-600">
-          Valitse {anyGroup ? 'joukkue tai ryhmä' : 'joukkue'} ja aikaväli. Merkintä koskee vain treenejä, joilta se puuttuu; jo merkityt treenit eivät muutu.
+          Valitse {anyGroup ? 'joukkue tai ryhmä' : 'joukkue'}, aikaväli ja tarvittaessa tarkenne. Merkintä koskee vain treenejä, joilta se puuttuu; jo merkityt treenit eivät muutu.
         </p>
         <Field label={anyGroup ? 'Joukkue tai ryhmä' : 'Joukkue'}>
           <select className={inputClass} value={teamId} onChange={(e) => setTeamId(e.target.value)}>
@@ -160,6 +179,22 @@ function AssignTrainingsSheet({ profile, open, onClose }: { profile: Profile; op
             <DateInput className={inputClass} value={to} min={from || undefined} max={today} onChange={setTo} aria-label="Päättyen" />
           </Field>
         </div>
+        {labelList.length > 1 && (
+          <div>
+            <div className="mb-1.5 text-[13px] font-semibold text-slate-700">Tarkenne</div>
+            <div className="flex flex-wrap gap-1.5">
+              <ToggleChip on={activeLabel === null} onChange={() => setLabel(null)}>
+                Kaikki ({inDates.length})
+              </ToggleChip>
+              {labelList.map(([k, v]) => (
+                <ToggleChip key={k || '-'} on={activeLabel === k} onChange={(on) => setLabel(on ? k : null)}>
+                  {v.text} ({v.n})
+                </ToggleChip>
+              ))}
+            </div>
+            <p className="mt-1.5 text-xs text-slate-500">Esim. vain talenttitreenit treeniryhmälle ja joukkuetreenit joukkueelle, kumpikin omalla merkinnällään.</p>
+          </div>
+        )}
         <p className="text-sm text-slate-700" aria-live="polite">
           {n > 0 ? (
             <>
@@ -167,7 +202,7 @@ function AssignTrainingsSheet({ profile, open, onClose }: { profile: Profile; op
               {inRange.length > 0 && ` (${formatDate(inRange[inRange.length - 1]!.date, 'd.M.yyyy')}–${formatDate(inRange[0]!.date, 'd.M.yyyy')})`}.
             </>
           ) : (
-            'Aikavälillä ei ole treenejä ilman joukkuetta.'
+            activeLabel === null ? 'Aikavälillä ei ole treenejä ilman joukkuetta.' : 'Tällä tarkenteella ei ole aikavälillä treenejä ilman joukkuetta.'
           )}
         </p>
         <div className="flex gap-2">
