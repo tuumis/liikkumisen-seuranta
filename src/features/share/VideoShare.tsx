@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Button } from '../../ui/components';
 import { useToast } from '../../ui/Toast';
 import { HEIGHT, loadStyleFonts, W } from './drawResult';
-import { drawFrame, layerCollector, pickVideoFormat, recordScene, type VideoScene } from './previewVideo';
+import { canEncodeFrames, drawFrame, encodeScene, layerCollector, pickVideoFormat, recordScene, type VideoScene } from './previewVideo';
 import type { RenderOptions } from './ShareSheet';
 import { IconPlay } from '../../ui/icons';
 
@@ -32,6 +32,8 @@ export function useVideoShare({
 }): { preview: ReactNode; actions: ReactNode } {
   const toast = useToast();
   const format = useMemo(pickVideoFormat, []);
+  // Kuva kerrallaan (paras laatu), jos selain osaa; undefined = tarkistus kesken.
+  const [frames, setFrames] = useState<boolean>();
   const [allowWebm, setAllowWebm] = useState(false);
   const [scene, setScene] = useState<VideoScene>();
   const [state, setState] = useState<VideoState>({ k: 'idle' });
@@ -87,32 +89,37 @@ export function useVideoShare({
 
   useEffect(() => () => abort.current?.abort(), []);
 
+  useEffect(() => {
+    if (!active || frames !== undefined) return;
+    let cancelled = false;
+    void canEncodeFrames(W, HEIGHT.story).then((ok) => !cancelled && setFrames(ok));
+    return () => {
+      cancelled = true;
+    };
+  }, [active, frames]);
+
   const videoName = (ext: string) => fileName.replace(/\.[a-z0-9]+$/i, '') + '.' + ext;
 
   async function make() {
     const el = canvas.current;
-    if (!scene || !el || !format) return;
+    if (!scene || !el || frames === undefined || (!frames && !format)) return;
     cancelAnimationFrame(raf.current);
     setPlaying(false);
     const ctrl = new AbortController();
     abort.current = ctrl;
     setState({ k: 'recording', p: 0 });
     let shown = 0;
+    // Edistyminen 2 %:n välein, ettei paneeli piirry joka kuvalla.
+    const progress = (p: number) => {
+      if (p - shown >= 0.02 || p === 1) {
+        shown = p;
+        setState({ k: 'recording', p });
+      }
+    };
     try {
-      const blob = await recordScene(
-        el,
-        scene,
-        format,
-        (p) => {
-          // Edistyminen 2 %:n välein, ettei paneeli piirry joka kuvalla.
-          if (p - shown >= 0.02 || p === 1) {
-            shown = p;
-            setState({ k: 'recording', p });
-          }
-        },
-        ctrl.signal,
-      );
-      setState({ k: 'ready', file: new File([blob], videoName(format.ext), { type: blob.type }), seconds: Math.round(scene.timeline.total) });
+      const blob = frames ? await encodeScene(scene, progress, ctrl.signal) : await recordScene(el, scene, format!, progress, ctrl.signal);
+      const ext = frames ? 'mp4' : format!.ext;
+      setState({ k: 'ready', file: new File([blob], videoName(ext), { type: blob.type }), seconds: Math.round(scene.timeline.total) });
     } catch (e) {
       if (ctrl.signal.aborted) {
         setState({ k: 'idle' });
@@ -171,9 +178,9 @@ export function useVideoShare({
   );
 
   let actions: ReactNode;
-  if (!format) {
+  if (frames === false && !format) {
     actions = <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">Tämä selain ei osaa tehdä videota. Jaa kuva tai kokeile toisella selaimella (esim. Chrome tai Safari).</p>;
-  } else if (format.ext === 'webm' && !allowWebm) {
+  } else if (frames === false && format?.ext === 'webm' && !allowWebm) {
     actions = (
       <div className="space-y-2">
         <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">
@@ -188,7 +195,7 @@ export function useVideoShare({
     actions = (
       <div className="space-y-2" aria-live="polite">
         <div className="flex items-center justify-between text-sm text-slate-700">
-          <span>Tehdään videota… pidä sovellus auki.</span>
+          <span>Tehdään videota{frames ? '…' : '… pidä sovellus auki.'}</span>
           <span className="tabular-nums">{Math.round(state.p * 100)} %</span>
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-sunk)]">
@@ -204,7 +211,7 @@ export function useVideoShare({
     actions = (
       <div className="space-y-2">
         <p className="text-sm text-slate-600" aria-live="polite">
-          Video valmis: {state.seconds} s, {(f.size / 1_000_000).toLocaleString('fi-FI', { maximumFractionDigits: 1 })} Mt ({format.ext.toUpperCase()}, ei ääntä).
+          Video valmis: {state.seconds} s, {(f.size / 1_000_000).toLocaleString('fi-FI', { maximumFractionDigits: 1 })} Mt ({f.name.split('.').pop()?.toUpperCase()}, ei ääntä).
         </p>
         <div className="flex gap-2">
           {canShare && (
@@ -226,10 +233,10 @@ export function useVideoShare({
             Videon teko ei onnistunut ({state.msg}). Kokeile uudelleen tai jaa kuva.
           </p>
         )}
-        <Button className="w-full" disabled={!scene} onClick={() => void make()}>
+        <Button className="w-full" disabled={!scene || frames === undefined} onClick={() => void make()}>
           Tee video
         </Button>
-        <p className="text-xs text-slate-500">Video on noin {scene ? Math.round(scene.timeline.total) : 7} sekuntia ja ilman ääntä. Teko kestää yhtä kauan kuin video.</p>
+        <p className="text-xs text-slate-500">Video on noin {scene ? Math.round(scene.timeline.total) : 7} sekuntia ja ilman ääntä. {frames === false ? 'Teko kestää yhtä kauan kuin video.' : 'Teko kestää yleensä muutaman sekunnin.'}</p>
       </div>
     );
   }

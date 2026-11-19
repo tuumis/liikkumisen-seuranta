@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.10',
+    date: '19.11.2026',
+    items: ['Ennakkovideot ovat nyt teräviä ja tasaisia, ja niiden teko kestää vain muutaman sekunnin.'],
+  },
+  {
     version: '1.1.9',
     date: '18.11.2026',
     items: ['Ennakko- ja tuloskuviin uusi Brändi-tyyli: iso päivä, joukkueet allekkain, iso VOITTO ja tulos sekä ohuin viivoin jaettu tietoruudukko.'],

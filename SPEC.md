@@ -1381,15 +1381,16 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
       - kesto 7–13 s (ottelu noin 7 s), ei ääntä; tempoa hidastettiin käyttäjän palautteesta 19.11.2026 ("hieman liian nopea"), kaikki ajat ×1,6
     - Toteutus:
       - piirto merkitsee osien rajat (`mark`), ja osat leikataan omiksi kuvikseen
-      - kehykset piirretään kankaalle ja tallennetaan selaimen MediaRecorderilla (`canvas.captureStream`, 30 kuvaa/s)
-      - ei kirjastoja eikä verkkoliikennettä
+      - video tehdään kuva kerrallaan (30 kuvaa/s) piilossa olevalla kankaalla ja pakataan H.264-MP4:ksi selaimen WebCodecsilla; tiedoston kokoaa Mediabunny-kirjasto (päivitetty 19.11.2026, ks. alla)
+      - varatie selaimille ilman WebCodecsia: kangas tallennetaan reaaliajassa MediaRecorderilla (`canvas.captureStream`, 30 kuvaa/s)
+      - ei verkkoliikennettä
     - Muoto: MP4 (H.264), jos selain osaa; tämä toimii iPhonessa ja WhatsAppissa. Muuten tarjotaan WebM varoituksen kanssa. Jos tallennus ei onnistu lainkaan, ohjataan jakamaan kuva.
     - Esikatselu:
       - kankaalla toistuva animaatio, jonka voi toistaa uudelleen ("▶ Toista")
       - `<video>`-elementtiä ei käytetä, koska sisältöturvakäytäntö ei salli blob-mediaa
       - vähennetty liike: ei automaattista toistoa
     - Tekeminen:
-      - "Tee video" toistaa animaation ja tallentaa sen; edistyminen näkyy, ja teon voi perua
+      - "Tee video" tekee videon; edistyminen näkyy, ja teon voi perua. Kuva kerrallaan teko kestää yleensä muutaman sekunnin, varatiellä yhtä kauan kuin video.
       - valmiin videon jälkeen "Jaa video" (puhelimen jakovalikko) ja "Tallenna video" (lataus)
       - valintojen muutos hylkää valmiin videon
   - **Alkusivu ja kutsukoodi** (käyttäjän toive 18.11.2026; `features/landing/AccessGate.tsx`, `Landing.tsx`, `domain/invite.ts`, kuvat `public/landing/*.webp`):
@@ -1507,3 +1508,8 @@ Käyttäjän pyynnöstä MVP:n jälkeen toteutetut muutokset. Tietomalli on nyt 
       - **Tuloskuva (ottelu):** tunniste ja rivi "päivä · klo · paikka", sen alla iso korostusvärinen VOITTO / TASAPELI / TAPPIO ja jättikokoinen tulos (niin iso kuin leveyteen ja korkeuteen mahtuu). Joukkueet rinnakkain tuloksen alla, oma vasemmalla. Alareunassa pelaajan nimi isolla ja maalit korostusvärillä.
       - **Tuloskuva (turnaus):** otsikko, päivä, oma joukkue, "Tulokset"-rivit (vastustaja, tulos ja V/T/H-merkki), pelaajan maalit ja ruudukko: pelit, V–T–H korostusvärillä ja maalit.
       - Korostus on pystypalkki vasemmassa yläkulmassa otsikon kohdalla. Seurojen tunnuksia ei ole tyylissä.
+    - **Ennakkovideon laatu** (käyttäjän palaute 19.11.2026: "videoiden laatu on heikko"):
+      - **Syy:** video tallennettiin reaaliajassa toistamalla animaatiota ruudulla (MediaRecorder, 6 Mbit/s). Hitaalla laitteella kuvia jäi pois, ja laitteen pakkaaja sumensi tekstin reunoja varsinkin alussa.
+      - **Korjaus:** video tehdään kuva kerrallaan. Jokainen kuva piirretään valmiiksi piilossa olevalle kankaalle ja pakataan WebCodecsin `VideoEncoder`illa H.264:ksi (16 Mbit/s, avainkuva 2 s välein); MP4-tiedoston kokoaa **Mediabunny** (uusi riippuvuus `mediabunny`, MPL-2.0, käyttäjän lupa 19.11.2026). Kirjasto ladataan vasta, kun videota tehdään, toimii kokonaan laitteella eikä tee verkkoliikennettä. Video on tasainen ja terävä laitteen nopeudesta riippumatta, ja teko kestää yleensä muutaman sekunnin.
+      - **Varatie:** jos selain ei osaa tehdä H.264-videota WebCodecsilla, käytetään entistä reaaliaikaista tallennusta, nyt 12 Mbit/s.
+      - Tuloskuvissa ei ole videota; video on vain otteluennakoissa.

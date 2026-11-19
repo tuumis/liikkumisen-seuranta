@@ -1,5 +1,6 @@
 // Ennakkovideo (19.11.2026): piirto erotetaan osiin (tausta, tunniste, joukkueet, VS, rivit, laatikot),
-// osat animoidaan ajoituksen mukaan ja kangas tallennetaan videoksi selaimen MediaRecorderilla.
+// osat animoidaan ajoituksen mukaan ja video tehdään kuva kerrallaan (WebCodecs + Mediabunny, 19.11.2026).
+// Vanhoissa selaimissa varatienä kangas tallennetaan reaaliajassa MediaRecorderilla.
 // Kaikki tapahtuu laitteella; mitään ei lähetetä ennen kuin käyttäjä jakaa tiedoston.
 
 import type { LayerMark } from './drawResult';
@@ -180,7 +181,7 @@ export function recordScene(
     const stream = canvas.captureStream(30);
     let rec: MediaRecorder;
     try {
-      rec = new MediaRecorder(stream, { mimeType: format.mime, videoBitsPerSecond: 6_000_000 });
+      rec = new MediaRecorder(stream, { mimeType: format.mime, videoBitsPerSecond: 12_000_000 });
     } catch (e) {
       stream.getTracks().forEach((t) => t.stop());
       reject(e instanceof Error ? e : new Error(String(e)));
@@ -227,4 +228,53 @@ export function recordScene(
     };
     raf = requestAnimationFrame(tick);
   });
+}
+
+/** Kuva kerrallaan tehdyn videon kuvataajuus ja bittinopeus (paikallaan olevat kuvat pakkautuvat pieniksi). */
+const FPS = 30;
+const BITRATE = 16_000_000;
+
+/**
+ * Voiko selain tehdä videon kuva kerrallaan (WebCodecs, H.264 MP4). Tällöin video on tasainen ja terävä
+ * laitteen nopeudesta riippumatta, eikä tallennus tapahdu reaaliajassa.
+ */
+export async function canEncodeFrames(width: number, height: number): Promise<boolean> {
+  if (typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') return false;
+  try {
+    const { canEncodeVideo, Quality } = await import('mediabunny');
+    return await canEncodeVideo('avc', { width, height, quality: new Quality({ bitrate: BITRATE }), frameRate: FPS });
+  } catch {
+    return false;
+  }
+}
+
+/** Tekee videon kuva kerrallaan piilossa olevalla kankaalla; Mediabunny ladataan vasta tarvittaessa. */
+export async function encodeScene(scene: VideoScene, onProgress: (share: number) => void, signal: AbortSignal): Promise<Blob> {
+  const { Output, Mp4OutputFormat, BufferTarget, CanvasSource, Quality } = await import('mediabunny');
+  const canvas = document.createElement('canvas');
+  canvas.width = scene.width;
+  canvas.height = scene.height;
+  const ctx = canvas.getContext('2d', { alpha: false })!;
+  const output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target: new BufferTarget() });
+  const source = new CanvasSource(canvas, { codec: 'avc', quality: new Quality({ bitrate: BITRATE }), keyFrameInterval: 2 });
+  output.addVideoTrack(source, { frameRate: FPS });
+  const frames = Math.ceil(scene.timeline.total * FPS) + 1;
+  try {
+    await output.start();
+    for (let i = 0; i < frames; i++) {
+      if (signal.aborted) throw new DOMException('Peruttu', 'AbortError');
+      drawFrame(ctx, scene, i / FPS);
+      await source.add(i / FPS, 1 / FPS);
+      onProgress((i + 1) / frames);
+      // Välillä tauko, jotta edistymispalkki ehtii piirtyä.
+      if (i % 6 === 5) await new Promise((r) => setTimeout(r, 0));
+    }
+    await output.finalize();
+  } catch (e) {
+    if (output.state !== 'finalized' && output.state !== 'canceled') await output.cancel().catch(() => undefined);
+    throw e;
+  }
+  const buf = output.target.buffer;
+  if (!buf?.byteLength) throw new Error('Video jäi tyhjäksi');
+  return new Blob([buf], { type: 'video/mp4' });
 }
