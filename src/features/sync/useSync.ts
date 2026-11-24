@@ -267,10 +267,12 @@ export async function autoSyncReady(): Promise<'ok' | 'no-folder' | 'no-permissi
 
 export function useSyncActions() {
   /** PC: "Synkronoi" – lue puhelimen tiedosto (jos muuttunut), yhdistä, ensurePlanned, kirjoita PC:n tiedosto. */
-  const pcSync = useCallback(async (): Promise<SyncOutcome> => {
+  //  repick = kansio valitaan uudelleen ennen synkronointia (24.11.2026: vanhentunut kansioyhteys jäi
+  //  jumiin käyttöluvan tarkistukseen; saman kansion valinta uudelleen korjasi). Valinta heti painalluksesta.
+  const pcSync = useCallback(async (repick = false): Promise<SyncOutcome> => {
     if (!supportsFolder()) throw new Error('Selain ei tue kansion käsittelyä. Käytä tiedoston tuontia ja latausta.');
+    let handle = repick ? undefined : await repo.getMeta<FileSystemDirectoryHandle>('syncFolderHandle');
     const deviceId = await repo.deviceId();
-    let handle = await repo.getMeta<FileSystemDirectoryHandle>('syncFolderHandle');
     if (!handle) {
       handle = await pickFolder();
       await repo.setMeta('syncFolderHandle', handle);

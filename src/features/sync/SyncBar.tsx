@@ -20,6 +20,7 @@ import { syncFileDevice, useSyncActions, useSyncStage, useSyncState } from './us
 import { subscribeCommands } from '../desktop/commands';
 
 const DAY = 86_400_000;
+const FAILED_BTN = 'press mt-2 rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-amber-950 ring-1 ring-amber-300 hover:bg-amber-100';
 
 /** "Synkronoitu 5 min sitten" tai "Ei vielä synkronoitu" (ei kömpelöä "Synkronoitu ei koskaan"). */
 const synced = (ts?: string) => (ts ? 'Synkronoitu ' + ago(ts) : 'Ei vielä synkronoitu');
@@ -88,9 +89,9 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' | 'he
 
   async function run(f: () => Promise<{ summary?: MergeSummary; message: string } | null | string>) {
     setBusy(true);
-    setFailed(undefined);
     try {
       const r = await f();
+      setFailed(undefined);
       if (r === null) return;
       if (typeof r === 'string') return toast(r);
       if (r.summary?.conflicts.length) {
@@ -109,7 +110,21 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' | 'he
   }
 
   const busyText = stage ? `Synkronoidaan: ${stage}…` : 'Synkronoidaan…';
-  const failedNote = (cls: string) => (failed && !busy ? <p className={cls} role="status">{failed}</p> : null);
+  // Keskeytyksen syy ja korjaus: saman pilvikansion valinta uudelleen antaa selaimelle tuoreen yhteyden kansioon.
+  const failedNote = (cls: string, btnCls: string) =>
+    failed && !busy ? (
+      <div className={cls} role="status">
+        <p>{failed}</p>
+        {state.role === 'pc' && supportsFolder() && (
+          <>
+            <p className="mt-1.5">Jos sama toistuu, valitse sama pilvikansio uudelleen.</p>
+            <button type="button" onClick={() => run(() => actions.pcSync(true))} className={btnCls}>
+              Valitse kansio uudelleen
+            </button>
+          </>
+        )}
+      </div>
+    ) : null;
 
   const stale = state.lastSyncAt ? Date.now() - new Date(state.lastSyncAt).getTime() > 7 * DAY : false;
   const pcDays = state.lastIncomingExportedAt ? Math.floor((Date.now() - new Date(state.lastIncomingExportedAt).getTime()) / DAY) : undefined;
@@ -137,7 +152,10 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' | 'he
               <span className={`block text-[11px] ${busy ? '' : 'truncate'} ${(phoneHasNew || failed) && !busy ? 'font-semibold text-[var(--hero-accent)]' : 'text-[var(--side-muted)]'}`}>{sub}</span>
             </span>
           </button>
-          {failedNote('px-4 pb-1 text-[11px] leading-snug text-[var(--side-ink-soft)]')}
+          {failedNote(
+            'px-4 pb-1 text-[11px] leading-snug text-[var(--side-ink-soft)]',
+            'press mt-2 rounded-full bg-white/[0.08] px-3 py-1.5 text-xs font-semibold text-[var(--side-ink)] hover:bg-white/[0.14]',
+          )}
           </>
         ) : (
           <div className="px-4">
@@ -171,6 +189,7 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' | 'he
       {state.role === 'pc' ? (
         <div className="space-y-2 lg:hidden">
           {phoneHasNew && <div className="rounded-2xl bg-sky-50 p-3 text-sm text-sky-950 ring-1 ring-sky-200">Puhelimella on uusia kirjauksia – synkronoi</div>}
+          {failedNote('rounded-2xl bg-amber-50 p-3 text-sm text-amber-950 ring-1 ring-amber-200', FAILED_BTN)}
           <div className="card flex items-center gap-2 !rounded-2xl p-2 pl-3">
             <span className="flex-1 text-xs text-slate-600">{busy ? busyText : synced(state.lastSyncRunAt)}</span>
             {supportsFolder() ? (
@@ -252,7 +271,7 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' | 'he
             <div className="space-y-3 pb-1">
               {phoneHasNew && <div className="rounded-2xl bg-sky-50 p-3 text-sm text-sky-950 ring-1 ring-sky-200">Puhelimella on uusia kirjauksia – synkronoi</div>}
               <p className="text-sm text-slate-600">{busy ? busyText : synced(state.lastSyncRunAt)}</p>
-              {failedNote('rounded-2xl bg-amber-50 p-3 text-sm text-amber-950 ring-1 ring-amber-200')}
+              {failedNote('rounded-2xl bg-amber-50 p-3 text-sm text-amber-950 ring-1 ring-amber-200', FAILED_BTN)}
               <div className="flex gap-2">
                 {supportsFolder() ? (
                   <Button className="flex-1" disabled={busy} onClick={() => run(actions.pcSync)}>

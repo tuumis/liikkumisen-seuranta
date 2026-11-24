@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.41',
+    date: '24.11.2026',
+    items: ['Jos synkronointi keskeytyy, viestin alla on painike Valitse kansio uudelleen. Saman pilvikansion valinta uudelleen korjaa vanhentuneen kansioyhteyden.'],
+  },
+  {
     version: '1.1.40',
     date: '24.11.2026',
     items: [
