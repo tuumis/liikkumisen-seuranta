@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.57',
+    date: '24.11.2026',
+    items: [
+      'Viikko-näkymästä tuleva peli, turnaus tai harjoituspeli avautuu suoraan muokattavaksi: vastustajan, paikan, ajan ja muut tiedot voi tarkistaa ja korjata samasta paneelista kuin pelikalenterissa.',
+      'Poissaolon tai peruuntumisen voi merkitä paneelin alalaidasta. Pelipäivänä ja perutuissa tapahtumissa kuittauksessa näkyy tapahtuman tiivistelmä ja Muokkaa tapahtumaa -painike.',
+    ],
+  },
+  {
     version: '1.1.56',
     date: '24.11.2026',
     items: [

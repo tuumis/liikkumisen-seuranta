@@ -41,11 +41,23 @@ const fromMin = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, '0
 
 const LEVELS: GameLevel[] = ['elite', 'kilpa', 'haaste'];
 const KIND_LABEL: Record<FixtureKind, string> = { game: 'Peli', tournament: 'Turnaus', friendly: 'Harjoituspeli' };
+const KIND_EDIT: Record<FixtureKind, string> = { game: 'Muokkaa peliä', tournament: 'Muokkaa turnausta', friendly: 'Muokkaa harjoituspeliä' };
 
 type ScheduleRow = { time: string; opponent: string; location: string; homeAway: HomeAway | '' };
 const emptyRow = (): ScheduleRow => ({ time: '', opponent: '', location: '', homeAway: '' });
 
-export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; draft: FixtureDraft | null; onClose: () => void }) {
+export function FixtureSheet({
+  profile,
+  draft,
+  onClose,
+  onAbsence,
+}: {
+  profile: Profile;
+  draft: FixtureDraft | null;
+  onClose: () => void;
+  /** Viikko-näkymästä avattuna (24.11.2026): poissaolon tai peruuntumisen merkintä kuittauspaneelissa. */
+  onAbsence?: () => void;
+}) {
   const toast = useToast();
   const teams = useLiveQuery(() => repo.listTeams(profile.id), [profile.id]);
   const names = useLiveQuery(() => repo.footballNameSuggestions(profile.id), [profile.id]);
@@ -228,7 +240,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
   }
 
   return (
-    <Sheet open onClose={onClose} title={editing ? 'Muokkaa' : `Uusi ${KIND_LABEL[kind].toLocaleLowerCase('fi')}`}>
+    <Sheet open onClose={onClose} title={editing ? KIND_EDIT[kind] : `Uusi ${KIND_LABEL[kind].toLocaleLowerCase('fi')}`}>
       <form
         className="space-y-4"
         noValidate
@@ -592,6 +604,11 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
             </button>
           )}
         </div>
+        {editing && onAbsence && draft.entry?.plan.status === 'open' && (
+          <button type="button" onClick={onAbsence} className="w-full text-center text-sm font-medium text-green-800 hover:underline">
+            Ei osallistu tai peruttu: merkitse poissaolo
+          </button>
+        )}
       </form>
     </Sheet>
   );

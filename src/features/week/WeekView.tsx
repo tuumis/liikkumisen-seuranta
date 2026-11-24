@@ -5,7 +5,7 @@ import { dayGoalMet } from '../../domain/dayTarget';
 import { planAdherence } from '../../domain/adherence';
 import { farWeekPlanning, planningThroughForWeek } from '../../domain/planning';
 import { RECOMMENDATIONS } from '../../domain/recommendations';
-import type { ActivityType, DayFlag, ISODate, PlannedSession, Profile, RecommendationGroup, Session, UUID } from '../../domain/types';
+import type { ActivityType, DayFlag, Fixture, ISODate, PlannedSession, Profile, RecommendationGroup, Session, UUID } from '../../domain/types';
 import { displayTeamName } from '../../domain/opponent';
 import { repo } from '../../db/repositories';
 import { Button, Card } from '../../ui/components';
@@ -46,10 +46,13 @@ import { LastWeekCard } from './LastWeekCard';
 import { PlanOnceSheet } from './PlanOnceSheet';
 import { useFootballEnabled } from '../football/useFootballEnabled';
 import { GameDayCard } from '../games/TournamentDay';
+import { FixtureSheet, fixtureKindOf, type FixtureDraft } from '../games/FixtureSheet';
 import type { SettingsSectionId } from '../settings/SettingsView';
 import { DaySheet } from './DaySheet';
 import { EstimateDaySheet } from './EstimateDaySheet';
 import { SessionEditor } from './SessionEditor';
+
+const FIXTURE_TYPE_IDS = new Set(['t:football_game', 't:football_tournament', 't:football_friendly']);
 
 /** Päivän MVPA-palkin täysi pituus (min) ryhmän päivätavoitteesta. */
 export const DAY_BAR_TARGET: Record<RecommendationGroup, number> = {
@@ -82,6 +85,9 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
   const [planOnce, setPlanOnce] = useState<ISODate | null>(null);
   const [estimateDay, setEstimateDay] = useState<ISODate | null>(null);
   const [planOpen, setPlanOpen] = useState<PlannedSession | null>(null);
+  // Peli, turnaus tai harjoituspeli Viikko-näkymästä (24.11.2026): tuleva avoin suoraan muokkaukseen.
+  const [fixtureDraft, setFixtureDraft] = useState<FixtureDraft | null>(null);
+  const [planFixture, setPlanFixture] = useState<Fixture>();
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewFocus, setReviewFocus] = useState<string>();
   const [football, setFootball] = useState<Session | null>(null);
@@ -124,6 +130,28 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     [fixtureEntries],
   );
   const plannedById = useMemo(() => new Map((plans ?? []).map((p) => [p.id, p])), [plans]);
+  const isFixturePlan = (p: PlannedSession) => FIXTURE_TYPE_IDS.has(p.activityTypeId);
+  /**
+   * Suunnitelman avaus: tuleva avoin peli, turnaus tai harjoituspeli avautuu tapahtuman muokkaukseen
+   * (sama paneeli kuin Jalkapallo-kalenterissa), muut kuittauspaneeliin. Kuluvan viikon tiedot ovat
+   * valmiina (avausanimaatio lähtee kortista), muiden viikkojen haetaan.
+   */
+  const openPlan = (p: PlannedSession) => {
+    if (!profile || !footballOn || !isFixturePlan(p)) {
+      setPlanFixture(undefined);
+      setPlanOpen(p);
+      return;
+    }
+    const show = (fixture?: Fixture) => {
+      if (p.date > today && p.status === 'open') setFixtureDraft({ kind: fixtureKindOf(p.activityTypeId), entry: { plan: p, fixture } });
+      else {
+        setPlanFixture(fixture);
+        setPlanOpen(p);
+      }
+    };
+    if (p.date >= period.start && p.date <= period.end) show(fixtureByPlan.get(p.id));
+    else void repo.listFixtures(profile.id, p.date, p.date).then((es) => show(es.find((e) => e.plan.id === p.id)?.fixture));
+  };
   const minute = useMinuteTick();
   const unconfirmed = useLiveQuery(
     () => (profile ? loadUnconfirmed(profile.id, today) : Promise.resolve([] as PlannedSession[])),
@@ -462,7 +490,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             onAdd={(date) => setQuickAdd({ date })}
             onPlan={setPlanOnce}
             onEdit={setEditing}
-            onPlanOpen={setPlanOpen}
+            onPlanOpen={openPlan}
             onPlanConfirm={(p) => void planActions.confirm(p)}
             onEstimate={setEstimateDay}
             onOpenMenu={setDayMenu}
@@ -486,7 +514,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             footballDetails={footballDetails}
             teamName={teamName}
             onFootball={footballOn ? setFootball : () => undefined}
-            onPlanOpen={setPlanOpen}
+            onPlanOpen={openPlan}
             onPlanConfirm={(p) => void planActions.confirm(p)}
             types={typeMap}
             flag={flagByDate.get(d)}
@@ -558,7 +586,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
           footballDetails={footballDetails}
           teamName={teamName}
           onFootball={footballOn ? setFootball : () => undefined}
-          onPlanOpen={setPlanOpen}
+          onPlanOpen={openPlan}
           onPlanConfirm={(p) => void planActions.confirm(p)}
           types={typeMap}
           flag={flagByDate.get(day)}
@@ -614,7 +642,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             case 'hoursDetail':
               return <HoursDetailCard report={report} isCurrentWeek={isCurrent} />;
             case 'upcoming':
-              return <UpcomingCard profile={profile} today={today} types={typeMap} onOpen={setPlanOpen} teamName={teamName} />;
+              return <UpcomingCard profile={profile} today={today} types={typeMap} onOpen={openPlan} teamName={teamName} />;
             case 'days':
               // Puhelimella ja tabletilla päivät ovat päivänauhassa (19.11.2026).
               return isLg ? dayList : null;
@@ -701,7 +729,32 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             onClose={() => setPlanOpen(null)}
             onOpenSession={setEditing}
             onConfirmed={openFootballIfAny}
+            fixture={planOpen ? (fixtureByPlan.get(planOpen.id) ?? planFixture) : undefined}
+            onEditFixture={
+              planOpen && footballOn && isFixturePlan(planOpen)
+                ? (p) => {
+                    const fixture = fixtureByPlan.get(p.id) ?? planFixture;
+                    setPlanOpen(null);
+                    setFixtureDraft({ kind: fixtureKindOf(p.activityTypeId), entry: { plan: p, fixture } });
+                  }
+                : undefined
+            }
           />
+          {profile && (
+            <FixtureSheet
+              profile={profile}
+              draft={fixtureDraft}
+              onClose={() => setFixtureDraft(null)}
+              onAbsence={() => {
+                const p = fixtureDraft?.entry?.plan;
+                setFixtureDraft(null);
+                if (p) {
+                  setPlanFixture(fixtureDraft?.entry?.fixture);
+                  setPlanOpen(p);
+                }
+              }}
+            />
+          )}
           <ReviewSheet
             open={reviewOpen}
             onClose={() => {

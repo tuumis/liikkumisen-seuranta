@@ -2,7 +2,7 @@
 // kestolla), tämän kerran muutos (kesto, kellonaika) myös etukäteen, ohitus syineen.
 
 import { useEffect, useState } from 'react';
-import type { ActivityType, PlannedSession, Session } from '../../domain/types';
+import type { ActivityType, Fixture, PlannedSession, Session } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { Button, Field, inputClass } from '../../ui/components';
 import { TimeField } from '../../ui/TimeField';
@@ -14,7 +14,7 @@ import { today as todayFn } from '../../ui/today';
 import { SkipReasons } from '../review/SkipReasons';
 import { usePlanActions } from '../review/usePlanActions';
 import { ConfirmForm } from '../review/ConfirmForm';
-import { isClubTraining } from '../../domain/football';
+import { HOME_AWAY_LABEL, isClubTraining, LEVEL_LABEL } from '../../domain/football';
 import { durationSchema } from './sessionForm';
 
 /** Kestovaihtoehdot kuittaukseen: suunniteltu ja sitä lyhyemmät/pidemmät yleiset kestot. */
@@ -23,18 +23,40 @@ function durationChoices(planned: number): number[] {
   return [...new Set([planned, ...base.filter((m) => m !== planned && m <= Math.max(planned * 1.5, 60))])].sort((a, b) => b - a).slice(0, 8);
 }
 
+/** Pelin, turnauksen tai harjoituspelin tiedot yhdellä rivillä (24.11.2026). */
+function fixtureSummary(f: Fixture | undefined, typeId: string): string {
+  if (!f) return '';
+  const friendlyOpp = typeId === 't:football_friendly' ? f.games?.map((g) => g.opponent).filter(Boolean).join(', ') : '';
+  const games = typeId === 't:football_tournament' ? (f.games?.length || f.gamesCount) : undefined;
+  return [
+    f.opponent ? `vs ${f.opponent}` : f.eventName || (friendlyOpp ? `vs ${friendlyOpp}` : undefined),
+    f.homeAway ? HOME_AWAY_LABEL[f.homeAway].toLowerCase() : undefined,
+    games ? `${games} ${games === 1 ? 'peli' : 'peliä'}` : undefined,
+    f.level ? LEVEL_LABEL[f.level] : undefined,
+    f.location,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
 export function PlanSheet({
   plan,
   type,
   onClose,
   onOpenSession,
   onConfirmed,
+  fixture,
+  onEditFixture,
 }: {
   plan: PlannedSession | null;
   type?: ActivityType;
   onClose: () => void;
   onOpenSession: (s: Session) => void;
   onConfirmed?: (s: Session) => void;
+  /** Pelin, turnauksen tai harjoituspelin lisätiedot (Viikko-näkymä, 24.11.2026). */
+  fixture?: Fixture;
+  /** Avaa tapahtuman muokkauksen (pelikalenterin paneeli). Annetaan vain peleille ja turnauksille. */
+  onEditFixture?: (plan: PlannedSession) => void;
 }) {
   const toast = useToast();
   const actions = usePlanActions(onOpenSession, onConfirmed);
@@ -103,6 +125,23 @@ export function PlanSheet({
         </p>
         {plan.status === 'skipped' && <SkipNoteField plan={plan} />}
 
+        {onEditFixture && (plan.status !== 'done' || fixture) && (
+          <div className="card-sunk flex items-center gap-3 p-3">
+            <div className="min-w-0 flex-1 text-sm">
+              {fixture?.infoMissing && (
+                <div className="font-semibold text-amber-800">Tietoja puuttuu{fixture.missingNote ? `: ${fixture.missingNote}` : ''}</div>
+              )}
+              <div className="text-slate-700">{fixtureSummary(fixture, plan.activityTypeId) || 'Ei lisätietoja'}</div>
+            </div>
+            {/* Pelattua tapahtumaa ei muokata kalenterista (tulos ja tiedot pelin kerrasta). */}
+            {plan.status !== 'done' && (
+              <Button variant="secondary" className="shrink-0" onClick={() => onEditFixture(plan)}>
+                Muokkaa tapahtumaa
+              </Button>
+            )}
+          </div>
+        )}
+
         {!future && plan.status !== 'done' && (
           <div className="space-y-2">
             <div className="text-sm font-medium text-slate-700">Tehty, kesto</div>
@@ -147,7 +186,7 @@ export function PlanSheet({
           </div>
         )}
 
-        {plan.status === 'open' && (
+        {plan.status === 'open' && !onEditFixture && (
           <div className="card-sunk p-3">
             {!editing ? (
               <button type="button" className="w-full text-left text-sm font-medium text-green-800" onClick={() => setEditing(true)}>
