@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.39',
+    date: '24.11.2026',
+    items: [
+      'Korjattu: PC:n synkronointi saattoi jäädä pyörimään loputtomiin, jos pilvikansiossa (OneDrive tai Google Drive) oli lataamattomia tiedostoja. Synkronointi avaa nyt vain omat tiedostonsa.',
+      'Jos pilvikansio ei vastaa, synkronointi keskeytyy noin puolessa minuutissa ja kertoo syyn, ja automaattinen synkronointi jatkaa seuraavalla kerralla.',
+    ],
+  },
+  {
     version: '1.1.38',
     date: '24.11.2026',
     items: [

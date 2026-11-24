@@ -1,14 +1,19 @@
 import 'fake-indexeddb/auto';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 import { AppDB, db } from '../../db/schema';
 import { createRepositories, repo } from '../../db/repositories';
 import { buildSyncFile, toJson } from '../../db/backup';
 import { isSyncCopyName } from '../../domain/version';
-import { mergeFromFolder } from './useSync';
+import { exclusive, mergeFromFolder, SyncTimeoutError, withTimeout } from './useSync';
 
 /** Muistissa toimiva pilvikansio (File System Access API:n osajoukko). */
-function fakeFolder(files: Record<string, { text: string; lastModified: number }>) {
-  const file = (name: string) => new File([files[name].text], name, { lastModified: files[name].lastModified });
+function fakeFolder(files: Record<string, { text: string; lastModified: number }>, opened: string[] = []) {
+  const file = (name: string) => {
+    opened.push(name);
+    // Pilvikansion paikkamerkki, joka ei koskaan lataudu (vain muut kuin synkronoinnin tiedostot).
+    if (name.startsWith('muistiinpanot')) return new Promise<File>(() => undefined);
+    return new File([files[name].text], name, { lastModified: files[name].lastModified });
+  };
   const handle = {
     async getFileHandle(name: string) {
       if (!files[name]) throw new DOMException('ei löydy', 'NotFoundError');
@@ -52,11 +57,49 @@ describe('kopiotiedostot pilvikansiossa', () => {
       'liikkuminen 4.json': { text: 'ei json', lastModified: 3000 },
       'muistiinpanot.json': { text: phoneFile, lastModified: 4000 },
     };
-    const summary = await mergeFromFolder(fakeFolder(files), pcId);
+    const opened: string[] = [];
+    const summary = await mergeFromFolder(fakeFolder(files, opened), pcId);
+    // Muita tiedostoja ei avata (24.11.2026: pilvikansion lataamaton tiedosto jumitti synkronoinnin).
+    expect(opened).not.toContain('muistiinpanot.json');
     expect(summary?.added).toBeGreaterThan(0);
     expect((await repo.listProfiles()).map((x) => x.name)).toEqual(['Aino']);
     expect(Object.keys(files).sort()).toEqual(['liikkuminen 4.json', 'muistiinpanot.json']);
     // Toinen kierros: ei mitään yhdistettävää.
     expect(await mergeFromFolder(fakeFolder(files), pcId)).toBeUndefined();
+  });
+});
+
+describe('jumiin jäävä kansio', () => {
+  it('aikaraja keskeyttää vaiheen selkeällä viestillä', async () => {
+    vi.useFakeTimers();
+    try {
+      const p = withTimeout(new Promise<never>(() => undefined), 'kansion kopiotiedostojen haku', 30_000);
+      const check = expect(p).rejects.toBeInstanceOf(SyncTimeoutError);
+      const msg = expect(p).rejects.toThrow(/Synkronointi keskeytyi: kansion kopiotiedostojen haku ei valmistunut 30 sekunnissa/);
+      await vi.advanceTimersByTimeAsync(30_000);
+      await check;
+      await msg;
+      await expect(withTimeout(Promise.resolve(5), 'x')).resolves.toBe(5);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('yksi synkronointi kerrallaan; epäonnistunut ei estä seuraavaa', async () => {
+    const log: string[] = [];
+    let release!: () => void;
+    const first = exclusive(() => new Promise<void>((r) => (release = () => (log.push('1'), r()))));
+    const failing = exclusive(async () => {
+      log.push('2');
+      throw new Error('virhe');
+    });
+    const third = exclusive(async () => log.push('3'));
+    await Promise.resolve();
+    expect(log).toEqual([]);
+    release();
+    await first;
+    await expect(failing).rejects.toThrow('virhe');
+    await third;
+    expect(log).toEqual(['1', '2', '3']);
   });
 });

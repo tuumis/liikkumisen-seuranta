@@ -131,11 +131,15 @@ export async function readFolderFile(handle: FileSystemDirectoryHandle, name: st
   }
 }
 
-/** Kansion tiedostot (ei alikansioita). */
-export async function listFolderFiles(handle: FileSystemDirectoryHandle): Promise<File[]> {
+/**
+ * Kansion tiedostot (ei alikansioita), joiden nimi kelpaa. Nimi tarkistetaan ennen tiedoston avaamista
+ * (24.11.2026, käyttäjän havainto "synkronointi jäi jumiin"): pilvikansiossa (OneDrive, Google Drive) jokaisen
+ * tiedoston avaaminen voi käynnistää sen latauksen koneelle ja jäädä odottamaan, vaikka tiedostoa ei tarvita.
+ */
+export async function listFolderFiles(handle: FileSystemDirectoryHandle, accept: (name: string) => boolean = () => true): Promise<File[]> {
   const out: File[] = [];
   const entries = (handle as unknown as { values(): AsyncIterable<FileSystemHandle> }).values();
-  for await (const e of entries) if (e.kind === 'file') out.push(await (e as FileSystemFileHandle).getFile());
+  for await (const e of entries) if (e.kind === 'file' && accept(e.name)) out.push(await (e as FileSystemFileHandle).getFile());
   return out;
 }
 
