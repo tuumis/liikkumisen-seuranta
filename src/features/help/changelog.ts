@@ -9,6 +9,13 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.62',
+    date: '24.11.2026',
+    items: [
+      'Korjattu: kun vaalean ja tumman tilan välillä vaihdettiin toisella välilehdellä, Jalkapallo-välilehden kausikortti (ja muiden taustalla olleiden välilehtien värit) jäi edellisen tilan teemaan.',
+    ],
+  },
+  {
     version: '1.1.61',
     date: '24.11.2026',
     items: ['Jalkapallo-välilehden Kausi tähän mennessä -kortti käyttää samaa teemaa kuin Viikko-näkymän pääkortti (myös vaalean ja tumman tilan valinnat).'],

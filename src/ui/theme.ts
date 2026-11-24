@@ -1,7 +1,7 @@
 // Ulkoasu: järjestelmä / vaalea / tumma (oletus vaalea), väriteema oletuksena Vuono. Laitekohtainen käyttöliittymäasetus (localStorage),
 // ei synkronoidu. public/theme-init.js asettaa teeman jo ennen Reactin käynnistystä (ei välähdystä).
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { HeroTheme } from '../domain/types';
 
 export type ThemeChoice = 'system' | 'light' | 'dark';
@@ -49,32 +49,28 @@ export function watchSystemTheme(): () => void {
   return () => m?.removeEventListener('change', onChange);
 }
 
-/** true, kun tumma tila on käytössä (kaavioiden SVG-värit). */
+/*
+ * Teeman tila ulkoisena tilana (24.11.2026): piilotettu välilehti (React Activity) ei kuuntele
+ * tapahtumia, joten pelkkä tapahtumakuuntelija jätti sen vanhaan tilaan (esim. tumman tilan teema
+ * vaaleassa tilassa). useSyncExternalStore tarkistaa arvon uudelleen, kun välilehti tulee näkyviin.
+ */
+let themeEpoch = 0;
+if (typeof window !== 'undefined') window.addEventListener('themechange', () => void themeEpoch++);
+function subscribeTheme(cb: () => void): () => void {
+  window.addEventListener('themechange', cb);
+  return () => window.removeEventListener('themechange', cb);
+}
+const isDarkNow = () => document.documentElement.classList.contains('dark');
+
+/** true, kun tumma tila on käytössä (kaavioiden SVG-värit, pääkortin teema). */
 export function useIsDark(): boolean {
-  const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
-  useEffect(() => {
-    const update = () => setDark(document.documentElement.classList.contains('dark'));
-    window.addEventListener('themechange', update);
-    return () => window.removeEventListener('themechange', update);
-  }, []);
-  return dark;
+  return useSyncExternalStore(subscribeTheme, isDarkNow);
 }
 
 export function useThemeChoice(): [ThemeChoice, (c: ThemeChoice) => void] {
-  const [choice, setChoice] = useState<ThemeChoice>(getThemeChoice);
   // Sivupalkin pikavalinta (24.11.2026) muuttaa teemaa muualta: valinta pysyy ajan tasalla.
-  useEffect(() => {
-    const update = () => setChoice(getThemeChoice());
-    window.addEventListener('themechange', update);
-    return () => window.removeEventListener('themechange', update);
-  }, []);
-  return [
-    choice,
-    (c) => {
-      setThemeChoice(c);
-      setChoice(c);
-    },
-  ];
+  const choice = useSyncExternalStore(subscribeTheme, getThemeChoice);
+  return [choice, setThemeChoice];
 }
 
 // ---------- väriteema (korosteväri) ----------
@@ -138,13 +134,7 @@ export function useAccent(): [AccentTheme, (a: AccentTheme) => void] {
 
 /** Kasvaa aina teeman tai väriteeman vaihtuessa (SVG-kaaviot lukevat värit CSS-muuttujista). */
 export function useThemeVersion(): number {
-  const [v, setV] = useState(0);
-  useEffect(() => {
-    const bump = () => setV((x) => x + 1);
-    window.addEventListener('themechange', bump);
-    return () => window.removeEventListener('themechange', bump);
-  }, []);
-  return v;
+  return useSyncExternalStore(subscribeTheme, () => themeEpoch);
 }
 
 /** Design systemin tokenin arvo (esim. '--viz-logged') nykyisessä teemassa. */
