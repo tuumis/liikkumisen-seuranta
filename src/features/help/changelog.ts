@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.48',
+    date: '24.11.2026',
+    items: [
+      'Sulavammat animaatiot: päiväkortin kerran tai suunnitelman avaus ja välilehden vaihto alkavat heti, eikä näkymä enää jähmety hetkeksi ennen liikettä (puhelimella aiemmin jopa 0,2 s).',
+      'PC:llä kerran paneeli kasvaa napautetun rivin kohdalta. Viikon pääluvun laskuri ja Uusi kerta -paneelin avaus kuormittavat puhelinta aiempaa vähemmän.',
+    ],
+  },
+  {
     version: '1.1.47',
     date: '24.11.2026',
     items: [

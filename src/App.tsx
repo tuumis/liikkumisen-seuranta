@@ -1,6 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { useCompactHeader } from './ui/useCompactHeader';
-import { flushSync } from 'react-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { repo } from './db/repositories';
 import { defaultPlanningThrough } from './domain/planning';
@@ -23,7 +22,7 @@ import { StoryHost } from './features/story/StoryViewer';
 import { FootballStatusContext, useFootballStatusMap } from './features/football/useFootballEnabled';
 import { Avatar } from './ui/Avatar';
 import { hideUntilSettled } from './ui/settle';
-import { TabPanel } from './ui/TabPanel';
+import { markTabSwitch, TabPanel } from './ui/TabPanel';
 import { formatDate } from './ui/format';
 import { IconBall, IconCalendarClock, IconChart, IconHelp, IconLeaf, IconMoon, IconSearch, IconSettings, IconSun, IconWeek } from './ui/icons';
 import { setThemeChoice, useIsDark } from './ui/theme';
@@ -129,27 +128,13 @@ export default function App() {
   const tab: Tab = !football && rawTab === 'games' ? 'week' : rawTab;
   const onboarded = useLiveQuery(() => (ready ? repo.getMeta<boolean>('onboarded').then((v) => v ?? false) : null), [ready]) ?? null;
 
-  // Siirtymän aikana pyydetty välilehti (17.11.2026): näkymänvaihto vaihtaa tilan vasta seuraavassa
-  // ruudussa, joten nopea toinen klikkaus verrataan viimeksi pyydettyyn eikä vielä näkyvään välilehteen.
-  // Muuten paluu lähtövälilehdelle kesken siirtymän jäisi huomiotta ja näkymä päätyisi ensin valitulle.
-  const pendingTab = useRef<Tab | null>(null);
+  // Välilehden vaihto (24.11.2026): tila vaihtuu heti ja uusi välilehti häivytetään esiin (ui/TabPanel). Aiempi
+  // View Transitions -siirtymä kuvasi sivun kahdesti ja jähmetti näkymän puhelimella yli 100 ms.
   const setTab = (t: Tab) => {
-    const current = pendingTab.current ?? tab;
-    if (t === 'settings' && current === 'settings') setSettingsSection(undefined);
+    if (t === 'settings' && tab === 'settings') setSettingsSection(undefined);
     store.set('tab', t);
-    if (t === current) return setTabState(t);
-    // Sulava näkymänvaihto (View Transitions), jos selain tukee eikä liikettä ole vähennetty.
-    const doc = document as Document & { startViewTransition?: (cb: () => void) => { ready?: Promise<unknown> } | undefined };
-    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    if (doc.startViewTransition && !reduce) {
-      pendingTab.current = t;
-      const vt = doc.startViewTransition(() => {
-        flushSync(() => setTabState(t));
-        if (pendingTab.current === t) pendingTab.current = null;
-      });
-      // Uusi klikkaus ohittaa kesken jääneen siirtymän; ohitus ei ole virhe (ei konsolivirhettä).
-      vt?.ready?.catch(() => {});
-    } else setTabState(t);
+    if (t !== tab) markTabSwitch();
+    setTabState(t);
     window.scrollTo({ top: 0 });
   };
   // Profiilin vaihto: sisältö näkyviin kerralla, kun uuden profiilin tiedot ovat valmiit (ui/settle).

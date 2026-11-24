@@ -11,7 +11,7 @@ import { repo } from '../../db/repositories';
 import { EmptyState, SectionLabel } from '../../ui/components';
 import { dayLabel, formatDate } from '../../ui/format';
 import { ENJOYMENT_LABEL, focusTagLabel, goalsLabel } from '../../ui/labels';
-import { useCountUp } from '../../ui/motion';
+import { CountUp } from '../../ui/CountUp';
 import { TypeIcon } from '../week/Dashboard';
 
 type Scope = 'week' | 'month' | 'season';
@@ -59,7 +59,6 @@ export function HighlightsCard({ profile, week, fixed, className = '' }: { profi
 
   const h = useMemo(() => (data ? highlights(data.sessions, data.details, period.start, period.end) : null), [data, period.start, period.end]);
   const prev = useMemo(() => (data ? highlights(data.sessions, data.details, prevFrom, addDays(period.start, -1)) : null), [data, prevFrom, period.start]);
-  const avgShown = useCountUp(h?.rating.avg ?? 0);
 
   const scopeLabel = scope === 'week' ? 'viikolta' : scope === 'month' ? formatDate(period.start, 'LLLL') + 'lta' : scope === 'season' ? 'kaudelta' : 'vuodelta';
   const trend = h?.rating.avg != null && prev?.rating.avg != null ? h.rating.avg - prev.rating.avg : null;
@@ -118,7 +117,7 @@ export function HighlightsCard({ profile, week, fixed, className = '' }: { profi
             <div className="card-sunk mt-4 flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
               <div className="flex items-center gap-4">
                 <div>
-                  <div className="stat text-[44px] font-semibold text-slate-900">{avgShown.toFixed(1).replace('.', ',')}</div>
+                  <div className="stat text-[44px] font-semibold text-slate-900"><CountUp value={h?.rating.avg ?? 0} format={(v) => v.toFixed(1).replace('.', ',')} /></div>
                   <Stars value={h.rating.avg ?? 0} />
                 </div>
                 <div className="min-w-0">

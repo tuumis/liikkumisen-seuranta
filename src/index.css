@@ -707,6 +707,16 @@ html[data-bg] body::before {
   .anim-sheet {
     animation-name: sheet-scale;
   }
+  /* Kortista avattu paneeli kasvaa napautetun rivin kohdalta (ui/morph.ts, transform-origin). */
+  .anim-sheet.from-origin {
+    animation-name: sheet-grow;
+  }
+}
+@keyframes sheet-grow {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
 }
 
 /* Näkymänvaihto (View Transitions API, jos selain tukee): pehmeä ristihäivytys ja nosto. */
@@ -755,62 +765,6 @@ html[data-bg] body::before {
 }
 ::view-transition-new(page) {
   animation: 0.24s var(--ease-out) both rise;
-}
-
-/* Kortti → paneeli -morfi (ui/morph.ts). Morfin ajaksi sivu ja alapalkki eivät ole omia
-   kerroksiaan, jolloin koko näkymä (myös paneelin tumma tausta ja sen häivytys) näkyy elävänä
-   juurikuvassa ja vain morfattava kortti liikkuu sen päällä. */
-html.morphing .page-view,
-html.morphing .bottom-nav {
-  view-transition-name: none;
-}
-::view-transition-group(morph) {
-  animation-duration: 0.42s;
-  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
-}
-/* Pinta, pyöristys ja varjo kuvaparille: kulmat muuttuvat rivin pyöristyksestä paneelin pyöristykseen. */
-::view-transition-image-pair(morph) {
-  overflow: hidden;
-  background-color: var(--surface);
-  box-shadow: 0 18px 48px -18px rgb(0 0 0 / 0.3);
-  animation: morph-radius 0.42s cubic-bezier(0.2, 0, 0, 1) both;
-}
-@keyframes morph-radius {
-  from {
-    border-radius: 1rem;
-  }
-  to {
-    border-radius: 2rem 2rem 0 0;
-  }
-}
-@media (min-width: 1024px) {
-  @keyframes morph-radius {
-    from {
-      border-radius: 1rem;
-    }
-    to {
-      border-radius: 2rem;
-    }
-  }
-}
-/* Kuvia ei venytetä: rivi ja paneeli pysyvät luonnollisessa koossaan ja paljastuvat kasvavan
-   kehyksen sisältä (ei suurennettua, sumeaa välikuvaa). */
-::view-transition-old(morph),
-::view-transition-new(morph) {
-  mix-blend-mode: normal;
-  width: auto;
-  height: auto;
-  object-fit: none;
-}
-::view-transition-old(morph) {
-  animation: 0.12s linear both fade reverse;
-}
-::view-transition-new(morph) {
-  animation: 0.26s ease-out 0.06s both fade;
-}
-/* Napautettu rivi piilotetaan uudesta tilasta morfin ajaksi (paneeli "on" se). */
-.morph-source {
-  visibility: hidden;
 }
 
 /* Liikkeen vähentäminen: animaatiot ja siirtymät pois, sisältö näkyy heti. */

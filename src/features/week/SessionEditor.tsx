@@ -60,8 +60,13 @@ export function SessionEditor({
   const [selfAfter, setSelfAfter] = useState<string | null>(null);
   const self = useLiveQuery(() => (session ? repo.getTrainingSelf(session.id) : undefined), [session?.id]);
 
-  useEffect(() => {
-    if (!session) return;
+  // Lomake täytetään jo piirron aikana (24.11.2026): avaus piirtää paneelin kerran valmiilla tiedoilla.
+  const [seen, setSeen] = useState<Session | null>(null);
+  if (session !== seen) {
+    setSeen(session);
+    if (session) fill(session);
+  }
+  function fill(session: Session) {
     setTypeId(session.activityTypeId);
     setDate(session.date);
     setDuration(String(session.durationMin));
@@ -83,7 +88,7 @@ export function SessionEditor({
     setSelfAfter(null);
     setErrors({});
     setConfirmDelete(false);
-  }, [session]);
+  }
 
   // Poistovahvistus raukeaa 4 sekunnissa.
   useEffect(() => {

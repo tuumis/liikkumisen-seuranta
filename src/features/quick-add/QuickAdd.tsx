@@ -3,7 +3,7 @@
 // valitaan samassa paneelissa ennen kestoa.
 
 import { TypeGlyph } from '../../ui/TypeGlyph';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { addDays } from '../../domain/dates';
 import type { ActivityType, Category, Effort, IntensityMinutes, ISODate, Profile, Session } from '../../domain/types';
@@ -108,9 +108,14 @@ export function QuickAdd({
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
 
-  // Paneelin avaus nollaa valinnat.
-  useEffect(() => {
-    if (!open) return;
+  // Paneelin avaus nollaa valinnat jo piirron aikana (24.11.2026: ei toista piirtoa avausanimaation alussa).
+  const resetKey = open ? `${initialDate ?? ''}|${today}` : '';
+  const [seenKey, setSeenKey] = useState('');
+  if (resetKey !== seenKey) {
+    setSeenKey(resetKey);
+    if (open) resetForm();
+  }
+  function resetForm() {
     setType(null);
     setShowAll(false);
     setDate(initialDate && initialDate <= today ? initialDate : today);
@@ -125,7 +130,7 @@ export function QuickAdd({
     setParts([]);
     setCompanions([]);
     setError(undefined);
-  }, [open, initialDate, today]);
+  }
 
   const recent = useMemo(() => {
     if (!types) return [];

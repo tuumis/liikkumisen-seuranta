@@ -10,7 +10,7 @@ import { repo } from '../../db/repositories';
 import { GROUP_LABEL } from '../../ui/labels';
 import { aboutMinutes, num1, statusShort, statusSentence } from '../../ui/statusText';
 import { today as todayFn } from '../../ui/today';
-import { useCountUp } from '../../ui/motion';
+import { CountUp } from '../../ui/CountUp';
 import { ProgressRing } from '../../ui/ProgressRing';
 import { GoalCard } from '../analysis/GoalCard';
 import { Term, type TermId } from '../../ui/glossary';
@@ -122,7 +122,6 @@ export function WeekHero({ report, profile, isCurrentWeek }: { report: PeriodRep
   const settings = useLiveQuery(() => repo.getSettings(), []) ?? DEFAULT_SETTINGS;
   const { main, tiles } = weekModel(report, settings);
   const ev = report.evaluation;
-  const shown = useCountUp(main ? main.value : 0);
   const decimals = main && main.unit.startsWith('min / päivä') ? 0 : 0;
   // Viikko on täysi, kun sen kaikki päivät ovat mukana (sunnuntaina ja sen jälkeen). Kesken viikon
   // tila kertoo tahdin; "Suositus täyttyi", putki ja juhlistus vasta täydestä viikosta (17.11.2026).
@@ -169,7 +168,7 @@ export function WeekHero({ report, profile, isCurrentWeek }: { report: PeriodRep
                 track="var(--hero-track)"
                 label={`${main.label}: ${num1(Math.round(main.value))} ${main.unit}, ${Math.round(main.m.ratio * 100)} % tavoitteesta`}
               >
-                <span className="stat text-[40px] font-semibold">{shown.toFixed(decimals).replace('.', ',')}</span>
+                <span className="stat text-[40px] font-semibold"><CountUp value={main ? main.value : 0} format={(v) => v.toFixed(decimals).replace('.', ',')} /></span>
                 <span className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--hero-ink-soft)]">{main.unit}</span>
               </ProgressRing>
               <div className="min-w-0 @xl:hidden">

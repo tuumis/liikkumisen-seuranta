@@ -1,57 +1,26 @@
-// Jaettu elementtisiirtymä (SPEC 16): napautettu kortti laajenee saumattomasti avautuvaksi
-// paneeliksi (View Transitions API). Ilman tukea, liikettä vähennettäessä tai toisen paneelin
-// ollessa auki paneeli avautuu tavalliseen tapaan.
+// Kortista avautuva paneeli (SPEC 16). 24.11.2026 (käyttäjän havainto: päiväkortin rivin avaus tökki): aiempi
+// View Transitions -morfi kuvasi koko sivun kahdesti ja laski kaikkien elementtien tyylit uudelleen, mikä jähmetti
+// näkymän puhelimella 100–180 ms ennen liikettä. Nyt paneeli avautuu heti, ja PC:llä se kasvaa napautetun rivin
+// kohdalta (transform-origin; liike näytönohjaimella, ei pääsäikeellä).
 
-import { flushSync } from 'react-dom';
 import { prefersReducedMotion } from './motion';
 
-let pending = false;
+let origin: { x: number; y: number } | null = null;
 
-/** Sheet kysyy avautuessaan, avataanko se morfina (kerran). */
-export function takeMorph(): boolean {
-  const p = pending;
-  pending = false;
-  return p;
+/** Sheet kysyy avautuessaan napautuksen kohdan (kerran). */
+export function takeMorphOrigin(): { x: number; y: number } | null {
+  const o = origin;
+  origin = null;
+  return o;
 }
 
-type VTDoc = Document & { startViewTransition?: (cb: () => void) => { finished: Promise<void>; skipTransition?: () => void } };
-
 export function morphOpen(from: EventTarget | Element | null, open: () => void): void {
-  const doc = document as VTDoc;
   const el = from instanceof HTMLElement ? from : null;
-  if (!el || !doc.startViewTransition || prefersReducedMotion() || document.visibilityState !== 'visible' || document.querySelector('[role="dialog"]')) {
-    open();
-    return;
+  if (el && !prefersReducedMotion() && !document.querySelector('[role="dialog"]')) {
+    const r = el.getBoundingClientRect();
+    origin = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    // Jos paneeli ei avautunut (esim. sama kerta jo auki), kohta ei jää seuraavalle paneelille.
+    requestAnimationFrame(() => (origin = null));
   }
-  el.style.setProperty('view-transition-name', 'morph');
-  document.documentElement.classList.add('morphing');
-  let done = false;
-  const run = (morph: boolean) => {
-    if (done) return;
-    done = true;
-    el.style.removeProperty('view-transition-name');
-    if (morph) el.classList.add('morph-source');
-    pending = morph;
-    flushSync(open);
-    pending = false;
-  };
-  const finish = () => {
-    el.classList.remove('morph-source');
-    document.documentElement.classList.remove('morphing');
-  };
-  try {
-    const t = doc.startViewTransition(() => run(true));
-    void t.finished.finally(finish);
-    // Jos selain ei piirrä (esim. ikkuna taustalla), paneeli avataan heti ilman morfia.
-    window.setTimeout(() => {
-      if (done) return;
-      t.skipTransition?.();
-      run(false);
-      finish();
-    }, 300);
-  } catch {
-    el.style.removeProperty('view-transition-name');
-    document.documentElement.classList.remove('morphing');
-    open();
-  }
+  open();
 }

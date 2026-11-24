@@ -9,7 +9,7 @@ import type { Profile } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { dayLabel } from '../../ui/format';
 import { IconSparkle, IconTrophy } from '../../ui/icons';
-import { useCountUp } from '../../ui/motion';
+import { CountUp } from '../../ui/CountUp';
 import { today as todayFn } from '../../ui/today';
 import { useFootball } from '../football/useFootball';
 import { goalsLabel } from '../../ui/labels';
@@ -18,12 +18,11 @@ import { dispatchCommand } from '../desktop/commands';
 // Puhelimella (alle 640 px) luvut ovat yhdellä rivillä pienempinä (19.11.2026), jotta sivun valinnat mahtuvat ensimmäiseen ruutuun.
 function Stat({ label, value, i }: { label: ReactNode; value: number | string; i: number }) {
   const n = typeof value === 'number' ? value : NaN;
-  const shown = useCountUp(Number.isFinite(n) ? n : 0);
   const long = String(value).length > 5;
   return (
     <div className="anim-rise min-w-0 rounded-2xl bg-white/[0.08] px-1 py-1.5 text-center ring-1 ring-white/[0.08] sm:px-3 sm:py-2.5 sm:text-left" style={{ ['--i' as string]: i }}>
       <dt className="truncate text-[9.5px] sm:overflow-visible sm:whitespace-normal font-bold uppercase tracking-wide text-[var(--hero-ink-soft)] sm:text-[10px]">{label}</dt>
-      <dd className={`stat mt-0.5 whitespace-nowrap font-semibold sm:mt-1.5 sm:text-[24px] lg:text-[28px] ${long ? 'text-[15px]' : 'text-[19px]'}`}>{Number.isFinite(n) ? Math.round(shown) : value}</dd>
+      <dd className={`stat mt-0.5 whitespace-nowrap font-semibold sm:mt-1.5 sm:text-[24px] lg:text-[28px] ${long ? 'text-[15px]' : 'text-[19px]'}`}>{Number.isFinite(n) ? <CountUp value={n} format={(v) => String(Math.round(v))} /> : value}</dd>
     </div>
   );
 }

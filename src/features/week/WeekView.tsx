@@ -195,7 +195,11 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     // Paikka ilman siirtymää (offset* ei huomioi transformia), ettei piilotus itse muuta tulosta.
     const el = fabRef.current;
     const card = dayCardRef.current;
-    if (!el || !card || !el.offsetWidth) return setFabCovers(false);
+    // Ei asettelun mittausta, kun päivän korttia ei ole (PC) tai paneeli on auki (24.11.2026: mittaus jokaisen
+    // piirron jälkeen pakotti koko sivun asettelun ja hidasti paneelin avausta).
+    if (!el || !card) return setFabCovers(false);
+    if (document.querySelector('[role="dialog"]')) return;
+    if (!el.offsetWidth) return setFabCovers(false);
     const fab = { left: el.offsetLeft, top: el.offsetTop, right: el.offsetLeft + el.offsetWidth, bottom: el.offsetTop + el.offsetHeight };
     const hit = [...card.querySelectorAll('button')].some((b) => {
       const r = b.getBoundingClientRect();
