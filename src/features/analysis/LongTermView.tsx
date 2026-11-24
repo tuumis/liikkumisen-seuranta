@@ -5,7 +5,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Bar, BarChart, CartesianGrid, Rectangle, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis, type BarShapeProps } from 'recharts';
-import { longTermSummary, nextPeriod, periodName, periodOf, previousPeriod, type LongKind, type LongTermSummary, type TrendBucket } from '../../domain/longTerm';
+import { FOOTBALL_HEAVY_NOTE, FOOTBALL_HEAVY_SHARE, longTermSummary, nextPeriod, periodName, periodOf, previousPeriod, type LongKind, type LongTermSummary, type TrendBucket } from '../../domain/longTerm';
 import type { ActivityType, Context, Period, Profile } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { Button, Card, EmptyState } from '../../ui/components';
@@ -97,7 +97,7 @@ export function LongTermView({ profile, kind }: { profile: Profile; kind: LongKi
       case 'variety':
         return (
           <Card title="Monipuolisuus ja lajit" eyebrow="Kirjatut kerrat">
-            <Variety s={s} />
+            <Variety s={s} p={p} prevName={periodName(prev)} />
           </Card>
         );
       case 'weeklyGoals':
@@ -440,11 +440,39 @@ function ContextBars({ s, p, prevName }: { s: LongTermSummary; p?: LongTermSumma
 
 // ---------- monipuolisuus ja lajit ----------
 
-function Variety({ s }: { s: LongTermSummary }) {
+const h1 = (m: number) => `${(m / 60).toFixed(1).replace('.', ',')} h`;
+
+/** Jalkapallon osuus kirjatusta liikunnasta (24.11.2026): palkki, tunnit, edellinen jakso ja huomio. */
+function FootballShare({ f, p, prevName }: { f: NonNullable<LongTermSummary['football']>; p?: LongTermSummary; prevName?: string }) {
+  const w = Math.round(f.share * 100);
+  return (
+    <div className="mb-3 rounded-2xl bg-[var(--surface-sunk)] p-3">
+      <div className="flex items-baseline justify-between gap-2 text-sm">
+        <span className="text-slate-700">⚽ Jalkapallon osuus</span>
+        <span className="stat shrink-0 font-semibold tabular-nums text-slate-900">{pct(f.share)}</span>
+      </div>
+      <div
+        className="mt-1.5 h-2 overflow-hidden rounded-full bg-[var(--viz-track)]"
+        role="img"
+        aria-label={`Jalkapalloa ${pct(f.share)} kirjatusta liikunnasta`}
+      >
+        <div className="h-full rounded-full bg-[var(--viz-logged)]" style={{ width: `${Math.max(2, w)}%` }} />
+      </div>
+      <p className="mt-1.5 text-xs text-slate-500">
+        {h1(f.minutes)} / {h1(f.total)} kirjatusta liikunnasta
+        {p?.football && prevName ? ` · ${prevName}: ${pct(p.football.share)}` : ''}
+      </p>
+      {f.share >= FOOTBALL_HEAVY_SHARE && <p className="mt-1.5 text-xs leading-relaxed text-slate-600">{FOOTBALL_HEAVY_NOTE}</p>}
+    </div>
+  );
+}
+
+function Variety({ s, p, prevName }: { s: LongTermSummary; p?: LongTermSummary; prevName?: string }) {
   const top = s.byType.slice(0, 8);
   const maxMin = Math.max(1, ...top.map((t) => t.minutes));
   return (
     <div>
+      {s.football && <FootballShare f={s.football} p={p && p.validDays > 0 ? p : undefined} prevName={prevName} />}
       <div className="text-sm text-slate-700">
         <span className="font-semibold text-slate-900">{s.variety.groups.length}</span> liikuntaryhmää ·{' '}
         <span className="font-semibold text-slate-900">{s.variety.types}</span> {s.variety.types === 1 ? 'laji' : 'lajia'}

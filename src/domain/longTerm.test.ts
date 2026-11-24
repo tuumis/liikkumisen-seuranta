@@ -49,6 +49,10 @@ describe('pitkän aikavälin kooste', () => {
     expect(s.context!.organized).toBeCloseTo(180 / 220);
     expect(s.vigorousShare).toBeCloseTo(60 / 220);
     expect(s.byType[0]).toMatchObject({ count: 3, minutes: 270 });
+    // Jalkapallon osuus kirjatuista minuuteista: 270 / (270 + 60).
+    expect(s.football).toEqual({ minutes: 270, total: 330, share: 270 / 330 });
+    const none = longTermSummary(report, sessions.filter((x) => x.activityTypeId !== activityTypeId('football_training')), types, DEFAULT_SETTINGS);
+    expect(none.football).toBeNull();
     expect(s.variety.types).toBe(2);
     expect(s.variety.groups.length).toBe(2);
   });

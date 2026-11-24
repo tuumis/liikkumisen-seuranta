@@ -10,7 +10,7 @@ import { footballPeriodSummary, gameRows, playSummary, POSITION_LABEL, POSITIONS
 import { highlights } from '../../domain/highlights';
 import { displayTeamName } from '../../domain/opponent';
 import { teamBreakdown } from '../../domain/teamBreakdown';
-import { periodName, type LongTermSummary } from '../../domain/longTerm';
+import { FOOTBALL_HEAVY_NOTE, FOOTBALL_HEAVY_SHARE, periodName, type LongTermSummary } from '../../domain/longTerm';
 import type { ActivityType, Context, Period, Profile } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { useFootballEnabled } from '../football/useFootballEnabled';
@@ -236,6 +236,13 @@ export function SeasonReport({ profile, s, p, onClose }: { profile: Profile; s: 
           <p className="mb-1">
             {s.variety.groups.length} liikuntaryhmää{s.variety.groups.length ? `: ${s.variety.groups.map((x) => MOVEMENT_GROUP_LABEL[x].toLowerCase()).join(', ')}` : ''}.
           </p>
+          {s.football && (
+            <p className="mb-1">
+              Jalkapallon osuus kirjatusta liikunnasta {pct(s.football.share)} ({hours(s.football.minutes)} / {hours(s.football.total)})
+              {hasPrev && p!.football ? `, ${prevName} ${pct(p!.football.share)}` : ''}.
+              {s.football.share >= FOOTBALL_HEAVY_SHARE && ` ${FOOTBALL_HEAVY_NOTE}`}
+            </p>
+          )}
           {s.byType.length > 0 && (
             <table className="w-full border-collapse tabular-nums">
               <tbody>

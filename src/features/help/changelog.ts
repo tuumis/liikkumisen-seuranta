@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.55',
+    date: '24.11.2026',
+    items: [
+      'Analyysin Monipuolisuus ja lajit -kortissa näkyy jalkapallon osuus kirjatusta liikunnasta tunteina ja prosentteina sekä edellisen jakson osuus. Sama luku on kauden raportissa.',
+      'Kun liikunta on lähes pelkkää jalkapalloa (vähintään 80 %), kortti muistuttaa, että liikkumissuositus kannustaa liikkumaan monipuolisesti.',
+    ],
+  },
+  {
     version: '1.1.54',
     date: '24.11.2026',
     items: [

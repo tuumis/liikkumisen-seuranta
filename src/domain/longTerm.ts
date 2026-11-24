@@ -77,11 +77,22 @@ export interface LongTermSummary {
   /** Eri liikuntaryhmät (ei "vaihtelee"/"muu") ja lajit kirjatuista kerroista. */
   variety: { groups: MovementGroup[]; types: number };
   byType: TypeTotal[];
+  /**
+   * Jalkapallon osuus kirjatusta liikunnasta (24.11.2026): jalkapallolajien minuutit (treenit, pelit, turnaukset,
+   * omatoiminen) kaikkien kirjattujen kertojen minuuteista, samoista luvuista kuin lajilista (ei arkiliikunnan
+   * arvioita). null, kun jalkapalloa ei ole kirjattu.
+   */
+  football: { minutes: number; total: number; share: number } | null;
   /** Viikkotavoitteet (7.6): viikot, joilla ≥ 4 kelvollista päivää, ja täyttyneet tavoitteittain. */
   weeks: { evaluated: number; goals: WeeklyGoal[] };
   quality: { coverage: number; estimateShare: number };
   buckets: TrendBucket[];
 }
+
+/** Osuus, josta alkaen näytetään huomio monipuolisuudesta (käyttäjän valinta 24.11.2026). */
+export const FOOTBALL_HEAVY_SHARE = 0.8;
+/** Huomio, kun liikunta on lähes pelkkää jalkapalloa: havainto, ei terveysneuvo. */
+export const FOOTBALL_HEAVY_NOTE = 'Lähes kaikki kirjattu liikunta on jalkapalloa. Liikkumissuositus kannustaa liikkumaan monipuolisesti.';
 
 const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 const NOT_VARIETY: MovementGroup[] = ['varies', 'other'];
@@ -183,6 +194,12 @@ export function longTermSummary(report: PeriodReport, sessions: Session[], types
     if (t && !NOT_VARIETY.includes(t.movementGroup)) groups.add(t.movementGroup);
     byType.set(typeId, { typeId, name: t?.name ?? 'Muu', icon: t?.icon ?? '•', count: v.count, minutes: v.minutes });
   }
+  let fbMin = 0;
+  let allMin = 0;
+  for (const t of byType.values()) {
+    allMin += t.minutes;
+    if (types.get(t.typeId)?.sport === 'football') fbMin += t.minutes;
+  }
 
   return {
     period: report.period,
@@ -195,6 +212,7 @@ export function longTermSummary(report: PeriodReport, sessions: Session[], types
     context: ctxSum > 0 ? { organized: ctx.organized / ctxSum, self_directed: ctx.self_directed / ctxSum, everyday: ctx.everyday / ctxSum } : null,
     variety: { groups: [...groups], types: byType.size },
     byType: [...byType.values()].sort((a, b) => b.minutes - a.minutes || b.count - a.count),
+    football: fbMin > 0 ? { minutes: fbMin, total: allMin, share: fbMin / allMin } : null,
     weeks: weeklyGoals(report, settings),
     quality: { coverage: report.evaluation.quality.coverage, estimateShare: report.evaluation.quality.estimateShare },
     buckets: bucketsOf(report.period, report.allDays, valid),
