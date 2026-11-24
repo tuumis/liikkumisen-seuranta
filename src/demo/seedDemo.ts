@@ -8,6 +8,7 @@ import { addDays, datesBetween, isoWeekday, startOfIsoWeek } from '../domain/dat
 import { activityTypeId } from '../domain/ids';
 import type { Category, FocusTag, GameResult, ISODate, PlannedSession, UUID } from '../domain/types';
 import { ESTIMATE_DEFAULT_TYPE_KEY } from '../seed/activityTypes';
+import { readDemoOwn } from './demoMode';
 
 type Repo = Repositories;
 
@@ -35,9 +36,25 @@ let seeding: Promise<unknown> | null = null;
 /** Esimerkkitilan käynnistys: aineisto luodaan kerran, vaikka käynnistys ajettaisiin samanaikaisesti kahdesti. */
 export function seedDemoOnce(repo: Repo, today: ISODate): Promise<unknown> {
   seeding ??= (async () => {
-    if (!(await repo.getMeta<boolean>('demoSeeded'))) await seedDemo(repo, today);
+    if (!(await repo.getMeta<boolean>('demoSeeded'))) {
+      await seedDemo(repo, today);
+      await applyOwnSettings(repo);
+    }
   })();
   return seeding;
+}
+
+/**
+ * Omat asetukset esimerkkiin (24.11.2026): laskenta-asetukset sekä oman profiilin pääkortin teema ja
+ * viikon huomioiden valinnat molemmille esimerkkiprofiileille.
+ */
+async function applyOwnSettings(repo: Repo): Promise<void> {
+  const own = readDemoOwn();
+  if (!own) return;
+  await repo.updateSettings(own.settings);
+  for (const p of await repo.listProfiles()) {
+    await repo.updateProfile(p.id, { heroTheme: own.heroTheme, heroThemeDark: own.heroThemeDark, insightsRec: own.insightsRec, insightsLoad: own.insightsLoad });
+  }
 }
 
 export interface DemoIds {

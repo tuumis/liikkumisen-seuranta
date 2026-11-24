@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.64',
+    date: '24.11.2026',
+    items: [
+      'Esimerkkitila käyttää omia asetuksiasi: pääkortin teema (vaalea ja tumma tila), viikon huomioiden valinnat ja laskenta-asetukset (esim. rasittavan päivän raja) siirtyvät esimerkkiin, kun siirryt siihen.',
+      'Viikko-näkymän korttien järjestys ja valinnat, väriteema, tausta ja näkymätila olivat jo ennestään samat kuin omassa sovelluksessa.',
+    ],
+  },
+  {
     version: '1.1.63',
     date: '24.11.2026',
     items: [
