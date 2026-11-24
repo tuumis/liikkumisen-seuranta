@@ -3,6 +3,7 @@ import { useBackClose } from './backClose';
 import { createPortal } from 'react-dom';
 import { IconClose } from './icons';
 import { takeMorphOrigin } from './morph';
+import { prefersReducedMotion } from './motion';
 
 // Taustan vierityksen lukitus, joka toimii myös iPhonessa (overflow: hidden ei siellä riitä):
 // body kiinnitetään paikalleen nykyiseen vierityskohtaan ja palautetaan suljettaessa.
@@ -47,8 +48,6 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   wasOpen.current = open;
   useBackClose(open, onClose);
 
-  // Avausanimaatio käynnistyy vasta, kun paneeli on piirretty ensimmäisen kerran (19.11.2026, käyttäjän havainto:
-  // avautuminen ja taustan himmennys töksähtivät). Raskaan sisällön rakentaminen ei näin vie animaation alkua.
   const scrim = useRef<HTMLDivElement>(null);
   // Sulkemishetki kirjataan asettelun vaiheessa, joten saman päivityksen aikana avautuva paneeli näkee sen.
   useLayoutEffect(() => {
@@ -57,38 +56,46 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
       lastCloseAt = performance.now();
     };
   }, [open]);
-  const hold = useRef(false);
-  const shownOnce = useRef(false);
-  if (open && !shownOnce.current) {
-    shownOnce.current = true;
-    hold.current = true;
-  }
-  if (!open) shownOnce.current = hold.current = false;
+
+  // Avausanimaatio (24.11.2026, käyttäjän videot PC:ltä: paneeli välähti pois animaation lopussa ja jäi välillä
+  // kokonaan näkymättömäksi tumman taustan alle). Aiempi CSS-animaatio pidettiin ensin pysäytettynä ja jätettiin
+  // lopuksi voimaan; näytönohjaimen ja pääsäikeen tilat pääsivät eroamaan. Nyt animaatio käynnistetään
+  // JavaScriptillä (Web Animations): se alkaa vasta, kun ensimmäinen ruutu on piirretty (raskas sisältö ei vie
+  // alkua), pitää loppuarvon siihen asti, kun pääsäie ehtii mukaan, ja poistetaan sitten kokonaan. Paneeli ei
+  // siis voi jäädä animaation alkutilaan, ja suljettaessa kesken animaation se perutaan.
+  const anim = useRef<Animation | null>(null);
   useLayoutEffect(() => {
-    if (!open || !hold.current) return;
-    // Paneelista toiseen (24.11.2026, käyttäjän havainto: ruutu välähtää): edellinen tausta katosi heti ja uusi
-    // häivytettiin läpinäkyvästä, jolloin sivu näkyi hetken täysin kirkkaana. Nyt tausta pysyy tummana.
-    if (performance.now() - lastCloseAt < 300) scrim.current?.classList.add('scrim-instant');
+    const p = panel.current;
+    const s = scrim.current;
+    if (!open || !p || !s || typeof p.animate !== 'function' || prefersReducedMotion()) return;
+    const desktop = window.matchMedia?.('(min-width: 1024px)').matches;
     const o = origin.current;
-    if (o && panel.current) {
-      const r = panel.current.getBoundingClientRect();
+    let from = 'translateY(24px)';
+    if (desktop && o) {
+      // Kortista avattu paneeli kasvaa PC:llä napautetun rivin kohdalta (ui/morph.ts).
+      const r = p.getBoundingClientRect();
       const x = Math.min(r.width, Math.max(0, o.x - r.left));
       const y = Math.min(r.height, Math.max(0, o.y - r.top));
-      panel.current.style.transformOrigin = `${Math.round(x)}px ${Math.round(y)}px`;
-    }
-    let r2 = 0;
-    const release = () => {
-      hold.current = false;
-      panel.current?.classList.remove('anim-hold');
-      scrim.current?.classList.remove('anim-hold');
-    };
-    const r1 = requestAnimationFrame(() => (r2 = requestAnimationFrame(release)));
-    // Varmistus: jos ruutua ei piirretä (esim. välilehti taustalla), paneeli näytetään silti.
-    const t = window.setTimeout(release, 400);
+      p.style.transformOrigin = `${Math.round(x)}px ${Math.round(y)}px`;
+      from = 'scale(0.9)';
+    } else if (desktop) from = 'translateY(8px) scale(0.98)';
+    const ease = 'cubic-bezier(0.22, 1, 0.36, 1)';
+    const list: Animation[] = [];
+    const a = p.animate([{ opacity: 0, transform: from }, { opacity: 1, transform: 'none' }], { duration: 350, easing: ease, fill: 'forwards' });
+    anim.current = a;
+    list.push(a);
+    // Paneelista toiseen (esim. kerran muokkaus suunnitelman päältä) tausta pysyy tummana: ei uutta häivytystä.
+    if (performance.now() - lastCloseAt >= 300) list.push(s.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 320, easing: ease, fill: 'forwards' }));
+    for (const x of list) x.finished.then(() => x.cancel(), () => undefined);
+    // Varmistus: jos selain ei piirrä ruutuja (esim. ikkuna piilossa), animaatio ei käynnisty, ja paneeli jäisi
+    // alkutilaan. Silloin se viedään loppuun, jolloin paneeli ja tausta näkyvät joka tapauksessa.
+    const guard = window.setTimeout(() => {
+      for (const x of list) if (x.playState !== 'finished' && x.playState !== 'idle') x.finish();
+    }, 700);
     return () => {
-      cancelAnimationFrame(r1);
-      cancelAnimationFrame(r2);
-      window.clearTimeout(t);
+      window.clearTimeout(guard);
+      anim.current = null;
+      for (const x of list) x.cancel();
     };
   }, [open]);
 
@@ -100,8 +107,8 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
     drag.current = { y0: y, dy: 0, lastY: y, lastT: performance.now(), v: 0 };
     if (panel.current) {
       panel.current.style.transition = 'none';
-      // Avausanimaatio pitää loppuarvonsa (index.css, fill both), joten se poistetaan, jotta veto voi siirtää paneelia.
-      panel.current.style.animation = 'none';
+      // Kesken oleva avausanimaatio perutaan, jotta veto voi siirtää paneelia.
+      anim.current?.cancel();
     }
   };
   const onDragMove = (e: TouchEvent) => {
@@ -146,14 +153,14 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   if (!open) return null;
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center lg:items-center lg:p-6" role="presentation">
-      <div ref={scrim} className={`scrim absolute inset-0 ${hold.current ? 'anim-hold' : ''}`} onClick={onClose} aria-hidden />
+      <div ref={scrim} className="scrim sheet-scrim absolute inset-0" onClick={onClose} aria-hidden />
       <div
         ref={panel}
         role="dialog"
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className={`anim-sheet ${origin.current ? 'from-origin' : ''} ${hold.current ? 'anim-hold' : ''} relative flex max-h-[90dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-[2rem] bg-[var(--surface)] shadow-xl focus:outline-none lg:rounded-[2rem]`}
+        className={`relative flex max-h-[90dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-[2rem] bg-[var(--surface)] shadow-xl focus:outline-none lg:rounded-[2rem]`}
       >
         {/* Otsikko pysyy paikallaan; vain sisältö vierii (ohut palkki pyöristettyjen kulmien sisällä). */}
         <div className="shrink-0 touch-none px-5 pt-3 lg:touch-auto lg:px-7 lg:pt-6" onTouchStart={onDragStart} onTouchMove={onDragMove} onTouchEnd={onDragEnd} onTouchCancel={onDragEnd}>

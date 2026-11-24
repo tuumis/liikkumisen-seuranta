@@ -9,6 +9,13 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.53',
+    date: '24.11.2026',
+    items: [
+      'Korjattu PC:llä: tapahtuman paneeli saattoi jäädä avautumatta kokonaan tai näkymättömäksi tumman taustan alle, ja ruutu välähti avauksen lopussa. Avausanimaatio on tehty uudella tavalla, ja paneeli tulee näkyviin joka tilanteessa.',
+    ],
+  },
+  {
     version: '1.1.52',
     date: '24.11.2026',
     items: [

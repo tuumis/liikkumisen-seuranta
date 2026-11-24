@@ -534,18 +534,6 @@ html[data-bg] body::before {
     transform: none;
   }
 }
-@keyframes sheet-up {
-  from {
-    transform: translateY(24px);
-    opacity: 0;
-  }
-}
-@keyframes sheet-scale {
-  from {
-    transform: translateY(8px) scale(0.98);
-    opacity: 0;
-  }
-}
 @keyframes draw {
   from {
     stroke-dashoffset: var(--len, 100);
@@ -666,18 +654,15 @@ html[data-bg] body::before {
    vaalentaa näkymää hetkellisesti (välähdys). */
 /* Häivytys läpinäkyvyydellä (19.11.2026): taustavärin animointi piirtyi pääsäikeellä ja nyki, kun paneelin sisältö
    rakentui samaan aikaan; opacity liikkuu näytönohjaimella sulavasti. */
-/* Täyttö "both" (24.11.2026, käyttäjän video: paneeli ja tausta katosivat ruudun tai kaksi avauksen lopussa PC:llä):
-   kun näytönohjaimella ajettu animaatio päättyy ennen kuin kiireinen pääsäie ehtii päivittää tilan, selain piirsi
-   elementin hetken animaation alkuarvolla (läpinäkyvänä). Loppuarvon pitäminen poistaa tämän välin. */
 .scrim {
   background-color: rgb(26 37 32 / 0.5);
-  animation: fade 0.32s var(--ease-out) both;
-  will-change: opacity;
+  animation: fade 0.32s var(--ease-out) backwards;
 }
 .dark .scrim {
   background-color: rgb(0 0 0 / 0.6);
 }
-.scrim.scrim-instant {
+/* Paneelin (ui/Sheet.tsx) taustan häivytys tehdään JavaScriptillä yhdessä paneelin kanssa (24.11.2026). */
+.scrim.sheet-scrim {
   animation: none;
 }
 .anim-fade {
@@ -699,30 +684,6 @@ html[data-bg] body::before {
 .anim-draw {
   animation: draw 1s var(--ease-out) backwards;
   animation-delay: 150ms;
-}
-.anim-sheet {
-  animation: sheet-up 0.35s var(--ease-out) both;
-  will-change: transform, opacity;
-}
-/* Paneelin avautuminen odottaa ensimmäistä piirrettyä ruutua (ui/Sheet.tsx): muuten sisällön rakentamisen aikana
-   kulunut aika "syö" animaation alun, ja paneeli ja himmennys ilmestyvät nykäyksellä puolivälistä. */
-.anim-hold {
-  animation-play-state: paused !important;
-}
-@media (min-width: 1024px) {
-  .anim-sheet {
-    animation-name: sheet-scale;
-  }
-  /* Kortista avattu paneeli kasvaa napautetun rivin kohdalta (ui/morph.ts, transform-origin). */
-  .anim-sheet.from-origin {
-    animation-name: sheet-grow;
-  }
-}
-@keyframes sheet-grow {
-  from {
-    transform: scale(0.9);
-    opacity: 0;
-  }
 }
 
 /* Näkymänvaihto (View Transitions API, jos selain tukee): pehmeä ristihäivytys ja nosto. */
