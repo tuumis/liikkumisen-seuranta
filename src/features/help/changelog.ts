@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.63',
+    date: '24.11.2026',
+    items: [
+      'Päivittäin-kaaviossa näkyy jokaisen päivän minuutit palkin yläpuolella (aiemmin vain asteikon ylittävälle päivälle). Tulevien päivien arvio on himmeämpi.',
+      'Päivätavoitteen luku on siirretty kaavion selitteeseen, ettei se peitä päivien lukuja.',
+    ],
+  },
+  {
     version: '1.1.62',
     date: '24.11.2026',
     items: [

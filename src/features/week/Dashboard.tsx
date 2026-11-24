@@ -140,7 +140,6 @@ export function DailyChart({ report, today, target: dayTarget, title }: { report
         {/* tavoiteviiva */}
         {showTarget && (
           <div className="absolute inset-x-0 border-t-2 border-dashed border-[var(--viz-track-line)]" style={{ bottom: 28 + y(target) }} aria-hidden>
-            <span className="absolute -top-5 right-0 rounded-md bg-[var(--surface)] px-1 text-[11px] font-semibold text-slate-500">tavoite {Math.round(target)}</span>
           </div>
         )}
         <div className="absolute inset-x-0 bottom-0 grid grid-cols-7 gap-1.5 sm:gap-3" role="list" aria-label={mode === 'mvpa' ? 'Reipas ja rasittava liikunta päivittäin' : 'Kaikki liikunta päivittäin'}>
@@ -181,9 +180,12 @@ export function DailyChart({ report, today, target: dayTarget, title }: { report
                           style={{ height: `${(p.v / d.total) * 100}%`, background: p.c }}
                         />
                       ))}
-                      {d.total > max && (
-                        <span className="absolute -top-5 left-1/2 -translate-x-1/2 rounded-md bg-[var(--surface)] px-1 text-[11px] font-bold text-slate-700 tabular-nums">{d.total}</span>
-                      )}
+                      {/* Päivän luku jokaisen palkin yläpuolella (24.11.2026); tulevien päivien arvio himmeämpänä. */}
+                      <span
+                        className={`absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap px-0.5 text-[11px] tabular-nums ${future ? 'font-semibold text-slate-400' : 'font-bold text-slate-700'}`}
+                      >
+                        {Math.round(d.total)}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -223,7 +225,7 @@ export function DailyChart({ report, today, target: dayTarget, title }: { report
         {showTarget ? (
           <span className="flex items-center gap-1.5">
             <span className="w-4 border-t-2 border-dashed border-[var(--viz-track-line)]" />{' '}
-            {early ? (mode === 'mvpa' ? 'Tavoite 1 h vauhdikasta' : 'Tavoite 3 h liikkumista (kesto)') : 'Päivätavoite'}
+            {early ? (mode === 'mvpa' ? 'Tavoite 1 h vauhdikasta' : 'Tavoite 3 h liikkumista (kesto)') : `Päivätavoite ${Math.round(target)} min`}
           </span>
         ) : (
           <span className="text-slate-500">Kesto minuutteina, myös kevyt liikunta</span>
