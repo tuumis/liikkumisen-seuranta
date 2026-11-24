@@ -9,6 +9,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.37',
+    date: '24.11.2026',
+    items: [
+      'Viikon huomiot kertovat lapsilla myös ohjatun urheilun kuormituksesta: ei yhtään vapaapäivää, viikkotunnit yli ikävuosien tai nopea kasvu edellisiin viikkoihin.',
+      'Kuormitushuomiot perustuvat kansainväliseen tutkimustietoon (AAP ja Jayanthi ym. 2015), ja ne on merkitty sanalla Tutkimus. Lähde ja laskutapa kohdassa Miksi?.',
+      'Kauden koosteessa uusi kortti Tauot ja vaihtelu: päälajin osuus ja pisin tauko lajista.',
+    ],
+  },
+  {
     version: '1.1.36',
     date: '24.11.2026',
     items: [

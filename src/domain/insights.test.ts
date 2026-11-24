@@ -117,4 +117,35 @@ describe('viikon huomiot', () => {
     expect(freeWeekdays([], types, MON)).toEqual([]);
     expect(freeWeekdays([{ ...item([1, 2]), validTo: '2026-11-01' }, item([5])], types, MON)).toEqual([1, 2, 3, 4, 6, 7]);
   });
+
+  describe('kuormitus (vaihe 2)', () => {
+    const FT = activityTypeId('football_training');
+    const ball = (date: string, min: number) =>
+      session({ date, activityTypeId: FT, durationMin: min, minutes: { light: min * 0.3, moderate: min * 0.4, vigorous: min * 0.3 }, muscle: true, bone: true });
+    const daily = (mon: string, min: number) => datesBetween(mon, addDays(mon, 6)).map((d) => ball(d, min));
+
+    it('joka päivä ohjattua urheilua ja tunnit yli iän; aikuisella ei kuormitusta', () => {
+      const s = daily(MON, 100);
+      const r = weekInsights({ report: report(MON, s), today: TODAY, types, profile: kid, sessions: s });
+      expect(r.insights.map((i) => i.id)).toEqual(['no_rest_day', 'hours_vs_age']);
+      expect(r.insights[1].title).toBe('Ohjattua urheilua 11,7 h viikossa, enemmän kuin ikävuosia (10)');
+      expect(r.insights.every((i) => i.tier === 'research')).toBe(true);
+      expect(weekInsights({ report: report(MON, s), today: TODAY, types, profile: kid, sessions: s, load: false }).state).toBe('ok');
+      const adult = profile({ createdAt: '2026-09-01T10:00:00.000Z', birthYear: 1985, birthMonth: 5 });
+      const ra = weekInsights({ report: report(MON, s, { profile: adult }), today: TODAY, types, profile: adult, sessions: s });
+      expect(ra.insights.filter((i) => i.tier === 'research')).toEqual([]);
+    });
+
+    it('kasvu edellisten neljän viikon keskiarvoon (yli 20 % ja vähintään tunti)', () => {
+      const prev = [7, 14, 21, 28].flatMap((k) => [ball(addDays(MON, -k), 120), ball(addDays(MON, -k + 2), 120)]);
+      const week = [0, 2, 4, 5].map((k) => ball(addDays(MON, k), 100));
+      const other = datesBetween(MON, addDays(MON, 6)).map((date) => session({ date, minutes: { light: 0, moderate: 30, vigorous: 0 } }));
+      const r = weekInsights({ report: report(MON, [...week, ...other]), today: TODAY, types, profile: kid, sessions: [...prev, ...week, ...other] });
+      expect(r.insights.find((i) => i.id === 'load_spike')?.title).toBe('Ohjattua urheilua 6,7 h, 67 % enemmän kuin edellisillä viikoilla keskimäärin (4,0 h)');
+      // Ennen seurannan alkua olevat viikot eivät ole vertailukohta.
+      const late = profile({ createdAt: '2026-10-25T10:00:00.000Z', birthYear: 2016, birthMonth: 5 });
+      const r2 = weekInsights({ report: report(MON, [...week, ...other], { profile: late }), today: TODAY, types, profile: late, sessions: [...prev, ...week, ...other] });
+      expect(r2.insights.find((i) => i.id === 'load_spike')).toBeUndefined();
+    });
+  });
 });

@@ -51,6 +51,28 @@ describe('kauden kooste', () => {
     expect(buildStory({ name: 'Aino', seasonLabel: 'Syksy 2026', report, sessions, types, footballDetails: new Map(), teams: teams.slice(0, 1) }).some((s) => s.id === 'teams')).toBe(false);
   });
 
+  it('tauot ja vaihtelu: päälajin osuus ja pisin tauko (lapsella)', () => {
+    const types = new Map([
+      ['t:ft', type('t:ft', 'Jalkapallo – treeni', { sport: 'football', footballKind: 'training', category: 'hobby' })],
+      ['t:gym', type('t:gym', 'Telinevoimistelu', { category: 'hobby' })],
+    ]);
+    const dates = ['2026-09-01', '2026-09-03', '2026-09-05', '2026-09-20', '2026-09-22'];
+    const sessions = [...dates.map((d, k) => ses(`f${k}`, 't:ft', d, 90)), ses('g', 't:gym', '2026-09-10', 60)];
+    const report = {
+      days: [day('2026-09-01', 90, 40)],
+      period: { kind: 'season', start: '2026-09-01', end: '2026-09-30' },
+      trackingStart: '2026-08-01',
+      group: { group: 'school_age', over64: false },
+    } as PeriodReport;
+    const slides = buildStory({ name: 'Aino', seasonLabel: 'Syksy 2026', report, sessions, types, footballDetails: new Map(), football: false });
+    const b = slides.find((s) => s.id === 'balance')!;
+    expect(b.title).toBe('Pisin tauko 14 päivää');
+    expect(b.lines[0]).toBe('Jalkapallo: 88 % ohjatun urheilun ajasta');
+    expect(b.lines[1]).toBe('Pisin tauko lajista 6.9.–19.9.');
+    expect(b.stats).toContainEqual({ label: 'Ohjattuja lajeja', value: '2' });
+    expect(buildStory({ name: 'Aino', seasonLabel: 'Syksy 2026', report, sessions, types, footballDetails: new Map(), load: false }).some((s) => s.id === 'balance')).toBe(false);
+  });
+
   it('ilman kirjauksia vain kansi ja lopetus', () => {
     const slides = buildStory({ name: 'Aino', seasonLabel: 'Syksy 2026', report: { days: [] } as unknown as PeriodReport, sessions: [], types: new Map(), footballDetails: new Map() });
     expect(slides.map((s) => s.id)).toEqual(['cover', 'outro']);

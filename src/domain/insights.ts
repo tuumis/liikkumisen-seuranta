@@ -1,18 +1,31 @@
 // Viikon huomiot (SPEC 16, 20.11.2026): päättyneeltä viikolta lyhyet, lähteistetyt huomiot omasta datasta.
-// Vaihe 1: liikkumissuosituksen huomiot. Huomio kertoo havainnon ja tarjoaa vaihtoehdon; ei käskyjä, ei
+// Vaihe 1: liikkumissuosituksen huomiot. Vaihe 2 (24.11.2026): urheilun kuormitus lapsilla (sportLoad.ts). Huomio kertoo havainnon ja tarjoaa vaihtoehdon; ei käskyjä, ei
 // terveys- tai valmennusneuvoja, ei vertailuja muihin. Hyvästä viikosta ei keksitä parannettavaa.
 // Puhdas funktio: kaikki data annetaan parametreina.
 
 import { isVigorousDay } from './aggregate';
 import { addDays, isoWeekday } from './dates';
+import { ageInYears } from './groups';
+import { formatHours } from './hours';
+import { LOAD_INCREASE_LIMIT, LOAD_INCREASE_MIN, organizedDays, organizedMinutes, previousWeeksMinutes, RESEARCH_SOURCES } from './sportLoad';
 import { RECOMMENDATIONS, SOURCES, type SourceRef } from './recommendations';
 import type { PeriodReport } from './report';
-import type { ActivityType, DayTotals, ISODate, TemplateItem, UUID, Weekday } from './types';
+import type { ActivityType, DayTotals, ISODate, Profile, Session, TemplateItem, UUID, Weekday } from './types';
 
 /** Lähdetaso: virallinen suositus, tutkimus (vaihe 2) tai sovelluksen oma tulkinta. */
 export type InsightTier = 'official' | 'research' | 'app';
 
-export type InsightId = 'mvpa_avg' | 'mvpa_days' | 'vigorous_days' | 'strength_days' | 'ey_days' | 'adult_weighted' | 'adult_muscle';
+export type InsightId =
+  | 'mvpa_avg'
+  | 'mvpa_days'
+  | 'vigorous_days'
+  | 'strength_days'
+  | 'ey_days'
+  | 'adult_weighted'
+  | 'adult_muscle'
+  | 'hours_vs_age'
+  | 'no_rest_day'
+  | 'load_spike';
 
 export interface Insight {
   id: InsightId;
@@ -61,6 +74,12 @@ export interface InsightInput {
   today: ISODate;
   templateItems?: TemplateItem[];
   types: Map<UUID, ActivityType>;
+  /** Kuormitushuomioihin (vaihe 2): syntymävuosi ja -kuukausi. */
+  profile?: Pick<Profile, 'birthYear' | 'birthMonth'>;
+  /** Kerrat viikolta ja vähintään kuudelta edeltävältä viikolta (ohjatun urheilun määrä, kasvu ja toisto). */
+  sessions?: Session[];
+  /** Kuormitushuomiot (oletus päällä lapsilla; aikuisilla ei koskaan). */
+  load?: boolean;
 }
 
 /** Vähintään näin monta vertailtavaa päivää, jotta päivämäärätavoitteet ovat reiluja. */
@@ -78,7 +97,64 @@ export function listFi(xs: string[]): string {
 const days = (n: number) => `${n} päivänä`;
 
 /** Järjestys: suosituksen pääluku, rasittavat päivät, vahvistavat päivät, päivittäiset vajeet. */
-const ORDER: InsightId[] = ['mvpa_avg', 'ey_days', 'adult_weighted', 'vigorous_days', 'strength_days', 'adult_muscle', 'mvpa_days'];
+// Kuormitus (vaihe 2) heti pääluvun jälkeen: viikon kahdessa tärkeimmässä huomiossa sen kuuluu näkyä.
+const ORDER: InsightId[] = ['mvpa_avg', 'ey_days', 'adult_weighted', 'no_rest_day', 'hours_vs_age', 'load_spike', 'vigorous_days', 'strength_days', 'adult_muscle', 'mvpa_days'];
+
+interface LoadCtx {
+  sessions: Session[];
+  types: Map<UUID, ActivityType>;
+  birthYear: number;
+  birthMonth: number;
+}
+
+const LOAD_WHY =
+  'Ohjattu urheilu = harrastusten kerrat (treenit, pelit ja turnaukset), ei koululiikuntaa, omatoimista eikä treenin verryttelyä. Turnauksen kesto sisältää odottelun, joten luku voi olla todellista suurempi.';
+
+/** Urheilun kuormitus (vaihe 2): lähdetaso Tutkimus. Ei aikuisille. */
+function loadInsights(report: PeriodReport, c: LoadCtx): Insight[] {
+  if (report.group.group === 'adult') return [];
+  const { start, end } = report.period;
+  const out: Insight[] = [];
+  const min = organizedMinutes(c.sessions, c.types, start, end);
+  if (min <= 0) return out;
+  const days = organizedDays(c.sessions, c.types, start, end);
+  if (days.size === 7) {
+    out.push({
+      id: 'no_rest_day',
+      tier: 'research',
+      title: 'Ohjattua urheilua viikon jokaisena päivänä',
+      text: 'Yhdysvaltain lastenlääkäriyhdistyksen (AAP) mukaan lapsen ei pitäisi joutua harjoittelemaan tai pelaamaan useampana kuin 5–6 päivänä viikossa. Vapaapäivä tarkoittaa vapaata ohjatusta urheilusta; muuten liikkuminen joka päivä on suositeltavaa.',
+      why: `${LOAD_WHY} Päivä lasketaan, kun sille on kirjattu ohjattua urheilua.`,
+      source: RESEARCH_SOURCES.aap2024,
+    });
+  }
+  const age = ageInYears(c.birthYear, c.birthMonth, end);
+  if (age >= 7 && min > age * 60) {
+    out.push({
+      id: 'hours_vs_age',
+      tier: 'research',
+      title: `Ohjattua urheilua ${formatHours(min)} viikossa, enemmän kuin ikävuosia (${age})`,
+      text: 'Tutkimuksessa 7–18-vuotiailla urheilijoilla ikävuodet ylittävä viikkotuntimäärä oli yhteydessä vakaviin rasitusvammoihin. Tutkimus osoittaa yhteyden, ei syy-seurausta.',
+      why: `${LOAD_WHY} Vertailuluku on ikä vuosina viikon viimeisenä päivänä.`,
+      source: RESEARCH_SOURCES.jayanthi2015,
+    });
+  }
+  const prev = previousWeeksMinutes(c.sessions, c.types, start, 4, report.trackingStart);
+  if (prev.every((x) => x !== undefined)) {
+    const avg = (prev as number[]).reduce((a, b) => a + b, 0) / prev.length;
+    if (avg > 0 && min > avg * (1 + LOAD_INCREASE_LIMIT) && min - avg >= LOAD_INCREASE_MIN) {
+      out.push({
+        id: 'load_spike',
+        tier: 'research',
+        title: `Ohjattua urheilua ${formatHours(min)}, ${Math.round((min / avg - 1) * 100)} % enemmän kuin edellisillä viikoilla keskimäärin (${formatHours(avg)})`,
+        text: 'AAP:n mukaan viikoittaista harjoitusmäärää lisätään kerralla enintään 10–20 %. Yksittäinen turnaus- tai leiriviikko ei ole sama asia kuin pysyvä kasvu.',
+        why: `${LOAD_WHY} Vertailu edellisten neljän viikon keskiarvoon on sovelluksen tulkinta (AAP puhuu viikoittaisesta lisäyksestä); alle tunnin erot jätetään huomiotta.`,
+        source: RESEARCH_SOURCES.aap2024,
+      });
+    }
+  }
+  return out;
+}
 
 /**
  * Viikonpäivät, joille viikkorytmissä ei ole harrastusta (laji kategoriaa harrastus) seuraavalla viikolla.
@@ -99,10 +175,10 @@ export function freeWeekdays(items: TemplateItem[] | undefined, types: Map<UUID,
 }
 
 /** Huomiot ilman datan porttia ja vaihtoehtoja (myös toiston tunnistamiseen edellisiltä viikoilta). */
-function raw(report: PeriodReport, free: string | undefined): Insight[] {
+function raw(report: PeriodReport, free: string | undefined, load?: LoadCtx): Insight[] {
   const ev = report.evaluation;
   const valid = report.days;
-  const out: Insight[] = [];
+  const out: Insight[] = load ? loadInsights(report, load) : [];
   const n = ev.n;
   if (ev.schoolAge) {
     const s = ev.schoolAge;
@@ -239,13 +315,16 @@ export function weekInsights(input: InsightInput): InsightResult {
 
   const freeDays = freeWeekdays(input.templateItems, input.types, addDays(report.period.end, 1));
   const free = freeDays.length ? `Viikkorytmissä harrastuksettomia päiviä: ${listFi(freeDays.map((d) => WD[d - 1]))}.` : undefined;
-  const insights = raw(report, free);
+  const p = input.profile;
+  const load: LoadCtx | undefined =
+    input.load !== false && p && input.sessions ? { sessions: input.sessions, types: input.types, birthYear: p.birthYear, birthMonth: p.birthMonth } : undefined;
+  const insights = raw(report, free, load);
   // Sama vaihtoehto vain kerran (ensimmäisessä huomiossa), ettei se toistu joka rivillä.
   insights.forEach((i, k) => {
     if (i.option && insights.slice(0, k).some((x) => x.option === i.option)) delete i.option;
   });
   // Toisto: sama vaje peräkkäisinä viikkoina.
-  const prevIds = (input.previous ?? []).map((r) => (reliable(r) ? new Set(raw(r!, undefined).map((i) => i.id)) : undefined));
+  const prevIds = (input.previous ?? []).map((r) => (reliable(r) ? new Set(raw(r!, undefined, load).map((i) => i.id)) : undefined));
   for (const i of insights) {
     let streak = 1;
     for (const ids of prevIds) {

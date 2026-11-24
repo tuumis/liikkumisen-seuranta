@@ -26,9 +26,16 @@ export function useWeekInsights(profile: Profile | undefined, weekStart: ISODate
   const prev2 = useReport(profile, weekPeriod(addDays(weekStart, -14)));
   const items = useLiveQuery(() => (profile ? repo.listTemplateItems(profile.id) : []), [profile?.id]);
   const types = useLiveQuery(() => repo.listActivityTypes({ includeArchived: true }), []);
+  // Kuormitushuomiot (vaihe 2): viikko ja kuusi edeltävää (kasvu neljään viikkoon, toisto kahteen edelliseen).
+  const from = addDays(weekStart, -42);
+  const to = addDays(weekStart, 6);
+  const sessions = useLiveQuery(
+    async () => (profile ? { key: `${profile.id}|${weekStart}`, rows: await repo.sessionsInRange(profile.id, from, to) } : undefined),
+    [profile?.id, from, to],
+  );
   return useMemo(() => {
     // Live-haku voi hetken palauttaa edellisen viikon raportin: vain oikean viikon tiedoista.
-    if (!report || !items || !types || report.period.start !== weekStart) return undefined;
+    if (!report || !items || !types || !sessions || sessions.key !== `${profile?.id}|${weekStart}` || report.period.start !== weekStart) return undefined;
     const at = (r: typeof report | undefined, start: ISODate) => (r && r.period.start === start ? r : undefined);
     return weekInsights({
       report,
@@ -36,8 +43,10 @@ export function useWeekInsights(profile: Profile | undefined, weekStart: ISODate
       today,
       templateItems: items,
       types: new Map<string, ActivityType>(types.map((t) => [t.id, t])),
+      profile,
+      sessions: sessions.rows,
     });
-  }, [report, prev1, prev2, items, types, weekStart, today]);
+  }, [report, prev1, prev2, items, types, sessions, profile, weekStart, today]);
 }
 
 /** Tilan viesti, kun huomioita ei näytetä. */
@@ -54,7 +63,7 @@ export function insightStateText(r: InsightResult): string | undefined {
     case 'partial':
       return `Vertailussa oli vain ${r.validDays} päivää (esimerkiksi sairaus tai loma), joten huomioita ei anneta.`;
     case 'ok':
-      return 'Hyvä viikko: ei huomautettavaa suosituksen osalta.';
+      return 'Hyvä viikko: ei huomautettavaa.';
     default:
       return undefined;
   }
@@ -102,7 +111,7 @@ export function InsightsCard({ profile, weekStart }: { profile: Profile; weekSta
   const msg = insightStateText(r);
   return (
     <Card title="Huomiot" eyebrow={`Viikko ${isoWeek(weekStart).week}`}>
-      <p className="text-sm text-slate-600">Havainnot päättyneeltä viikolta liikkumissuositusta vasten. Perustelu ja lähde kohdasta Miksi?</p>
+      <p className="text-sm text-slate-600">Havainnot päättyneeltä viikolta liikkumissuositusta ja lasten urheilun tutkimustietoa vasten. Perustelu ja lähde kohdasta Miksi?</p>
       {msg ? (
         <p className={`mt-3 rounded-xl px-3 py-2.5 text-sm ${r.state === 'ok' ? 'bg-green-50 font-semibold text-green-900' : 'bg-[var(--surface-sunk)] text-slate-600'}`}>{msg}</p>
       ) : (

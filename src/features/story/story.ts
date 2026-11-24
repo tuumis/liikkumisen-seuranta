@@ -8,6 +8,8 @@ import type { PeriodReport } from '../../domain/report';
 import { shortTeamName, teamBreakdown } from '../../domain/teamBreakdown';
 import type { ActivityType, FocusTag, FootballDetails, Session, Team, UUID } from '../../domain/types';
 import { ENJOYMENT_LABEL, focusTagLabel } from '../../ui/labels';
+import { formatDate } from '../../ui/format';
+import { isOrganized, longestBreak, mainSport, sportDates, sportKey } from '../../domain/sportLoad';
 
 export interface StoryBar {
   label: string;
@@ -41,6 +43,8 @@ export interface StoryInput {
   football?: boolean;
   /** Omat joukkueet ja treeniryhmät (19.11.2026): kortti joukkueittain, kun niitä on vähintään kaksi. */
   teams?: Team[];
+  /** Kuormitustiedot (Viikon huomiot vaihe 2): tauot ja vaihtelu -kortti lapsilla; false = ei korttia. */
+  load?: boolean;
 }
 
 const fi = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
@@ -167,6 +171,30 @@ export function buildStory(input: StoryInput): StorySlide[] {
         bars: tags.map(([t, n]) => ({ label: focusTagLabel(t), value: `${n} ×`, pct: n / maxT })),
       });
     }
+  }
+
+  // Tauot ja vaihtelu (24.11.2026, Viikon huomiot vaihe 2): päälajin osuus ja pisin tauko siitä. Vain lapsilla.
+  const main = input.load !== false && report.group?.group !== 'adult' ? mainSport(sessions, types) : undefined;
+  const mainDates = main ? sportDates(sessions, types, main.key) : [];
+  if (main && mainDates.length >= 4) {
+    const from = report.period.start > report.trackingStart ? report.period.start : report.trackingStart;
+    const brk = longestBreak(mainDates, from, report.period.end);
+    const sports = new Set(sessions.filter((s) => isOrganized(s, types)).map((s) => sportKey(types.get(s.activityTypeId)!))).size;
+    const days = brk?.days ?? 0;
+    slides.push({
+      id: 'balance',
+      kicker: 'Tauot ja vaihtelu',
+      title: days ? `Pisin tauko ${days} ${days === 1 ? 'päivä' : 'päivää'}` : 'Ei taukoa lajista',
+      stats: [
+        { label: 'Pisin tauko', value: `${days} pv` },
+        { label: 'Ohjattuja lajeja', value: String(sports) },
+      ],
+      lines: [
+        `${main.name}: ${Math.round(main.share * 100)} % ohjatun urheilun ajasta`,
+        ...(brk && days > 1 ? [`Pisin tauko lajista ${formatDate(brk.start, 'd.M.')}–${formatDate(brk.end, 'd.M.')}${brk.end === report.period.end ? ' (jatkuu)' : ''}`] : []),
+        'Lastenlääkärien (AAP) mukaan samasta lajista on hyvä pitää vuodessa yhteensä 2–3 kuukautta taukoa, esimerkiksi kuukauden jaksoina.',
+      ],
+    });
   }
 
   slides.push({ id: 'outro', kicker: seasonLabel, title: `Hienoa kautta, ${name}!`, lines: ['Jatketaan samaan malliin.'] });
