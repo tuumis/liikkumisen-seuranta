@@ -1,7 +1,8 @@
 // Alkusivu uusille käyttäjille (18.11.2026, rauhallisempi ilme): vaalea paperisävy, selkeä otsikko,
 // pikatestin painike ja kutsukoodi heti alussa sekä esittely, jossa PC:n ja puhelimen näkymät vaihtuvat
 // itsestään. Sen alla lyhyet tosiasiat, kolme ominaisuusosiota kuvineen, tekijän sanat ja pikatesti.
-// Kuvat ovat esimerkkiprofiileista (Aino ja Eino), eivät oikeista tiedoista.
+// Kuvat ovat esimerkkitilasta (Aino ja Eino, src/demo/seedDemo.ts), eivät oikeista tiedoista: ne kuvataan
+// uudelleen komennolla npm run shots (scripts/landing-shots.mjs), kun näkymät muuttuvat.
 
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode, type RefObject } from 'react';
 import { checkInvite } from '../../domain/invite';
@@ -28,7 +29,7 @@ type ShotName =
   | 'phone-story';
 
 const SHOTS: Record<ShotName, { w: number; h: number; alt: string }> = {
-  'pc-week': { w: 1280, h: 800, alt: 'Viikkonäkymä PC:llä' },
+  'pc-week': { w: 1280, h: 800, alt: 'Viikkonäkymä PC:llä: viime viikon kooste ja viikon huomiot' },
   'pc-analysis': { w: 1280, h: 800, alt: 'Analyysi PC:llä: kehitys kuukausittain ja lajit' },
   'pc-calendar': { w: 1280, h: 800, alt: 'Pelikalenterin kuukausinäkymä PC:llä: treenit ja pelit' },
   'pc-theme': { w: 1280, h: 800, alt: 'Viikkonäkymä PC:llä Kanerva-väriteemalla ja nurmitaustalla' },
@@ -56,15 +57,16 @@ interface Scene {
   chips: [string, string];
 }
 
-// Esittelyn kohtaukset; merkinnät vastaavat kuvien esimerkkitietoja.
+// Esittelyn kohtaukset. Merkinnät eivät sisällä kuvien lukuja, joten ne pysyvät oikeina, kun kuvat otetaan
+// uudelleen esimerkkitilasta (päivät ja luvut muuttuvat kuvauspäivän mukaan).
 const SCENES: Scene[] = [
-  { phone: 'phone-add', pc: 'pc-week', title: 'Liikuntakerta sekunneissa', text: 'Viikon harrastukset ovat valmiina kuitattaviksi. Muut kerrat: valitse laji ja kesto.', chips: ['Treeni 90 min', 'Tallennettu'] },
-  { phone: 'phone-week', pc: 'pc-week', title: 'Viikko yhdellä silmäyksellä', text: 'Näet heti, täyttyykö ikäryhmän liikkumissuositus.', chips: ['Lähellä tahtia', '49 min / päivä'] },
-  { phone: 'phone-analysis', pc: 'pc-analysis', title: 'Kehitys kuukausittain', text: 'Kaudet, lajit ja suositusten toteutuminen. Raportit PDF:nä.', chips: ['+9 min / pv syyskuusta', '6 lajia'] },
+  { phone: 'phone-week', pc: 'pc-week', title: 'Kuittaus yhdellä napautuksella', text: 'Viikon harrastukset ovat valmiina. Tehty treeni kuitataan, poissaolo merkitään syineen.', chips: ['Kuittaa', 'Viikkorytmi'] },
+  { phone: 'phone-add', pc: 'pc-week', title: 'Viikko ja huomiot', text: 'Näet heti, täyttyykö liikkumissuositus, ja huomiot kertovat, mikä muuttui. Muu liikunta: laji ja kesto.', chips: ['Viikon huomiot', 'Suosikkilajit ensin'] },
+  { phone: 'phone-analysis', pc: 'pc-analysis', title: 'Kehitys kuukausittain', text: 'Kaudet, lajit ja suositusten toteutuminen. Raportit PDF:nä.', chips: ['Kausi kerralla', 'Raportti PDF:nä'] },
   { phone: 'phone-theme', pc: 'pc-theme', title: 'Oman näköinen', text: 'Vaalea tai tumma teema, neljä väriteemaa ja taustat, myös oma kuva.', chips: ['4 väriteemaa', 'Tumma teema'] },
-  { phone: 'phone-football', pc: 'pc-calendar', title: 'Pelit ja tulokset', text: 'Pelikalenteri, turnaukset ja kauden tilastot.', chips: ['Kausi 2–1–1', 'Aino: 3 maalia'] },
+  { phone: 'phone-football', pc: 'pc-calendar', title: 'Pelit ja tulokset', text: 'Pelikalenteri, turnaukset, joukkueet ja kauden tilastot.', chips: ['Kauden tilastot', 'Omat maalit'] },
   { phone: 'phone-family', pc: 'pc-family', title: 'Koko perheen kalenteri', text: 'Sisarusten treenit ja pelit samassa kalenterissa. Päällekkäiset pelit näkyvät heti.', chips: ['Päällekkäin', 'Vienti kalenteriin'] },
-  { phone: 'phone-story', pc: 'pc-story', title: 'Kauden kooste', text: 'Kauden kohokohdat tarinakortteina. Tallenna kuvana tai jaa.', chips: ['96,3 h liikuntaa', 'Paras viikko'] },
+  { phone: 'phone-story', pc: 'pc-story', title: 'Kauden kooste', text: 'Kauden kohokohdat tarinakortteina. Tallenna kuvana tai jaa.', chips: ['Paras viikko', 'Jaa kuvana'] },
   { phone: 'phone-preview', pc: 'pc-calendar', title: 'Ennakot jakoon', text: 'Otteluennakko kuvana tai videona joukkueen WhatsApp-ryhmään.', chips: ['Kuva tai video', 'Jaa ryhmään'] },
 ];
 const SCENE_MS = 5000;
@@ -72,7 +74,7 @@ const SCENE_MS = 5000;
 const FACTS = [
   ['Kuittaus yhdellä napautuksella', 'Viikon treenit ovat valmiina kirjattuina.'],
   ['Ei tiliä eikä palvelinta', 'Tiedot tallentuvat vain omalle laitteellesi.'],
-  ['PC ja puhelin', 'Synkronointi oman pilvikansion kautta, toimii myös ilman verkkoa.'],
+  ['PC ja puhelin', 'Synkronointi oman pilvikansion kautta. PC:llä ilmoitukset treenien ja pelien jälkeen.'],
   ['Koko perhe', 'Jokaiselle lapselle oma profiili ja suositus.'],
 ] as const;
 
@@ -156,8 +158,12 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
           id="ominaisuudet"
           kicker="Kirjaaminen"
           title="Viikkorytmi kerran, sen jälkeen pelkkä kuittaus"
-          text="Lisää lapsen säännölliset harrastukset kerran. Viikon treenit ovat sen jälkeen valmiina, ja tehty kerta kuitataan yhdellä napautuksella. Ylimääräinen liikuntakerta kirjataan valitsemalla laji ja kesto."
-          points={['Arkiliikunta, kuten välitunnit ja koulumatkat, arvioidaan kerran ja lasketaan mukaan', 'Poissaolot ja peruutukset merkitään syineen']}
+          text="Lisää lapsen säännölliset harrastukset kerran. Viikon treenit ovat sen jälkeen valmiina, ja tehty kerta kuitataan yhdellä napautuksella. Ylimääräinen liikuntakerta kirjataan valitsemalla laji ja kesto, suosikkilajit ensimmäisinä."
+          points={[
+            'Arkiliikunta, kuten välitunnit ja koulumatkat, arvioidaan kerran ja lasketaan mukaan',
+            'Kuittaa tiedoilla: toteutunut kesto, teho ja omatoiminen verryttely samalla kertaa',
+            'Poissaolot ja peruutukset merkitään syineen',
+          ]}
         >
           <Shot name="phone-add" onZoom={setZoom} className="lp-solo-phone" />
         </Feature>
@@ -167,7 +173,12 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
           kicker="Analyysi"
           title="Arvio perustuu lajin tehoon, ei pelkkään kestoon"
           text="Puolentoista tunnin treenistä vain osa on reipasta liikuntaa. Sovellus arvioi jokaisen kerran tehon lajin tyypillisen profiilin perusteella ja näyttää, miten viikko, kuukausi ja kausi vertautuvat suositukseen."
-          points={['Kouluikäisillä 60 minuuttia reipasta ja rasittavaa liikuntaa päivässä', 'Alle kouluikäisillä kolme tuntia liikkumista päivässä', 'Raportti kaudesta PDF-tiedostona']}
+          points={[
+            'Kouluikäisillä 60 minuuttia reipasta ja rasittavaa liikuntaa päivässä',
+            'Alle kouluikäisillä kolme tuntia liikkumista päivässä',
+            'Viikon huomiot: suosituksen toteutuminen ja ohjatun urheilun kuormitus tutkimustiedon valossa',
+            'Raportti kaudesta PDF-tiedostona',
+          ]}
         >
           <Shot name="pc-analysis" onZoom={setZoom} className="lp-pc" />
         </Feature>
@@ -176,8 +187,12 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
           id="jalkapallo"
           kicker="Jalkapalloperheille"
           title="Pelit, tulokset ja koko perheen kalenteri"
-          text="Pelikalenteri ja tulokset on tehty jalkapalloperheen tarpeisiin. Turnaukset, ottelut ja tulokset ovat yhdessä paikassa. Sisarusten treenit ja pelit näkyvät samassa kalenterissa omilla väreillään, ja päällekkäiset pelit huomaa heti. Otteluennakon voi jakaa kuvana tai videona joukkueen WhatsApp-ryhmään."
-          points={['Muut lajit, kuten jääkiekko, salibandy, uinti ja tanssi, kirjataan samalla tavalla ja lasketaan mukaan suosituksiin']}
+          text="Pelikalenteri ja tulokset on tehty jalkapalloperheen tarpeisiin. Turnaukset, ottelut ja tulokset ovat yhdessä paikassa. Sisarusten treenit ja pelit näkyvät samassa kalenterissa omilla väreillään, ja päällekkäiset pelit huomaa heti. Otteluennakon ja tuloksen voi jakaa kuvana tai videona joukkueen WhatsApp-ryhmään."
+          points={[
+            'Joukkueet ja treeniryhmät sarjoineen, tilastot joukkueittain',
+            'Pelipäivän pikakirjaus: tulos, omat maalit ja peliaika suoraan kortista, myös turnauksessa peli kerrallaan',
+            'Muut lajit, kuten jääkiekko, salibandy, uinti ja tanssi, kirjataan samalla tavalla ja lasketaan mukaan suosituksiin',
+          ]}
         >
           <div className="relative pb-[10%]">
             <Shot name="pc-family" onZoom={setZoom} className="lp-pc w-[88%]" />
@@ -564,6 +579,7 @@ function InviteForm({
         <p id={ids('invite-help')} className={`mt-3 text-sm ${dark ? 'text-[var(--hero-ink-soft)]' : 'text-[var(--lp-ink-3)]'}`}>
           {dark ? 'Ei koodia? Pyydä kutsu: ' : 'Sovellus on toistaiseksi kutsupohjainen. Pyydä kutsu: '}
           {link}
+          {dark ? null : '. Koodin jälkeen voit tutustua esimerkkiin ennen omien tietojen lisäämistä.'}
         </p>
       )}
     </form>

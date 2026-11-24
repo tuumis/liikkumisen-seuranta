@@ -107,7 +107,9 @@ describe('esimerkkitilan aineisto', () => {
     check('otteluohjelma', fixtures.some((f) => (f.games?.length ?? 0) >= 3 && planOf.get(f.plannedSessionId)!.date > today));
     check('koti ja vieras', fixtures.some((f) => f.homeAway === 'home') && fixtures.some((f) => f.homeAway === 'away'));
 
-    // Perheen kalenteri: sisarusten kerrat päällekkäin samana päivänä.
+    // Perheen kalenteri: sisarusten pelit samana päivänä ja kerrat päällekkäin.
+    const gameDays = (id: string) => new Set(fixtures.map((f) => planOf.get(f.plannedSessionId)!).filter((p) => p.profileId === id && p.date > today).map((p) => p.date));
+    check('sisarusten pelit samana päivänä', [...gameDays(ids.school)].some((d) => gameDays(ids.early).has(d)));
     const future = plans.filter((p) => p.date > today && p.startTime);
     check(
       'päällekkäiset menot',

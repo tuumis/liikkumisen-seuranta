@@ -5,7 +5,7 @@ import { IconSparkle } from '../ui/icons';
 /** Esimerkkitilan palkki näkymän yläreunassa: kertoo, että tiedot ovat keksittyjä, ja Poistu palaa omiin tietoihin. */
 export function DemoBanner() {
   return (
-    <div role="status" className="mb-4 flex items-center gap-3 rounded-2xl bg-amber-50 py-2 pl-4 pr-2 text-sm text-amber-950 ring-1 ring-amber-200 lg:mb-6">
+    <div role="status" data-demo-banner className="mb-4 flex items-center gap-3 rounded-2xl bg-amber-50 py-2 pl-4 pr-2 text-sm text-amber-950 ring-1 ring-amber-200 lg:mb-6">
       <IconSparkle size="1.15rem" className="shrink-0 text-amber-700" />
       <span className="min-w-0 flex-1 leading-snug">
         <b>Esimerkkitila.</b> Tiedot ovat keksittyjä. Voit kokeilla kaikkea, omat tietosi eivät muutu.

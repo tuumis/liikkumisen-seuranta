@@ -61,8 +61,17 @@ const TOPICS: { q: string; a: string[] }[] = [
     q: 'Jalkapallo',
     a: [
       'Jalkapallo-välilehdellä ovat päiväkirja (kommentit treeneistä), pelikalenteri, tulokset ja joukkueet. Tulevat pelit näkyvät myös viikolla, ja pelin jälkeen kirjataan tulos.',
+      'Pelipäivänä Viikko-näkymässä ja Jalkapallo-välilehden yläosassa on pikakirjauksen kortti: tulos, oman pelaajan maalit ja peliaika suoraan, turnauksessa peli kerrallaan ja harjoituspelissä pelien määrä, pituus ja lämmittely. PC:llä ilmoitus tulee jokaisen pelin päätyttyä, ja sitä painamalla pikakirjaus avautuu.',
+      'Joukkueelle voi antaa sarjan (esim. P9) kohdassa Jalkapallo → Joukkueet: se esitäytetään uusiin peleihin ja näkyy jakokuvissa. Otteluennakon ja tuloksen voi jakaa kuvana tai videona (Jaa-painike pelin kohdalla).',
       'Jos pelaaja treenaa useammassa joukkueessa tai ryhmässä, valitse treenin joukkue tai ryhmä viikkorytmissä tai treenin lisätiedoissa. Treeniryhmä (esim. pienryhmävalmennus tai taitokoulu) lisätään Joukkueet-näkymässä omalla nimellä, eikä se näy peleissä. Jos joukkueita ja ryhmiä on yhteensä yksi, treenit merkitään sille automaattisesti. Aiemmat treenit voi merkitä kerralla kohdassa Jalkapallo → Joukkueet. Samassa näkymässä Treeni- ja pelihistoria kertoo treenit ja pelit joukkueittain ja ryhmittäin.',
       'Jalkapallo on valinnainen profiileittain: Asetukset → Profiilit → Muokkaa → "Pelaako … jalkapalloa?". Pois päältä välilehti, joukkueet, pelit ja jalkapallon lisätiedot piilotetaan; kirjatut kerrat säilyvät ja lasketaan liikuntaan.',
+    ],
+  },
+  {
+    q: 'Voinko kokeilla sovellusta esimerkillä?',
+    a: [
+      'Kyllä: Asetukset → Esimerkkitila → Tutustu esimerkkiin (tai aloitusnäkymän painike). Esimerkissä on kaksi keksittyä lasta, koululainen jalkapalloilija ja alle kouluikäinen sisarus, ja heidän viikkonsa, pelinsä ja analyysinsä.',
+      'Esimerkki on erillään omista tiedoistasi: voit kokeilla kaikkea, eikä mikään muutu omissa tiedoissa. Yläreunan Poistu-painike palaa omiin tietoihin. Esimerkki luodaan joka kerta uudelleen tämän päivän mukaan. Synkronointi, varmuuskopiointi ja PC:n ilmoitukset eivät ole esimerkissä käytössä.',
     ],
   },
   {

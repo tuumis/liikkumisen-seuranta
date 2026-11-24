@@ -9,6 +9,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.52',
+    date: '24.11.2026',
+    items: [
+      'Alkusivun kuvat on päivitetty esimerkkitilasta, ja tekstit kertovat uusista ominaisuuksista: viikon huomiot, kuittaa tiedoilla, suosikkilajit, joukkueet ja treeniryhmät, pelipäivän pikakirjaus sekä jakokuvat ja videot.',
+      'Ohjeessa uudet kohdat esimerkkitilasta, pelipäivän pikakirjauksesta, PC:n peli-ilmoituksista ja joukkueen sarjasta.',
+      'Esimerkkitilassa Einolla on nyt oma futiskoulu ja pelejä, ja koko perheen kalenterissa sisarusten pelit näkyvät samana päivänä.',
+    ],
+  },
+  {
     version: '1.1.51',
     date: '24.11.2026',
     items: [

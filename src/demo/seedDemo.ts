@@ -70,7 +70,7 @@ export async function seedDemo(repo: Repo, today: ISODate): Promise<DemoIds> {
     trackingStart: start,
     football: true,
   });
-  const eino = await repo.createProfile({ name: DEMO_NAMES.early, kind: 'child', birthYear: year - 5, birthMonth: 2, color: '#ea580c', trackingStart: start });
+  const eino = await repo.createProfile({ name: DEMO_NAMES.early, kind: 'child', birthYear: year - 5, birthMonth: 2, color: '#ea580c', trackingStart: start, football: true });
   await repo.setTypeHidden(eino.id, t('floorball'), true);
   await repo.updateActivityType(t('football_self'), { favorite: true });
   await repo.updateActivityType(t('cycling'), { favorite: true });
@@ -89,6 +89,8 @@ export async function seedDemo(repo: Repo, today: ISODate): Promise<DemoIds> {
   await repo.saveClub(CLUB, { city: 'Järvikylä', country: 'FI', shareColor: '#0f766e' });
   const team = await repo.saveTeam(aino.id, { name: `${CLUB} · Sininen · ${year - 9}`, format: '7v7', series: 'T10', kind: 'team' });
   const group = await repo.saveTeam(aino.id, { name: `${CLUB} · Taitoryhmä`, kind: 'group' });
+  // Einolla oma joukkue: perheen kalenterissa sisarusten pelit ja niiden päällekkäisyys.
+  const einoTeam = await repo.saveTeam(eino.id, { name: `${CLUB} · Keltainen · ${year - 5}`, format: '5v5', kind: 'team' });
 
   // ---------- viikkorytmi ----------
   const items = [
@@ -97,6 +99,7 @@ export async function seedDemo(repo: Repo, today: ISODate): Promise<DemoIds> {
     await repo.createTemplateItem(aino.id, { activityTypeId: t('school_pe'), weekdays: [2, 4], startTime: '09:00', durationMin: 45, validFrom: start }, today),
     await repo.createTemplateItem(eino.id, { activityTypeId: t('swimming'), weekdays: [6], startTime: '10:00', durationMin: 45, validFrom: start, label: 'Uimakoulu' }, today),
     await repo.createTemplateItem(eino.id, { activityTypeId: t('gymnastics'), weekdays: [3], startTime: '17:00', durationMin: 45, validFrom: start, label: 'Temppujumppa' }, today),
+    await repo.createTemplateItem(eino.id, { activityTypeId: t('football_training'), weekdays: [2], startTime: '17:00', durationMin: 45, validFrom: start, teamId: einoTeam.id, label: 'Futiskoulu' }, today),
   ];
   for (const it of items) await repo.backfillTemplateItem(it.id, today);
   await repo.applyHolidaySkips();
@@ -241,6 +244,16 @@ export async function seedDemo(repo: Repo, today: ISODate): Promise<DemoIds> {
     ],
   });
   await fixture(addDays(nextSat, 12), { kind: 'friendly', startTime: '18:00', durationMin: 90, games: [{ opponent: OPPONENTS[1] }], infoMissing: true, missingNote: 'Kenttä tarkentuu' });
+
+  // Einon pelit: mennyt tuloksineen ja tuleva samana päivänä kuin Ainon turnaus (päällekkäin).
+  const einoGame = (date: ISODate, extra: Partial<Parameters<Repo['createFixture']>[1]> & { kind: 'game' }) =>
+    repo.createFixture(eino.id, { date, startTime: '11:00', durationMin: 45, teamId: einoTeam.id, format: '5v5', ...extra });
+  const einoPast = wd(-1, 7);
+  if (past(einoPast)) {
+    const { plan } = await einoGame(einoPast, { kind: 'game', opponent: OPPONENTS[1], location: 'Järvikylän tekonurmi' });
+    await repo.recordGameResult({ planId: plan.id }, { goalsFor: 4, goalsAgainst: 4, playerGoals: 1, played: 'full' }, today);
+  }
+  await einoGame(addDays(nextSat, 8), { kind: 'game', startTime: '10:30', opponent: OPPONENTS[2], location: 'Harjun halli' });
 
   await repo.setMeta('onboarded', true);
   await repo.setMeta('demoSeeded', true);
