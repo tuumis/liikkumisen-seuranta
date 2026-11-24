@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.56',
+    date: '24.11.2026',
+    items: [
+      'Puhelimen lisäyspainike on nyt pienempi ja pyöreä, eikä siinä ole hehkuvaa varjoa.',
+      'Viikko-näkymän ohjetekstit mainitsevat myös loukkaantumispäivän.',
+    ],
+  },
+  {
     version: '1.1.55',
     date: '24.11.2026',
     items: [

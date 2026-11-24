@@ -503,11 +503,11 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
       </ol>
       )}
       {daysView === 'table' ? (
-        <p className="text-center text-xs text-slate-500">Päivän nimestä: lisää kerta, sairas- tai matkapäivä. Kerrasta muokkaus, Arki-napista arkiliikunnan tarkistus.</p>
+        <p className="text-center text-xs text-slate-500">Päivän nimestä: lisää kerta, sairas-, matka- tai loukkaantumispäivä. Kerrasta muokkaus, Arki-napista arkiliikunnan tarkistus.</p>
       ) : (
         <>
-          <p className="text-center text-xs text-slate-500 lg:hidden">Pitkä painallus päivään: sairas- tai matkapäivä. Pyyhkäise vaihtaaksesi viikkoa.</p>
-          <p className="hidden text-center text-xs text-slate-500 lg:block">Päivän ⋯ tai hiiren oikea painike: lisää kerta, sairas- tai matkapäivä.</p>
+          <p className="text-center text-xs text-slate-500 lg:hidden">Pitkä painallus päivään: sairas-, matka- tai loukkaantumispäivä. Pyyhkäise vaihtaaksesi viikkoa.</p>
+          <p className="hidden text-center text-xs text-slate-500 lg:block">Päivän ⋯ tai hiiren oikea painike: lisää kerta, sairas-, matka- tai loukkaantumispäivä.</p>
         </>
       )}
     </section>
@@ -572,7 +572,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
           onEstimate={() => setEstimateDay(day)}
         />
       </ol>
-      <p className="text-center text-xs text-slate-500">Pyyhkäise vaihtaaksesi päivää. Suunnitelman kuittaat tehdyksi pyyhkäisemällä sitä oikealle. Pitkä painallus päivään: sairas- tai matkapäivä.</p>
+      <p className="text-center text-xs text-slate-500">Pyyhkäise vaihtaaksesi päivää. Suunnitelman kuittaat tehdyksi pyyhkäisemällä sitä oikealle. Pitkä painallus päivään: sairas-, matka- tai loukkaantumispäivä.</p>
     </div>
   );
 
@@ -671,17 +671,18 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
 
       {profile && (
         <>
+          {/* Lisäyspainike (24.11.2026, käyttäjän valinta B): pieni pyöreä, ei hehkuvaa varjoa. */}
           <button
             ref={fabRef}
             type="button"
             onClick={() => setQuickAdd({})}
             tabIndex={scrolling || fabCovers ? -1 : 0}
-            className={`fixed bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+5.5rem)] right-5 z-20 flex size-16 items-center justify-center rounded-[1.4rem] bg-green-700 text-white shadow-[0_14px_30px_-10px_rgb(var(--accent-rgb)/0.8)] transition-[transform,opacity] duration-300 [transition-timing-function:var(--ease-out)] hover:bg-green-800 active:scale-95 sm:right-[max(1.25rem,calc(50%-19rem))] md:right-[max(1.25rem,calc(50%-21rem))] lg:hidden ${
+            className={`fixed bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+5.5rem)] right-5 z-20 flex size-13 items-center justify-center rounded-full bg-green-700 text-white shadow-[0_6px_14px_-6px_rgb(0_0_0/0.35)] ring-1 ring-black/5 transition-[transform,opacity] duration-300 [transition-timing-function:var(--ease-out)] hover:bg-green-800 active:scale-95 sm:right-[max(1.25rem,calc(50%-19rem))] md:right-[max(1.25rem,calc(50%-21rem))] lg:hidden ${
               scrolling || fabCovers ? 'pointer-events-none translate-y-6 scale-90 opacity-0' : 'opacity-100'
             }`}
             aria-label="Lisää kerta"
           >
-            <IconPlus size="1.75rem" strokeWidth={2.2} />
+            <IconPlus size="1.5rem" strokeWidth={2.2} />
           </button>
 
           <EditLayoutSheet
