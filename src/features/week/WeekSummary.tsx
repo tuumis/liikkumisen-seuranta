@@ -107,7 +107,9 @@ export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: Pe
 
   return (
     <section className="hero anim-rise p-5 sm:p-6 lg:p-7" style={{ ['--i' as string]: 0 }} aria-label="Viikon tilanne">
-      <div className="relative z-10">
+      {/* Asettelu kortin leveyden mukaan (24.11.2026): kapeassa pääpalstassa (PC, sivupalsta auki) lukulaatikot
+          menivät rinnakkain liian kapeiksi ja tekstit päällekkäin. */}
+      <div className="@container relative z-10">
         <div className="flex items-center justify-between gap-3">
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--hero-ink-soft)]">
             {isCurrentWeek ? 'Tämä viikko' : 'Viikon tilanne'} · {GROUP_LABEL[report.group.group]}
@@ -129,7 +131,7 @@ export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: Pe
             </button>
           </div>
         ) : (
-          <div className={`mt-4 flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-7 ${ev.quality.lowData ? 'opacity-80' : ''}`}>
+          <div className={`mt-4 flex flex-col gap-5 @xl:flex-row @xl:items-center @xl:gap-7 ${ev.quality.lowData ? 'opacity-80' : ''}`}>
             <div className={`relative flex items-center gap-5 ${party.sparks ? 'celebrate' : ''}`}>
               {party.sparks && (
                 <span className="absolute left-0 top-0 size-[136px]">
@@ -147,7 +149,7 @@ export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: Pe
                 <span className="stat text-[40px] font-semibold">{shown.toFixed(decimals).replace('.', ',')}</span>
                 <span className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--hero-ink-soft)]">{main.unit}</span>
               </ProgressRing>
-              <div className="min-w-0 sm:hidden">
+              <div className="min-w-0 @xl:hidden">
                 <div className="text-sm font-semibold leading-snug">{main.label}</div>
                 <div className="mt-1 text-xs text-[var(--hero-ink-soft)]">{main.target}</div>
                 <div className="mt-2 text-xs leading-snug text-[var(--hero-ink-soft)]">{statusSentence(main.m, main.shortfall, report.period.kind, inProgress)}</div>
@@ -155,16 +157,16 @@ export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: Pe
             </div>
 
             <div className="min-w-0 flex-1">
-              <div className="hidden sm:block">
+              <div className="hidden @xl:block">
                 <div className="font-display text-xl font-semibold leading-snug lg:text-2xl">{main.label}</div>
                 <div className="mt-1 text-sm text-[var(--hero-ink-soft)]">
                   {statusSentence(main.m, main.shortfall, report.period.kind, inProgress)} · {main.target}
                 </div>
               </div>
-              <dl className="grid grid-cols-3 gap-2 sm:mt-5 sm:gap-3">
+              <dl className="grid grid-cols-3 gap-2 @xl:mt-5 @xl:gap-3">
                 {tiles.map((t, i) => (
                   <div key={t.label} className="anim-rise rounded-2xl bg-white/[0.08] px-3 py-2.5 ring-1 ring-white/[0.08]" style={{ ['--i' as string]: i + 2 }}>
-                    <dt className="min-h-[2lh] text-[11px] font-bold uppercase leading-tight tracking-wide text-[var(--hero-ink-soft)] sm:min-h-0 sm:text-[11px]">
+                    <dt className="min-h-[2lh] text-[11px] font-bold uppercase leading-tight tracking-wide text-[var(--hero-ink-soft)] @xl:min-h-0">
                       {t.term ? (
                         <Term id={t.term} vigorousMin={report.vigorousDay.min} className="!decoration-white/40 text-left" align={i === 2 ? 'right' : 'left'}>
                           {t.label}
@@ -174,7 +176,7 @@ export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: Pe
                       )}
                     </dt>
                     <dd className="stat mt-1.5 text-[22px] font-semibold lg:text-[26px]">{t.value}</dd>
-                    {t.sub && <dd className="mt-1 line-clamp-2 text-[11px] leading-snug text-[var(--hero-ink-soft)] sm:text-xs">{t.sub}</dd>}
+                    {t.sub && <dd className="mt-1 line-clamp-2 text-[11px] leading-snug text-[var(--hero-ink-soft)] @xl:text-xs">{t.sub}</dd>}
                   </div>
                 ))}
               </dl>

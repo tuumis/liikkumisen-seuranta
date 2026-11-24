@@ -9,15 +9,14 @@ import { computeSessionMinutes, INTENSITY_PRESETS } from '../../domain/intensity
 import type { Effort, IntensityMinutes, Session } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { Button, Field, inputClass } from '../../ui/components';
-import { ToggleChip } from '../../ui/controls';
 import { IntensityPicker, isPreset, type IntensityMode } from './IntensityPicker';
 import { Sheet } from '../../ui/Sheet';
 import { LabelField } from './LabelField';
-import { useHiddenTypes } from './useLoggableTypes';
+import { saveStrengthDefault, StrengthFields } from './StrengthFields';
+import { favoritesFirst, typeOptionLabel, useHiddenTypes } from './useLoggableTypes';
 import { useFootballEnabledById } from '../football/useFootballEnabled';
 import { isClubFootball, isClubTraining } from '../../domain/football';
 import { parseSelfMin, TrainingSelfFields } from '../football/TrainingSelf';
-import { TermInfo } from '../../ui/glossary';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { dateSchema, durationSchema, manualSchema, optionalMinutes, showStrength } from './sessionForm';
@@ -47,6 +46,7 @@ export function SessionEditor({
   const [effort, setEffort] = useState<Effort>(0);
   const [muscle, setMuscle] = useState(false);
   const [bone, setBone] = useState(false);
+  const [saveDefault, setSaveDefault] = useState(false);
   const [note, setNote] = useState('');
   const [label, setLabel] = useState('');
   const [mode, setMode] = useState<IntensityMode>('profile');
@@ -69,6 +69,7 @@ export function SessionEditor({
     setEffort(session.effort);
     setMuscle(session.muscle);
     setBone(session.bone);
+    setSaveDefault(false);
     setNote(session.note ?? '');
     setLabel(session.label ?? '');
     setMode(session.intensitySource === 'manual' ? 'manual' : (session.intensityPreset ?? 'profile'));
@@ -155,6 +156,7 @@ export function SessionEditor({
         label,
         parts: partList ?? [],
       });
+      if (saveDefault) await saveStrengthDefault(type, muscle, bone);
       if (clubTraining && (selfBefore !== null || selfAfter !== null) && (sb !== self?.before || sa !== self?.after)) {
         await repo.setTrainingSelf(session.id, { before: sb ?? 0, after: sa ?? 0 });
       }
@@ -188,11 +190,10 @@ export function SessionEditor({
         >
           <Field label="Laji">
             <select className={inputClass} value={typeId} onChange={(e) => setTypeId(e.target.value)}>
-              {types
-                ?.filter((t) => (!t.archived && !hidden.has(t.id) && (footballOn || !isClubFootball(t))) || t.id === session.activityTypeId)
+              {favoritesFirst((types ?? []).filter((t) => (!t.archived && !hidden.has(t.id) && (footballOn || !isClubFootball(t))) || t.id === session.activityTypeId))
                 .map((t) => (
                   <option key={t.id} value={t.id}>
-                    {t.icon} {t.name}
+                    {typeOptionLabel(t)}
                   </option>
                 ))}
             </select>
@@ -224,29 +225,7 @@ export function SessionEditor({
             </div>
           )}
 
-          {type && (showStrength(type.muscleDefault, muscle) || showStrength(type.boneDefault, bone)) && (
-            <div className="space-y-1.5">
-              <div className="flex flex-wrap items-center gap-2">
-                {showStrength(type.muscleDefault, muscle) && (
-                  <span className="inline-flex items-center gap-1">
-                    <ToggleChip on={muscle} onChange={setMuscle}>
-                      Lihaksia vahvistava
-                    </ToggleChip>
-                    <TermInfo id="muscle" />
-                  </span>
-                )}
-                {showStrength(type.boneDefault, bone) && (
-                  <span className="inline-flex items-center gap-1">
-                    <ToggleChip on={bone} onChange={setBone}>
-                      Luustoa vahvistava
-                    </ToggleChip>
-                    <TermInfo id="bone" align="right" />
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-500">Lihakset: kiipeily, punnerrukset, kuntopiiri. Luusto: hypyt, juoksu, pallopelit.</p>
-            </div>
-          )}
+          {type && <StrengthFields type={type} muscle={muscle} bone={bone} onMuscle={setMuscle} onBone={setBone} saveDefault={saveDefault} onSaveDefault={setSaveDefault} />}
 
           {type && profileShares && (
             <div>

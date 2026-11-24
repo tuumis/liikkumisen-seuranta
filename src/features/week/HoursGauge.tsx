@@ -29,19 +29,18 @@ export function HoursGauge({ hours, isCurrentWeek, className = '' }: { hours: We
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
           <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Kaikki liikunta kestona</div>
-          <h2 id="hours-gauge-title" className="whitespace-nowrap font-display text-lg font-semibold text-slate-900">
+          <h2 id="hours-gauge-title" className="font-display text-lg font-semibold text-slate-900">
             Liikuntaa viikossa
           </h2>
-        </div>
-        <div className="flex items-center gap-2">
+          {/* Pienennettynä tiivistelmä otsikon alla (24.11.2026): kapeassa sivupalstassa tekstit menivät päällekkäin. */}
           {!open && (
-            <span className="whitespace-nowrap text-sm font-semibold tabular-nums text-slate-700">
-              {showExpected ? `${formatHours(hours.actualMin)} · arvio ${formatHours(hours.forecastMin)}` : formatHours(hours.actualMin)}
-              <span className="hidden sm:inline"> · {(showExpected ? expected : actual).label.toLowerCase()}</span>
-            </span>
+            <p className="text-sm font-semibold tabular-nums text-slate-700">
+              {showExpected ? `${formatHours(hours.actualMin)} · arvio ${formatHours(hours.forecastMin)}` : formatHours(hours.actualMin)} ·{' '}
+              {(showExpected ? expected : actual).label.toLowerCase()}
+            </p>
           )}
-          <CollapseToggle open={open} onToggle={toggle} label="Liikuntaa viikossa" />
         </div>
+        <CollapseToggle open={open} onToggle={toggle} label="Liikuntaa viikossa" />
       </div>
       <Collapse open={open}>
 

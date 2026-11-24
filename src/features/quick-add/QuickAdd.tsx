@@ -10,12 +10,12 @@ import type { ActivityType, Category, Effort, IntensityMinutes, ISODate, Profile
 import { repo } from '../../db/repositories';
 import { requestPersistentStorage } from '../../db/storage';
 import { IconBall, IconChevronLeft } from '../../ui/icons';
-import { TermInfo } from '../../ui/glossary';
 import { LabelField } from '../week/LabelField';
 import { useHiddenTypes, visibleTypes } from '../week/useLoggableTypes';
 import { useFootballEnabled, withoutClubFootball } from '../football/useFootballEnabled';
 import { Button, inputClass } from '../../ui/components';
 import { ToggleChip } from '../../ui/controls';
+import { saveStrengthDefault, StrengthFields } from '../week/StrengthFields';
 import { IntensityPicker, isPreset, type IntensityMode, type ManualDraft } from '../week/IntensityPicker';
 import { PartsEditor, partCandidates, partsFromDrafts, type PartDraft } from '../week/PartsEditor';
 import { CompanionsPicker, companionDuration, type Companion } from '../week/Companions';
@@ -47,7 +47,7 @@ function TypeButton({ t, onPick, label, football }: { t: ActivityType; onPick: (
       type="button"
       onClick={() => onPick(t)}
       aria-label={t.name}
-      className={`press card-interactive group flex min-h-[5.5rem] flex-col items-center justify-center gap-1.5 rounded-[1.25rem] p-2 text-center ${
+      className={`press card-interactive group relative flex min-h-[5.5rem] flex-col items-center justify-center gap-1.5 rounded-[1.25rem] p-2 text-center ${
         football ? 'bg-[var(--surface-raised)] shadow-sm' : 'card'
       }`}
     >
@@ -55,6 +55,11 @@ function TypeButton({ t, onPick, label, football }: { t: ActivityType; onPick: (
         <TypeGlyph t={t} />
       </span>
       <span className="text-xs font-semibold leading-tight text-slate-800">{label ?? t.name}</span>
+      {t.favorite && (
+        <span className="absolute right-2 top-1.5 text-xs text-amber-500" title="Suosikki" aria-hidden>
+          ★
+        </span>
+      )}
     </button>
   );
 }
@@ -91,6 +96,7 @@ export function QuickAdd({
   const [manual, setManual] = useState<ManualDraft>({ light: '', moderate: '', vigorous: '' });
   const [muscle, setMuscle] = useState(false);
   const [bone, setBone] = useState(false);
+  const [saveDefault, setSaveDefault] = useState(false);
   const [note, setNote] = useState('');
   const [label, setLabel] = useState('');
   const [played, setPlayed] = useState('');
@@ -124,13 +130,16 @@ export function QuickAdd({
   const recent = useMemo(() => {
     if (!types) return [];
     const byId = new Map(types.map((t) => [t.id, t]));
-    const list = (recentIds ?? []).map((id) => byId.get(id)).filter((t): t is ActivityType => !!t && !inFootballGroup(t));
-    // Täydennetään oletusjärjestyksellä, kunnes kuusi painiketta on täynnä (jalkapallo on omana ryhmänään).
+    // Suosikit ensin (24.11.2026; kaikki suosikit näkyvät), sitten viimeksi käytetyt.
+    const favs = types.filter((t) => t.favorite && !inFootballGroup(t));
+    const list = [...favs, ...(recentIds ?? []).map((id) => byId.get(id)).filter((t): t is ActivityType => !!t && !t.favorite && !inFootballGroup(t))];
+    const max = Math.max(6, Math.ceil(favs.length / 3) * 3);
+    // Täydennetään oletusjärjestyksellä, kunnes painikkeet ovat täynnä (jalkapallo on omana ryhmänään).
     for (const t of types.filter((x) => !inFootballGroup(x))) {
-      if (list.length >= 6) break;
+      if (list.length >= max) break;
       if (!list.includes(t)) list.push(t);
     }
-    return list.slice(0, 6);
+    return list.slice(0, max);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [types, recentIds, footballOn]);
   // Järjestys: treeni, omatoiminen, peli, turnaus.
@@ -178,6 +187,7 @@ export function QuickAdd({
     const d = strengthDefaults(t);
     setMuscle(d.muscle);
     setBone(d.bone);
+    setSaveDefault(false);
     setPlayed('');
     setLabel('');
     setParts([]);
@@ -230,6 +240,7 @@ export function QuickAdd({
         label,
         parts: partList.length ? partList : undefined,
       });
+      if (saveDefault) await saveStrengthDefault(type, muscle, bone);
       markFresh(s.id);
       const extra: Session[] = [];
       for (const { c, min } of others) {
@@ -434,29 +445,7 @@ export function QuickAdd({
               manual={manual}
               onManual={setManual}
             />
-            {(showStrength(type.muscleDefault) || showStrength(type.boneDefault)) && (
-              <div className="space-y-1.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  {showStrength(type.muscleDefault) && (
-                    <span className="inline-flex items-center gap-1">
-                      <ToggleChip on={muscle} onChange={setMuscle}>
-                        Lihaksia vahvistava
-                      </ToggleChip>
-                      <TermInfo id="muscle" />
-                    </span>
-                  )}
-                  {showStrength(type.boneDefault) && (
-                    <span className="inline-flex items-center gap-1">
-                      <ToggleChip on={bone} onChange={setBone}>
-                        Luustoa vahvistava
-                      </ToggleChip>
-                      <TermInfo id="bone" align="right" />
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-slate-500">Lihakset: kiipeily, punnerrukset, kuntopiiri. Luusto: hypyt, juoksu, pallopelit.</p>
-              </div>
-            )}
+            <StrengthFields type={type} muscle={muscle} bone={bone} onMuscle={setMuscle} onBone={setBone} saveDefault={saveDefault} onSaveDefault={setSaveDefault} />
             <input className={inputClass} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Muistiinpano" maxLength={200} aria-label="Muistiinpano" />
           </div>
 

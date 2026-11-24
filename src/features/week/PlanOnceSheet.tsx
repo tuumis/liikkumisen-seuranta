@@ -15,7 +15,7 @@ import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { useFootballEnabled, withoutClubFootball } from '../football/useFootballEnabled';
 import { LabelField } from './LabelField';
-import { useHiddenTypes, visibleTypes } from './useLoggableTypes';
+import { typeOptionLabel, useHiddenTypes, visibleTypes } from './useLoggableTypes';
 import { CompanionsPicker, companionDuration, type Companion } from './Companions';
 import { isClubTraining } from '../../domain/football';
 import { TrainingTeamField } from '../football/TrainingTeam';
@@ -96,7 +96,7 @@ export function PlanOnceSheet({ profile, date, onClose }: { profile: Profile; da
             <select className={inputClass} value={typeId} onChange={(e) => setTypeId(e.target.value)}>
               {types?.map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.icon} {t.name}
+                  {typeOptionLabel(t)}
                 </option>
               ))}
             </select>

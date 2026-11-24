@@ -9,6 +9,16 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.43',
+    date: '24.11.2026',
+    items: [
+      'Suosikkilajit: merkitse lajeja tähdellä kohdassa Asetukset → Liikkumismuodot ja tehoprofiilit, niin ne näkyvät lajivalinnoissa ensimmäisinä.',
+      'Lihaksia ja luustoa vahvistava -valinnat näkyvät nyt kaikilla lajeilla. Kun muutat valintaa, voit tallentaa sen lajin oletukseksi, esimerkiksi lihaksen esivalituksi jalkapallon treeneihin.',
+      'PC:n sivupalkissa on painike, joka vaihtaa vaalean ja tumman teeman.',
+      'Kaikki Viikko-näkymän kortit voi pienentää, eivätkä tekstit enää mene päällekkäin kapeassa ikkunassa.',
+    ],
+  },
+  {
     version: '1.1.42',
     date: '24.11.2026',
     items: [

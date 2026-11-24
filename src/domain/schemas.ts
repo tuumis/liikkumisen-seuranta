@@ -57,6 +57,7 @@ export const activityTypeSchema = either(
     boneDefault: z.enum(['yes', 'ask', 'no']),
     usesPlayedMinutes: z.boolean(),
     multiActivity: z.boolean().optional(),
+    favorite: z.boolean().optional(),
     builtIn: z.boolean(),
     archived: z.boolean(),
     sortOrder: z.number(),

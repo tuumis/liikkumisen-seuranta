@@ -61,6 +61,12 @@ export function useIsDark(): boolean {
 
 export function useThemeChoice(): [ThemeChoice, (c: ThemeChoice) => void] {
   const [choice, setChoice] = useState<ThemeChoice>(getThemeChoice);
+  // Sivupalkin pikavalinta (24.11.2026) muuttaa teemaa muualta: valinta pysyy ajan tasalla.
+  useEffect(() => {
+    const update = () => setChoice(getThemeChoice());
+    window.addEventListener('themechange', update);
+    return () => window.removeEventListener('themechange', update);
+  }, []);
   return [
     choice,
     (c) => {

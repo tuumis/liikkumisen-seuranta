@@ -445,7 +445,7 @@ export function createRepositories(db: AppDB = defaultDb) {
    */
   async function updateActivityType(
     id: UUID,
-    changes: Partial<Pick<ActivityType, 'shares' | 'muscleDefault' | 'boneDefault' | 'name' | 'icon' | 'image' | 'category' | 'movementGroup' | 'archived' | 'multiActivity'>>,
+    changes: Partial<Pick<ActivityType, 'shares' | 'muscleDefault' | 'boneDefault' | 'name' | 'icon' | 'image' | 'category' | 'movementGroup' | 'archived' | 'multiActivity' | 'favorite'>>,
   ): Promise<ActivityType> {
     const current = await getActivityType(id);
     // Sisäänrakennetun lajin nimi, kuvake ja kategoria pysyvät (tunnistus ja laskenta nojaavat niihin).
@@ -455,6 +455,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     const next: ActivityType = await stamp({ ...current, ...changes, shares: { ...(changes.shares ?? current.shares) } });
     if ('image' in changes && changes.image === undefined) delete next.image;
     if (!next.multiActivity) delete next.multiActivity;
+    if (!next.favorite) delete next.favorite;
     if (next.name !== undefined && !next.name.trim()) throw new Error('Anna lajille nimi');
     await db.activityTypes.put(next);
     return next;

@@ -14,7 +14,15 @@ export function useHiddenTypes(profileId: UUID | undefined): ReadonlySet<UUID> {
   return useMemo(() => (ids?.length ? new Set(ids) : EMPTY), [ids]);
 }
 
-/** Suodattaa piilotetut lajit; `keepId` (esim. muokattavan kerran nykyinen laji) jää aina näkyviin. */
+/** Suosikkilajit ensin (24.11.2026), muuten järjestys säilyy. */
+export function favoritesFirst<T extends ActivityType>(types: T[]): T[] {
+  return [...types.filter((t) => t.favorite), ...types.filter((t) => !t.favorite)];
+}
+
+/** Lajin nimi valikkoon: suosikilla tähti. */
+export const typeOptionLabel = (t: ActivityType) => `${t.icon} ${t.name}${t.favorite ? ' ★' : ''}`;
+
+/** Suodattaa piilotetut lajit (suosikit ensin); `keepId` (esim. muokattavan kerran nykyinen laji) jää aina näkyviin. */
 export function visibleTypes<T extends ActivityType>(types: T[] | undefined, hidden: ReadonlySet<UUID>, keepId?: string): T[] | undefined {
-  return types?.filter((t) => !hidden.has(t.id) || t.id === keepId);
+  return types && favoritesFirst(types.filter((t) => !hidden.has(t.id) || t.id === keepId));
 }

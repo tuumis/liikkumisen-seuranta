@@ -116,6 +116,8 @@ export interface ActivityType extends SyncFields {
   usesPlayedMinutes: boolean; // peli ja turnaus
   /** Kerran voi jakaa osiin (monta tekemistä, esim. liikuntapuisto); sisäänrakennetuista liikuntapuisto. */
   multiActivity?: boolean;
+  /** Suosikkilaji (24.11.2026): näkyy lajivalinnoissa ensimmäisenä; synkronoituu. */
+  favorite?: boolean;
   builtIn: boolean;
   archived: boolean;
   sortOrder: number;

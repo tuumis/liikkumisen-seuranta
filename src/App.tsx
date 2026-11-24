@@ -25,7 +25,8 @@ import { Avatar } from './ui/Avatar';
 import { hideUntilSettled } from './ui/settle';
 import { TabPanel } from './ui/TabPanel';
 import { formatDate } from './ui/format';
-import { IconBall, IconCalendarClock, IconChart, IconHelp, IconLeaf, IconSearch, IconSettings, IconWeek } from './ui/icons';
+import { IconBall, IconCalendarClock, IconChart, IconHelp, IconLeaf, IconMoon, IconSearch, IconSettings, IconSun, IconWeek } from './ui/icons';
+import { setThemeChoice, useIsDark } from './ui/theme';
 import { useUnconfirmedCounts } from './features/review/unconfirmed';
 import { requestWeek } from './features/desktop/settings';
 
@@ -338,6 +339,7 @@ export default function App() {
             <IconHelp size="1.25rem" />
             Ohje
           </button>
+          <ThemeToggle />
           <p className="flex items-start gap-2 px-4 text-[11px] leading-relaxed text-[var(--side-muted)]">
             <IconLeaf size="0.95rem" className="mt-px shrink-0" />
             Tiedot pysyvät tällä laitteella. Ei verkkoliikennettä.
@@ -539,5 +541,24 @@ function LoadingSkeleton() {
       </div>
       <div className="skeleton h-64 rounded-[1.75rem]" />
     </div>
+  );
+}
+
+/**
+ * Vaalea/tumma-pikavalinta PC:n sivupalkissa (24.11.2026, käyttäjän toive). Vaihtaa näkyvän teeman
+ * vastakkaiseksi; laitteen mukainen teema valitaan edelleen kohdasta Asetukset → Ulkoasu.
+ */
+function ThemeToggle() {
+  const dark = useIsDark();
+  return (
+    <button
+      type="button"
+      onClick={() => setThemeChoice(dark ? 'light' : 'dark')}
+      className="press flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-sm font-semibold text-[var(--side-ink-soft)] hover:bg-white/[0.06] hover:text-white"
+      aria-label={dark ? 'Vaihda vaaleaan teemaan' : 'Vaihda tummaan teemaan'}
+    >
+      {dark ? <IconSun size="1.25rem" /> : <IconMoon size="1.25rem" />}
+      {dark ? 'Vaalea teema' : 'Tumma teema'}
+    </button>
   );
 }

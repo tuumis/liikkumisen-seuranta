@@ -10,9 +10,10 @@ import type { ConfirmDetails } from '../../db/repositories';
 import { repo } from '../../db/repositories';
 import { Button, Field, inputClass } from '../../ui/components';
 import { ToggleChip } from '../../ui/controls';
+import { saveStrengthDefault, StrengthFields } from '../week/StrengthFields';
 import { TermInfo } from '../../ui/glossary';
 import { parseSelfMin, TrainingSelfFields } from '../football/TrainingSelf';
-import { durationSchema, showStrength } from '../week/sessionForm';
+import { durationSchema } from '../week/sessionForm';
 
 type Teho = 'profile' | IntensityPreset;
 
@@ -44,6 +45,7 @@ export function ConfirmForm({
   const [teho, setTeho] = useState<Teho>('profile');
   const [muscle, setMuscle] = useState(type?.muscleDefault === 'yes');
   const [bone, setBone] = useState(type?.boneDefault === 'yes');
+  const [saveDefault, setSaveDefault] = useState(false);
   const [before, setBefore] = useState<string | null>(null);
   const [after, setAfter] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ duration?: string; self?: string }>({});
@@ -68,11 +70,12 @@ export function ConfirmForm({
     if (!d.success || errs.self) return;
     setSaving(true);
     try {
+      if (saveDefault && type) await saveStrengthDefault(type, muscle, bone);
       await onConfirm({
         durationMin: d.data,
         intensityPreset: teho === 'profile' ? undefined : teho,
-        muscle: type && showStrength(type.muscleDefault, muscle) ? muscle : false,
-        bone: type && showStrength(type.boneDefault, bone) ? bone : false,
+        muscle,
+        bone,
         self: club ? { before: sb ?? 0, after: sa ?? 0 } : undefined,
       });
     } finally {
@@ -110,26 +113,7 @@ export function ConfirmForm({
         </p>
       </div>
 
-      {type && (showStrength(type.muscleDefault, muscle) || showStrength(type.boneDefault, bone)) && (
-        <div className="flex flex-wrap items-center gap-2">
-          {showStrength(type.muscleDefault, muscle) && (
-            <span className="inline-flex items-center gap-1">
-              <ToggleChip on={muscle} onChange={setMuscle}>
-                Lihaksia vahvistava
-              </ToggleChip>
-              <TermInfo id="muscle" />
-            </span>
-          )}
-          {showStrength(type.boneDefault, bone) && (
-            <span className="inline-flex items-center gap-1">
-              <ToggleChip on={bone} onChange={setBone}>
-                Luustoa vahvistava
-              </ToggleChip>
-              <TermInfo id="bone" align="right" />
-            </span>
-          )}
-        </div>
-      )}
+      {type && <StrengthFields type={type} muscle={muscle} bone={bone} onMuscle={setMuscle} onBone={setBone} saveDefault={saveDefault} onSaveDefault={setSaveDefault} />}
 
       {club && (
         <TrainingSelfFields

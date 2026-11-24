@@ -13,7 +13,7 @@ import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { durationSchema, issuesByField } from '../week/sessionForm';
 import { LabelField } from '../week/LabelField';
-import { useHiddenTypes, visibleTypes } from '../week/useLoggableTypes';
+import { typeOptionLabel, useHiddenTypes, visibleTypes } from '../week/useLoggableTypes';
 import { useFootballStatus, withoutClubFootball } from '../football/useFootballEnabled';
 import { DateInput } from '../../ui/DateInput';
 import { isClubTraining, trainingSelfText } from '../../domain/football';
@@ -242,7 +242,7 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
         <select className={inputClass} value={v.activityTypeId} onChange={(e) => setV((c) => ({ ...c, activityTypeId: e.target.value }))}>
           {types?.map((t) => (
             <option key={t.id} value={t.id}>
-              {t.icon} {t.name}
+              {typeOptionLabel(t)}
             </option>
           ))}
         </select>

@@ -49,8 +49,8 @@ export const GROUP_LABEL: Record<RecommendationGroup, string> = {
 
 export const STRENGTH_LABEL: Record<StrengthDefault, string> = {
   yes: 'esivalittu',
-  ask: 'kysytään',
-  no: '–',
+  ask: 'ei esivalittu',
+  no: 'ei esivalittu',
 };
 
 export const SKIP_REASON_LABEL: Record<SkipReason, string> = {

@@ -87,16 +87,14 @@ export function HoursCard({ report, isCurrentWeek }: { report: PeriodReport; isC
         <div className="min-w-0">
           <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Kaikki liikunta kestona</div>
           <h2 className="font-display text-lg font-semibold text-slate-900">Viikon liikuntatunnit</h2>
-        </div>
-        <div className="flex items-center gap-2">
           {!open && !empty && (
-            <span className="text-sm font-semibold tabular-nums text-slate-700">
+            <p className="text-sm font-semibold tabular-nums text-slate-700">
               {formatHours(h.actualMin)}
               {!pastWeek && ` / ${formatHours(h.forecastMin)}`}
-            </span>
+            </p>
           )}
-          <CollapseToggle open={open} onToggle={toggle} label="Viikon liikuntatunnit" />
         </div>
+        <CollapseToggle open={open} onToggle={toggle} label="Viikon liikuntatunnit" />
       </div>
       <Collapse open={open}>
         {empty ? (

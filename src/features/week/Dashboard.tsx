@@ -49,6 +49,8 @@ export function DailyChart({ report, today, target: dayTarget, title }: { report
   const [hover, setHover] = useState<number | null>(null);
   // Näkymä: reipas ja rasittava (suositusvertailu) tai kaikki liikunta kestona (myös kevyt).
   const [mode, setMode] = useState<'mvpa' | 'total'>('mvpa');
+  // Pienennettävä (24.11.2026): kaikki Viikko-näkymän kortit voi pienentää.
+  const [open, toggle] = useCollapsible('dailyChart');
   const hours = report.hours.days;
   // Osat: kerrat, vahvistettu arkiliikunta ja arkiliikunnan arvio (vahvistettu kuuluu arkiliikuntaan, ei kertoihin).
   // Tulevat päivät: arkiliikunnan arvio (vinoviivoitus) ja Kaikki liikunta -näkymässä suunnitellut kerrat katkoviivalla.
@@ -108,7 +110,9 @@ export function DailyChart({ report, today, target: dayTarget, title }: { report
           </div>
           <div className="text-xs text-slate-500">{ad ? dayLabel(ad.date) : '\u00a0'}</div>
         </div>
+        <CollapseToggle open={open} onToggle={toggle} label={mode === 'mvpa' ? title : 'Kaikki liikunta'} />
       </div>
+      <Collapse open={open}>
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
         <div className="inline-flex shrink-0 rounded-xl bg-[var(--surface-sunk)] p-0.5 text-xs font-bold" role="radiogroup" aria-label="Kaavion sisältö">
           {(
@@ -230,6 +234,7 @@ export function DailyChart({ report, today, target: dayTarget, title }: { report
           </span>
         )}
       </div>
+      </Collapse>
     </section>
   );
 }
@@ -238,6 +243,7 @@ export function DailyChart({ report, today, target: dayTarget, title }: { report
 
 export function RhythmCard({ report, today }: { report: PeriodReport; today: ISODate }) {
   const group = report.group.group;
+  const [open, toggle] = useCollapsible('rhythm');
   if (group === 'early_years') return null;
   const min = report.vigorousDay.min;
   const rows = [
@@ -250,8 +256,14 @@ export function RhythmCard({ report, today }: { report: PeriodReport; today: ISO
 
   return (
     <section className="card anim-rise p-4 sm:p-5 lg:p-6" style={{ ['--i' as string]: 3 }}>
-      <SectionLabel>Viikon rytmi</SectionLabel>
-      <h2 className="font-display text-lg font-semibold text-slate-900">Rasittava ja vahvistava</h2>
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <SectionLabel>Viikon rytmi</SectionLabel>
+          <h2 className="font-display text-lg font-semibold text-slate-900">Rasittava ja vahvistava</h2>
+        </div>
+        <CollapseToggle open={open} onToggle={toggle} label="Rasittava ja vahvistava" />
+      </div>
+      <Collapse open={open}>
       <div className="mt-4 space-y-4">
         {rows.map((r, ri) => {
           const count = report.allDays.filter((_, i) => r.on(i)).length;
@@ -292,6 +304,7 @@ export function RhythmCard({ report, today }: { report: PeriodReport; today: ISO
           );
         })}
       </div>
+      </Collapse>
     </section>
   );
 }
@@ -325,14 +338,12 @@ export function UpcomingCard({
   return (
     <section className="card anim-rise p-4 sm:p-5" style={{ ['--i' as string]: 4 }}>
       <div className="flex items-center justify-between gap-2">
-        <div>
+        <div className="min-w-0">
           <SectionLabel>Seuraavaksi</SectionLabel>
           <h2 className="font-display text-lg font-semibold text-slate-900">Tulevat kerrat</h2>
+          {!open && <p className="text-sm font-semibold text-slate-600">{list.length} tulossa</p>}
         </div>
-        <div className="flex items-center gap-2">
-          {!open && <span className="text-sm font-semibold text-slate-600">{list.length} tulossa</span>}
-          <CollapseToggle open={open} onToggle={toggle} label="Tulevat kerrat" />
-        </div>
+        <CollapseToggle open={open} onToggle={toggle} label="Tulevat kerrat" />
       </div>
       <Collapse open={open}>
       {plans && list.length === 0 ? (

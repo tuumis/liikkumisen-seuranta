@@ -31,7 +31,12 @@ export const optionalMinutes = z.union([z.string().trim().length(0).transform(()
 export const manualSchema = z.object({ light: minutes, moderate: minutes, vigorous: minutes });
 
 /** Näkyykö lihas-/luustovalinta (yes ja ask näkyvät; no piilotetaan, ellei valinta ole jo päällä). */
-export const showStrength = (d: StrengthDefault, current = false) => d !== 'no' || current;
+/**
+ * Näytetäänkö lihas/luusto-valinta. 24.11.2026 (käyttäjän valinta): valinnat näkyvät kaikilla lajeilla;
+ * lajin oletus 'yes' = esivalittu, 'ask' ja vanha 'no' = ei esivalittu. Parametrit säilyvät kutsujia varten.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const showStrength = (_d: StrengthDefault, _current = false) => true;
 
 export const strengthDefaults = (t: ActivityType) => ({ muscle: t.muscleDefault === 'yes', bone: t.boneDefault === 'yes' });
 

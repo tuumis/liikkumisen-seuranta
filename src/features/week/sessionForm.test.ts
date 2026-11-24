@@ -34,7 +34,6 @@ describe('kerran lomakevalidointi', () => {
   it('lihas/luusto: no piilotetaan, ellei valinta ole päällä', () => {
     expect(showStrength('yes')).toBe(true);
     expect(showStrength('ask')).toBe(true);
-    expect(showStrength('no')).toBe(false);
-    expect(showStrength('no', true)).toBe(true);
+    expect(showStrength('no')).toBe(true); // 24.11.2026: aina näkyvissä
   });
 });

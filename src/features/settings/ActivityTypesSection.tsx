@@ -23,11 +23,12 @@ import { TypeGlyph } from '../../ui/TypeGlyph';
 import { PhotoPicker } from '../../ui/Avatar';
 import { IconCheck, IconPencil, IconPlus } from '../../ui/icons';
 
+// 24.11.2026: valinnat näkyvät kirjauksessa aina, joten oletus on vain esivalittu tai ei ('no' = ei esivalittu).
 const STRENGTH_OPTIONS: { value: StrengthDefault; label: string }[] = [
   { value: 'yes', label: 'Esivalittu' },
-  { value: 'ask', label: 'Kysytään' },
-  { value: 'no', label: 'Ei näytetä' },
+  { value: 'ask', label: 'Ei esivalittu' },
 ];
+const asOption = (d: StrengthDefault): StrengthDefault => (d === 'yes' ? 'yes' : 'ask');
 
 /** Pikavalinnat oman lajin kuvakkeeksi (voi kirjoittaa myös oman emojin). */
 const EMOJI_PICKS = ['🏃', '🚴', '🛹', '🛼', '🧗', '🤸', '🏊', '⛸️', '🎿', '🛷', '🏀', '🏐', '🎾', '🏸', '🥋', '🧘', '🐴', '🎯', '🎢', '🌲', '⛹️', '🏓', '🥏', '✳️'];
@@ -57,7 +58,7 @@ export function ActivityTypesSection() {
           <TermInfo id="intensity" />
         </span>
       </p>
-      <p className="mt-2 text-xs text-slate-500">Jokaisen lajin kohdalla on lyhyt perustelu sen oletusjaolle.</p>
+      <p className="mt-2 text-xs text-slate-500">Jokaisen lajin kohdalla on lyhyt perustelu sen oletusjaolle. Tähdellä merkityt suosikkilajit näkyvät lajivalinnoissa ensimmäisinä.</p>
       <div className="mt-3">
         <Button variant="secondary" onClick={() => setEditing('new')}>
           <IconPlus size="1rem" /> Uusi laji
@@ -68,8 +69,8 @@ export function ActivityTypesSection() {
           {types?.map((t) => {
             const hidden = hiddenFor(t);
             return (
-              <li key={t.id}>
-                <button type="button" onClick={() => setEditing(t)} className="flex w-full items-start gap-2 py-3 text-left hover:bg-slate-50">
+              <li key={t.id} className="flex items-start gap-1">
+                <button type="button" onClick={() => setEditing(t)} className="flex min-w-0 flex-1 items-start gap-2 py-3 text-left hover:bg-slate-50">
                   <span className="text-xl" aria-hidden>
                     <TypeGlyph t={t} />
                   </span>
@@ -96,6 +97,17 @@ export function ActivityTypesSection() {
                   <span className="pt-1 text-slate-400" aria-hidden>
                     <IconPencil size="1rem" />
                   </span>
+                </button>
+                {/* Suosikki (24.11.2026): lajivalinnoissa ensimmäisenä. */}
+                <button
+                  type="button"
+                  onClick={() => void repo.updateActivityType(t.id, { favorite: !t.favorite })}
+                  aria-pressed={!!t.favorite}
+                  aria-label={t.favorite ? `Poista suosikeista: ${t.name}` : `Merkitse suosikiksi: ${t.name}`}
+                  title={t.favorite ? 'Poista suosikeista' : 'Merkitse suosikiksi'}
+                  className={`press hit mt-2 flex size-10 shrink-0 items-center justify-center rounded-full text-xl hover:bg-slate-100 ${t.favorite ? 'text-amber-500' : 'text-slate-300'}`}
+                >
+                  {t.favorite ? '★' : '☆'}
                 </button>
               </li>
             );
@@ -130,8 +142,8 @@ function TypeEditor({
   const existing = type && type !== 'new' ? type : undefined;
   const custom = isNew || (existing && !existing.builtIn);
   const [pcts, setPcts] = useState(() => (existing ? sharesToPcts(existing.shares) : { light: String(NEW_SHARES.light), moderate: String(NEW_SHARES.moderate), vigorous: String(NEW_SHARES.vigorous) }));
-  const [muscle, setMuscle] = useState<StrengthDefault>(existing?.muscleDefault ?? 'ask');
-  const [bone, setBone] = useState<StrengthDefault>(existing?.boneDefault ?? 'ask');
+  const [muscle, setMuscle] = useState<StrengthDefault>(asOption(existing?.muscleDefault ?? 'ask'));
+  const [bone, setBone] = useState<StrengthDefault>(asOption(existing?.boneDefault ?? 'ask'));
   const [name, setName] = useState(existing?.name ?? '');
   const [icon, setIcon] = useState(existing?.icon ?? '🏃');
   const [image, setImage] = useState<string | undefined>(existing?.image);
@@ -184,8 +196,8 @@ function TypeEditor({
   async function restore() {
     const t = await repo.restoreActivityTypeDefaults(existing!.id);
     setPcts(sharesToPcts(t.shares));
-    setMuscle(t.muscleDefault);
-    setBone(t.boneDefault);
+    setMuscle(asOption(t.muscleDefault));
+    setBone(asOption(t.boneDefault));
     setSaved(t);
     toast('Lähtöoletukset palautettu');
   }
