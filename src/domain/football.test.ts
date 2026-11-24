@@ -87,6 +87,26 @@ describe('A17 pelit ja tulokset', () => {
     expect(summarizeGames(rows)).toMatchObject({ games: 4, noResult: 4, wins: 0, playedMinTotal: 60, playedMinAvg: 15 });
   });
 
+  it('"Osan" näkyy peliaikana arviona (pelin pituus × peliaika-arvio), myös turnauksen pelissä (24.11.2026)', () => {
+    const s = [
+      session({ id: 'g', date: '2026-09-05', activityTypeId: GAME, minutes: M, durationMin: 75, warmupMin: 15, playShare: 0.7 }),
+      session({ id: 't', date: '2026-09-06', activityTypeId: TOURNAMENT, minutes: M, playShare: 0.5 }),
+    ];
+    const d = new Map([
+      ['g', fd('g', { played: 'part' })],
+      ['t', fd('t', { gameLengthMin: 20, games: [{ played: 'part' }, { played: 'full' }, { played: 'none' }, {}] })],
+    ]);
+    const rows = gameRows(s, d, types);
+    expect(rows.map((r) => [r.playedMin, r.playedEstimate])).toEqual([
+      [42, true],
+      [10, true],
+      [20, undefined],
+      [0, undefined],
+      [undefined, undefined],
+    ]);
+    expect(summarizeGames(rows).playedMinTotal).toBe(72);
+  });
+
   it('peliaika yhteensä ja keskimäärin per peli (vain peleistä, joille aika on kirjattu)', () => {
     const { s, d } = fixtureA17();
     const sum = summarizeGames(gameRows(s, d, types));

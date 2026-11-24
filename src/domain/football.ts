@@ -23,7 +23,19 @@ import type {
   Session,
   UUID,
 } from './types';
-import { DEFAULT_GAME_WARMUP_MIN } from './intensity';
+import { DEFAULT_GAME_WARMUP_MIN, DEFAULT_PLAY_SHARE, roundMinutes } from './intensity';
+import { defaultGameLength } from './tournamentTime';
+
+/**
+ * Pelasiko-valinnan minuutit (24.11.2026, käyttäjän havainto: "Osan (70 %)" ei päivittänyt peliaikaa
+ * tuloksissa): Koko pelin = pelin pituus, Ei pelannut = 0, Osan = pelin pituus × peliaika-arvio.
+ */
+export function playedMinOf(played: PlayedState | undefined, gameMin: number, share: number | undefined): number | undefined {
+  if (played === 'full') return gameMin;
+  if (played === 'none') return 0;
+  if (played === 'part') return roundMinutes(gameMin * (share ?? DEFAULT_PLAY_SHARE));
+  return undefined;
+}
 
 export type GameOutcome = 'W' | 'D' | 'L';
 
@@ -134,6 +146,8 @@ export interface GameRow {
   /** Vain, kun molemmat maalimäärät on kirjattu. */
   outcome?: GameOutcome;
   playedMin?: number;
+  /** Peliaika on arvio valinnasta "Osan" (ei tarkkoja minuutteja). */
+  playedEstimate?: true;
   /** Montako peliä rivi edustaa: 1, tai turnaus ilman pelirivejä = gamesCount. */
   games: number;
   level?: GameLevel;
@@ -217,9 +231,11 @@ export function gameRows(sessions: Session[], details: Map<UUID, FootballDetails
       ...(fd?.positions?.length ? { positions: fd.positions } : {}),
     };
     if (kind === 'game') {
+      const gameMin = Math.max(0, s.durationMin - (s.warmupMin ?? DEFAULT_GAME_WARMUP_MIN));
+      const playedMin = s.playedMin ?? playedMinOf(fd?.played, gameMin, s.playShare);
       rows.push({
         ...extra,
-        gameMin: Math.max(0, s.durationMin - (s.warmupMin ?? DEFAULT_GAME_WARMUP_MIN)),
+        gameMin,
         ...(fd?.played ? { played: fd.played } : {}),
         sessionId: s.id,
         date: s.date,
@@ -229,12 +245,14 @@ export function gameRows(sessions: Session[], details: Map<UUID, FootballDetails
         goalsFor: fd?.goalsFor,
         goalsAgainst: fd?.goalsAgainst,
         outcome: outcomeOf(fd?.goalsFor, fd?.goalsAgainst),
-        playedMin: s.playedMin,
+        playedMin,
+        ...(s.playedMin === undefined && fd?.played === 'part' ? { playedEstimate: true as const } : {}),
         games: 1,
         ...(fd?.playerGoals !== undefined ? { playerGoals: fd.playerGoals } : {}),
         ...(fd?.homeAway ? { homeAway: fd.homeAway } : {}),
       });
     } else if (fd?.games && fd.games.length > 0) {
+      const len = fd.gameLengthMin ?? defaultGameLength(fd.format);
       fd.games.forEach((g, i) =>
         rows.push({
           ...extra,
@@ -248,7 +266,8 @@ export function gameRows(sessions: Session[], details: Map<UUID, FootballDetails
           goalsFor: g.goalsFor,
           goalsAgainst: g.goalsAgainst,
           outcome: outcomeOf(g.goalsFor, g.goalsAgainst),
-          playedMin: g.playedMin,
+          playedMin: g.playedMin ?? playedMinOf(g.played, len, s.playShare),
+          ...(g.playedMin === undefined && g.played === 'part' ? { playedEstimate: true as const } : {}),
           games: 1,
           ...(fd.gameLengthMin ? { gameMin: fd.gameLengthMin } : {}),
           ...(g.played ? { played: g.played } : {}),
@@ -448,7 +467,7 @@ export function playSummary(rows: GameRow[]): PlaySummary {
     if (r.played) played[r.played] += r.games;
     const len = r.gameMin;
     if (!len || len <= 0) continue;
-    if (r.playedMin !== undefined && r.playedMin !== null) {
+    if (r.playedMin !== undefined && r.playedMin !== null && !r.playedEstimate) {
       onField += Math.min(r.playedMin, len);
       length += len;
       shareGames += r.games;

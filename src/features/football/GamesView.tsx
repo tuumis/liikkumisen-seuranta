@@ -243,7 +243,7 @@ function GameLine({ r, showDate }: { r: GameRow; showDate: boolean }) {
               r.series,
               r.format,
               r.positions?.map((p) => POSITION_LABEL[p].toLowerCase()).join(', '),
-              r.playedMin !== undefined && `pelattu ${r.playedMin} min`,
+              r.playedMin !== undefined && `pelattu ${r.playedEstimate ? '~' : ''}${r.playedMin} min`,
               r.playerGoals ? `⚽ ${r.playerGoals} ${r.playerGoals === 1 ? 'maali' : 'maalia'}` : undefined,
             ]
               .filter(Boolean)

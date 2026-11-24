@@ -13,7 +13,7 @@ import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { ConflictSheet } from '../sync/ConflictSheet';
 import { pcAutoSync } from '../sync/useSync';
-import { requestWeek, showNotification, useDesktopSettings } from './settings';
+import { closeNotification, requestWeek, showNotification, shownNotificationTags, useDesktopSettings } from './settings';
 import { holidayDates } from '../../domain/holidays';
 
 const BASE_TITLE = typeof document !== 'undefined' ? document.title : 'Liikkumisen seuranta';
@@ -92,17 +92,22 @@ export function DesktopAgent({ onOpen }: { onOpen: (profileId: string) => void }
           const name = p.label ?? data.types.get(p.activityTypeId)?.name ?? 'Kerta';
           const start = p.startTime ?? '';
           const end = r.endOf(p);
-          void showNotification(
-            `${name} päättyi`,
-            `${r.profile.name} · ${start}${end !== undefined ? `–${hhmm(end)}` : ''} · Kuittaa tehdyksi tai merkitse "Ei tehty"`,
-            `plan-${p.id}`,
-            () => {
-              onOpen(r.profile.id);
-              // Klikkaus avaa suoraan kuittauksen (18.11.2026), ei pelkkää Viikko-näkymää; päättyneen
-              // kerran kuittauslomake valmiiksi auki (24.11.2026: verryttely, teho, lihas/luusto samalla).
-              requestWeek(true, p.id);
-            },
-          );
+          // Tila tarkistetaan vielä suoraan tietokannasta juuri ennen ilmoitusta (24.11.2026, käyttäjän
+          // havainto: etukäteen kuitatusta kerrasta tuli silti ilmoitus).
+          void repo.isPlanOpen(p.id).then((open) => {
+            if (!open) return;
+            void showNotification(
+              `${name} päättyi`,
+              `${r.profile.name} · ${start}${end !== undefined ? `–${hhmm(end)}` : ''} · Kuittaa tehdyksi tai merkitse "Ei tehty"`,
+              `plan-${p.id}`,
+              () => {
+                onOpen(r.profile.id);
+                // Klikkaus avaa suoraan kuittauksen (18.11.2026), ei pelkkää Viikko-näkymää; päättyneen
+                // kerran kuittauslomake valmiiksi auki (24.11.2026: verryttely, teho, lihas/luusto samalla).
+                requestWeek(true, p.id);
+              },
+            );
+          });
         }
       }
     }
@@ -131,6 +136,13 @@ export function DesktopAgent({ onOpen }: { onOpen: (profileId: string) => void }
       }
     }
   }, [nowMin, t, data, settings.notify, settings.planEnd, settings.evening, settings.eveningTime]);
+
+  // Kuitattujen (tai ohitettujen) kertojen ilmoitukset suljetaan.
+  useEffect(() => {
+    if (!data) return;
+    const open = new Set(data.rows.flatMap((r) => r.plans.map((p) => `plan-${p.id}`)));
+    for (const tag of shownNotificationTags('plan-')) if (!open.has(tag)) void closeNotification(tag);
+  }, [data]);
 
   // PC: automaattinen synkronointi käynnistyessä, minuutin välein, ikkunan saadessa fokuksen ja
   // ikkunasta poistuttaessa (muutokset ehtivät tiedostoon ennen kuin puhelin lukee sen). Tiedosto

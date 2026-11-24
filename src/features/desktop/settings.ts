@@ -100,11 +100,18 @@ export function useInstallPrompt(): (() => Promise<boolean>) | null {
 export const notificationsSupported = () => typeof window !== 'undefined' && 'Notification' in window;
 
 /** Näyttää ilmoituksen; klikkaus tuo sovelluksen eteen. Puhelimella (ei Notification-konstruktoria) service workerin kautta. */
+/** Näytetyt ilmoitukset tunnisteittain (suljetaan, kun kerta kuitataan). */
+const shown = new Map<string, Notification>();
+
 export async function showNotification(title: string, body: string, tag: string, onClick?: () => void): Promise<void> {
   if (!notificationsSupported() || Notification.permission !== 'granted') return;
   const icon = new URL('pwa-192.png', document.baseURI).href;
   try {
     const n = new Notification(title, { body, tag, icon });
+    shown.set(tag, n);
+    n.onclose = () => {
+      if (shown.get(tag) === n) shown.delete(tag);
+    };
     n.onclick = () => {
       window.focus();
       onClick?.();
@@ -113,6 +120,26 @@ export async function showNotification(title: string, body: string, tag: string,
   } catch {
     const reg = await navigator.serviceWorker?.getRegistration();
     await reg?.showNotification(title, { body, tag, icon });
+  }
+}
+
+/** Ilmoituksia näytetty tällä tunnisteen alulla (esim. 'plan-'). */
+export function shownNotificationTags(prefix: string): string[] {
+  return [...shown.keys()].filter((t) => t.startsWith(prefix));
+}
+
+/**
+ * Sulkee ilmoituksen (24.11.2026): kuitatun kerran "päättyi"-ilmoitus ei jää Windowsin
+ * ilmoituskeskukseen. Myös palvelutyön kautta näytetyt suljetaan.
+ */
+export async function closeNotification(tag: string): Promise<void> {
+  shown.get(tag)?.close();
+  shown.delete(tag);
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration();
+    for (const n of (await reg?.getNotifications({ tag })) ?? []) n.close();
+  } catch {
+    /* ei tukea */
   }
 }
 

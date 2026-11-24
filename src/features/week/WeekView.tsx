@@ -592,7 +592,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
         const card = (id: WeekCardId) => {
           switch (id) {
             case 'hero':
-              return <WeekHero report={report} profile={profile} isCurrentWeek={isCurrent} onAdd={() => setQuickAdd({})} />;
+              return <WeekHero report={report} profile={profile} isCurrentWeek={isCurrent} />;
             case 'daily':
               return <DailyChart report={report} today={today} target={DAY_BAR_TARGET[info?.group ?? 'school_age']} title={chartTitle} />;
             case 'rhythm':

@@ -1104,9 +1104,22 @@ export function createRepositories(db: AppDB = defaultDb) {
       .where('[profileId+date]')
       .between([profileId, Dexie.minKey], [profileId, today], true, false)
       .toArray();
-    return live(rows)
-      .filter((p) => p.status === 'open')
+    const open = live(rows).filter((p) => p.status === 'open');
+    // Kerta, jolla on jo kirjaus (s:<id>), on kuitattu, vaikka suunnitelman tila olisi synkronoinnissa
+    // palannut avoimeksi (24.11.2026, käyttäjän havainto: ilmoitus jo kuitatusta kerrasta).
+    const linked = new Set(
+      live(await db.sessions.where('plannedSessionId').anyOf(open.map((p) => p.id)).toArray()).map((s) => s.plannedSessionId),
+    );
+    return open
+      .filter((p) => !linked.has(p.id))
       .sort((a, b) => a.date.localeCompare(b.date) || (a.startTime ?? '99').localeCompare(b.startTime ?? '99'));
+  }
+
+  /** Onko kerta yhä kuittaamatta (ilmoitusta ennen tarkistus suoraan tietokannasta). */
+  async function isPlanOpen(planId: UUID): Promise<boolean> {
+    const p = await db.plannedSessions.get(planId);
+    if (!p || p.deletedAt || p.status !== 'open') return false;
+    return live(await db.sessions.where('plannedSessionId').equals(planId).toArray()).length === 0;
   }
 
   /**
@@ -2516,6 +2529,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     backfillTemplateItem,
     plansInRange,
     unconfirmedPlans,
+    isPlanOpen,
     confirmPlanned,
     confirmMany,
     recordTournamentGame,

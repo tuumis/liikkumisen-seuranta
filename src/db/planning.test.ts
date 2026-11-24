@@ -276,6 +276,17 @@ describe('kuittaus ja ohitus', () => {
     expect((await repo.unconfirmedPlans('p1', WED)).map((p) => p.date)).toEqual(['2026-11-10']);
     expect(await repo.sessionsInRange('p1', MON, WED)).toEqual([]);
   });
+
+  it('kirjauksen saanut kerta ei ole kuittaamaton, vaikka tila palaisi avoimeksi (24.11.2026)', async () => {
+    const planId = await onePlan();
+    expect(await repo.isPlanOpen(planId)).toBe(true);
+    await repo.confirmPlanned(planId, WED);
+    expect(await repo.isPlanOpen(planId)).toBe(false);
+    const plan = (await db.plannedSessions.get(planId))!;
+    await db.plannedSessions.put({ ...plan, status: 'open' }); // esim. vanhempi tila synkronoinnista
+    expect((await repo.unconfirmedPlans('p1', '2026-12-31')).map((p) => p.id)).not.toContain(planId);
+    expect(await repo.isPlanOpen(planId)).toBe(false);
+  });
 });
 
 describe('suunnitellun kerran poisto kokonaan', () => {

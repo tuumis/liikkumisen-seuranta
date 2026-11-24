@@ -12,7 +12,6 @@ import { aboutMinutes, num1, statusShort, statusSentence } from '../../ui/status
 import { today as todayFn } from '../../ui/today';
 import { useCountUp } from '../../ui/motion';
 import { ProgressRing } from '../../ui/ProgressRing';
-import { IconPlus } from '../../ui/icons';
 import { GoalCard } from '../analysis/GoalCard';
 import { Term, type TermId } from '../../ui/glossary';
 import { Collapse, CollapseToggle, useCollapsible } from '../../ui/Collapse';
@@ -85,6 +84,33 @@ export function weekModel(report: PeriodReport, settings: Settings): WeekModel {
   return { main: null, tiles: [] };
 }
 
+/** Suositusryhmän tavoite lyhyesti (viikon alun suunnitelmarivi). */
+const GROUP_TARGET: Record<PeriodReport['group']['group'], string> = {
+  school_age: 'tavoite 60 min reipasta ja rasittavaa päivässä',
+  early_years: 'tavoite 3 h liikkumista päivässä, josta 1 h vauhdikasta',
+  adult: 'tavoite 150 min reipasta viikossa',
+};
+
+/**
+ * Viikon alku ennen ensimmäistä arvioitavaa päivää (24.11.2026, käyttäjän toive: "Viikko on vasta alussa"
+ * -viesti oli turha): viikon suunnitelma lyhyesti, ei kehotusta eikä painiketta.
+ */
+export function weekPlanText(report: PeriodReport, upcoming: boolean): { title: string; sub: string } {
+  const a = report.adherence;
+  const planned = a.planned;
+  if (!upcoming) return { title: planned > 0 ? `${planned} ${planned === 1 ? 'kerta' : 'kertaa'} suunniteltu` : 'Ei kirjauksia', sub: 'Viikolta ei ole arvioitavia päiviä.' };
+  const parts = [
+    planned > 0 && report.hours.expected.sessions > 0 && `yhteensä ${formatHours(report.hours.expected.sessions)}`,
+    report.hours.forecastMin > 0 && `arvio koko viikolle noin ${formatHours(report.hours.forecastMin)}`,
+    GROUP_TARGET[report.group.group],
+  ].filter(Boolean) as string[];
+  const sub = parts.join(' · ');
+  return {
+    title: planned > 0 ? `${planned} ${planned === 1 ? 'kerta' : 'kertaa'} suunniteltu` : 'Ei suunniteltuja kertoja',
+    sub: sub.charAt(0).toUpperCase() + sub.slice(1),
+  };
+}
+
 const PILL = {
   met: 'bg-[var(--hero-pill-bg)] text-[var(--hero-pill-ink)]',
   near: 'bg-[#f3e3cc] text-[#6a4526]',
@@ -92,7 +118,7 @@ const PILL = {
 } as const;
 
 /** Etusivun pääkortti: metsänvihreä pinta, animoitu rengas ja tunnusluvut. */
-export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: PeriodReport; profile: Profile; isCurrentWeek: boolean; onAdd: () => void }) {
+export function WeekHero({ report, profile, isCurrentWeek }: { report: PeriodReport; profile: Profile; isCurrentWeek: boolean }) {
   const settings = useLiveQuery(() => repo.getSettings(), []) ?? DEFAULT_SETTINGS;
   const { main, tiles } = weekModel(report, settings);
   const ev = report.evaluation;
@@ -123,12 +149,9 @@ export function WeekHero({ report, profile, isCurrentWeek, onAdd }: { report: Pe
         </div>
 
         {!ev.evaluable || !main ? (
-          <div className="py-6">
-            <p className="font-display text-2xl font-semibold leading-snug">Viikko on vasta alussa.</p>
-            <p className="mt-1 max-w-md text-sm text-[var(--hero-ink-soft)]">Kirjaa ensimmäinen liikuntakerta, niin {profile.name}n tilanne suhteessa suosituksiin näkyy tässä.</p>
-            <button type="button" onClick={onAdd} className="press mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--side-ink)] px-4 text-sm font-bold text-[var(--accent)] shadow-md hover:bg-white">
-              <IconPlus size="1.1rem" /> Lisää kerta
-            </button>
+          <div className="py-4">
+            <p className="font-display text-2xl font-semibold leading-snug">{weekPlanText(report, inProgress).title}</p>
+            <p className="mt-1 max-w-md text-sm text-[var(--hero-ink-soft)]">{weekPlanText(report, inProgress).sub}</p>
           </div>
         ) : (
           <div className={`mt-4 flex flex-col gap-5 @xl:flex-row @xl:items-center @xl:gap-7 ${ev.quality.lowData ? 'opacity-80' : ''}`}>

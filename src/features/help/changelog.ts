@@ -9,6 +9,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.44',
+    date: '24.11.2026',
+    items: [
+      'Treenin päättymisestä ei enää tule ilmoitusta, jos kerta on jo kuitattu. Kuitatun kerran ilmoitus myös poistuu ilmoituksista.',
+      'Pelin peliaika päivittyy tuloksiin myös valinnalla "Osan": se lasketaan peliaika-arviosta (esim. ~42 min) ja näkyy tuloksissa ja tilastoissa.',
+      'Viikon alussa pääkortti näyttää viikon suunnitelman (suunnitellut kerrat ja arvio koko viikolle) turhan "Viikko on vasta alussa" -viestin sijaan.',
+    ],
+  },
+  {
     version: '1.1.43',
     date: '24.11.2026',
     items: [
