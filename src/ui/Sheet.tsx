@@ -9,6 +9,8 @@ import { takeMorphOrigin } from './morph';
 // Laskuri sallii sisäkkäiset paneelit (esim. kerran muokkaus suunnitelmapaneelin päällä).
 let locks = 0;
 let savedY = 0;
+/** Edellisen paneelin sulkemishetki: paneelista toiseen siirryttäessä tumma tausta ei häivy uudelleen esiin. */
+let lastCloseAt = -Infinity;
 export function lockScroll() {
   if (locks++ > 0) return;
   savedY = window.scrollY;
@@ -48,6 +50,13 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   // Avausanimaatio käynnistyy vasta, kun paneeli on piirretty ensimmäisen kerran (19.11.2026, käyttäjän havainto:
   // avautuminen ja taustan himmennys töksähtivät). Raskaan sisällön rakentaminen ei näin vie animaation alkua.
   const scrim = useRef<HTMLDivElement>(null);
+  // Sulkemishetki kirjataan asettelun vaiheessa, joten saman päivityksen aikana avautuva paneeli näkee sen.
+  useLayoutEffect(() => {
+    if (!open) return;
+    return () => {
+      lastCloseAt = performance.now();
+    };
+  }, [open]);
   const hold = useRef(false);
   const shownOnce = useRef(false);
   if (open && !shownOnce.current) {
@@ -57,6 +66,9 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   if (!open) shownOnce.current = hold.current = false;
   useLayoutEffect(() => {
     if (!open || !hold.current) return;
+    // Paneelista toiseen (24.11.2026, käyttäjän havainto: ruutu välähtää): edellinen tausta katosi heti ja uusi
+    // häivytettiin läpinäkyvästä, jolloin sivu näkyi hetken täysin kirkkaana. Nyt tausta pysyy tummana.
+    if (performance.now() - lastCloseAt < 300) scrim.current?.classList.add('scrim-instant');
     const o = origin.current;
     if (o && panel.current) {
       const r = panel.current.getBoundingClientRect();

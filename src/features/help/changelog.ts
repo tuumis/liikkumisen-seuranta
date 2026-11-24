@@ -9,6 +9,13 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.49',
+    date: '24.11.2026',
+    items: [
+      'Korjattu: ruutu välähti, kun paneelista avautui suoraan toinen paneeli (esim. päivän toiminnoista Lisää kerta, suunnitelmasta kerta tai kerrasta Lisätiedot). Tumma tausta pysyy nyt yhtenäisenä paneelien vaihtuessa.',
+    ],
+  },
+  {
     version: '1.1.48',
     date: '24.11.2026',
     items: [

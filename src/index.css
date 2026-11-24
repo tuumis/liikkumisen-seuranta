@@ -674,6 +674,9 @@ html[data-bg] body::before {
 .dark .scrim {
   background-color: rgb(0 0 0 / 0.6);
 }
+.scrim.scrim-instant {
+  animation: none;
+}
 .anim-fade {
   animation: fade 0.4s var(--ease-out) backwards;
 }
