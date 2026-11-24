@@ -154,7 +154,7 @@ function SectionContent({ id, profile, onProfileCreated }: { id: SettingsSection
         </>
       );
     case 'appearance':
-      return <AppearanceSection />;
+      return <AppearanceSection profile={profile} />;
     case 'privacy':
       return <PrivacySection onCleared={() => window.location.reload()} />;
   }

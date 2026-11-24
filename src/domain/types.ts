@@ -61,6 +61,10 @@ export interface SyncFields {
 }
 
 // ---------- profiili ----------
+/** Viikon pääkortin teemat: app = sovelluksen väriteema (oletus), profile = profiilin oma väri. */
+export type HeroTheme = 'app' | 'evening' | 'pitch' | 'morning' | 'graphite' | 'profile';
+export const HERO_THEME_IDS: readonly HeroTheme[] = ['app', 'evening', 'pitch', 'morning', 'graphite', 'profile'];
+
 export interface Profile extends SyncFields {
   id: UUID;
   name: string; // lempinimi riittää
@@ -87,6 +91,8 @@ export interface Profile extends SyncFields {
   insightsRec?: boolean;
   /** Viikon huomiot: false = urheilun kuormituksen huomiot (lapset) pois; puuttuessa päällä. */
   insightsLoad?: boolean;
+  /** Viikon pääkortin teema (24.11.2026); puuttuessa sovelluksen väriteema. Synkronoituu profiilin mukana. */
+  heroTheme?: HeroTheme;
   sortOrder: number;
   archived: boolean;
   createdAt: Timestamp;

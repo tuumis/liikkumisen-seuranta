@@ -34,6 +34,14 @@ export const IconBall = (p: IconProps) => (
     <path d="M12 3.5v4M15.6 10.1l4.3-1.3M14.2 14.3l2.6 3.6M9.8 14.3l-2.6 3.6M8.4 10.1 4.1 8.8" />
   </svg>
 );
+export const IconPalette = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 3.5a8.5 8.5 0 0 0 0 17c1.2 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.2-.3-.4-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8h2.1a4.3 4.3 0 0 0 3.8-4.3c0-3.7-3.8-6.7-8.5-6.7Z" />
+    <circle cx="7.6" cy="11.2" r="1.1" />
+    <circle cx="10.4" cy="7.6" r="1.1" />
+    <circle cx="14.9" cy="7.9" r="1.1" />
+  </svg>
+);
 export const IconChart = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M4 20h16" />

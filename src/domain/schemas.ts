@@ -36,6 +36,8 @@ export const profileSchema = either(
     hiddenTypeIds: z.array(z.string()).optional(),
     insightsRec: z.boolean().optional(),
     insightsLoad: z.boolean().optional(),
+    // Tuntematon teema (uudempi versio toisella laitteella) luetaan oletukseksi.
+    heroTheme: z.enum(['app', 'evening', 'pitch', 'morning', 'graphite', 'profile']).optional().catch(undefined),
     sortOrder: z.number(),
     archived: z.boolean(),
     createdAt: ts,

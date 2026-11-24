@@ -2,6 +2,7 @@
 // ei synkronoidu. public/theme-init.js asettaa teeman jo ennen Reactin käynnistystä (ei välähdystä).
 
 import { useEffect, useState } from 'react';
+import type { HeroTheme } from '../domain/types';
 
 export type ThemeChoice = 'system' | 'light' | 'dark';
 const KEY = 'theme';
@@ -77,6 +78,16 @@ export function useThemeChoice(): [ThemeChoice, (c: ThemeChoice) => void] {
 }
 
 // ---------- väriteema (korosteväri) ----------
+
+/** Viikon pääkortin teemat (24.11.2026): nimi, kuvaus ja pikavalitsimen näyte (CSS-tausta). */
+export const HERO_THEMES: { id: HeroTheme; label: string; text: string; swatch: string }[] = [
+  { id: 'app', label: 'Sovelluksen väri', text: 'Seuraa väriteemaa', swatch: '' },
+  { id: 'evening', label: 'Ilta', text: 'Syvä sininen ja koralli', swatch: 'linear-gradient(155deg, #2b3566, #151a33)' },
+  { id: 'pitch', label: 'Nurmi', text: 'Kentän raidat ja keskiympyrä', swatch: 'repeating-linear-gradient(90deg, #2f6b3f 0 6px, #2a6339 6px 12px)' },
+  { id: 'morning', label: 'Aamu', text: 'Vaalea, tumma teksti', swatch: 'linear-gradient(155deg, #f6f1e7, #e4d9c3)' },
+  { id: 'graphite', label: 'Hiili', text: 'Grafiitti ja meripihka', swatch: 'linear-gradient(155deg, #2c3236, #15181b)' },
+  { id: 'profile', label: 'Profiilin väri', text: 'Profiilin oma väri', swatch: '' },
+];
 
 export type AccentTheme = 'forest' | 'fjord' | 'heather' | 'graphite';
 export const ACCENT_THEMES: { id: AccentTheme; label: string; text: string; swatch: [string, string, string] }[] = [

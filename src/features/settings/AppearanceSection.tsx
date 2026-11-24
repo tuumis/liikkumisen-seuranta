@@ -1,7 +1,9 @@
 import { Button, Card } from '../../ui/components';
 import { Segmented } from '../../ui/controls';
 import { playSound, soundsSupported, useSoundsEnabled } from '../../ui/sound';
-import { ACCENT_THEMES, BACKGROUNDS, useAccent, useBackground, useThemeChoice, useViewMode, type BackgroundId, type ThemeChoice, type ViewMode } from '../../ui/theme';
+import type { Profile } from '../../domain/types';
+import { saveHeroTheme, swatchStyle } from '../week/HeroThemePicker';
+import { ACCENT_THEMES, BACKGROUNDS, HERO_THEMES, useAccent, useBackground, useThemeChoice, useViewMode, type BackgroundId, type ThemeChoice, type ViewMode } from '../../ui/theme';
 import { useRef, useState } from 'react';
 import { resizeBackground } from '../../ui/image';
 import { useToast } from '../../ui/Toast';
@@ -12,7 +14,7 @@ const VIEW_MODES: { id: ViewMode; label: string; text: string }[] = [
   { id: 'simple', label: 'Yksinkertainen', text: 'Vain tärkein: viikon tilanne ja päivät. Kirjaus, kuittaus ja muokkaus toimivat kuten ennenkin.' },
 ];
 
-export function AppearanceSection() {
+export function AppearanceSection({ profile }: { profile?: Profile }) {
   const [choice, setChoice] = useThemeChoice();
   const [accent, setAccent] = useAccent();
   const [view, setView] = useViewMode();
@@ -95,6 +97,8 @@ export function AppearanceSection() {
         </div>
         <p className="mt-3 text-xs text-slate-500">Väriteema vaihtaa korostevärit, navigaation ja kaavioiden pääsävyn. Kaaviovärit on tarkistettu erottuviksi myös värisokeille.</p>
       </Card>
+
+      {profile && <HeroThemeCard profile={profile} />}
 
       <BackgroundCard />
 
@@ -216,6 +220,39 @@ function BackgroundCard() {
       <p className="mt-3 text-xs text-slate-500">
         Piirretyillä taustoilla on vaalea ja tumma versio. Oma kuva tallentuu vain tälle laitteelle: se ei siirry synkronoinnissa eikä varmuuskopiossa. Valinta koskee vain tätä laitetta.
       </p>
+    </Card>
+  );
+}
+
+/** Viikon pääkortin teema valitulle profiilille (24.11.2026); sama kuin kortin kulman pikavalitsin. */
+function HeroThemeCard({ profile }: { profile: Profile }) {
+  const current = profile.heroTheme ?? 'app';
+  return (
+    <Card title={`Viikon pääkortti · ${profile.name}`}>
+      <p className="-mt-1 mb-3 text-sm text-slate-600">
+        Viikko-näkymän pääkortin teema tälle profiilille. Valinnan voi vaihtaa myös kortin kulman paletti-painikkeesta.
+      </p>
+      <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-3" role="radiogroup" aria-label={`Viikon pääkortin teema, ${profile.name}`}>
+        {HERO_THEMES.map((t) => {
+          const on = current === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => void saveHeroTheme(profile, t.id)}
+              className={`press card-interactive flex min-w-0 items-center gap-2.5 rounded-[1.25rem] p-2.5 text-left ${on ? 'bg-[var(--surface-raised)] shadow-md ring-2 ring-green-700' : 'card'}`}
+            >
+              <span className="size-10 shrink-0 rounded-xl shadow-sm" style={swatchStyle(t.id, profile)} aria-hidden />
+              <span className="min-w-0 flex-1">
+                <span className="block font-display text-[15px] font-semibold leading-tight text-slate-900">{t.label}</span>
+                <span className="block text-xs leading-snug text-slate-500">{t.text}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </Card>
   );
 }

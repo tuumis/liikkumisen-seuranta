@@ -16,6 +16,7 @@ import { GoalCard } from '../analysis/GoalCard';
 import { Term, type TermId } from '../../ui/glossary';
 import { Collapse, CollapseToggle, useCollapsible } from '../../ui/Collapse';
 import { Sparks, useCelebrateOnce, useMetStreak } from './celebrate';
+import { HeroThemePicker, heroThemeProps } from './HeroThemePicker';
 
 const pick = (d: DualMeasure, s: Settings) => (s.primaryView === 'logged' ? d.logged : d.combined);
 
@@ -114,7 +115,7 @@ export function weekPlanText(report: PeriodReport, upcoming: boolean): { title: 
 const PILL = {
   met: 'bg-[var(--hero-pill-bg)] text-[var(--hero-pill-ink)]',
   near: 'bg-[#f3e3cc] text-[#6a4526]',
-  below: 'bg-white/15 text-[var(--hero-ink)]',
+  below: 'bg-[var(--hero-glass-strong)] text-[var(--hero-ink)]',
 } as const;
 
 /** Etusivun pääkortti: metsänvihreä pinta, animoitu rengas ja tunnusluvut. */
@@ -129,9 +130,15 @@ export function WeekHero({ report, profile, isCurrentWeek }: { report: PeriodRep
   const met = !!main && ev.evaluable && main.m.status === 'met' && !inProgress;
   const streak = useMetStreak(profile, report.period.start, met);
   const party = useCelebrateOnce(profile.id, report.period.start, met && isCurrentWeek);
+  const theme = heroThemeProps(profile);
 
   return (
-    <section className="hero anim-rise p-5 sm:p-6 lg:p-7" style={{ ['--i' as string]: 0 }} aria-label="Viikon tilanne">
+    <section
+      className="hero anim-rise p-5 sm:p-6 lg:p-7"
+      data-hero={theme['data-hero']}
+      style={{ ['--i' as string]: 0, ...theme.style }}
+      aria-label="Viikon tilanne"
+    >
       {/* Asettelu kortin leveyden mukaan (24.11.2026): kapeassa pääpalstassa (PC, sivupalsta auki) lukulaatikot
           menivät rinnakkain liian kapeiksi ja tekstit päällekkäin. */}
       <div className="@container relative z-10">
@@ -187,10 +194,10 @@ export function WeekHero({ report, profile, isCurrentWeek }: { report: PeriodRep
               </div>
               <dl className="grid grid-cols-3 gap-2 @xl:mt-5 @xl:gap-3">
                 {tiles.map((t, i) => (
-                  <div key={t.label} className="anim-rise rounded-2xl bg-white/[0.08] px-3 py-2.5 ring-1 ring-white/[0.08]" style={{ ['--i' as string]: i + 2 }}>
+                  <div key={t.label} className="hero-glass anim-rise rounded-2xl px-3 py-2.5" style={{ ['--i' as string]: i + 2 }}>
                     <dt className="min-h-[2lh] text-[11px] font-bold uppercase leading-tight tracking-wide text-[var(--hero-ink-soft)] @xl:min-h-0">
                       {t.term ? (
-                        <Term id={t.term} vigorousMin={report.vigorousDay.min} className="!decoration-white/40 text-left" align={i === 2 ? 'right' : 'left'}>
+                        <Term id={t.term} vigorousMin={report.vigorousDay.min} className="!decoration-[color:var(--hero-line)] text-left" align={i === 2 ? 'right' : 'left'}>
                           {t.label}
                         </Term>
                       ) : (
@@ -211,7 +218,11 @@ export function WeekHero({ report, profile, isCurrentWeek }: { report: PeriodRep
           </p>
         )}
         {ev.evaluable && ev.quality.lowData && <p className="mt-3 text-xs text-[var(--hero-ink-soft)]">Kirjauksia on vielä vähän, joten vertailu on suuntaa antava.</p>}
-        <p className="mt-4 text-xs text-[var(--hero-ink-soft)] opacity-80">Luvut ovat arvioita lajien tyypillisestä tehosta.</p>
+        {/* Teeman pikavalinta alarivillä (yläreunassa tila loppui puhelimella). */}
+        <div className="-mb-2 mt-2 flex items-center justify-between gap-3">
+          <p className="text-xs text-[var(--hero-ink-soft)] opacity-80">Luvut ovat arvioita lajien tyypillisestä tehosta.</p>
+          <HeroThemePicker profile={profile} />
+        </div>
       </div>
     </section>
   );

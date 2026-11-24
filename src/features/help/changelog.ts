@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.59',
+    date: '24.11.2026',
+    items: [
+      'Viikko-näkymän pääkortille voi valita teeman: Sovelluksen väri, Ilta, Nurmi, Aamu (vaalea), Hiili tai Profiilin väri.',
+      'Teeman vaihtaa kortin oikean alakulman paletti-painikkeesta tai kohdasta Asetukset → Ulkoasu. Valinta on profiilikohtainen ja siirtyy synkronoinnissa muille laitteille.',
+    ],
+  },
+  {
     version: '1.1.58',
     date: '24.11.2026',
     items: [

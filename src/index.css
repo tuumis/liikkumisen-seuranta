@@ -444,6 +444,16 @@ html[data-bg] body::before {
   border-radius: var(--radius-3xl);
   box-shadow: var(--shadow-lg), inset 0 1px 0 rgb(255 255 255 / 0.08);
 }
+.hero {
+  /* Lukulaatikot, merkit ja alleviivaukset kortin päällä (teemat voivat vaihtaa). */
+  --hero-glass: rgb(255 255 255 / 0.08);
+  --hero-glass-strong: rgb(255 255 255 / 0.15);
+  --hero-line: rgb(255 255 255 / 0.4);
+}
+.hero-glass {
+  background: var(--hero-glass);
+  box-shadow: inset 0 0 0 1px var(--hero-glass);
+}
 .hero::after {
   /* hienovarainen ääriviivakuvio (korkeuskäyrät) syvyyden tunteeksi */
   content: '';
@@ -1556,4 +1566,78 @@ html[data-bg] body::before {
     opacity: 1;
     transform: none;
   }
+}
+
+/*
+ * Viikon pääkortin teemat (24.11.2026, profiilikohtainen valinta Profile.heroTheme). Oletus (app)
+ * seuraa sovelluksen väriteemaa yllä; nämä korvaavat kortin omat muuttujat.
+ */
+.hero[data-hero='evening'] {
+  --hero-from: #2b3566;
+  --hero-to: #151a33;
+  --hero-ink: #f3f1fa;
+  --hero-ink-soft: #c3c6e6;
+  --hero-track: rgb(243 241 250 / 0.16);
+  --hero-accent: #f2a07f;
+  --hero-pill-bg: #dfe1f5;
+  --hero-pill-ink: #232a55;
+}
+.hero[data-hero='graphite'] {
+  --hero-from: #2c3236;
+  --hero-to: #15181b;
+  --hero-ink: #f1f1ee;
+  --hero-ink-soft: #b9bfc2;
+  --hero-track: rgb(241 241 238 / 0.14);
+  --hero-accent: #e8b562;
+  --hero-pill-bg: #e8b562;
+  --hero-pill-ink: #2a2110;
+}
+.hero[data-hero='pitch'] {
+  --hero-ink: #f4f8ef;
+  --hero-ink-soft: #d3e8cf;
+  --hero-track: rgb(244 248 239 / 0.2);
+  --hero-accent: #f4f8ef;
+  --hero-pill-bg: #e6f3d8;
+  --hero-pill-ink: #1f4a2a;
+  --hero-glass: rgb(16 40 22 / 0.28);
+  background: linear-gradient(180deg, transparent, rgb(0 0 0 / 0.16)), repeating-linear-gradient(90deg, #2f6b3f 0 12.5%, #2a6339 12.5% 25%);
+}
+.hero[data-hero='pitch']::after {
+  /* kentän keskiympyrä ja keskiviiva kalkkiviivoina */
+  background:
+    radial-gradient(circle at calc(100% - 2rem) 50%, transparent 0 5.5rem, rgb(255 255 255 / 0.2) 5.5rem calc(5.5rem + 2px), transparent calc(5.5rem + 2px)),
+    linear-gradient(90deg, transparent calc(100% - 2rem - 1px), rgb(255 255 255 / 0.2) calc(100% - 2rem - 1px) calc(100% - 2rem + 1px), transparent calc(100% - 2rem + 1px));
+}
+.hero[data-hero='morning'] {
+  --hero-from: #f6f1e7;
+  --hero-to: #ece3d2;
+  --hero-ink: #1d3340;
+  --hero-ink-soft: #4f6168;
+  --hero-track: rgb(31 74 91 / 0.14);
+  --hero-accent: #1f4a5b;
+  --hero-pill-bg: #1f4a5b;
+  --hero-pill-ink: #f6f1e7;
+  --hero-glass: rgb(31 74 91 / 0.06);
+  --hero-glass-strong: rgb(31 74 91 / 0.1);
+  --hero-line: rgb(29 51 64 / 0.35);
+  box-shadow: var(--shadow-lg), inset 0 0 0 1px rgb(60 50 30 / 0.08);
+}
+.hero[data-hero='morning']::after {
+  background: repeating-radial-gradient(circle at 110% -10%, transparent 0 22px, rgb(31 74 91 / 0.05) 22px 23px);
+}
+:root.dark .hero[data-hero='morning'] {
+  /* tummassa tilassa hillitympi vaalea, ettei kortti häikäise */
+  --hero-from: #e4dccb;
+  --hero-to: #d2c6ae;
+  --hero-ink-soft: #46565c;
+}
+.hero[data-hero='profile'] {
+  --hero-from: color-mix(in oklab, var(--hero-profile) 64%, #0b1015);
+  --hero-to: color-mix(in oklab, var(--hero-profile) 34%, #0b1015);
+  --hero-ink: #ffffff;
+  --hero-ink-soft: color-mix(in oklab, var(--hero-profile) 22%, #ffffff);
+  --hero-track: rgb(255 255 255 / 0.18);
+  --hero-accent: color-mix(in oklab, var(--hero-profile) 30%, #ffffff);
+  --hero-pill-bg: color-mix(in oklab, var(--hero-profile) 16%, #ffffff);
+  --hero-pill-ink: color-mix(in oklab, var(--hero-profile) 50%, #000000);
 }
