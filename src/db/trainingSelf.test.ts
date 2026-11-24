@@ -66,6 +66,20 @@ describe('omatoiminen verryttely', () => {
     expect((await db.sessions.toArray()).filter((s) => s.linkedTo)).toHaveLength(1);
   });
 
+  it('kuittaus lisätiedoilla: kesto, teho, lihas/luusto ja verryttely korvaa viikkorytmin oletuksen', async () => {
+    const { repo, planId } = await setup({ selfBeforeMin: 10, selfAfterMin: 5 });
+    const { session } = await repo.confirmPlanned(planId, TODAY, { durationMin: 75, intensityPreset: 'vigorous', muscle: true, bone: false, self: { before: 20, after: 0 } });
+    expect(session).toMatchObject({ durationMin: 75, intensityPreset: 'vigorous', effort: 0, muscle: true, bone: false });
+    expect(session.minutes.vigorous).toBeGreaterThan(session.minutes.light);
+    expect(sessionSchema.safeParse(session).success).toBe(true);
+    expect(await repo.getTrainingSelf(session.id)).toEqual({ before: 20, after: 0 });
+    // Verryttely 0 ja 0 = ei verryttelyä, vaikka viikkorytmissä on oletus.
+    const other = await setup({ selfBeforeMin: 10, selfAfterMin: 5 });
+    const r = await other.repo.confirmPlanned(other.planId, TODAY, { self: { before: 0, after: 0 } });
+    expect(await other.db.sessions.get(`w:${r.session.id}`)).toBeUndefined();
+    expect(r.session.intensityPreset).toBeUndefined();
+  });
+
   it('ilman oletusta ei kerran viereen tule mitään; kertaan voi lisätä, muuttaa ja poistaa', async () => {
     const { db, repo, planId } = await setup();
     const { session } = await repo.confirmPlanned(planId, TODAY);

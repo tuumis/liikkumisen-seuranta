@@ -1,21 +1,22 @@
 // "Käy viikko läpi" (SPEC 12): kaikki kuittaamattomat (open, päivä < tänään, sekä tämän päivän jo päättyneet).
-// Rivillä ✓ kuten suunniteltu, ✗ ei tehty → valinnainen syy, ✎ muokkaa kestoa.
+// Rivillä ✓ kuten suunniteltu, ✗ ei tehty → valinnainen syy, ✎ kuittaa tiedoilla (kesto, teho, lihas/luusto,
+// treenin omatoiminen verryttely; 24.11.2026). Ilmoituksesta avattaessa päättyneen kerran lomake on valmiiksi auki.
 
 import { TypeGlyph } from '../../ui/TypeGlyph';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import type { ActivityType, PlannedSession, Profile, Session, UUID } from '../../domain/types';
-import { Button, inputClass } from '../../ui/components';
+import { Button } from '../../ui/components';
 import { dayLabel } from '../../ui/format';
 import { Sheet } from '../../ui/Sheet';
 import { playSound } from '../../ui/sound';
 import { today } from '../../ui/today';
-import { durationSchema } from '../week/sessionForm';
 import { SkipReasons } from './SkipReasons';
 import { usePlanActions } from './usePlanActions';
 import { loadUnconfirmed, useMinuteTick } from './unconfirmed';
 import { IconCheck, IconClose, IconPencil } from '../../ui/icons';
 import { SwipeRow } from '../../ui/SwipeRow';
+import { ConfirmForm } from './ConfirmForm';
 
 export function ReviewSheet({
   open,
@@ -23,12 +24,15 @@ export function ReviewSheet({
   profile,
   types,
   onOpenSession,
+  focusPlanId,
 }: {
   open: boolean;
   onClose: () => void;
   profile: Profile;
   types: Map<UUID, ActivityType>;
   onOpenSession: (s: Session) => void;
+  /** Ilmoituksen kerta: ensimmäisenä ja kuittauslomake auki. */
+  focusPlanId?: string;
 }) {
   const minute = useMinuteTick();
   const plans = useLiveQuery(() => loadUnconfirmed(profile.id, today()), [profile.id, minute]);
@@ -53,9 +57,10 @@ export function ReviewSheet({
       ) : (
         <div className="space-y-3">
           <ul className="space-y-2">
-            {plans?.map((p) => (
-              <ReviewRow key={p.id} plan={p} type={types.get(p.activityTypeId)} actions={actions} />
-            ))}
+            {plans &&
+              [...plans.filter((p) => p.id === focusPlanId), ...plans.filter((p) => p.id !== focusPlanId)].map((p) => (
+                <ReviewRow key={p.id} plan={p} type={types.get(p.activityTypeId)} actions={actions} focused={p.id === focusPlanId} />
+              ))}
           </ul>
           {plans && plans.length > 1 && (
             <Button variant="secondary" className="w-full" onClick={() => actions.confirmAll(plans)}>
@@ -72,14 +77,17 @@ function ReviewRow({
   plan,
   type,
   actions,
+  focused = false,
 }: {
   plan: PlannedSession;
   type?: ActivityType;
   actions: ReturnType<typeof usePlanActions>;
+  focused?: boolean;
 }) {
-  const [mode, setMode] = useState<'idle' | 'skip' | 'edit'>('idle');
-  const [duration, setDuration] = useState(String(plan.durationMin));
-  const [error, setError] = useState<string>();
+  const [mode, setMode] = useState<'idle' | 'skip' | 'edit'>(focused ? 'edit' : 'idle');
+  useEffect(() => {
+    if (focused) setMode('edit');
+  }, [focused]);
 
   // Pyyhkäisy (kosketus): oikealle = tehty, vasemmalle = ei tehty (syyn valinta); vain perustilassa.
   const idle = mode === 'idle';
@@ -109,7 +117,7 @@ function ReviewRow({
             <IconButton label="Ei tehty" onClick={() => setMode('skip')} tone="red">
               <IconClose />
             </IconButton>
-            <IconButton label="Muokkaa kestoa" onClick={() => setMode('edit')}>
+            <IconButton label="Kuittaa tiedoilla (kesto, teho, lihas/luusto, verryttely)" onClick={() => setMode('edit')}>
               <IconPencil />
             </IconButton>
           </div>
@@ -122,30 +130,10 @@ function ReviewRow({
         </div>
       )}
       {mode === 'edit' && (
-        <form
-          className="mt-2 flex gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const d = durationSchema.safeParse(duration);
-            if (!d.success) return setError(d.error.issues[0].message);
-            void actions.confirm(plan, d.data);
-          }}
-        >
-          <input
-            className={inputClass}
-            inputMode="numeric"
-            autoFocus
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-            aria-label="Toteutunut kesto minuutteina"
-          />
-          <Button type="submit">Kuittaa</Button>
-          <Button variant="ghost" onClick={() => setMode('idle')}>
-            Peruuta
-          </Button>
-        </form>
+        <div className="mt-3 border-t border-[var(--line)] pt-3">
+          <ConfirmForm plan={plan} type={type} onConfirm={(d) => actions.confirm(plan, undefined, d)} onCancel={() => setMode('idle')} />
+        </div>
       )}
-      {error && <p className="mt-1 text-sm text-red-700">{error}</p>}
     </SwipeRow>
   );
 }

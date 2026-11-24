@@ -13,6 +13,8 @@ import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { SkipReasons } from '../review/SkipReasons';
 import { usePlanActions } from '../review/usePlanActions';
+import { ConfirmForm } from '../review/ConfirmForm';
+import { isClubTraining } from '../../domain/football';
 import { durationSchema } from './sessionForm';
 
 /** Kestovaihtoehdot kuittaukseen: suunniteltu ja sitä lyhyemmät/pidemmät yleiset kestot. */
@@ -40,6 +42,7 @@ export function PlanSheet({
   const [editDuration, setEditDuration] = useState('');
   const [editTime, setEditTime] = useState('');
   const [editing, setEditing] = useState(false);
+  const [details, setDetails] = useState(false);
   const [error, setError] = useState<string>();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -48,6 +51,7 @@ export function PlanSheet({
     setEditDuration(plan ? String(plan.durationMin) : '');
     setEditTime(plan?.startTime ?? '');
     setEditing(false);
+    setDetails(false);
     setError(undefined);
     setConfirmDelete(false);
   }, [plan]);
@@ -129,6 +133,16 @@ export function PlanSheet({
               </Button>
             </form>
             <p className="text-xs text-slate-500">Vihreä = suunniteltu kesto. Suunnitelma säilyy ennallaan vertailua varten (esim. 120 suunniteltu → 60 toteutunut).</p>
+            {/* Kuittaus lisätiedoilla (24.11.2026): teho, lihas/luusto ja treenin omatoiminen verryttely samalla. */}
+            <div className="card-sunk p-3">
+              {!details ? (
+                <button type="button" className="w-full text-left text-sm font-medium text-green-800" onClick={() => setDetails(true)}>
+                  Kuittaa tiedoilla (teho, lihas/luusto{isClubTraining(type) ? ', verryttely' : ''})
+                </button>
+              ) : (
+                <ConfirmForm plan={plan} type={type} onConfirm={(d) => run(() => actions.confirm(plan, undefined, d))()} onCancel={() => setDetails(false)} />
+              )}
+            </div>
           </div>
         )}
 

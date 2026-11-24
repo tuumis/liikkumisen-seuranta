@@ -120,20 +120,25 @@ export async function showNotification(title: string, body: string, tag: string,
 
 const REVIEW_EVENT = 'openweekrequest';
 let pendingReview: boolean | null = null;
+/** Ilmoituksen kerta (24.11.2026): läpikäynti avautuu tämän kerran kuittauslomake auki. */
+let pendingFocus: string | undefined;
 
 /** Pyytää Viikko-näkymää palaamaan kuluvaan viikkoon ja (review) avaamaan "Käy viikko läpi". */
-export function requestWeek(review: boolean) {
+export function requestWeek(review: boolean, focusPlanId?: string) {
   pendingReview = review;
+  pendingFocus = focusPlanId;
   window.dispatchEvent(new Event(REVIEW_EVENT));
 }
 
 /** Viikko-näkymän kuuntelija; käsittelee myös ennen kiinnitystä tulleen pyynnön. */
-export function subscribeWeekRequest(cb: (review: boolean) => void): () => void {
+export function subscribeWeekRequest(cb: (review: boolean, focusPlanId?: string) => void): () => void {
   const run = () => {
     if (pendingReview === null) return;
     const r = pendingReview;
+    const f = pendingFocus;
     pendingReview = null;
-    cb(r);
+    pendingFocus = undefined;
+    cb(r, f);
   };
   run();
   window.addEventListener(REVIEW_EVENT, run);

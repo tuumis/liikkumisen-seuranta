@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.42',
+    date: '24.11.2026',
+    items: [
+      'Kuittaa tiedoilla: treenin voi kuitata tehdyksi ja kertoa samalla toteutuneen keston, tehon (lajin arvio, kevyt, reipas tai rasittava), lihas- ja luustovalinnat sekä omatoimisen verryttelyn.',
+      'Lomake löytyy Käy viikko läpi -rivin kynästä ja päiväkortin suunnitelmasta. Kun painat ilmoitusta treenin päättymisestä, kyseisen treenin lomake on valmiiksi auki.',
+    ],
+  },
+  {
     version: '1.1.41',
     date: '24.11.2026',
     items: ['Jos synkronointi keskeytyy, viestin alla on painike Valitse kansio uudelleen. Saman pilvikansion valinta uudelleen korjaa vanhentuneen kansioyhteyden.'],

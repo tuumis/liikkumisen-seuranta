@@ -75,6 +75,16 @@ const live = <T extends Partial<SyncFields>>(rows: T[]): T[] => rows.filter((r) 
 export type DeviceRole = 'pc' | 'phone';
 
 /** Kerran tallennettavat tiedot (pikalisäys ja muokkaus). */
+/** Kuittauksen lisätiedot (24.11.2026): puuttuva kenttä = oletus (suunniteltu kesto, lajin arvio ja oletukset). */
+export interface ConfirmDetails {
+  durationMin?: number;
+  intensityPreset?: IntensityPreset;
+  muscle?: boolean;
+  bone?: boolean;
+  /** Seuran treenin omatoiminen verryttely; annettuna korvaa viikkorytmin oletuksen (0 ja 0 = ei verryttelyä). */
+  self?: TrainingSelf;
+}
+
 export interface SessionInput {
   activityTypeId: UUID;
   date: ISODate;
@@ -1107,7 +1117,7 @@ export function createRepositories(db: AppDB = defaultDb) {
   async function confirmPlanned(
     planId: UUID,
     today: ISODate,
-    opts: { durationMin?: number } = {},
+    opts: ConfirmDetails = {},
   ): Promise<{ session: Session; created: boolean }> {
     noteLocalChange();
     return db.transaction('rw', CONFIRM_TABLES(), async () => {
@@ -1141,9 +1151,11 @@ export function createRepositories(db: AppDB = defaultDb) {
         date: plan.date,
         startTime: plan.startTime,
         durationMin: opts.durationMin ?? plan.durationMin,
-        effort: fixtureLevel ? LEVEL_EFFORT[fixtureLevel] : 0,
-        muscle: type.muscleDefault === 'yes',
-        bone: type.boneDefault === 'yes',
+        // Tehon esiasetus kuittauksessa (24.11.2026) korvaa tason ponnistelukertoimen kuten kerran muokkauksessa.
+        effort: opts.intensityPreset ? 0 : fixtureLevel ? LEVEL_EFFORT[fixtureLevel] : 0,
+        intensityPreset: opts.intensityPreset,
+        muscle: opts.muscle ?? type.muscleDefault === 'yes',
+        bone: opts.bone ?? type.boneDefault === 'yes',
         warmupMin: type.usesPlayedMinutes ? gamesN * (fixture?.warmupMin ?? DEFAULT_GAME_WARMUP_MIN) : undefined,
         playShare: type.usesPlayedMinutes ? liveTeam?.playShare : undefined,
       };
@@ -1174,8 +1186,10 @@ export function createRepositories(db: AppDB = defaultDb) {
         if (team) session.teamId = team;
       }
       await db.sessions.put(session); // put herättää poistomerkityn henkiin
-      // Seuran treeni: viikkorytmin omatoiminen alku- ja loppuverryttely linkitetyksi kerraksi.
-      if (isClubTraining(type) && plan.templateItemId) {
+      // Seuran treeni: kuittauksessa annettu omatoiminen verryttely (24.11.2026), muuten viikkorytmin oletus.
+      if (isClubTraining(type) && opts.self) {
+        if (opts.self.before || opts.self.after) await putTrainingSelf(session, opts.self);
+      } else if (isClubTraining(type) && plan.templateItemId) {
         const item = await db.templateItems.get(plan.templateItemId);
         if (item && (item.selfBeforeMin || item.selfAfterMin)) await putTrainingSelf(session, { before: item.selfBeforeMin ?? 0, after: item.selfAfterMin ?? 0 });
       }

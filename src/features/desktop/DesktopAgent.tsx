@@ -98,8 +98,9 @@ export function DesktopAgent({ onOpen }: { onOpen: (profileId: string) => void }
             `plan-${p.id}`,
             () => {
               onOpen(r.profile.id);
-              // Klikkaus avaa suoraan kuittauksen (18.11.2026), ei pelkkää Viikko-näkymää.
-              requestWeek(true);
+              // Klikkaus avaa suoraan kuittauksen (18.11.2026), ei pelkkää Viikko-näkymää; päättyneen
+              // kerran kuittauslomake valmiiksi auki (24.11.2026: verryttely, teho, lihas/luusto samalla).
+              requestWeek(true, p.id);
             },
           );
         }

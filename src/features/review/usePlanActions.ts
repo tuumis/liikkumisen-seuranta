@@ -1,7 +1,7 @@
 // Suunnitelmien kuittaus- ja ohitustoiminnot ilmoituksineen ja kumoamisineen.
 
 import type { PlannedSession, Session, SkipReason } from '../../domain/types';
-import { repo } from '../../db/repositories';
+import { repo, type ConfirmDetails } from '../../db/repositories';
 import { dayLabel } from '../../ui/format';
 import { SKIP_REASON_LABEL } from '../../ui/labels';
 import { markFresh } from '../../ui/fresh';
@@ -16,10 +16,13 @@ import { today } from '../../ui/today';
 export function usePlanActions(onOpenSession: (s: Session) => void, onConfirmed?: (s: Session) => void) {
   const toast = useToast();
 
-  /** ✓ kuten suunniteltu (tai annetulla kestolla). Jo kuitattu → avataan olemassa oleva kerta muokattavaksi. */
-  async function confirm(plan: PlannedSession, durationMin?: number) {
+  /**
+   * ✓ kuten suunniteltu (tai annetulla kestolla), tai lisätiedoilla (teho, lihas/luusto, verryttely; ConfirmForm).
+   * Jo kuitattu → avataan olemassa oleva kerta muokattavaksi.
+   */
+  async function confirm(plan: PlannedSession, durationMin?: number, details: ConfirmDetails = {}) {
     try {
-      const r = await repo.confirmPlanned(plan.id, today(), { durationMin });
+      const r = await repo.confirmPlanned(plan.id, today(), { ...details, durationMin: durationMin ?? details.durationMin });
       if (!r.created) {
         onOpenSession(r.session);
         return;

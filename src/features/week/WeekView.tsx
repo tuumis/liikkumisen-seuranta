@@ -78,6 +78,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
   const [estimateDay, setEstimateDay] = useState<ISODate | null>(null);
   const [planOpen, setPlanOpen] = useState<PlannedSession | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewFocus, setReviewFocus] = useState<string>();
   const [football, setFootball] = useState<Session | null>(null);
   // Jalkapallo pois käytöstä (SPEC 16): ei lisätietopaneelia, "Lisää tiedot" -painiketta eikä jalkapallosaraketta.
   const footballOn = useFootballEnabled(profile);
@@ -126,9 +127,10 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
   // Ilmoituksen klikkaus (työpöytätila): kuluva viikko ja tarvittaessa "Käy viikko läpi".
   useEffect(
     () =>
-      subscribeWeekRequest((review) => {
+      subscribeWeekRequest((review, focus) => {
         setWeekStart(startOfIsoWeek(todayFn()));
         setSelDay(todayFn());
+        setReviewFocus(focus);
         if (review) setReviewOpen(true);
       }),
     [],
@@ -689,7 +691,17 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             onOpenSession={setEditing}
             onConfirmed={openFootballIfAny}
           />
-          <ReviewSheet open={reviewOpen} onClose={() => setReviewOpen(false)} profile={profile} types={typeMap} onOpenSession={setEditing} />
+          <ReviewSheet
+            open={reviewOpen}
+            onClose={() => {
+              setReviewOpen(false);
+              setReviewFocus(undefined);
+            }}
+            profile={profile}
+            types={typeMap}
+            onOpenSession={setEditing}
+            focusPlanId={reviewFocus}
+          />
           {/* Viimeisenä, jotta muokkaus aukeaa muiden paneelien päälle (toinen kuittaus avaa kerran). */}
           <SessionEditor session={editing} onClose={() => setEditing(null)} onFootball={footballOn ? setFootball : undefined} />
           <FootballPanel
