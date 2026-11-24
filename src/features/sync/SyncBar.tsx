@@ -16,7 +16,7 @@ import { useToast } from '../../ui/Toast';
 import { ConflictSheet } from './ConflictSheet';
 import { PendingSheet } from './PendingSheet';
 import { folderPermission, readFolderFile, supportsFolder } from './fileIO';
-import { syncFileDevice, useSyncActions, useSyncState } from './useSync';
+import { syncFileDevice, useSyncActions, useSyncStage, useSyncState } from './useSync';
 import { subscribeCommands } from '../desktop/commands';
 
 const DAY = 86_400_000;
@@ -41,6 +41,9 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' | 'he
   const actions = useSyncActions();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
+  // Vaihe ja edellisen yrityksen keskeytyssyy näkyvät (24.11.2026, synkronoinnin jumin selvitys).
+  const stage = useSyncStage();
+  const [failed, setFailed] = useState<string>();
   const [conflicts, setConflicts] = useState<MergeSummary | null>(null);
   const [phoneHasNew, setPhoneHasNew] = useState(false);
   const [showPending, setShowPending] = useState(false);
@@ -85,6 +88,7 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' | 'he
 
   async function run(f: () => Promise<{ summary?: MergeSummary; message: string } | null | string>) {
     setBusy(true);
+    setFailed(undefined);
     try {
       const r = await f();
       if (r === null) return;
@@ -96,11 +100,16 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' | 'he
       setPhoneHasNew(false);
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return;
-      toast(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      setFailed(msg);
+      toast(msg, undefined, 'error');
     } finally {
       setBusy(false);
     }
   }
+
+  const busyText = stage ? `Synkronoidaan: ${stage}…` : 'Synkronoidaan…';
+  const failedNote = (cls: string) => (failed && !busy ? <p className={cls} role="status">{failed}</p> : null);
 
   const stale = state.lastSyncAt ? Date.now() - new Date(state.lastSyncAt).getTime() > 7 * DAY : false;
   const pcDays = state.lastIncomingExportedAt ? Math.floor((Date.now() - new Date(state.lastIncomingExportedAt).getTime()) / DAY) : undefined;
@@ -113,10 +122,11 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' | 'he
   };
   const sideBtn = 'press flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-left hover:bg-white/[0.06] disabled:opacity-60';
   if (variant === 'sidebar') {
-    const sub = busy ? 'Synkronoidaan…' : phoneHasNew ? 'Puhelimella uusia kirjauksia' : synced(state.lastSyncRunAt);
+    const sub = busy ? busyText : failed ? 'Synkronointi keskeytyi' : phoneHasNew ? 'Puhelimella uusia kirjauksia' : synced(state.lastSyncRunAt);
     return (
       <div ref={rootRef}>
         {supportsFolder() ? (
+          <>
           <button type="button" disabled={busy} onClick={() => run(actions.pcSync)} className={`${sideBtn} group`} aria-label={`Synkronoi puhelimen kanssa. ${sub}`}>
             <span className="relative text-[var(--side-ink-soft)] group-hover:text-white">
               <IconSync size="1.25rem" className={busy ? 'animate-spin [animation-direction:reverse]' : ''} />
@@ -124,9 +134,11 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' | 'he
             </span>
             <span className="min-w-0 leading-tight">
               <span className="block text-sm font-semibold text-[var(--side-ink-soft)] group-hover:text-white">Synkronoi</span>
-              <span className={`block truncate text-[11px] ${phoneHasNew && !busy ? 'font-semibold text-[var(--hero-accent)]' : 'text-[var(--side-muted)]'}`}>{sub}</span>
+              <span className={`block text-[11px] ${busy ? '' : 'truncate'} ${(phoneHasNew || failed) && !busy ? 'font-semibold text-[var(--hero-accent)]' : 'text-[var(--side-muted)]'}`}>{sub}</span>
             </span>
           </button>
+          {failedNote('px-4 pb-1 text-[11px] leading-snug text-[var(--side-ink-soft)]')}
+          </>
         ) : (
           <div className="px-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-[var(--side-ink-soft)]">
@@ -160,7 +172,7 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' | 'he
         <div className="space-y-2 lg:hidden">
           {phoneHasNew && <div className="rounded-2xl bg-sky-50 p-3 text-sm text-sky-950 ring-1 ring-sky-200">Puhelimella on uusia kirjauksia – synkronoi</div>}
           <div className="card flex items-center gap-2 !rounded-2xl p-2 pl-3">
-            <span className="flex-1 text-xs text-slate-600">{synced(state.lastSyncRunAt)}</span>
+            <span className="flex-1 text-xs text-slate-600">{busy ? busyText : synced(state.lastSyncRunAt)}</span>
             {supportsFolder() ? (
               <Button disabled={busy} onClick={() => run(actions.pcSync)}>
                 {busy ? 'Synkronoidaan…' : 'Synkronoi'}
@@ -239,7 +251,8 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' | 'he
           {state.role === 'pc' ? (
             <div className="space-y-3 pb-1">
               {phoneHasNew && <div className="rounded-2xl bg-sky-50 p-3 text-sm text-sky-950 ring-1 ring-sky-200">Puhelimella on uusia kirjauksia – synkronoi</div>}
-              <p className="text-sm text-slate-600">{synced(state.lastSyncRunAt)}</p>
+              <p className="text-sm text-slate-600">{busy ? busyText : synced(state.lastSyncRunAt)}</p>
+              {failedNote('rounded-2xl bg-amber-50 p-3 text-sm text-amber-950 ring-1 ring-amber-200')}
               <div className="flex gap-2">
                 {supportsFolder() ? (
                   <Button className="flex-1" disabled={busy} onClick={() => run(actions.pcSync)}>

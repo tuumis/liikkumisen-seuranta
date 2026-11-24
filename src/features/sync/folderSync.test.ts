@@ -4,7 +4,7 @@ import { AppDB, db } from '../../db/schema';
 import { createRepositories, repo } from '../../db/repositories';
 import { buildSyncFile, toJson } from '../../db/backup';
 import { isSyncCopyName } from '../../domain/version';
-import { exclusive, mergeFromFolder, SyncTimeoutError, withTimeout } from './useSync';
+import { exclusive, mergeFromFolder, syncStage, SyncTimeoutError, withTimeout } from './useSync';
 
 /** Muistissa toimiva pilvikansio (File System Access API:n osajoukko). */
 function fakeFolder(files: Record<string, { text: string; lastModified: number }>, opened: string[] = []) {
@@ -73,9 +73,10 @@ describe('jumiin jäävä kansio', () => {
   it('aikaraja keskeyttää vaiheen selkeällä viestillä', async () => {
     vi.useFakeTimers();
     try {
-      const p = withTimeout(new Promise<never>(() => undefined), 'kansion kopiotiedostojen haku', 30_000);
+      const p = withTimeout(new Promise<never>(() => undefined), 'kopiotiedostojen haku', 30_000);
+      expect(syncStage()).toBe('kopiotiedostojen haku');
       const check = expect(p).rejects.toBeInstanceOf(SyncTimeoutError);
-      const msg = expect(p).rejects.toThrow(/Synkronointi keskeytyi: kansion kopiotiedostojen haku ei valmistunut 30 sekunnissa/);
+      const msg = expect(p).rejects.toThrow('Synkronointi keskeytyi vaiheessa "kopiotiedostojen haku": ei valmistunut 30 sekunnissa.');
       await vi.advanceTimersByTimeAsync(30_000);
       await check;
       await msg;
@@ -101,5 +102,45 @@ describe('jumiin jäävä kansio', () => {
     await expect(failing).rejects.toThrow('virhe');
     await third;
     expect(log).toEqual(['1', '2', '3']);
+  });
+
+  it('kokonaisaikaraja vapauttaa jonon ja kertoo jumiin jääneen vaiheen', async () => {
+    vi.useFakeTimers();
+    try {
+      const stuck = exclusive(async () => {
+        await withTimeout(Promise.resolve(), 'liikkuminen.json avaus');
+        withTimeout(Promise.resolve(), 'tiedoston kokoaminen');
+        return new Promise<never>(() => undefined); // esim. laitteen tietokanta ei vastaa
+      }, 60_000);
+      const next = exclusive(async () => 'valmis');
+      const check = expect(stuck).rejects.toThrow('Synkronointi keskeytyi vaiheessa "tiedoston kokoaminen": synkronointi ei valmistunut 60 sekunnissa.');
+      await vi.advanceTimersByTimeAsync(60_000);
+      await check;
+      await expect(next).resolves.toBe('valmis');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(syncStage()).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('jumittuva kansion luettelointi keskeyttää synkronoinnin (ei jatketa muihin kansiovaiheisiin)', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const handle = {
+        getFileHandle: async () => {
+          throw new DOMException('ei löydy', 'NotFoundError');
+        },
+        values: () => ({ [Symbol.asyncIterator]: () => ({ next: () => new Promise<never>(() => undefined) }) }),
+      } as unknown as FileSystemDirectoryHandle;
+      const p = mergeFromFolder(handle, 'pc');
+      const check = expect(p).rejects.toThrow('vaiheessa "kopiotiedostojen haku"');
+      // Tietokannan haut ennen luettelointia käyttävät oikeita ajastimia (vain setTimeout on valeaikaa).
+      await vi.waitFor(() => expect(syncStage()).toBe('kopiotiedostojen haku'));
+      await vi.advanceTimersByTimeAsync(30_000);
+      await check;
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

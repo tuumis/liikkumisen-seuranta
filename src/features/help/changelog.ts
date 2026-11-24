@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.40',
+    date: '24.11.2026',
+    items: [
+      'Synkronoinnin aikana Synkronoi-painikkeen alla näkyy, mitä synkronointi parhaillaan tekee.',
+      'Jos synkronointi ei valmistu kahdessa minuutissa, se keskeytyy ja kertoo vaiheen, johon se jäi. Syy jää näkyviin painikkeen alle.',
+    ],
+  },
+  {
     version: '1.1.39',
     date: '24.11.2026',
     items: [

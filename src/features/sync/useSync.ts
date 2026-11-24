@@ -1,6 +1,6 @@
 // Synkronoinnin toiminnot ja tila (SPEC 10, "Synkronointi PC ↔ puhelin").
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { defaultPlanningThrough } from '../../domain/planning';
 import { isSyncCopyName, SYNC_FILE_NAME } from '../../domain/version';
@@ -78,35 +78,91 @@ export class SyncTimeoutError extends Error {}
 /** Yhden kansiovaiheen aikaraja; pilvipalvelun lataus voi kestää, mutta ei loputtomiin. */
 export const SYNC_STEP_MS = 30_000;
 
+/** Koko synkronoinnin aikaraja: mikään vaihe (myös laitteen oma tietokanta) ei pidä synkronointia kesken pidempään. */
+export const SYNC_TOTAL_MS = 120_000;
+
 /**
- * Aikaraja kansion vaiheelle (24.11.2026, käyttäjän havainto: synkronointi pyöri loputtomiin, eikä
- * automaattinen synkronointi enää käynnistynyt). Jumiin jäänyt tiedostotoiminto ei pidä painiketta eikä
- * automaattista synkronointia kesken-tilassa: virheviesti kertoo vaiheen, ja seuraava yritys onnistuu.
+ * Synkronoinnin meneillään oleva vaihe (24.11.2026, käyttäjän havainto: pyörii yhä versiossa 1.1.39).
+ * Näkyy Synkronoi-painikkeen alla, ja keskeytyksen viesti kertoo vaiheen, jotta jumin kohta selviää.
  */
-export function withTimeout<T>(p: Promise<T>, step: string, ms = SYNC_STEP_MS): Promise<T> {
+let stage: string | undefined;
+const stageListeners = new Set<(s: string | undefined) => void>();
+export function setSyncStage(s: string | undefined) {
+  stage = s;
+  for (const l of stageListeners) l(s);
+}
+export const syncStage = () => stage;
+export function useSyncStage(): string | undefined {
+  const [s, set] = useState(stage);
+  useEffect(() => {
+    stageListeners.add(set);
+    set(stage);
+    return () => void stageListeners.delete(set);
+  }, []);
+  return s;
+}
+
+/** Vaihe ilman omaa aikarajaa (laitteen tietokanta); koko synkronoinnin aikaraja kattaa sen. */
+async function step<T>(label: string, f: () => Promise<T>): Promise<T> {
+  setSyncStage(label);
+  return f();
+}
+
+/** Ajastin, joka hylkää lupauksen; `message` luetaan vasta laukeamishetkellä. */
+function race<T>(p: Promise<T>, ms: number, message: () => string): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(
-      () =>
-        reject(
-          new SyncTimeoutError(
-            `Synkronointi keskeytyi: ${step} ei valmistunut ${Math.round(ms / 1000)} sekunnissa. Pilvipalvelun kansio (esim. OneDrive tai Google Drive) voi olla kesken tiedoston lataamisessa. Odota hetki ja yritä uudelleen.`,
-          ),
-        ),
-      ms,
-    );
+    timer = setTimeout(() => reject(new SyncTimeoutError(message())), ms);
   });
   return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
 }
 
 /**
+ * Aikaraja kansion vaiheelle (24.11.2026, käyttäjän havainto: synkronointi pyöri loputtomiin, eikä
+ * automaattinen synkronointi enää käynnistynyt). Jumiin jäänyt tiedostotoiminto ei pidä painiketta eikä
+ * automaattista synkronointia kesken-tilassa: virheviesti kertoo vaiheen, ja seuraava yritys onnistuu.
+ */
+export function withTimeout<T>(p: Promise<T>, label: string, ms = SYNC_STEP_MS): Promise<T> {
+  setSyncStage(label);
+  return timed(p, label, ms);
+}
+
+/** Kuten withTimeout, mutta ei muuta näkyvää vaihetta (käsin painetun synkronoinnin alku ennen jonoa). */
+function timed<T>(p: Promise<T>, label: string, ms = SYNC_STEP_MS): Promise<T> {
+  return race(
+    p,
+    ms,
+    () =>
+      `Synkronointi keskeytyi vaiheessa "${label}": ei valmistunut ${Math.round(ms / 1000)} sekunnissa. Pilvipalvelun kansio (esim. OneDrive tai Google Drive) ei vastannut. Tarkista, että pilvipalvelun sovellus on käynnissä, ja yritä uudelleen.`,
+  );
+}
+
+/** Aikakatkaisu kesken jääneelle tiedostolle ohitetaan, muut virheet (esim. ei lupaa) myös; vain aikakatkaisu keskeyttää. */
+const onlyTimeouts = (e: unknown) => {
+  if (e instanceof SyncTimeoutError) throw e;
+};
+
+/**
  * Yksi synkronointi kerrallaan: käsin painettu ja automaattinen eivät käsittele kansiota yhtä aikaa.
- * Edellinen ajo päättyy aina (vaiheiden aikarajat), joten jono ei jää jumiin.
+ * Jokaisella ajolla on kokonaisaikaraja, joten jono ei jää jumiin, vaikka jokin vaihe ei koskaan valmistuisi.
  */
 let queue: Promise<unknown> = Promise.resolve();
-export function exclusive<T>(f: () => Promise<T>): Promise<T> {
-  const run = queue.then(f, f);
-  queue = run.catch(() => undefined);
+export function exclusive<T>(f: () => Promise<T>, total = SYNC_TOTAL_MS): Promise<T> {
+  const before = queue;
+  const run = (async () => {
+    await before; // vaiheteksti näyttää edellisen ajon vaiheen, kunnes se päättyy
+    return race(
+      f(),
+      total,
+      () =>
+        `Synkronointi keskeytyi vaiheessa "${stage ?? 'aloitus'}": synkronointi ei valmistunut ${Math.round(total / 1000)} sekunnissa. Sulje selain kokonaan, avaa sovellus uudelleen ja yritä uudelleen.`,
+    );
+  })();
+  const settled = run.catch(() => undefined);
+  queue = settled;
+  void settled.then(() => {
+    if (queue === settled) setSyncStage(undefined);
+  });
   return run;
 }
 
@@ -114,18 +170,19 @@ export function exclusive<T>(f: () => Promise<T>): Promise<T> {
 export async function mergeFromFolder(handle: FileSystemDirectoryHandle, deviceId: string): Promise<MergeSummary | undefined> {
   let summary: MergeSummary | undefined;
   // 1) Yhteinen tiedosto: jos joku muu (puhelin) on tallentanut sen PC:n oman kirjoituksen jälkeen, yhdistetään.
-  const shared = await withTimeout(readFolderFile(handle, SYNC_FILE_NAME.shared), 'yhteisen tiedoston (liikkuminen.json) avaus');
+  const shared = await withTimeout(readFolderFile(handle, SYNC_FILE_NAME.shared), 'liikkuminen.json avaus');
   const ownWrite = (await repo.getMeta<number>('syncFileWrittenAt')) ?? 0;
   if (shared && shared.lastModified > ownWrite) {
-    const text = await withTimeout(shared.text(), 'yhteisen tiedoston (liikkuminen.json) luku');
+    const text = await withTimeout(shared.text(), 'liikkuminen.json luku');
     const by = syncFileDevice(text);
-    if (by && by !== deviceId) summary = await mergeSyncFile(db, text, deviceId);
+    if (by && by !== deviceId) summary = await step('puhelimen kirjausten yhdistäminen', () => mergeSyncFile(db, text, deviceId));
   }
   // 2) Vanha puhelimen tiedosto (ennen yhteistä nimeä), jos se on muuttunut edellisen lukukerran jälkeen.
-  const legacy = await withTimeout(readFolderFile(handle, SYNC_FILE_NAME.legacyPhone), 'puhelimen vanhan tiedoston avaus');
+  const legacy = await withTimeout(readFolderFile(handle, SYNC_FILE_NAME.legacyPhone), 'puhelimen vanha tiedosto');
   const readAt = (await repo.getMeta<number>('phoneFileReadAt')) ?? 0;
   if (legacy && legacy.lastModified > readAt) {
-    summary = combine(summary, await mergeSyncFile(db, await withTimeout(legacy.text(), 'puhelimen vanhan tiedoston luku'), deviceId));
+    const text = await withTimeout(legacy.text(), 'puhelimen vanhan tiedoston luku');
+    summary = combine(summary, await step('puhelimen kirjausten yhdistäminen', () => mergeSyncFile(db, text, deviceId)));
     await repo.setMeta('phoneFileReadAt', legacy.lastModified);
   }
   // 3) Kopiot ("liikkuminen 2.json"): iPhone ei korvaa tiedostoa vaan tallentaa uudella nimellä.
@@ -134,21 +191,22 @@ export async function mergeFromFolder(handle: FileSystemDirectoryHandle, deviceI
   let files: File[] = [];
   try {
     // Vain kopioiden nimiset avataan (ks. listFolderFiles).
-    files = await withTimeout(listFolderFiles(handle, isSyncCopyName), 'kansion kopiotiedostojen haku');
-  } catch {
-    /* kansion luettelointi ei onnistu: yhteinen tiedosto riittää */
+    files = await withTimeout(listFolderFiles(handle, isSyncCopyName), 'kopiotiedostojen haku');
+  } catch (e) {
+    onlyTimeouts(e); // kansion luettelointi ei onnistu: yhteinen tiedosto riittää; jumi keskeyttää
   }
   for (const f of files.sort((a, b) => a.lastModified - b.lastModified)) {
     let text: string;
     try {
-      text = await withTimeout(f.text(), `tiedoston ${f.name} luku`);
-    } catch {
-      continue; // kesken latautuva kopio: seuraavalla kerralla
+      text = await withTimeout(f.text(), `${f.name} luku`);
+    } catch (e) {
+      onlyTimeouts(e);
+      continue; // luettavaksi kelpaamaton kopio
     }
     const by = syncFileDevice(text);
     if (!by) continue;
-    if (by !== deviceId) summary = combine(summary, await mergeSyncFile(db, text, deviceId));
-    await withTimeout(removeFolderFile(handle, f.name), `kopion ${f.name} poisto`).catch(() => undefined);
+    if (by !== deviceId) summary = combine(summary, await step('puhelimen kirjausten yhdistäminen', () => mergeSyncFile(db, text, deviceId)));
+    await withTimeout(removeFolderFile(handle, f.name), `${f.name} poisto`).catch(onlyTimeouts);
   }
   return summary;
 }
@@ -156,17 +214,18 @@ export async function mergeFromFolder(handle: FileSystemDirectoryHandle, deviceI
 /** Viikoittainen varmuuskopio kansioon; epäonnistuminen ei estä synkronointia. */
 async function weeklyBackup(handle: FileSystemDirectoryHandle) {
   try {
-    await withTimeout(runAutoBackup(handle), 'viikoittainen varmuuskopio', 2 * SYNC_STEP_MS);
-  } catch {
-    /* esim. kansio vain luku -tilassa; yritetään seuraavalla synkronoinnilla */
+    await withTimeout(runAutoBackup(handle), 'viikoittainen varmuuskopio');
+  } catch (e) {
+    onlyTimeouts(e); // esim. kansio vain luku -tilassa; yritetään seuraavalla synkronoinnilla
   }
 }
 
 /** Kirjoittaa yhdistetyn tilannekuvan yhteiseen tiedostoon ja muistaa oman kirjoitusajan. */
 async function writeToFolder(handle: FileSystemDirectoryHandle, deviceId: string) {
-  await ensurePlannedAll();
-  await withTimeout(writeFolderFile(handle, SYNC_FILE_NAME.shared, toJson(await buildSyncFile(db, deviceId, 'pc'))), 'liikkuminen.json-tiedoston tallennus');
-  const written = await withTimeout(readFolderFile(handle, SYNC_FILE_NAME.shared), 'tallennetun tiedoston tarkistus').catch(() => null);
+  await step('suunniteltujen kertojen päivitys', ensurePlannedAll);
+  const text = await step('tiedoston kokoaminen', async () => toJson(await buildSyncFile(db, deviceId, 'pc')));
+  await withTimeout(writeFolderFile(handle, SYNC_FILE_NAME.shared, text), 'liikkuminen.json tallennus');
+  const written = await withTimeout(readFolderFile(handle, SYNC_FILE_NAME.shared), 'tallennuksen tarkistus').catch(() => null);
   await repo.setMeta('syncFileWrittenAt', written?.lastModified ?? Date.now());
   await repo.setMeta('lastSyncRunAt', new Date().toISOString());
 }
@@ -183,13 +242,13 @@ export function pcAutoSync(): Promise<SyncOutcome | null> {
 async function pcAutoSyncNow(): Promise<SyncOutcome | null> {
   if (!supportsFolder() || (await repo.getDeviceRole()) !== 'pc') return null;
   const handle = await repo.getMeta<FileSystemDirectoryHandle>('syncFolderHandle');
-  if (!handle || !(await withTimeout(folderPermission(handle, false), 'kansion käyttöluvan tarkistus'))) return null;
+  if (!handle || !(await withTimeout(folderPermission(handle, false), 'kansion käyttölupa'))) return null;
   const deviceId = await repo.deviceId();
   const summary = await mergeFromFolder(handle, deviceId);
-  await foldEstimateOnly();
+  await step('kirjausten siivous', foldEstimateOnly);
   await weeklyBackup(handle);
   const since = await repo.getMeta<Timestamp>('lastSyncRunAt');
-  const localChanged = !since || (await changedSince(db, since)) > 0;
+  const localChanged = await step('muutosten tarkistus', async () => !since || (await changedSince(db, since)) > 0);
   if (!summary && !localChanged) {
     await repo.setMeta('lastSyncRunAt', new Date().toISOString()); // ajan tasalla: tarkistettu juuri nyt
     return null;
@@ -209,19 +268,23 @@ export async function autoSyncReady(): Promise<'ok' | 'no-folder' | 'no-permissi
 export function useSyncActions() {
   /** PC: "Synkronoi" – lue puhelimen tiedosto (jos muuttunut), yhdistä, ensurePlanned, kirjoita PC:n tiedosto. */
   const pcSync = useCallback(async (): Promise<SyncOutcome> => {
-    const deviceId = await repo.deviceId();
     if (!supportsFolder()) throw new Error('Selain ei tue kansion käsittelyä. Käytä tiedoston tuontia ja latausta.');
+    const deviceId = await repo.deviceId();
     let handle = await repo.getMeta<FileSystemDirectoryHandle>('syncFolderHandle');
     if (!handle) {
       handle = await pickFolder();
       await repo.setMeta('syncFolderHandle', handle);
     }
     // Lupakysely heti painalluksesta (vaatii käyttäjän eleen); varsinainen työ jonossa automaattisen kanssa.
-    if (!(await withTimeout(folderPermission(handle, true), 'kansion käyttöluvan kysely', 4 * SYNC_STEP_MS))) throw new Error('Kansion käyttöoikeus puuttuu.');
+    // Lupa: tarkistus 30 s, kysely (vain jos lupaa ei ole) odottaa käyttäjän vastausta 2 min.
+    const granted =
+      (await timed(folderPermission(handle, false), 'kansion käyttölupa')) ||
+      (await timed(folderPermission(handle, true), 'kansion käyttöluvan kysely', 4 * SYNC_STEP_MS));
+    if (!granted) throw new Error('Kansion käyttöoikeus puuttuu.');
     const folder = handle;
     return exclusive(async () => {
       const summary = await mergeFromFolder(folder, deviceId);
-      await foldEstimateOnly();
+      await step('kirjausten siivous', foldEstimateOnly);
       await weeklyBackup(folder);
       await writeToFolder(folder, deviceId);
       return { summary, wrote: true, message: summary ? summaryText(summary) : 'Tiedosto liikkuminen.json päivitetty; puhelimelta ei uutta' };
