@@ -1,5 +1,6 @@
 // Analyysi-välilehti: viikkonäkymä (vaihe 4) sekä kuukausi, kausi ja vuosi (vaihe 7, LongTermView).
 
+import { InsightsCard } from './InsightsCard';
 import { useState } from 'react';
 import { addDays, isoWeek, startOfIsoWeek, weekPeriod } from '../../domain/dates';
 import { APP_INTERPRETATIONS, RECOMMENDATIONS, RECOMMENDATIONS_VERSION, VIGOROUS_DAY_BY_AGE_DEFAULT, type Rule } from '../../domain/recommendations';
@@ -167,6 +168,8 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
                   <Card title={`Suositus · ${profile.name}`} eyebrow="Täyttyikö suositus">
                     <GoalCard report={report} variant="full" />
                   </Card>
+                ) : id === 'insights' ? (
+                  <InsightsCard profile={profile} weekStart={weekStart} />
                 ) : id === 'days' ? (
                   <DaysCard report={report} />
                 ) : id === 'gauge' ? (

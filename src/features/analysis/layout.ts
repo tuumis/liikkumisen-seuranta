@@ -7,10 +7,11 @@
 import { useCardLayout, type CardDef, type CardTopic } from '../../ui/cardLayout';
 import type { LongKind } from '../../domain/longTerm';
 
-export type AnalysisCardId = 'goals' | 'days' | 'adherence' | 'football' | 'highlights' | 'hours' | 'hoursDetail' | 'gauge' | 'heatmap' | 'quality';
+export type AnalysisCardId = 'goals' | 'insights' | 'days' | 'adherence' | 'football' | 'highlights' | 'hours' | 'hoursDetail' | 'gauge' | 'heatmap' | 'quality';
 
 export const ANALYSIS_CARDS: CardDef<AnalysisCardId>[] = [
   { id: 'goals', title: 'Suositus', text: 'Täyttyikö ikäryhmän suositus: pääluku ja päivätavoitteet' },
+  { id: 'insights', title: 'Huomiot', text: 'Päättyneen viikon huomiot suositusta vasten, lähde ja vaihtoehto viikkorytmistä' },
   { id: 'days', title: 'Päivät ja lajit', text: 'Reipas ja rasittava liikunta päivittäin ja mistä se kertyi' },
   { id: 'adherence', title: 'Suunnitelma ja toteuma', text: 'Toteutuivatko suunnitellut kerrat (näkyy, kun viikolla on suunnitelmia)' },
   { id: 'football', title: 'Jalkapallo', text: 'Treenit, pelit, peliaika ja tulokset' },
@@ -24,6 +25,7 @@ export const ANALYSIS_CARDS: CardDef<AnalysisCardId>[] = [
 
 export const ANALYSIS_TOPICS: CardTopic<AnalysisCardId>[] = [
   { id: 'goals', title: 'Suositus', text: 'Täyttyikö ikäryhmän liikkumissuositus', cards: ['goals'] },
+  { id: 'insights', title: 'Huomiot', text: 'Mitä suosituksesta jäi vajaaksi ja mitä voisi kokeilla', cards: ['insights'] },
   { id: 'days', title: 'Päivät ja lajit', text: 'Minä päivinä ja mistä liikunta kertyi', cards: ['days'] },
   { id: 'plan', title: 'Suunnitelma', text: 'Toteutuivatko suunnitellut kerrat', cards: ['adherence'] },
   { id: 'football', title: 'Jalkapallo', text: 'Treenit, pelit, peliaika ja tulokset', cards: ['football'] },

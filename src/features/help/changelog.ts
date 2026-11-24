@@ -9,6 +9,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.36',
+    date: '24.11.2026',
+    items: [
+      'Uusi Viikon huomiot: päättyneeltä viikolta lyhyet havainnot liikkumissuositusta vasten (esim. rasittavat päivät tai päivittäinen tunti) ja ehdotus viikkorytmin vapaista päivistä.',
+      'Jokaisessa huomiossa on lähde ja laskutapa kohdassa Miksi?. Hyvästä viikosta sanotaan vain, että se oli hyvä.',
+      'Kaksi tärkeintä huomiota näkyy viime viikon koosteessa Viikko-näkymässä, kaikki Analyysin Huomiot-kortissa.',
+    ],
+  },
+  {
     version: '1.1.35',
     date: '19.11.2026',
     items: [

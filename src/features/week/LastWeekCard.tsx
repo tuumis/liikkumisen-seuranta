@@ -18,6 +18,7 @@ import { useFootball } from '../football/useFootball';
 import { useFootballEnabled } from '../football/useFootballEnabled';
 import { weekModel } from './WeekSummary';
 import { IconClose } from '../../ui/icons';
+import { DigestInsights } from '../analysis/InsightsCard';
 
 // Vanha laitekohtainen muisti (ennen profiiliin tallennusta); luetaan edelleen, ettei suljettu palaa.
 const KEY = 'lastWeekSeen';
@@ -199,6 +200,7 @@ export function LastWeekCard({ profile, today, onOpenWeek }: { profile: Profile;
           ))}
         </dl>
       </div>
+      <DigestInsights profile={profile} weekStart={start} />
     </section>
   );
 }
