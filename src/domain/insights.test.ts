@@ -95,6 +95,15 @@ describe('viikon huomiot', () => {
     const prev2 = report('2026-10-26', week('2026-10-26', 70, [], [0, 2, 4]));
     const r = weekInsights({ report: report(MON, week(MON, 70, [1], [0, 2, 4])), previous: [prev1, prev2], today: TODAY, types });
     expect(r.insights.map((i) => [i.id, i.streak])).toEqual([['vigorous_days', 3]]);
+    expect(r.insights[0].soft).toBe(true);
+    // Toistuva siirtyy uusien huomioiden jälkeen, ja vaihtoehto näkyy ensimmäisessä.
+    const weak = week(MON, 40, [1], [0, 2, 4]);
+    const r3 = weekInsights({ report: report(MON, weak), previous: [prev1, prev2], today: TODAY, types, templateItems: [item([1, 3])] });
+    expect(r3.insights.map((i) => [i.id, !!i.soft])).toEqual([
+      ['mvpa_avg', false],
+      ['vigorous_days', true],
+    ]);
+    expect(r3.insights[0].option).toBeDefined();
     // Väliin jäänyt viikko katkaisee toiston.
     const r2 = weekInsights({ report: report(MON, week(MON, 70, [1], [0, 2, 4])), previous: [undefined, prev2], today: TODAY, types });
     expect(r2.insights[0].streak).toBeUndefined();
@@ -131,6 +140,10 @@ describe('viikon huomiot', () => {
       expect(r.insights[1].title).toBe('Ohjattua urheilua 11,7 h viikossa, enemmän kuin ikävuosia (10)');
       expect(r.insights.every((i) => i.tier === 'research')).toBe(true);
       expect(weekInsights({ report: report(MON, s), today: TODAY, types, profile: kid, sessions: s, load: false }).state).toBe('ok');
+      // Profiilin asetukset (vaihe 3): suosituksen huomiot pois, kuormitus jää; molemmat pois = off.
+      const weakS = [...week(MON, 40), ...s];
+      expect(weekInsights({ report: report(MON, weakS), today: TODAY, types, profile: kid, sessions: weakS, rec: false }).insights.map((i) => i.id)).toEqual(['no_rest_day', 'hours_vs_age']);
+      expect(weekInsights({ report: report(MON, s), today: TODAY, types, profile: kid, sessions: s, rec: false, load: false }).state).toBe('off');
       const adult = profile({ createdAt: '2026-09-01T10:00:00.000Z', birthYear: 1985, birthMonth: 5 });
       const ra = weekInsights({ report: report(MON, s, { profile: adult }), today: TODAY, types, profile: adult, sessions: s });
       expect(ra.insights.filter((i) => i.tier === 'research')).toEqual([]);

@@ -1,3 +1,4 @@
+import { Switch } from './DesktopSection';
 import { useState } from 'react';
 import { z } from 'zod';
 import { isISODate, timestampToLocalDate } from '../../domain/dates';
@@ -40,6 +41,8 @@ export type ProfileFormValues = Pick<Profile, 'name' | 'kind' | 'birthYear' | 'b
   trackingStart: Profile['trackingStart'];
   photo: Profile['photo'];
   football: Profile['football'];
+  insightsRec: Profile['insightsRec'];
+  insightsLoad: Profile['insightsLoad'];
 };
 
 export function ProfileForm({
@@ -73,6 +76,9 @@ export function ProfileForm({
   const inferredFootball = useFootballStatus(initial);
   const [footballChoice, setFootballChoice] = useState<boolean | undefined>(initial ? initial.football : defaults?.football);
   const football = footballChoice ?? (initial ? !!inferredFootball : false);
+  // Viikon huomiot (24.11.2026): oletuksena päällä; vain poisto tallennetaan.
+  const [insightsRec, setInsightsRec] = useState(initial?.insightsRec !== false);
+  const [insightsLoad, setInsightsLoad] = useState(initial?.insightsLoad !== false);
   // Oletus = luontipäivä (uudella profiililla tänään); vain poikkeava päivä tallennetaan.
   const defaultStart = initial ? timestampToLocalDate(initial.createdAt) : today();
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -122,6 +128,8 @@ export function ProfileForm({
         photo,
         // Vanhan profiilin päättely kesken eikä valintaa tehty → ei muuteta (päätellään jatkossakin).
         football: footballChoice ?? (initial ? inferredFootball : false),
+        insightsRec: insightsRec ? undefined : false,
+        insightsLoad: insightsLoad ? undefined : false,
       });
     } finally {
       setSaving(false);
@@ -237,6 +245,17 @@ export function ProfileForm({
             : 'Jalkapalloon liittyvät osat piilotetaan. Voit ottaa ne käyttöön myöhemmin tästä.'}
           {!football && initial && inferredFootball && ' Kirjatut jalkapallokerrat säilyvät ja lasketaan edelleen liikuntaan.'}
         </span>
+      </fieldset>
+
+      <fieldset>
+        <legend className="text-sm font-medium text-slate-700">Viikon huomiot</legend>
+        <span className="block text-xs leading-relaxed text-slate-500">Päättyneen viikon lyhyet havainnot lähteineen Viikko-näkymän koosteessa ja Analyysissa.</span>
+        <div className="divide-y divide-slate-100">
+          <Switch on={insightsRec} onChange={setInsightsRec} label="Liikkumissuositus" text="Mitä suosituksesta jäi vajaaksi, esim. rasittavat päivät tai päivittäinen tunti." />
+          {raw.kind === 'child' && (
+            <Switch on={insightsLoad} onChange={setInsightsLoad} label="Urheilun kuormitus" text="Ohjatun urheilun vapaapäivät, tunnit suhteessa ikään ja nopea kasvu (tutkimustieto). Myös Kauden koosteen Tauot ja vaihtelu -kortti." />
+          )}
+        </div>
       </fieldset>
 
       <Field label="Seuranta alkoi" hint="Analyysi laskee päivät tästä alkaen. Voit siirtää alkua aiemmaksi, jos kirjaat vanhoja kertoja.">

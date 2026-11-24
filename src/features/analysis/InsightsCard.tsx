@@ -45,6 +45,8 @@ export function useWeekInsights(profile: Profile | undefined, weekStart: ISODate
       types: new Map<string, ActivityType>(types.map((t) => [t.id, t])),
       profile,
       sessions: sessions.rows,
+      rec: profile?.insightsRec !== false,
+      load: profile?.insightsLoad !== false,
     });
   }, [report, prev1, prev2, items, types, sessions, profile, weekStart, today]);
 }
@@ -64,6 +66,8 @@ export function insightStateText(r: InsightResult): string | undefined {
       return `Vertailussa oli vain ${r.validDays} päivää (esimerkiksi sairaus tai loma), joten huomioita ei anneta.`;
     case 'ok':
       return 'Hyvä viikko: ei huomautettavaa.';
+    case 'off':
+      return 'Viikon huomiot ovat pois päältä tältä profiililta. Ne saa käyttöön profiilin asetuksista (Asetukset → Profiilit).';
     default:
       return undefined;
   }
@@ -73,11 +77,26 @@ const streakText = (n: number) => (n === 3 ? 'Kolmas viikko peräkkäin' : `${n}
 
 export function InsightRow({ i }: { i: Insight }) {
   const [why, setWhy] = useState(false);
+  // Toistuva huomio (vaihe 3): lievempänä, tarkenne avattavissa.
+  const [more, setMore] = useState(!i.soft);
+  if (!more)
+    return (
+      <li className="rounded-xl px-3 py-2 ring-1 ring-inset ring-[var(--line)]">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{TIER_LABEL[i.tier]}</span>
+          {i.streak && <span className="rounded-full bg-[var(--surface-sunk)] px-2 py-0.5 text-[11px] font-semibold text-slate-600">{streakText(i.streak)}</span>}
+        </div>
+        <p className="mt-0.5 text-sm text-slate-700">{i.title}</p>
+        <button type="button" onClick={() => setMore(true)} aria-expanded={false} className="hit -ml-1 mt-0.5 min-h-8 rounded-lg px-1 text-xs font-semibold text-green-800 hover:underline">
+          Näytä tarkemmin
+        </button>
+      </li>
+    );
   return (
     <li className="rounded-xl bg-[var(--surface-sunk)] px-3 py-2.5 ring-1 ring-inset ring-[var(--line)]">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{TIER_LABEL[i.tier]}</span>
-        {i.streak && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900">{streakText(i.streak)}</span>}
+        {i.streak && <span className="rounded-full bg-[var(--surface-raised)] px-2 py-0.5 text-[11px] font-semibold text-slate-600 ring-1 ring-inset ring-[var(--line)]">{streakText(i.streak)}</span>}
       </div>
       <p className="mt-0.5 text-sm font-semibold text-slate-900">{i.title}</p>
       <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{i.text}</p>

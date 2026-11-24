@@ -41,6 +41,8 @@ export interface Insight {
   source: SourceRef;
   /** Peräkkäiset viikot, joilla sama vaje (tämä mukaan lukien), kun vähintään 3. */
   streak?: number;
+  /** Toistuva huomio (vaihe 3): näytetään lievempänä ja muiden jälkeen, ettei se toistu samalla painolla. */
+  soft?: boolean;
 }
 
 export type InsightState =
@@ -54,6 +56,8 @@ export type InsightState =
   | 'lowData'
   /** Vertailtavia päiviä alle viisi (sairaus, loma). */
   | 'partial'
+  /** Huomiot pois päältä profiilin asetuksista (vaihe 3). */
+  | 'off'
   /** Ei huomautettavaa. */
   | 'ok'
   | 'insights';
@@ -80,6 +84,8 @@ export interface InsightInput {
   sessions?: Session[];
   /** Kuormitushuomiot (oletus päällä lapsilla; aikuisilla ei koskaan). */
   load?: boolean;
+  /** Liikkumissuosituksen huomiot (oletus päällä). */
+  rec?: boolean;
 }
 
 /** Vähintään näin monta vertailtavaa päivää, jotta päivämäärätavoitteet ovat reiluja. */
@@ -175,10 +181,11 @@ export function freeWeekdays(items: TemplateItem[] | undefined, types: Map<UUID,
 }
 
 /** Huomiot ilman datan porttia ja vaihtoehtoja (myös toiston tunnistamiseen edellisiltä viikoilta). */
-function raw(report: PeriodReport, free: string | undefined, load?: LoadCtx): Insight[] {
+/** Liikkumissuosituksen huomiot (vaihe 1). */
+function official(report: PeriodReport, free: string | undefined): Insight[] {
   const ev = report.evaluation;
   const valid = report.days;
-  const out: Insight[] = load ? loadInsights(report, load) : [];
+  const out: Insight[] = [];
   const n = ev.n;
   if (ev.schoolAge) {
     const s = ev.schoolAge;
@@ -295,6 +302,12 @@ function raw(report: PeriodReport, free: string | undefined, load?: LoadCtx): In
       });
     }
   }
+  return out;
+}
+
+/** Huomiot ilman datan porttia (myös toiston tunnistamiseen edellisiltä viikoilta). */
+function raw(report: PeriodReport, free: string | undefined, load: LoadCtx | undefined, rec: boolean): Insight[] {
+  const out = [...(load ? loadInsights(report, load) : []), ...(rec ? official(report, free) : [])];
   return out.sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
 }
 
@@ -307,6 +320,9 @@ export function weekInsights(input: InsightInput): InsightResult {
   const { report, today } = input;
   const ev = report.evaluation;
   const base = { insights: [] as Insight[], unconfirmed: report.adherence.unconfirmed, validDays: ev.n };
+  const rec = input.rec !== false;
+  const loadOn = input.load !== false && report.group.group !== 'adult';
+  if (!rec && !loadOn) return { ...base, state: 'off' };
   if (report.period.end >= today) return { ...base, state: 'current' };
   if (!ev.evaluable) return { ...base, state: 'none' };
   if (report.adherence.unconfirmed > 0) return { ...base, state: 'pending' };
@@ -318,20 +334,25 @@ export function weekInsights(input: InsightInput): InsightResult {
   const p = input.profile;
   const load: LoadCtx | undefined =
     input.load !== false && p && input.sessions ? { sessions: input.sessions, types: input.types, birthYear: p.birthYear, birthMonth: p.birthMonth } : undefined;
-  const insights = raw(report, free, load);
-  // Sama vaihtoehto vain kerran (ensimmäisessä huomiossa), ettei se toistu joka rivillä.
-  insights.forEach((i, k) => {
-    if (i.option && insights.slice(0, k).some((x) => x.option === i.option)) delete i.option;
-  });
+  const insights = raw(report, free, load, rec);
   // Toisto: sama vaje peräkkäisinä viikkoina.
-  const prevIds = (input.previous ?? []).map((r) => (reliable(r) ? new Set(raw(r!, undefined, load).map((i) => i.id)) : undefined));
+  const prevIds = (input.previous ?? []).map((r) => (reliable(r) ? new Set(raw(r!, undefined, load, rec).map((i) => i.id)) : undefined));
   for (const i of insights) {
     let streak = 1;
     for (const ids of prevIds) {
       if (!ids?.has(i.id)) break;
       streak++;
     }
-    if (streak >= 3) i.streak = streak;
+    if (streak >= 3) {
+      i.streak = streak;
+      i.soft = true;
+    }
   }
+  // Toistuvat muiden jälkeen (järjestys muuten ennallaan).
+  insights.sort((a, b) => Number(!!a.soft) - Number(!!b.soft));
+  // Sama vaihtoehto vain kerran (ensimmäisessä huomiossa), ettei se toistu joka rivillä.
+  insights.forEach((i, k) => {
+    if (i.option && insights.slice(0, k).some((x) => x.option === i.option)) delete i.option;
+  });
   return { ...base, state: insights.length ? 'insights' : 'ok', insights };
 }

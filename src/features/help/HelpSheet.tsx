@@ -54,7 +54,7 @@ const TOPICS: { q: string; a: string[] }[] = [
       'Valitse ylhäältä taso. Viikko: täyttyikö suositus ja mistä liikunta kertyi. Kuukausi: mihin suuntaan ollaan menossa. Kausi: kausi kokonaisuutena. Vuosi: koko vuosi yhdellä silmäyksellä.',
       'Muokkaa näkymää -painikkeesta valitaan, mitä aiheita näytetään. Jokaisella tasolla on omat valintansa; yksittäiset kortit ja niiden järjestys löytyvät kohdasta Lisää vaihtoehtoja.',
       'Sivun alalaidan "Mihin luvut perustuvat" kertoo suositukset, lähteet ja sovelluksen omat tulkinnat.',
-      'Huomiot-kortti kertoo päättyneeltä viikolta, mikä liikkumissuosituksesta jäi vajaaksi, ja ehdottaa viikkorytmin vapaita päiviä. Kohdasta Miksi? näkee laskutavan ja lähteen. Kaksi tärkeintä huomiota näkyy myös Viikko-näkymän viime viikon koosteessa. Huomioita ei anneta, ennen kuin viikon kerrat on kuitattu. Lapsilla huomiot kertovat myös ohjatun urheilun määrästä (vapaapäivät, tunnit suhteessa ikään, nopea kasvu) kansainvälisen tutkimustiedon pohjalta; ne on merkitty sanalla Tutkimus.',
+      'Huomiot-kortti kertoo päättyneeltä viikolta, mikä liikkumissuosituksesta jäi vajaaksi, ja ehdottaa viikkorytmin vapaita päiviä. Kohdasta Miksi? näkee laskutavan ja lähteen. Kaksi tärkeintä huomiota näkyy myös Viikko-näkymän viime viikon koosteessa. Huomioita ei anneta, ennen kuin viikon kerrat on kuitattu. Lapsilla huomiot kertovat myös ohjatun urheilun määrästä (vapaapäivät, tunnit suhteessa ikään, nopea kasvu) kansainvälisen tutkimustiedon pohjalta; ne on merkitty sanalla Tutkimus. Huomiot voi kytkeä pois profiilikohtaisesti kohdassa Asetukset → Profiilit → Muokkaa. Kolmatta viikkoa toistuva huomio näytetään lyhyesti.',
     ],
   },
   {

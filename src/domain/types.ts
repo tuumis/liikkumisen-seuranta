@@ -83,6 +83,10 @@ export interface Profile extends SyncFields {
   digestSeenWeek?: ISODate;
   /** Lajit, jotka on piilotettu tämän profiilin lajivalikoista (14.11.2026). Vanhat kerrat säilyvät. */
   hiddenTypeIds?: UUID[];
+  /** Viikon huomiot (24.11.2026): false = liikkumissuosituksen huomiot pois; puuttuessa päällä. */
+  insightsRec?: boolean;
+  /** Viikon huomiot: false = urheilun kuormituksen huomiot (lapset) pois; puuttuessa päällä. */
+  insightsLoad?: boolean;
   sortOrder: number;
   archived: boolean;
   createdAt: Timestamp;

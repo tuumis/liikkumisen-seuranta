@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.38',
+    date: '24.11.2026',
+    items: [
+      'Viikon huomiot voi kytkeä pois profiilikohtaisesti (Asetukset → Profiilit → Muokkaa): liikkumissuosituksen ja urheilun kuormituksen huomiot erikseen.',
+      'Kolmatta viikkoa peräkkäin toistuva huomio näytetään lyhyesti uusien jälkeen, ja tarkemmat tiedot saa auki kohdasta Näytä tarkemmin.',
+    ],
+  },
+  {
     version: '1.1.37',
     date: '24.11.2026',
     items: [

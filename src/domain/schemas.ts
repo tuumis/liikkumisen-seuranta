@@ -34,6 +34,8 @@ export const profileSchema = either(
     football: z.boolean().optional(),
     digestSeenWeek: iso.optional(),
     hiddenTypeIds: z.array(z.string()).optional(),
+    insightsRec: z.boolean().optional(),
+    insightsLoad: z.boolean().optional(),
     sortOrder: z.number(),
     archived: z.boolean(),
     createdAt: ts,

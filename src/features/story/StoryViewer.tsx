@@ -48,7 +48,7 @@ function useStory(profile: Profile): StorySlide[] | undefined {
     const footballIds = sessions.filter((s) => types.get(s.activityTypeId)?.sport === 'football').map((s) => s.id);
     const footballDetails = await repo.footballDetailsFor(footballIds);
     const report = periodReport({ profile, period: { ...season, end }, sessions, estimates, flags, planned, types, settings, today });
-    return buildStory({ name: profile.name, seasonLabel: seasonKey(today), report, sessions, types, footballDetails, football: footballOn, teams });
+    return buildStory({ name: profile.name, seasonLabel: seasonKey(today), report, sessions, types, footballDetails, football: footballOn, teams, load: profile.insightsLoad !== false });
   }, [profile, season.start, end, today, footballOn]);
 }
 
