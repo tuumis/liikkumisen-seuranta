@@ -666,9 +666,12 @@ html[data-bg] body::before {
    vaalentaa näkymää hetkellisesti (välähdys). */
 /* Häivytys läpinäkyvyydellä (19.11.2026): taustavärin animointi piirtyi pääsäikeellä ja nyki, kun paneelin sisältö
    rakentui samaan aikaan; opacity liikkuu näytönohjaimella sulavasti. */
+/* Täyttö "both" (24.11.2026, käyttäjän video: paneeli ja tausta katosivat ruudun tai kaksi avauksen lopussa PC:llä):
+   kun näytönohjaimella ajettu animaatio päättyy ennen kuin kiireinen pääsäie ehtii päivittää tilan, selain piirsi
+   elementin hetken animaation alkuarvolla (läpinäkyvänä). Loppuarvon pitäminen poistaa tämän välin. */
 .scrim {
   background-color: rgb(26 37 32 / 0.5);
-  animation: fade 0.32s var(--ease-out) backwards;
+  animation: fade 0.32s var(--ease-out) both;
   will-change: opacity;
 }
 .dark .scrim {
@@ -698,7 +701,7 @@ html[data-bg] body::before {
   animation-delay: 150ms;
 }
 .anim-sheet {
-  animation: sheet-up 0.35s var(--ease-out) backwards;
+  animation: sheet-up 0.35s var(--ease-out) both;
   will-change: transform, opacity;
 }
 /* Paneelin avautuminen odottaa ensimmäistä piirrettyä ruutua (ui/Sheet.tsx): muuten sisällön rakentamisen aikana

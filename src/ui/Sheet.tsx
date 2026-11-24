@@ -98,7 +98,11 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
     if ((e.target as HTMLElement).closest('button')) return;
     const y = e.touches[0].clientY;
     drag.current = { y0: y, dy: 0, lastY: y, lastT: performance.now(), v: 0 };
-    if (panel.current) panel.current.style.transition = 'none';
+    if (panel.current) {
+      panel.current.style.transition = 'none';
+      // Avausanimaatio pitää loppuarvonsa (index.css, fill both), joten se poistetaan, jotta veto voi siirtää paneelia.
+      panel.current.style.animation = 'none';
+    }
   };
   const onDragMove = (e: TouchEvent) => {
     const d = drag.current;

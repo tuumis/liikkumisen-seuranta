@@ -9,6 +9,13 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.50',
+    date: '24.11.2026',
+    items: [
+      'Korjattu PC:llä näkynyt välähdys: kerran tai suunnitelman paneeli saattoi kadota hetkeksi heti avautumisen jälkeen ja ilmestyä uudelleen. Paneeli ja tumma tausta pysyvät nyt näkyvissä koko ajan.',
+    ],
+  },
+  {
     version: '1.1.49',
     date: '24.11.2026',
     items: [
