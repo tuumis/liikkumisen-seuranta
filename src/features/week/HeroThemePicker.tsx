@@ -1,15 +1,21 @@
 // Viikon pääkortin teema (24.11.2026): pikavalitsin kortin alakulmassa ja sama valinta Asetuksissa.
-// Valinta tallennetaan profiiliin (Profile.heroTheme), joten se on profiilikohtainen ja synkronoituu.
+// Valinta tallennetaan profiiliin (Profile.heroTheme, tummalle tilalle heroThemeDark), joten se on
+// profiilikohtainen ja synkronoituu. Pikavalinta muuttaa sen tilan teemaa, joka on käytössä.
 
 import { useEffect, useRef, useState } from 'react';
 import type { HeroTheme, Profile } from '../../domain/types';
 import { repo } from '../../db/repositories';
-import { ACCENT_THEMES, getAccent, HERO_THEMES } from '../../ui/theme';
+import { ACCENT_THEMES, getAccent, HERO_THEMES, useIsDark } from '../../ui/theme';
 import { IconPalette } from '../../ui/icons';
 
+/** Tilan teema: tumma tila ilman omaa valintaa käyttää vaalean tilan teemaa. */
+export function heroThemeFor(profile: Profile, dark: boolean): HeroTheme {
+  return (dark ? (profile.heroThemeDark ?? profile.heroTheme) : profile.heroTheme) ?? 'app';
+}
+
 /** Kortin data-hero-attribuutti ja profiilivärin muuttuja (WeekHero). */
-export function heroThemeProps(profile: Profile): { 'data-hero'?: string; style: Record<string, string> } {
-  const t = profile.heroTheme;
+export function heroThemeProps(profile: Profile, dark: boolean): { 'data-hero'?: string; style: Record<string, string> } {
+  const t = heroThemeFor(profile, dark);
   return { 'data-hero': t && t !== 'app' ? t : undefined, style: { '--hero-profile': profile.color } };
 }
 
@@ -27,7 +33,9 @@ export function swatchStyle(id: HeroTheme, profile: Profile): React.CSSPropertie
   return { background: t.swatch, boxShadow: id === 'morning' ? 'inset 0 0 0 1px rgb(60 50 30 / 0.2)' : undefined };
 }
 
-export function saveHeroTheme(profile: Profile, id: HeroTheme): Promise<void> {
+/** Tallennus tilan mukaan; tummalle tilalle myös 'app' erikseen (muuten se seuraisi vaaleaa). */
+export function saveHeroTheme(profile: Profile, id: HeroTheme, dark: boolean): Promise<void> {
+  if (dark) return repo.updateProfile(profile.id, { heroThemeDark: id });
   return repo.updateProfile(profile.id, { heroTheme: id === 'app' ? undefined : id });
 }
 
@@ -35,7 +43,8 @@ export function saveHeroTheme(profile: Profile, id: HeroTheme): Promise<void> {
 export function HeroThemePicker({ profile }: { profile: Profile }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const current = profile.heroTheme ?? 'app';
+  const dark = useIsDark();
+  const current = heroThemeFor(profile, dark);
 
   useEffect(() => {
     if (!open) return;
@@ -67,8 +76,8 @@ export function HeroThemePicker({ profile }: { profile: Profile }) {
       </button>
       {open && (
         <div className="anim-pop absolute bottom-full right-0 z-30 mb-2 w-max max-w-[calc(100vw-3rem)] rounded-2xl bg-[var(--surface-raised)] p-3 text-slate-900 shadow-lg ring-1 ring-black/5">
-          <div className="mb-2 text-xs font-semibold text-slate-600">Kortin teema · {profile.name}</div>
-          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={`Kortin teema, ${profile.name}`}>
+          <div className="mb-2 text-xs font-semibold text-slate-600">Kortin teema · {profile.name} · {dark ? 'tumma tila' : 'vaalea tila'}</div>
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={`Kortin teema, ${profile.name}, ${dark ? 'tumma tila' : 'vaalea tila'}`}>
             {HERO_THEMES.map((t) => {
               const on = current === t.id;
               return (
@@ -79,7 +88,7 @@ export function HeroThemePicker({ profile }: { profile: Profile }) {
                   aria-checked={on}
                   aria-label={t.label}
                   title={t.label}
-                  onClick={() => void saveHeroTheme(profile, t.id)}
+                  onClick={() => void saveHeroTheme(profile, t.id, dark)}
                   className={`press size-9 rounded-full ${on ? 'ring-2 ring-slate-900 ring-offset-2 ring-offset-[var(--surface-raised)]' : ''}`}
                   style={swatchStyle(t.id, profile)}
                 />

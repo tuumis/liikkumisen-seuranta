@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.60',
+    date: '24.11.2026',
+    items: [
+      'Viikon pääkortin teeman voi valita erikseen vaalealle ja tummalle tilalle. Kortin paletti-painike vaihtaa käytössä olevan tilan teeman; molemmat näkyvät kohdassa Asetukset → Ulkoasu.',
+      'Jos tummalle tilalle ei ole valittu omaa teemaa, käytetään vaalean tilan teemaa.',
+    ],
+  },
+  {
     version: '1.1.59',
     date: '24.11.2026',
     items: [

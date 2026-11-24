@@ -375,7 +375,7 @@ export function createRepositories(db: AppDB = defaultDb) {
   }
 
   type ProfileInput = Pick<Profile, 'name' | 'kind' | 'birthYear' | 'birthMonth' | 'color'> &
-    Partial<Pick<Profile, 'schoolStart' | 'groupOverride' | 'trackingStart' | 'photo' | 'football' | 'hiddenTypeIds' | 'insightsRec' | 'insightsLoad' | 'heroTheme'>>;
+    Partial<Pick<Profile, 'schoolStart' | 'groupOverride' | 'trackingStart' | 'photo' | 'football' | 'hiddenTypeIds' | 'insightsRec' | 'insightsLoad' | 'heroTheme' | 'heroThemeDark'>>;
 
   async function createProfile(input: ProfileInput): Promise<Profile> {
     const all = await db.profiles.toArray();
@@ -398,7 +398,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     if (!current || current.deletedAt) throw new Error('Profiilia ei löydy');
     const next: Profile = await stamp({ ...current, ...changes });
     // Valinnaisten kenttien tyhjennys: undefined poistaa kentän.
-    for (const k of ['schoolStart', 'groupOverride', 'trackingStart', 'photo', 'football', 'hiddenTypeIds', 'insightsRec', 'insightsLoad', 'heroTheme'] as const) {
+    for (const k of ['schoolStart', 'groupOverride', 'trackingStart', 'photo', 'football', 'hiddenTypeIds', 'insightsRec', 'insightsLoad', 'heroTheme', 'heroThemeDark'] as const) {
       if (k in changes && changes[k] === undefined) delete next[k];
     }
     await db.profiles.put(next);

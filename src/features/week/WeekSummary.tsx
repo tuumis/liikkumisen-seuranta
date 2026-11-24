@@ -17,6 +17,7 @@ import { Term, type TermId } from '../../ui/glossary';
 import { Collapse, CollapseToggle, useCollapsible } from '../../ui/Collapse';
 import { Sparks, useCelebrateOnce, useMetStreak } from './celebrate';
 import { HeroThemePicker, heroThemeProps } from './HeroThemePicker';
+import { useIsDark } from '../../ui/theme';
 
 const pick = (d: DualMeasure, s: Settings) => (s.primaryView === 'logged' ? d.logged : d.combined);
 
@@ -130,7 +131,7 @@ export function WeekHero({ report, profile, isCurrentWeek }: { report: PeriodRep
   const met = !!main && ev.evaluable && main.m.status === 'met' && !inProgress;
   const streak = useMetStreak(profile, report.period.start, met);
   const party = useCelebrateOnce(profile.id, report.period.start, met && isCurrentWeek);
-  const theme = heroThemeProps(profile);
+  const theme = heroThemeProps(profile, useIsDark());
 
   return (
     <section

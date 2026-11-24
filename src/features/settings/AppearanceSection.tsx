@@ -2,8 +2,8 @@ import { Button, Card } from '../../ui/components';
 import { Segmented } from '../../ui/controls';
 import { playSound, soundsSupported, useSoundsEnabled } from '../../ui/sound';
 import type { Profile } from '../../domain/types';
-import { saveHeroTheme, swatchStyle } from '../week/HeroThemePicker';
-import { ACCENT_THEMES, BACKGROUNDS, HERO_THEMES, useAccent, useBackground, useThemeChoice, useViewMode, type BackgroundId, type ThemeChoice, type ViewMode } from '../../ui/theme';
+import { heroThemeFor, saveHeroTheme, swatchStyle } from '../week/HeroThemePicker';
+import { ACCENT_THEMES, BACKGROUNDS, HERO_THEMES, useIsDark, useAccent, useBackground, useThemeChoice, useViewMode, type BackgroundId, type ThemeChoice, type ViewMode } from '../../ui/theme';
 import { useRef, useState } from 'react';
 import { resizeBackground } from '../../ui/image';
 import { useToast } from '../../ui/Toast';
@@ -224,15 +224,36 @@ function BackgroundCard() {
   );
 }
 
-/** Viikon pääkortin teema valitulle profiilille (24.11.2026); sama kuin kortin kulman pikavalitsin. */
+/** Viikon pääkortin teema valitulle profiilille (24.11.2026), erikseen vaalealle ja tummalle tilalle. */
 function HeroThemeCard({ profile }: { profile: Profile }) {
-  const current = profile.heroTheme ?? 'app';
+  const dark = useIsDark();
   return (
     <Card title={`Viikon pääkortti · ${profile.name}`}>
       <p className="-mt-1 mb-3 text-sm text-slate-600">
-        Viikko-näkymän pääkortin teema tälle profiilille. Valinnan voi vaihtaa myös kortin kulman paletti-painikkeesta.
+        Viikko-näkymän pääkortin teema tälle profiilille, erikseen vaalealle ja tummalle tilalle. Kortin kulman paletti-painike vaihtaa
+        käytössä olevan tilan teeman. Jos tummalle tilalle ei ole valittu omaa, käytetään vaalean tilan teemaa.
       </p>
-      <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-3" role="radiogroup" aria-label={`Viikon pääkortin teema, ${profile.name}`}>
+      <div className="space-y-4">
+        {([false, true] as const).map((d) => (
+          <HeroThemeRow key={String(d)} profile={profile} dark={d} active={d === dark} />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function HeroThemeRow({ profile, dark, active }: { profile: Profile; dark: boolean; active: boolean }) {
+  const current = heroThemeFor(profile, dark);
+  const label = dark ? 'Tumma tila' : 'Vaalea tila';
+  const inherited = dark && !profile.heroThemeDark;
+  return (
+    <div>
+      <div className="mb-2 flex flex-wrap items-baseline gap-x-2 text-sm">
+        <span className="font-semibold text-slate-900">{label}</span>
+        {active && <span className="text-xs text-slate-500">käytössä nyt</span>}
+        {inherited && <span className="text-xs text-slate-500">sama kuin vaalea tila</span>}
+      </div>
+      <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-3" role="radiogroup" aria-label={`Viikon pääkortin teema, ${profile.name}, ${label.toLowerCase()}`}>
         {HERO_THEMES.map((t) => {
           const on = current === t.id;
           return (
@@ -241,7 +262,7 @@ function HeroThemeCard({ profile }: { profile: Profile }) {
               type="button"
               role="radio"
               aria-checked={on}
-              onClick={() => void saveHeroTheme(profile, t.id)}
+              onClick={() => void saveHeroTheme(profile, t.id, dark)}
               className={`press card-interactive flex min-w-0 items-center gap-2.5 rounded-[1.25rem] p-2.5 text-left ${on ? 'bg-[var(--surface-raised)] shadow-md ring-2 ring-green-700' : 'card'}`}
             >
               <span className="size-10 shrink-0 rounded-xl shadow-sm" style={swatchStyle(t.id, profile)} aria-hidden />
@@ -253,6 +274,6 @@ function HeroThemeCard({ profile }: { profile: Profile }) {
           );
         })}
       </div>
-    </Card>
+    </div>
   );
 }

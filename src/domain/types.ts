@@ -93,6 +93,8 @@ export interface Profile extends SyncFields {
   insightsLoad?: boolean;
   /** Viikon pääkortin teema (24.11.2026); puuttuessa sovelluksen väriteema. Synkronoituu profiilin mukana. */
   heroTheme?: HeroTheme;
+  /** Pääkortin teema tummassa tilassa (24.11.2026); puuttuessa sama kuin heroTheme. 'app' tallennetaan erikseen. */
+  heroThemeDark?: HeroTheme;
   sortOrder: number;
   archived: boolean;
   createdAt: Timestamp;
