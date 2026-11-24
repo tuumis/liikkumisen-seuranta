@@ -9,7 +9,8 @@ import { activityTypeId, dayFlagId, newId, plannedSessionId, sessionIdFromPlanne
 import { computeSessionMinutes, DEFAULT_GAME_WARMUP_MIN, DEFAULT_PLAY_SHARE, INTENSITY_PRESETS, roundMinutes, partsShares, supportsParts } from '../domain/intensity';
 import { defaultGameLength, DEFAULT_WARMUP_MIN, legacyTournamentStart, tournamentStart } from '../domain/tournamentTime';
 import { DEFAULT_SETTINGS } from '../domain/recommendations';
-import { addDays, isISODate, maxDate } from '../domain/dates';
+import { addDays, datesBetween, isISODate, maxDate } from '../domain/dates';
+import { injuryRunAt, MAX_INJURY_DAYS, type InjuryRun } from '../domain/injury';
 import { newPlanned, templateItemDates } from '../domain/planning';
 import { holidayOn } from '../domain/holidays';
 import { activeEstimate, ESTIMATE_ONLY_CATEGORIES, isDaycareLabel, isEstimateConfirmation, isEstimateValidOn } from '../domain/aggregate';
@@ -1466,6 +1467,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     const next = await stamp({ ...plan, status: 'skipped' as const });
     delete next.skipReason;
     delete next.skipNote;
+    delete next.autoSkipped;
     if (reason) next.skipReason = reason;
     const clean = cleanSkipNote(note);
     if (clean) next.skipNote = clean;
@@ -1492,6 +1494,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     const next = await stamp({ ...plan, status: 'open' as const });
     delete next.skipReason;
     delete next.skipNote;
+    delete next.autoSkipped;
     await db.plannedSessions.put(next);
   }
 
@@ -2605,6 +2608,69 @@ export function createRepositories(db: AppDB = defaultDb) {
     if (existing && !existing.deletedAt) await softDelete(db.dayFlags, id);
   }
 
+  // ---------- loukkaantumisjakso (24.11.2026) ----------
+
+  /** Päivän sisältävä loukkaantumisjakso (domain/injury), tai null. */
+  async function injuryAt(profileId: UUID, date: ISODate): Promise<InjuryRun | null> {
+    return injuryRunAt(await dayFlagsInRange(profileId, addDays(date, -MAX_INJURY_DAYS), addDays(date, MAX_INJURY_DAYS)), date);
+  }
+
+  /**
+   * Tallentaa jakson: päivät alusta paluuta edeltävään päivään merkitään loukkaantuneiksi (aiempi merkintä,
+   * esim. sairas, korvautuu). `prev` = muokattava aiempi jakso: sen päivät, jotka eivät ole uudessa jaksossa,
+   * vapautetaan. Lopuksi suunnitellut kerrat ohitetaan tai avataan uudelleen (applyInjurySkips).
+   */
+  async function setInjury(profileId: UUID, run: InjuryRun | null, prev?: InjuryRun | null): Promise<void> {
+    noteLocalChange();
+    const days = run && run.returnDate > run.start ? datesBetween(run.start, addDays(run.returnDate, -1)).slice(0, MAX_INJURY_DAYS) : [];
+    const keep = new Set(days);
+    if (prev && prev.returnDate > prev.start) {
+      for (const d of datesBetween(prev.start, addDays(prev.returnDate, -1))) {
+        if (keep.has(d)) continue;
+        const f = await db.dayFlags.get(dayFlagId(profileId, d));
+        if (f && !f.deletedAt && f.reason === 'injured') await softDelete(db.dayFlags, f.id);
+      }
+    }
+    for (const d of days) {
+      const f = await db.dayFlags.get(dayFlagId(profileId, d));
+      if (!f || f.deletedAt || f.reason !== 'injured') await setDayFlag(profileId, d, 'injured');
+    }
+    await applyInjurySkips();
+  }
+
+  /**
+   * Loukkaantumisjakson suunnitellut kerrat (24.11.2026): avoimet kerrat loukkaantumispäiviltä ohitetaan syyllä
+   * "Loukkaantunut", ja sovelluksen näin ohittamat avataan uudelleen, kun päivä ei enää kuulu jaksoon (paluu
+   * aiemmin, jakso poistettu). Käsin ohitettuihin ei kosketa. Aikaleima johdetaan päivämerkinnästä (uudempi
+   * versioista + 1 ms), joten molemmat laitteet tuottavat saman tietueen. Idempotentti.
+   */
+  async function applyInjurySkips(): Promise<number> {
+    const flags = new Map((await db.dayFlags.toArray()).map((f) => [`${f.profileId}|${f.date}`, f]));
+    let n = 0;
+    for (const p of live(await db.plannedSessions.toArray())) {
+      const f = flags.get(`${p.profileId}|${p.date}`);
+      const injured = !!f && !f.deletedAt && f.reason === 'injured';
+      const stampOf = (): Pick<PlannedSession, 'updatedAt' | 'updatedBy'> => ({
+        updatedAt: new Date(Math.max(Date.parse(p.updatedAt), f ? Date.parse(f.updatedAt) : 0) + 1).toISOString(),
+        updatedBy: f?.updatedBy ?? p.updatedBy,
+      });
+      if (p.status === 'open' && injured) {
+        await db.plannedSessions.put({ ...p, status: 'skipped', skipReason: 'injured', autoSkipped: true, ...stampOf() });
+        n++;
+      } else if (p.status === 'skipped' && p.autoSkipped && !injured) {
+        const { skipReason: _r, autoSkipped: _a, ...rest } = p;
+        await db.plannedSessions.put({ ...rest, status: 'open', ...stampOf() });
+        n++;
+      }
+    }
+    return n;
+  }
+
+  /** Sovelluksen omat ohitukset: ensin loukkaantumisjaksot, sitten lomat (lomapäivän koululiikunta jää lomaksi). */
+  async function applyAutoSkips(): Promise<number> {
+    return (await applyInjurySkips()) + (await applyHolidaySkips());
+  }
+
   // ---------- asetukset (synkronoituva rivi) ----------
 
   async function getSettings(): Promise<Settings> {
@@ -2677,10 +2743,14 @@ export function createRepositories(db: AppDB = defaultDb) {
     /** Pohjan suunnitelmat + lomapäivien koululiikunnan ohitus uusille kerroille. */
     ensurePlanned: async (profileId: UUID, through: ISODate, today: ISODate, only?: { from: ISODate }) => {
       const n = await planner.ensurePlanned(profileId, through, today, only);
-      if (n) await applyHolidaySkips();
+      if (n) await applyAutoSkips();
       return n;
     },
     applyHolidaySkips,
+    applyInjurySkips,
+    applyAutoSkips,
+    injuryAt,
+    setInjury,
     getPlannedThrough: planner.getPlannedThrough,
     listTemplateItems,
     createTemplateItem,

@@ -26,6 +26,8 @@ import { BackupReminder, SyncBar } from '../sync/SyncBar';
 import { UpdateBanner } from '../update/appUpdate';
 import { FootballPanel } from '../football/FootballPanel';
 import { DayRow } from './DayRow';
+import { InjuryNotice } from './InjuryNotice';
+import { InjurySheet } from './InjurySheet';
 import { DayStrip, type StripDay } from './DayStrip';
 import { DayTable, fmtUnit, type MinuteUnit } from './DayTable';
 import { WeekDetails, WeekHero } from './WeekSummary';
@@ -74,6 +76,8 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
   const [selDay, setSelDay] = useState<ISODate>(today);
   const [quickAdd, setQuickAdd] = useState<{ date?: ISODate } | null>(null);
   const [editing, setEditing] = useState<Session | null>(null);
+  // Loukkaantumisjakson paneeli: päivä, jolta se avattiin (24.11.2026).
+  const [injuryDay, setInjuryDay] = useState<ISODate | null>(null);
   const [dayMenu, setDayMenu] = useState<ISODate | null>(null);
   const [planOnce, setPlanOnce] = useState<ISODate | null>(null);
   const [estimateDay, setEstimateDay] = useState<ISODate | null>(null);
@@ -587,6 +591,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
       {!profile && <Card>Lisää profiili Asetukset-välilehdellä.</Card>}
 
       {profile && hasAnySessions === false && <GettingStarted onAdd={() => setQuickAdd({})} onOpenSettings={onOpenSettings} />}
+      {profile && isCurrent && <InjuryNotice profile={profile} today={today} onEdit={() => setInjuryDay(today)} />}
       {profile && isCurrent && <GameDayCard profile={profile} today={today} />}
       {profile && isCurrent && <LastWeekCard profile={profile} today={today} onOpenWeek={setWeekStart} />}
 
@@ -728,8 +733,13 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
               setDayMenu(null);
               setPlanOnce(date);
             }}
+            onInjury={(date) => {
+              setDayMenu(null);
+              setInjuryDay(date);
+            }}
           />
           <PlanOnceSheet profile={profile} date={planOnce} onClose={() => setPlanOnce(null)} />
+          <InjurySheet profile={profile} date={injuryDay} onClose={() => setInjuryDay(null)} />
         </>
       )}
     </div>

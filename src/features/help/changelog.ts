@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.54',
+    date: '24.11.2026',
+    items: [
+      'Uusi loukkaantumisjakso: päivän valikosta Merkitse loukkaantuneeksi, alkupäivä ja arvioitu paluupäivä. Jakson päivät eivät ole mukana suositusvertailussa, ja jakson treenit ja pelit merkitään poissaoloksi automaattisesti.',
+      'Viikko-näkymässä näkyy loukkaantumisen aikana arvioitu paluu. Palasi jo avaa myöhemmät treenit uudelleen, ja paluupäivää voi muuttaa.',
+    ],
+  },
+  {
     version: '1.1.53',
     date: '24.11.2026',
     items: [

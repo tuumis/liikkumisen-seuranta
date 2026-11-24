@@ -230,7 +230,7 @@ export function WeekReport({ profile, weekStart, onClose }: { profile: Profile; 
 
           <footer className="mt-6 pt-2 text-[10px] leading-snug" style={{ borderTop: `1px solid ${pal.line}`, color: pal.soft }}>
             Kesto on liikuttu aika. Reippaan ja rasittavan minuutit ovat lajien tyypillisistä tehoista laskettuja arvioita, ja arkiliikunta on vanhemman perusarvio.
-            Sairas- ja matkapäivät eivät ole mukana tavoitteissa. Luvut kertovat kirjatun liikunnan määrästä, eivät kunnosta eivätkä terveydestä. Vertailu:
+            Sairas-, matka- ja loukkaantumispäivät eivät ole mukana tavoitteissa. Luvut kertovat kirjatun liikunnan määrästä, eivät kunnosta eivätkä terveydestä. Vertailu:
             UKK-instituutin liikkumissuositukset.
           </footer>
         </div>

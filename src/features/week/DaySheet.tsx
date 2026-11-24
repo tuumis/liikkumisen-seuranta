@@ -1,4 +1,4 @@
-// Päivän toiminnot (pitkä painallus): lisää kerta, sairaus- ja matkapäivät (SPEC 12).
+// Päivän toiminnot (pitkä painallus): lisää kerta, sairaus- ja matkapäivät (SPEC 12) sekä loukkaantumisjakso.
 
 import type { DayFlag, DayFlagReason, ISODate, Profile } from '../../domain/types';
 import { repo } from '../../db/repositories';
@@ -13,9 +13,11 @@ export const FLAG_LABEL: Record<DayFlagReason, string> = {
   sick: 'Sairas',
   travel: 'Matkapäivä',
   other: 'Ei seurantaa',
+  injured: 'Loukkaantunut',
 };
 
-const FLAG_ACTION: Record<DayFlagReason, string> = {
+// Loukkaantuminen merkitään jaksona omassa paneelissaan (InjurySheet), ei päivä kerrallaan.
+const FLAG_ACTION: Record<Exclude<DayFlagReason, 'injured'>, string> = {
   sick: 'Merkitse sairaaksi',
   travel: 'Merkitse matkapäiväksi',
   other: 'Merkitse muuksi poissaoloksi',
@@ -28,6 +30,7 @@ export function DaySheet({
   onClose,
   onAdd,
   onPlan,
+  onInjury,
 }: {
   date: ISODate | null;
   flag?: DayFlag;
@@ -36,6 +39,8 @@ export function DaySheet({
   onAdd: (date: ISODate) => void;
   /** Tulevalle päivälle: suunniteltu kerta. */
   onPlan?: (date: ISODate) => void;
+  /** Loukkaantumisjakson merkintä tai muokkaus (24.11.2026). */
+  onInjury?: (date: ISODate) => void;
 }) {
   const toast = useToast();
   const today = todayFn();
@@ -73,14 +78,19 @@ export function DaySheet({
               <IconPlus size="1rem" /> Suunnittele kerta tälle päivälle
             </Button>
           )}
-          {(Object.keys(FLAG_ACTION) as DayFlagReason[])
+          {(Object.keys(FLAG_ACTION) as Exclude<DayFlagReason, 'injured'>[])
             .filter((r) => r !== flag?.reason)
             .map((r) => (
               <Button key={r} variant="secondary" className="w-full" onClick={() => setFlag(r)}>
                 {FLAG_ACTION[r]}
               </Button>
             ))}
-          {flag && (
+          {onInjury && (
+            <Button variant="secondary" className="w-full" onClick={() => onInjury(date)}>
+              {flag?.reason === 'injured' ? 'Muuta loukkaantumisjaksoa' : 'Merkitse loukkaantuneeksi'}
+            </Button>
+          )}
+          {flag && flag.reason !== 'injured' && (
             <Button variant="secondary" className="w-full" onClick={clear}>
               Poista merkintä ({FLAG_LABEL[flag.reason].toLowerCase()})
             </Button>

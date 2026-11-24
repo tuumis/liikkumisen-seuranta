@@ -49,7 +49,7 @@ function HowCounted({ isCurrentWeek }: { isCurrentWeek: boolean }) {
           Kesto kellotunteina, kaikki liikunta (myös kevyt). Toteuma = kirjatut kerrat + arkiliikunta: vahvistettu tai perusarvio päiville, joilta saman kategorian kirjaus puuttuu
           {isCurrentWeek ? ' (tähän päivään asti)' : ''}. Arvio koko viikolle = toteuma + tulevat ja kuittaamattomat suunnitellut kerrat + arkiliikunnan arvio tuleville päiville. "Ei tehty" tai
           poistettu kerta putoaa pois. Sairas- ja matkapäiviltä ja ennen seurannan alkua mukana ovat vain kirjatut kerrat, ei arkiliikunnan arviota. Tunnit kertovat liikunnan
-          määrän; suositusvertailu jättää sairas- ja matkapäivät kokonaan pois. Suunnitelmat eivät vaikuta suositusvertailuun.
+          määrän; suositusvertailu jättää sairas-, matka- ja loukkaantumispäivät kokonaan pois. Suunnitelmat eivät vaikuta suositusvertailuun.
         </>
       }
     >

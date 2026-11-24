@@ -63,11 +63,13 @@ describe('esimerkkitilan aineisto', () => {
     const flags = new Set((await db.dayFlags.toArray()).map((f) => f.reason));
     check('sairauspäivä', flags.has('sick'));
     check('matkapäivä', flags.has('travel'));
+    check('loukkaantumisjakso', flags.has('injured'));
 
     // Viikkorytmi: kuitatut, väliin jääneet syineen, kuittaamattomat ja tulevat.
     check('kuitattu', plans.some((p) => p.status === 'done'));
     for (const r of ['sick', 'cancelled', 'holiday', 'other_commitment']) check(`väliin: ${r}`, plans.some((p) => p.status === 'skipped' && p.skipReason === r));
     check('väliin jäänyt kommentilla', plans.some((p) => p.skipNote));
+    check('loukkaantumisjakson kerrat ohitettu', plans.some((p) => p.status === 'skipped' && p.skipReason === 'injured' && p.autoSkipped));
     check('kuittaamatta', plans.some((p) => p.status === 'open' && p.date < today));
     check('tuleva', plans.some((p) => p.status === 'open' && p.date > today));
     check('kuitattu kovempana', sessions.some((s) => s.plannedSessionId && s.intensityPreset === 'vigorous'));

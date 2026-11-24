@@ -175,6 +175,8 @@ export interface PlannedSession extends SyncFields {
   templateItemId?: UUID; // puuttuu, jos lisätty käsin
   status: PlannedStatus;
   skipReason?: SkipReason;
+  /** Sovellus ohitti kerran loukkaantumisjakson vuoksi (24.11.2026); avataan uudelleen, jos jakso lyhenee. */
+  autoSkipped?: boolean;
   /** Vapaa kommentti väliin jääneelle kerralle (24.11.2026), esim. "kipeä kurkku". */
   skipNote?: string;
   sessionId?: UUID; // kun status = 'done'
@@ -425,7 +427,7 @@ export interface Club extends SyncFields {
 }
 
 // ---------- muut ----------
-export type DayFlagReason = 'sick' | 'travel' | 'other';
+export type DayFlagReason = 'sick' | 'travel' | 'other' | 'injured';
 
 export interface DayFlag extends SyncFields {
   id: UUID; // f:<profileId>:<date>

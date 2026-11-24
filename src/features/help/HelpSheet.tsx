@@ -15,6 +15,13 @@ const TOPICS: { q: string; a: string[] }[] = [
     ],
   },
   {
+    q: 'Entä sairaus, matka tai loukkaantuminen?',
+    a: [
+      'Päivän kolmen pisteen valikosta (⋯) päivän voi merkitä sairaaksi, matkapäiväksi tai muuksi poissaoloksi. Merkittyä päivää ei lasketa mukaan suositusvertailuun, ja päivän kirjaukset säilyvät.',
+      'Loukkaantuminen merkitään jaksona: Merkitse loukkaantuneeksi, alkupäivä ja arvioitu paluupäivä. Jakson päivät eivät ole mukana suositusvertailussa, ja jakson suunnitellut treenit ja pelit merkitään poissaoloksi (syy: loukkaantunut). Viikko-näkymässä näkyy arvioitu paluu: Palasi jo avaa myöhemmät kerrat uudelleen, ja paluupäivää voi muuttaa.',
+    ],
+  },
+  {
     q: 'Mitä kevyt, reipas ja rasittava tarkoittavat?',
     a: [
       'Kevyt: ei hengästytä (esim. rauhallinen kävely).',

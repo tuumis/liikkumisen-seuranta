@@ -278,7 +278,7 @@ function QualityCard({ report }: { report: PeriodReport }) {
   const q = report.evaluation.quality;
   const ex = report.excluded;
   const out = [
-    ex.flagged > 0 && `${ex.flagged} sairas-/matkapäivää`,
+    ex.flagged > 0 && `${ex.flagged} sairas-, matka- tai loukkaantumispäivää`,
     ex.beforeTracking > 0 && `${ex.beforeTracking} ennen seurannan alkua (${formatDate(report.trackingStart, 'd.M.yyyy')})`,
     ex.future > 0 && `${ex.future} tulevaa`,
   ].filter(Boolean);
@@ -390,7 +390,7 @@ function Rationale() {
             <li>Tehoprofiilit (kuinka suuri osa treenistä on reipasta) ovat sovelluksen arvioita, eivät virallisia lukuja.</li>
             <li>Arkiliikunnan arvio täyttää kategorian vain päivinä, joille siinä ei ole kirjauksia, eikä se koskaan tuota rasittavaa eikä vahvistavaa päivää.</li>
             <li>Alle kouluikäisten jakson tila lasketaan täyttyneiden päivien osuudesta.</li>
-            <li>Vertailussa ovat mukana päivät profiilin luonnista alkaen, ei tulevia eikä sairas- ja matkapäiviä.</li>
+            <li>Vertailussa ovat mukana päivät profiilin luonnista alkaen, ei tulevia eikä sairas-, matka- ja loukkaantumispäiviä.</li>
           </ul>
           <p className="mt-3 text-xs text-slate-500">
             Laadullisia ohjeita (monipuolisuus, paikallaanolon tauottaminen, uni) ei mitata. Liikunnalle ei ole näyttöön perustuvaa ylärajaa, joten sitä ei näytetä. Suositusten versio{' '}

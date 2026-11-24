@@ -182,7 +182,7 @@ export function GoalCard({ report, variant }: { report: PeriodReport; variant: '
         <p className="text-xs text-slate-500">
           Vertailussa {ev.n}/7 päivää
           {report.excluded.beforeTracking > 0 && ` · seuranta alkoi ${formatDate(report.trackingStart, 'd.M.')}`}
-          {report.excluded.flagged > 0 && ` · ${report.excluded.flagged} sairas-/matkapäivää pois`}
+          {report.excluded.flagged > 0 && ` · ${report.excluded.flagged} sairas-, matka- tai loukkaantumispäivää pois`}
           {report.excluded.today > 0 && ' · tämä päivä tulee mukaan, kun sille on kirjattu jotain'}
         </p>
       )}

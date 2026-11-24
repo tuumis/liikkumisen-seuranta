@@ -4,7 +4,7 @@
 // ominaisuudelle on esimerkki: uuden ominaisuuden tiedot lisätään tänne.
 
 import type { Repositories } from '../db/repositories';
-import { addDays, isoWeekday, startOfIsoWeek } from '../domain/dates';
+import { addDays, datesBetween, isoWeekday, startOfIsoWeek } from '../domain/dates';
 import { activityTypeId } from '../domain/ids';
 import type { Category, FocusTag, GameResult, ISODate, PlannedSession, UUID } from '../domain/types';
 import { ESTIMATE_DEFAULT_TYPE_KEY } from '../seed/activityTypes';
@@ -102,12 +102,16 @@ export async function seedDemo(repo: Repo, today: ISODate): Promise<DemoIds> {
     await repo.createTemplateItem(eino.id, { activityTypeId: t('football_training'), weekdays: [2], startTime: '17:00', durationMin: 45, validFrom: start, teamId: einoTeam.id, label: 'Futiskoulu' }, today),
   ];
   for (const it of items) await repo.backfillTemplateItem(it.id, today);
-  await repo.applyHolidaySkips();
+  await repo.applyAutoSkips();
 
   // Sairauspäivät (Aino, viikko -4 ti–to): päivät merkitään ja kerrat jäävät väliin.
   const sick = [wd(-4, 2), wd(-4, 3), wd(-4, 4)];
   for (const d of sick) await repo.setDayFlag(aino.id, d, 'sick');
   await repo.setDayFlag(eino.id, wd(-2, 6), 'travel');
+  // Loukkaantumisjakso (Aino, viikko -7 ti–pe, paluu lauantaina): jakson kerrat ohittuvat automaattisesti.
+  const injury = { start: wd(-7, 2), returnDate: wd(-7, 6) };
+  await repo.setInjury(aino.id, injury, null);
+  const injuredDays = datesBetween(injury.start, addDays(injury.returnDate, -1));
 
   // Kuittaamatta jäävät: eilinen ja toissapäivä (Kuittaa-muistutus ja pikakuittaus).
   const pending = new Set([addDays(today, -1), addDays(today, -2)]);
@@ -153,7 +157,7 @@ export async function seedDemo(repo: Repo, today: ISODate): Promise<DemoIds> {
   for (let w = -9; w <= 0; w++) {
     for (let d = 1; d <= 7; d++) {
       const date = wd(w, d);
-      if (date < start || !past(date) || pending.has(date) || sick.includes(date)) continue;
+      if (date < start || !past(date) || pending.has(date) || sick.includes(date) || injuredDays.includes(date)) continue;
       // Aino: viikonloppuna vaihtelevasti, keskiviikkona omatoiminen pallottelu.
       if (d === 6) {
         const key = pick(['cycling', 'swimming', 'trampoline', 'inline_skating']);

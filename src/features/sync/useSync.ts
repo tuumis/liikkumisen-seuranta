@@ -50,7 +50,7 @@ async function ensurePlannedAll() {
  */
 const foldEstimateOnly = async () => {
   await repo.foldEstimateOnlySessions(today()).catch(() => 0);
-  await repo.applyHolidaySkips().catch(() => 0); // lomajaksot: toisen laitteen tuomat kerrat/jaksot
+  await repo.applyAutoSkips().catch(() => 0); // loma- ja loukkaantumisjaksot: toisen laitteen tuomat kerrat/jaksot
   await repo.alignTournamentArrivals().catch(() => 0);
 };
 

@@ -158,7 +158,7 @@ export const footballDetailsSchema = either(
 );
 
 export const dayFlagSchema = either(
-  z.looseObject({ id: z.string().min(1), profileId: z.string(), date: iso, reason: z.enum(['sick', 'travel', 'other']), ...sync }),
+  z.looseObject({ id: z.string().min(1), profileId: z.string(), date: iso, reason: z.enum(['sick', 'travel', 'other', 'injured']).catch('other'), ...sync }),
 );
 
 export const settingsSchema = z.looseObject({
