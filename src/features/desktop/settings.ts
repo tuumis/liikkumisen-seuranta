@@ -157,6 +157,30 @@ export function requestWeek(review: boolean, focusPlanId?: string) {
   window.dispatchEvent(new Event(REVIEW_EVENT));
 }
 
+// ---------- pyyntö pikakirjaukselle (pelin päättymisilmoituksen klikkaus, 24.11.2026) ----------
+
+const GAME_EVENT = 'opengameentry';
+let pendingGame: { planId: string; index: number } | null = null;
+
+/** Pyytää pelipäivän pikakirjausta avaamaan pelin (`index` = turnauksen peli, 0 = yksittäinen peli). */
+export function requestGameEntry(planId: string, index: number) {
+  pendingGame = { planId, index };
+  window.dispatchEvent(new Event(GAME_EVENT));
+}
+
+/** Pikakirjauskortin kuuntelija; `accept` kertoo, onko pyydetty peli tällä kortilla (muuten pyyntö jää odottamaan). */
+export function subscribeGameEntry(accept: (planId: string) => boolean, cb: (index: number) => void): () => void {
+  const run = () => {
+    if (!pendingGame || !accept(pendingGame.planId)) return;
+    const { index } = pendingGame;
+    pendingGame = null;
+    cb(index);
+  };
+  run();
+  window.addEventListener(GAME_EVENT, run);
+  return () => window.removeEventListener(GAME_EVENT, run);
+}
+
 /** Viikko-näkymän kuuntelija; käsittelee myös ennen kiinnitystä tulleen pyynnön. */
 export function subscribeWeekRequest(cb: (review: boolean, focusPlanId?: string) => void): () => void {
   const run = () => {

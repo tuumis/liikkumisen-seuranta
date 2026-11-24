@@ -24,11 +24,31 @@ export const MIN_TOTAL = 7;
 export const MAX_TOTAL = 13;
 
 /**
+ * Käyttäjän säädöt (24.11.2026, käyttäjän toive: nopeus ja pituus säädettäviksi). Tempo kertoo animaatioiden
+ * ajat, pituus lopun pysäytyskuvan keston ja videon rajat. Normaali = aiempi video.
+ */
+export type VideoTempo = 'slow' | 'normal' | 'fast';
+export type VideoLength = 'short' | 'normal' | 'long';
+export interface VideoTiming {
+  tempo: VideoTempo;
+  length: VideoLength;
+}
+export const DEFAULT_TIMING: VideoTiming = { tempo: 'normal', length: 'normal' };
+export const TEMPO_PACE: Record<VideoTempo, number> = { slow: 2.1, normal: PACE, fast: 1.1 };
+export const LENGTH_HOLD: Record<VideoLength, { hold: number; min: number; max: number }> = {
+  short: { hold: 1.5, min: 4, max: 9 },
+  normal: { hold: HOLD, min: MIN_TOTAL, max: MAX_TOTAL },
+  long: { hold: 6, min: 10, max: 20 },
+};
+
+/**
  * Ajoitus osien nimistä (piirtojärjestyksessä, toistot sallittu): tausta ensin, sitten tunniste ja päivä
  * ylös liukuen, joukkue vasemmalta ja vastustaja oikealta, VS ponnahtaen, turnauksen rivit yksi kerrallaan
  * ja lopuksi kommentti, ajat ja paikka.
  */
-export function videoTimeline(names: readonly string[]): VideoTimeline {
+export function videoTimeline(names: readonly string[], timing: VideoTiming = DEFAULT_TIMING): VideoTimeline {
+  const pace = TEMPO_PACE[timing.tempo] ?? PACE;
+  const len = LENGTH_HOLD[timing.length] ?? LENGTH_HOLD.normal;
   const order = [...new Set(names)];
   const has = (n: string) => order.includes(n);
   const anims = new Map<string, LayerAnim>();
@@ -58,9 +78,11 @@ export function videoTimeline(names: readonly string[]): VideoTimeline {
     if (n === 'bg' || anims.has(n)) continue;
     put(n, 0.5, 'up', 0.3);
   }
-  for (const [n, a] of anims) anims.set(n, { ...a, start: round(a.start * PACE), dur: round(a.dur * PACE) });
+  for (const [n, a] of anims) anims.set(n, { ...a, start: round(a.start * pace), dur: round(a.dur * pace) });
   const end = Math.max(0, ...[...anims.values()].map((a) => a.start + a.dur));
-  return { anims, total: Math.min(MAX_TOTAL, Math.max(MIN_TOTAL, round(end + HOLD))) };
+  // Pitkä animaatio ei katkea: yläraja vähintään animaatio + lyhyt pysäytyskuva.
+  const max = Math.max(len.max, round(end + 1));
+  return { anims, total: Math.min(max, Math.max(len.min, round(end + len.hold))) };
 }
 
 const round = (v: number) => Math.round(v * 1000) / 1000;

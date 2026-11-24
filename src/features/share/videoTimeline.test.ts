@@ -1,6 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_TOTAL, MIN_TOTAL, poseAt, videoTimeline } from './videoTimeline';
 
+describe('tempo ja pituus (24.11.2026)', () => {
+  const names = ['bg', 'kicker', 'date', 'team', 'opponent', 'vs', 'times', 'place'];
+  it('nopea tempo aikaistaa osia ja hidas myöhentää; normaali = oletus', () => {
+    const fast = videoTimeline(names, { tempo: 'fast', length: 'normal' }).anims.get('vs')!;
+    const normal = videoTimeline(names).anims.get('vs')!;
+    const slow = videoTimeline(names, { tempo: 'slow', length: 'normal' }).anims.get('vs')!;
+    expect(fast.start).toBeLessThan(normal.start);
+    expect(slow.start).toBeGreaterThan(normal.start);
+    expect(videoTimeline(names, { tempo: 'normal', length: 'normal' })).toEqual(videoTimeline(names));
+  });
+  it('pituus: lyhyt < normaali < pitkä; animaatio ei katkea', () => {
+    const t = (length: 'short' | 'normal' | 'long', tempo: 'slow' | 'fast' = 'fast') => videoTimeline(names, { tempo, length }).total;
+    expect(t('short')).toBeLessThan(t('normal'));
+    expect(t('normal')).toBeLessThan(t('long'));
+    const rows = Array.from({ length: 20 }, (_, k) => `row:${k}`);
+    const long = videoTimeline(['bg', 'title', ...rows, 'place'], { tempo: 'slow', length: 'short' });
+    const end = Math.max(...[...long.anims.values()].map((a) => a.start + a.dur));
+    expect(long.total).toBeGreaterThan(end);
+  });
+});
+
 describe('videoTimeline', () => {
   it('ottelu: tunniste ja päivä ensin, joukkueet yhtä aikaa vastakkaisilta puolilta, VS niiden jälkeen', () => {
     const { anims, total } = videoTimeline(['bg', 'kicker', 'date', 'team', 'opponent', 'team', 'opponent', 'vs', 'times', 'place']);

@@ -9,6 +9,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.46',
+    date: '24.11.2026',
+    items: [
+      'Ennakko- ja tulosvideoille voi valita tempon (Hidas, Normaali, Nopea) ja pituuden (Lyhyt, Normaali, Pitkä). Valinnat muistetaan.',
+      'Pelipäivän pikakirjaus: myös yksittäisen pelin tuloksen, oman pelaajan maalit ja peliajan voi kirjata pelipäivänä suoraan kortista. Kortti näkyy Viikko-näkymässä ja Jalkapallo-välilehden yläosassa.',
+      'PC: ilmoitus jokaisen pelin päätyttyä kalenterin mukaan, turnauksessa peli kerrallaan otteluohjelmasta. Ilmoitusta painamalla kyseisen pelin pikakirjaus avautuu suoraan.',
+    ],
+  },
+  {
     version: '1.1.45',
     date: '24.11.2026',
     items: [

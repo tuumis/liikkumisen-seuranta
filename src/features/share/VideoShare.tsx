@@ -6,10 +6,25 @@ import { Button } from '../../ui/components';
 import { useToast } from '../../ui/Toast';
 import { HEIGHT, loadStyleFonts, W } from './drawResult';
 import { canEncodeFrames, drawFrame, encodeScene, layerCollector, pickVideoFormat, recordScene, type VideoScene } from './previewVideo';
+import { DEFAULT_TIMING, videoTimeline, type VideoLength, type VideoTempo, type VideoTiming } from './videoTimeline';
+import { Segmented } from '../../ui/controls';
 import type { RenderOptions } from './ShareSheet';
 import { IconPlay } from '../../ui/icons';
 
 type VideoState = { k: 'idle' } | { k: 'recording'; p: number } | { k: 'ready'; file: File; seconds: number } | { k: 'error'; msg: string };
+
+const TIMING_KEY = 'videoTiming';
+function loadTiming(): VideoTiming {
+  try {
+    const v = JSON.parse(localStorage.getItem(TIMING_KEY) ?? 'null') as Partial<VideoTiming> | null;
+    return {
+      tempo: v?.tempo === 'slow' || v?.tempo === 'fast' ? v.tempo : 'normal',
+      length: v?.length === 'short' || v?.length === 'long' ? v.length : 'normal',
+    };
+  } catch {
+    return DEFAULT_TIMING;
+  }
+}
 
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -35,7 +50,25 @@ export function useVideoShare({
   // Kuva kerrallaan (paras laatu), jos selain osaa; undefined = tarkistus kesken.
   const [frames, setFrames] = useState<boolean>();
   const [allowWebm, setAllowWebm] = useState(false);
-  const [scene, setScene] = useState<VideoScene>();
+  const [layers, setScene] = useState<VideoScene>();
+  // Tempo ja pituus (24.11.2026): muistetaan laitteella; muutos laskee ajoituksen uudelleen ilman uutta piirtoa.
+  const [timing, setTimingState] = useState<VideoTiming>(loadTiming);
+  const setTiming = (change: Partial<VideoTiming>) => {
+    setTimingState((cur) => {
+      const next = { ...cur, ...change };
+      try {
+        localStorage.setItem(TIMING_KEY, JSON.stringify(next));
+      } catch {
+        /* ei muistia */
+      }
+      return next;
+    });
+    setState({ k: 'idle' });
+  };
+  const scene = useMemo(
+    () => (layers ? { ...layers, timeline: videoTimeline(['bg', ...layers.segments.map((s) => s.name)], timing) } : undefined),
+    [layers, timing],
+  );
   const [state, setState] = useState<VideoState>({ k: 'idle' });
   const [playing, setPlaying] = useState(false);
   const [replay, setReplay] = useState(0);
@@ -233,10 +266,38 @@ export function useVideoShare({
             Videon teko ei onnistunut ({state.msg}). Kokeile uudelleen tai jaa kuva.
           </p>
         )}
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div>
+            <div className="mb-1 text-xs font-medium text-slate-600">Tempo</div>
+            <Segmented<VideoTempo>
+              label="Videon tempo"
+              value={timing.tempo}
+              onChange={(tempo) => setTiming({ tempo })}
+              options={[
+                { value: 'slow', label: 'Hidas' },
+                { value: 'normal', label: 'Normaali' },
+                { value: 'fast', label: 'Nopea' },
+              ]}
+            />
+          </div>
+          <div>
+            <div className="mb-1 text-xs font-medium text-slate-600">Pituus</div>
+            <Segmented<VideoLength>
+              label="Videon pituus"
+              value={timing.length}
+              onChange={(length) => setTiming({ length })}
+              options={[
+                { value: 'short', label: 'Lyhyt' },
+                { value: 'normal', label: 'Normaali' },
+                { value: 'long', label: 'Pitkä' },
+              ]}
+            />
+          </div>
+        </div>
         <Button className="w-full" disabled={!scene || frames === undefined} onClick={() => void make()}>
           Tee video
         </Button>
-        <p className="text-xs text-slate-500">Video on noin {scene ? Math.round(scene.timeline.total) : 7} sekuntia ja ilman ääntä. {frames === false ? 'Teko kestää yhtä kauan kuin video.' : 'Teko kestää yleensä muutaman sekunnin.'}</p>
+        <p className="text-xs text-slate-500">Video on noin {scene ? Math.round(scene.timeline.total) : 7} sekuntia ja ilman ääntä; pituus kertoo, kuinka kauan valmis kuva pysyy lopussa. {frames === false ? 'Teko kestää yhtä kauan kuin video.' : 'Teko kestää yleensä muutaman sekunnin.'}</p>
       </div>
     );
   }

@@ -1296,6 +1296,62 @@ export function createRepositories(db: AppDB = defaultDb) {
     return { sessionId, created };
   }
 
+  /**
+   * Yksittäisen pelin pikakirjaus (24.11.2026, käyttäjän toive: tulokset nopeasti heti pelin jälkeen): kuittaa
+   * kalenterin pelin tarvittaessa ja tallentaa tuloksen, oman pelaajan maalit ja Pelasiko-valinnan. Muut
+   * lisätiedot säilyvät. Peliaika: Ei = 0, Koko pelin = kesto − lämmittely, Osan = arvio; ilman valintaa ennallaan.
+   */
+  async function recordGameResult(
+    target: { planId: UUID } | { sessionId: UUID },
+    result: Pick<GameResult, 'goalsFor' | 'goalsAgainst' | 'playerGoals' | 'played' | 'opponent'>,
+    today: ISODate,
+  ): Promise<{ sessionId: UUID; created: boolean }> {
+    noteLocalChange();
+    let sessionId: UUID;
+    let created = false;
+    if ('planId' in target) {
+      const r = await confirmPlanned(target.planId, today);
+      sessionId = r.session.id;
+      created = r.created;
+    } else sessionId = target.sessionId;
+    const session = await db.sessions.get(sessionId);
+    if (!session || session.deletedAt) throw new Error('Kertaa ei löydy');
+    const fd = await getFootballDetails(sessionId);
+    const warmup = session.warmupMin ?? DEFAULT_GAME_WARMUP_MIN;
+    const playedMin =
+      result.played === 'none'
+        ? 0
+        : result.played === 'full'
+          ? Math.max(0, session.durationMin - warmup)
+          : result.played === 'part'
+            ? undefined
+            : fd?.played
+              ? undefined
+              : session.playedMin;
+    await saveFootballDetails(sessionId, {
+      attendance: fd?.attendance ?? 'full',
+      focusTags: fd?.focusTags ?? [],
+      team: fd?.team,
+      teamId: fd?.teamId,
+      level: fd?.level,
+      format: fd?.format,
+      positions: fd?.positions,
+      parentRating: fd?.parentRating,
+      enjoyment: fd?.enjoyment,
+      ratingNote: fd?.ratingNote,
+      link: fd?.link,
+      series: fd?.series,
+      homeAway: fd?.homeAway,
+      opponent: result.opponent ?? fd?.opponent,
+      goalsFor: result.goalsFor,
+      goalsAgainst: result.goalsAgainst,
+      playerGoals: result.playerGoals,
+      played: result.played,
+      playedMin,
+    });
+    return { sessionId, created };
+  }
+
   /** "Merkitse loput tehdyiksi": kuittaa kaikki; palauttaa luodut kerrat kumoamista varten. */
   async function confirmMany(planIds: UUID[], today: ISODate): Promise<UUID[]> {
     noteLocalChange();
@@ -2565,6 +2621,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     confirmPlanned,
     confirmMany,
     recordTournamentGame,
+    recordGameResult,
     undoConfirm,
     skipPlanned,
     setSkipNote,

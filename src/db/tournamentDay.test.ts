@@ -62,3 +62,23 @@ describe('turnauspäivän pikakirjaus', () => {
     expect(fd.gamesCount).toBe(3);
   });
 });
+
+describe('pelin pikakirjaus (24.11.2026)', () => {
+  it('kuittaa kalenterin pelin, tallentaa tuloksen ja säilyttää muut tiedot; Koko pelin = kesto − lämmittely', async () => {
+    const team = await repo.saveTeam('p1', { name: 'P2016 Sininen', series: 'P10' });
+    const e = await repo.createFixture('p1', { kind: 'game', date: DAY, durationMin: 75, startTime: '10:00', teamId: team.id, opponent: 'HJK', homeAway: 'home', link: 'https://example.org/peli' });
+    const a = await repo.recordGameResult({ planId: e.plan.id }, { goalsFor: 3, goalsAgainst: 2, playerGoals: 1, played: 'full' }, DAY);
+    expect(a.created).toBe(true);
+    const fd = (await repo.getFootballDetails(a.sessionId))!;
+    expect(fd).toMatchObject({ opponent: 'HJK', goalsFor: 3, goalsAgainst: 2, playerGoals: 1, played: 'full', series: 'P10', homeAway: 'home', teamId: team.id });
+    const s = (await db.sessions.get(a.sessionId))!;
+    expect(s.playedMin).toBe(75 - (s.warmupMin ?? 15));
+    expect((await db.plannedSessions.get(e.plan.id))!.status).toBe('done');
+
+    const b = await repo.recordGameResult({ sessionId: a.sessionId }, { goalsFor: 3, goalsAgainst: 3, played: 'part' }, DAY);
+    expect(b.created).toBe(false);
+    expect(await repo.getFootballDetails(a.sessionId)).toMatchObject({ goalsAgainst: 3, played: 'part', link: 'https://example.org/peli' });
+    expect((await repo.getFootballDetails(a.sessionId))!.playerGoals).toBeUndefined();
+    expect((await db.sessions.get(a.sessionId))!.playedMin).toBeUndefined();
+  });
+});

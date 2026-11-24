@@ -13,7 +13,9 @@ import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { ConflictSheet } from '../sync/ConflictSheet';
 import { pcAutoSync } from '../sync/useSync';
-import { closeNotification, requestWeek, showNotification, shownNotificationTags, useDesktopSettings } from './settings';
+import { closeNotification, requestGameEntry, requestWeek, showNotification, shownNotificationTags, useDesktopSettings } from './settings';
+import { gameSlots, gamesEndedBetween, gameSlotTag } from '../../domain/gameReminders';
+import { sessionIdFromPlanned } from '../../domain/ids';
 import { holidayDates } from '../../domain/holidays';
 
 const BASE_TITLE = typeof document !== 'undefined' ? document.title : 'Liikkumisen seuranta';
@@ -49,15 +51,19 @@ export function DesktopAgent({ onOpen }: { onOpen: (profileId: string) => void }
     const { holidays } = await repo.getSettings();
     const rows = await Promise.all(
       (await repo.listProfiles()).map(async (profile) => {
-        const [plans, sessions, todayPlans, estimates, flags] = await Promise.all([
+        const [plans, sessions, todayPlans, estimates, flags, fixtures] = await Promise.all([
           repo.unconfirmedPlans(profile.id, addDays(t, 1)),
           repo.sessionsInRange(profile.id, t, t),
           repo.plansInRange(profile.id, t, t),
           repo.listEstimates(profile.id),
           repo.dayFlagsInRange(profile.id, t, t),
+          repo.listFixtures(profile.id, t, t),
         ]);
+        // Päivän pelit pelikohtaisia ilmoituksia varten (24.11.2026); kuitatun kerran tulokset lisätiedoista.
+        const details = await repo.footballDetailsFor(fixtures.filter((f) => f.plan.status === 'done').map((f) => sessionIdFromPlanned(f.plan.id)));
+        const games = gameSlots(fixtures.map((f) => ({ ...f, details: details.get(sessionIdFromPlanned(f.plan.id)) })));
         const day = weeklyHours({ period: { kind: 'week', start: t, end: t }, sessions, planned: todayPlans, estimates, flags, types, today: t, holidays: holidayDates(holidays, profile.id, t, t) }).days[0];
-        return { profile, plans, endOf: await endOfFor(plans, t), arkiPending: !!day && !day.flagged && day.estimateMin > 0 };
+        return { profile, plans, games, endOf: await endOfFor(plans, t), arkiPending: !!day && !day.flagged && day.estimateMin > 0 };
       }),
     );
     return { types, rows };
@@ -88,7 +94,18 @@ export function DesktopAgent({ onOpen }: { onOpen: (profileId: string) => void }
     if (!settings.notify) return;
     if (settings.planEnd && prev && prev.date === t && nowMin > prev.min) {
       for (const r of data.rows) {
+        // Pelin päättyminen (24.11.2026): ilmoitus jokaisen pelin jälkeen; painallus avaa pikakirjauksen sille pelille.
+        for (const g of gamesEndedBetween(r.games, prev.min, nowMin)) {
+          void showNotification(g.title, `${r.profile.name} · Kirjaa tulos heti pikakirjauksella`, gameSlotTag(g), () => {
+            onOpen(r.profile.id);
+            requestWeek(false);
+            requestGameEntry(g.planId, g.index);
+          });
+        }
+        // Peleille ja turnauksille, joilla on pelikohtaiset ajat, ei erillistä "kerta päättyi" -ilmoitusta.
+        const gamePlans = new Set(r.games.map((g) => g.planId));
         for (const p of endedBetween(r.plans, t, prev.min, nowMin, r.endOf)) {
+          if (gamePlans.has(p.id)) continue;
           const name = p.label ?? data.types.get(p.activityTypeId)?.name ?? 'Kerta';
           const start = p.startTime ?? '';
           const end = r.endOf(p);
@@ -142,6 +159,9 @@ export function DesktopAgent({ onOpen }: { onOpen: (profileId: string) => void }
     if (!data) return;
     const open = new Set(data.rows.flatMap((r) => r.plans.map((p) => `plan-${p.id}`)));
     for (const tag of shownNotificationTags('plan-')) if (!open.has(tag)) void closeNotification(tag);
+    // Pelin ilmoitus suljetaan, kun tulos on kirjattu.
+    const pending = new Set(data.rows.flatMap((r) => r.games.filter((g) => !g.recorded).map(gameSlotTag)));
+    for (const tag of shownNotificationTags('game-')) if (!pending.has(tag)) void closeNotification(tag);
   }, [data]);
 
   // PC: automaattinen synkronointi käynnistyessä, minuutin välein, ikkunan saadessa fokuksen ja

@@ -19,6 +19,7 @@ import { dayLabel, formatDate } from '../../ui/format';
 import { SKIP_REASON_LABEL } from '../../ui/labels';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
+import { GameDayCard } from './TournamentDay';
 import { FootballPanel } from '../football/FootballPanel';
 import { GamesView } from '../football/GamesView';
 import { SkipReasons } from '../review/SkipReasons';
@@ -79,6 +80,8 @@ export function GamesTab({ profile }: { profile?: Profile }) {
   return (
     <div className="space-y-5">
       <FootballHero profile={profile} />
+      {/* Pelipäivän pikakirjaus myös täällä (24.11.2026, käyttäjän valinta). */}
+      <GameDayCard profile={profile} today={todayFn()} />
 
       {/* Selkeät lisäystoiminnot: mitä painike tekee ja milloin sitä käytetään. PC:llä näkyvissä suoraan;
           puhelimella ja tabletilla yksi Lisää kalenteriin -painike avaa samat valinnat (19.11.2026). */}
