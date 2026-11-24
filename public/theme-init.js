@@ -4,6 +4,16 @@
   // Oletukset: vaalea teema ja Vuono-väriteema (sama kuin src/ui/theme.ts).
   var choice = 'light';
   var accent = 'fjord';
+  // Esimerkkitilasta poistumatta suljettu välilehti: omat näkymäasetukset takaisin ennen teeman asetusta
+  // (sama kuin src/demo/demoMode.ts).
+  try {
+    var saved = sessionStorage.getItem('demoMode') !== '1' && localStorage.getItem('demoReturnSaved');
+    if (saved) {
+      var values = JSON.parse(saved);
+      localStorage.clear();
+      for (var k in values) localStorage.setItem(k, values[k]);
+    }
+  } catch (e) {}
   try {
     choice = localStorage.getItem('theme') || 'light';
     accent = localStorage.getItem('accent') || 'fjord';

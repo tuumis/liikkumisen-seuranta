@@ -9,6 +9,13 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.65',
+    date: '24.11.2026',
+    items: [
+      'Esimerkkitila: jos sovelluksen tai välilehden sulkee painamatta Poistu, esimerkissä muutetut ulkoasuvalinnat (esim. tumma tila tai korttien järjestys) palautetaan omiksi seuraavalla avauksella. Aiemmin ne jäivät voimaan omaan sovellukseen.',
+    ],
+  },
+  {
     version: '1.1.64',
     date: '24.11.2026',
     items: [

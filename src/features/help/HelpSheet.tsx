@@ -80,7 +80,7 @@ const TOPICS: { q: string; a: string[] }[] = [
     q: 'Voinko kokeilla sovellusta esimerkillä?',
     a: [
       'Kyllä: Asetukset → Esimerkkitila → Tutustu esimerkkiin (tai aloitusnäkymän painike). Esimerkissä on kaksi keksittyä lasta, koululainen jalkapalloilija ja alle kouluikäinen sisarus, ja heidän viikkonsa, pelinsä ja analyysinsä.',
-      'Esimerkki on erillään omista tiedoistasi: voit kokeilla kaikkea, eikä mikään muutu omissa tiedoissa. Yläreunan Poistu-painike palaa omiin tietoihin. Esimerkki luodaan joka kerta uudelleen tämän päivän mukaan. Synkronointi, varmuuskopiointi ja PC:n ilmoitukset eivät ole esimerkissä käytössä.',
+      'Esimerkki on erillään omista tiedoistasi: voit kokeilla kaikkea, eikä mikään muutu omissa tiedoissa. Yläreunan Poistu-painike palaa omiin tietoihin. Esimerkki luodaan joka kerta uudelleen tämän päivän mukaan, joten esimerkissä tehdyt muutokset (kuittaukset, kirjaukset, asetukset) eivät säily seuraavaan kertaan. Esimerkissä muutetut ulkoasuvalinnat palautetaan omiksi myös silloin, jos sovelluksen sulkee poistumatta esimerkistä. Synkronointi, varmuuskopiointi ja PC:n ilmoitukset eivät ole esimerkissä käytössä.',
       'Esimerkki näyttää samalta kuin oma sovelluksesi: Viikko-näkymän korttien järjestys ja valinnat, väriteema, tausta, vaalea tai tumma tila, pääkortin teema, viikon huomioiden valinnat ja laskenta-asetukset tulevat omista asetuksistasi esimerkkiin siirryttäessä.',
     ],
   },

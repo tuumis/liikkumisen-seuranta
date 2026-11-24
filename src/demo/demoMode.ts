@@ -62,11 +62,43 @@ function read(): boolean {
 /** Onko tämä välilehti esimerkkitilassa (luetaan kerran käynnistyksessä; tietokanta valitaan sen mukaan). */
 export const DEMO = read();
 
+/**
+ * Omat näkymäasetukset talteen myös pysyvästi (24.11.2026): jos esimerkkitilan välilehti suljetaan
+ * Poistu-painiketta painamatta, välilehtikohtainen kopio katoaa. Seuraava tavallinen käynnistys palauttaa
+ * omat asetukset tästä kopiosta, joten esimerkissä tehdyt ulkoasumuutokset eivät jää voimaan.
+ */
+const RETURN_SAVED = 'demoReturnSaved';
+
+function snapshot(): string {
+  const values: Record<string, string> = { ...localStorage };
+  delete values[RETURN_SAVED];
+  return JSON.stringify(values);
+}
+
+function restoreSnapshot(json: string): void {
+  const values = JSON.parse(json) as Record<string, string>;
+  localStorage.clear();
+  for (const [k, v] of Object.entries(values)) localStorage.setItem(k, v);
+}
+
+if (!DEMO) {
+  try {
+    const saved = localStorage.getItem(RETURN_SAVED);
+    if (saved) restoreSnapshot(saved);
+  } catch {
+    // Palautus ei estä käynnistystä.
+  }
+}
+
 /** Siirtyy esimerkkitilaan: vanha esimerkki poistetaan, joten tiedot luodaan tuoreina tämän päivän mukaan. */
 export async function enterDemo(): Promise<void> {
   try {
     // Esimerkistä uudelleen aloitettaessa omat asetukset ovat jo tallessa.
-    if (!DEMO) sessionStorage.setItem(RETURN, JSON.stringify({ ...localStorage }));
+    if (!DEMO) {
+      const snap = snapshot();
+      sessionStorage.setItem(RETURN, snap);
+      localStorage.setItem(RETURN_SAVED, snap);
+    }
   } catch {
     // Asetusten tallennus ei estä tutustumista.
   }
@@ -87,12 +119,10 @@ export async function enterDemo(): Promise<void> {
 /** Palaa omiin tietoihin; esimerkin aikana muuttuneet näkymäasetukset palautetaan ennalleen. */
 export function exitDemo(): void {
   try {
-    const saved = sessionStorage.getItem(RETURN);
-    if (saved) {
-      const values = JSON.parse(saved) as Record<string, string>;
-      localStorage.clear();
-      for (const [k, v] of Object.entries(values)) localStorage.setItem(k, v);
-    }
+    // Välilehden oma kopio, muuten pysyvä kopio; palautus poistaa myös pysyvän kopion (localStorage.clear).
+    const saved = sessionStorage.getItem(RETURN) ?? localStorage.getItem(RETURN_SAVED);
+    if (saved) restoreSnapshot(saved);
+    else localStorage.removeItem(RETURN_SAVED);
   } catch {
     // Palautus ei estä poistumista.
   }
