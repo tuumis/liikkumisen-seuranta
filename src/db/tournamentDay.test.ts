@@ -82,3 +82,29 @@ describe('pelin pikakirjaus (24.11.2026)', () => {
     expect((await db.sessions.get(a.sessionId))!.playedMin).toBeUndefined();
   });
 });
+
+describe('harjoituspelin pikakirjaus (24.11.2026)', () => {
+  it('pelien määrä, pituus ja lämmittely: kesto = lämmittely + pelit × pituus; pelien paikat säilyvät', async () => {
+    const e = await repo.createFixture('p1', { kind: 'friendly', date: DAY, durationMin: 90, startTime: '17:00', games: [{ opponent: 'HJK' }, { opponent: 'PK-35' }] });
+    const a = await repo.recordFriendlyDay({ planId: e.plan.id }, { gamesCount: 4, gameLengthMin: 20, warmupMin: 15, games: [{ opponent: 'HJK', goalsFor: 2, goalsAgainst: 1 }, {}, { opponent: 'HJK', goalsFor: 0, goalsAgainst: 0, playerGoals: 0 }] }, DAY);
+    expect(a).toMatchObject({ created: true, durationMin: 95 });
+    const s = (await db.sessions.get(a.sessionId))!;
+    expect(s.durationMin).toBe(95);
+    expect(s.minutes.light + s.minutes.moderate + s.minutes.vigorous).toBeGreaterThan(60);
+    const fd = (await repo.getFootballDetails(a.sessionId))!;
+    expect(fd).toMatchObject({ gamesCount: 4, gameLengthMin: 20, warmupMin: 15 });
+    expect(fd.games).toHaveLength(3);
+    expect(fd.games![1]).toEqual({});
+    expect(fd.games![2]).toMatchObject({ opponent: 'HJK', goalsFor: 0 });
+
+    const b = await repo.recordFriendlyDay({ sessionId: a.sessionId }, { gamesCount: 3, gameLengthMin: 25, warmupMin: 0, games: fd.games! }, DAY);
+    expect(b).toMatchObject({ created: false, durationMin: 75 });
+    expect((await repo.getFootballDetails(a.sessionId))!).toMatchObject({ gamesCount: 3, gameLengthMin: 25, warmupMin: 0 });
+
+    // Ilman pituutta kesto ei muutu.
+    const e2 = await repo.createFixture('p1', { kind: 'friendly', date: DAY, durationMin: 90, startTime: '19:00', games: [{ opponent: 'KäPa' }] });
+    const c = await repo.recordFriendlyDay({ planId: e2.plan.id }, { gamesCount: 2, games: [{ opponent: 'KäPa', goalsFor: 1, goalsAgainst: 1 }] }, DAY);
+    expect(c.durationMin).toBe(90);
+    expect((await repo.getFootballDetails(c.sessionId))!.gamesCount).toBe(2);
+  });
+});

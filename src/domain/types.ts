@@ -315,6 +315,8 @@ export interface FootballDetails extends SyncFields {
   eventName?: string; // turnaus
   /** Turnauksen yhden pelin pituus (min) otteluohjelmasta; pelirivien "Koko pelin" / "Osan" laskentaan. */
   gameLengthMin?: number;
+  /** Harjoituspelin lämmittely (min) pikakirjauksesta (24.11.2026): kesto = lämmittely + pelit × pelin pituus. */
+  warmupMin?: number;
   /** Peli: pelasiko (ei / osan / koko pelin). */
   played?: PlayedState;
   /** Sarja, esim. P9 (valinnainen, 18.11.2026); näkyy ennakko- ja tuloskuvassa merkkinä. */

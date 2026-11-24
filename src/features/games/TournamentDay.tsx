@@ -18,6 +18,7 @@ import { useToast } from '../../ui/Toast';
 import { logoFor, TeamLogo, useClubLogos } from '../../ui/TeamLogo';
 import { GoalStepper, PlayedChips } from '../football/FootballPanel';
 import { subscribeGameEntry } from '../desktop/settings';
+import { FriendlyEntry, useTodayFriendlies } from './FriendlyDay';
 import { historyLine, useGameRows } from './OpponentHistory';
 import { IconPlus } from '../../ui/icons';
 
@@ -57,11 +58,11 @@ function useTodayGames(profileId: UUID, today: ISODate): Entry[] | undefined {
           ...(fd?.homeAway ? { homeAway: fd.homeAway } : {}),
           ...(s.startTime ? { time: s.startTime } : {}),
         };
-        return { key: s.id, kind: 'game', planId: s.plannedSessionId, target: { sessionId: s.id }, name: s.label ?? 'Ottelu', games: [g], playShare: s.playShare, link: fd?.link };
+        return { key: s.plannedSessionId ?? s.id, kind: 'game', planId: s.plannedSessionId, target: { sessionId: s.id }, name: s.label ?? 'Ottelu', games: [g], playShare: s.playShare, link: fd?.link };
       }
       const n = Math.max(fd?.games?.length ?? 0, fd?.gamesCount ?? 0, 1);
       const games = Array.from({ length: n }, (_, i) => fd?.games?.[i] ?? {});
-      return { key: s.id, kind: 'tournament', planId: s.plannedSessionId, target: { sessionId: s.id }, name: fd?.eventName ?? s.label ?? 'Turnaus', games, playShare: s.playShare, link: fd?.link };
+      return { key: s.plannedSessionId ?? s.id, kind: 'tournament', planId: s.plannedSessionId, target: { sessionId: s.id }, name: fd?.eventName ?? s.label ?? 'Turnaus', games, playShare: s.playShare, link: fd?.link };
     });
     for (const { plan, fixture } of await repo.listFixtures(profileId, today, today)) {
       if (plan.status !== 'open') continue;
@@ -87,11 +88,15 @@ const hasResult = (g: GameResult) => g.goalsFor !== undefined && g.goalsAgainst 
 
 export function GameDayCard({ profile, today }: { profile: Profile; today: ISODate }) {
   const entries = useTodayGames(profile.id, today);
-  if (!entries?.length) return null;
+  const friendlies = useTodayFriendlies(profile.id, today);
+  if (!entries?.length && !friendlies?.length) return null;
   return (
     <>
-      {entries.map((e) => (
+      {entries?.map((e) => (
         <TournamentEntry key={e.key} entry={e} profile={profile} today={today} />
+      ))}
+      {friendlies?.map((e) => (
+        <FriendlyEntry key={e.key} entry={e} profile={profile} today={today} />
       ))}
     </>
   );

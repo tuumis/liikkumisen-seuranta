@@ -132,8 +132,10 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
     setSeries(d?.series ?? '');
     setHomeAway(d?.homeAway ?? '');
     setGamesCount(str(d?.games?.length ? undefined : d?.gamesCount));
+    // Harjoituspeli: rivit pelien määrään asti (pikakirjauksen tyhjät pelit, 24.11.2026).
+    const friendlyPad = type?.footballKind === 'friendly' ? Math.max(0, (d?.gamesCount ?? 0) - (d?.games?.length ?? 0)) : 0;
     setGames(
-      (d?.games ?? []).map((g) => ({
+      [...(d?.games ?? []), ...Array.from({ length: friendlyPad }, () => ({}) as GameResult)].map((g) => ({
         opponent: g.opponent ?? '',
         goalsFor: str(g.goalsFor),
         goalsAgainst: str(g.goalsAgainst),
@@ -223,7 +225,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
       link: cleanLink,
       series,
       homeAway: kind === 'game' || kind === 'friendly' ? homeAway || undefined : undefined,
-      gamesCount: nums.count,
+      gamesCount: kind === 'friendly' ? games.length : nums.count,
       games: rows,
       playerGoals: nums.own,
       format: format || undefined,

@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.47',
+    date: '24.11.2026',
+    items: [
+      'Harjoituspelin pikakirjaus: harjoituspelipäivänä kortti, jossa voit muuttaa pelien määrää, pelin pituutta ja lämmittelyä paikan päällä. Kesto lasketaan niistä (esim. 15 + 4 × 20 = 95 min).',
+      'Jokaiselle pelille valitaan vastustaja kalenterin vastustajista (tai kirjoitetaan muu) ja kirjataan tulos ja oman pelaajan maalit. Kortti näkyy Viikko-näkymässä ja Jalkapallo-välilehden yläosassa.',
+    ],
+  },
+  {
     version: '1.1.46',
     date: '24.11.2026',
     items: [

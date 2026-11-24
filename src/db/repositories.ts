@@ -1352,6 +1352,76 @@ export function createRepositories(db: AppDB = defaultDb) {
     return { sessionId, created };
   }
 
+  /**
+   * Harjoituspelin pikakirjaus (24.11.2026, käyttäjän toive: pelien määrä ja kesto selviävät vasta paikan päällä):
+   * pelien määrä, yhteinen pelin pituus ja lämmittely sekä pelien tulokset. Kerran kesto = lämmittely + pelit ×
+   * pituus; tehot lasketaan uudelleen lajin profiililla. Kuittaa kalenterin harjoituspelin tarvittaessa.
+   */
+  async function recordFriendlyDay(
+    target: { planId: UUID } | { sessionId: UUID },
+    input: { gamesCount: number; gameLengthMin?: number; warmupMin?: number; games: GameResult[] },
+    today: ISODate,
+  ): Promise<{ sessionId: UUID; created: boolean; durationMin: number }> {
+    noteLocalChange();
+    const int = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, Math.round(Number.isFinite(v) ? v : lo)));
+    const n = int(input.gamesCount, 1, 20);
+    // Ilman pituutta kesto pysyy ennallaan (esim. kalenterin alku–loppu), vain tulokset ja määrä tallentuvat.
+    const timed = input.gameLengthMin !== undefined;
+    const len = int(input.gameLengthMin ?? 0, 1, 240);
+    const warm = int(input.warmupMin ?? 0, 0, 120);
+    let sessionId: UUID;
+    let created = false;
+    if ('planId' in target) {
+      const r = await confirmPlanned(target.planId, today);
+      sessionId = r.session.id;
+      created = r.created;
+    } else sessionId = target.sessionId;
+    const session = await db.sessions.get(sessionId);
+    if (!session || session.deletedAt) throw new Error('Kertaa ei löydy');
+    const type = await getActivityType(session.activityTypeId);
+    if (type.footballKind !== 'friendly') throw new Error('Kerta ei ole harjoituspeli');
+    const fd = await getFootballDetails(sessionId);
+    await saveFootballDetails(sessionId, {
+      attendance: fd?.attendance ?? 'full',
+      focusTags: fd?.focusTags ?? [],
+      team: fd?.team,
+      teamId: fd?.teamId,
+      level: fd?.level,
+      format: fd?.format,
+      positions: fd?.positions,
+      parentRating: fd?.parentRating,
+      enjoyment: fd?.enjoyment,
+      ratingNote: fd?.ratingNote,
+      link: fd?.link,
+      series: fd?.series,
+      homeAway: fd?.homeAway,
+      games: input.games.slice(0, n),
+      gamesCount: n,
+    });
+    const saved = await db.footballDetails.get(sessionId);
+    if (!timed) return { sessionId, created, durationMin: session.durationMin };
+    if (saved && (saved.gameLengthMin !== len || saved.warmupMin !== warm || saved.gamesCount !== n)) {
+      await db.footballDetails.put(await stamp({ ...saved, gameLengthMin: len, warmupMin: warm, gamesCount: n }));
+    }
+    const durationMin = warm + n * len;
+    if (durationMin !== session.durationMin) {
+      await updateSession(sessionId, {
+        activityTypeId: session.activityTypeId,
+        date: session.date,
+        startTime: session.startTime,
+        durationMin,
+        effort: session.effort,
+        intensityPreset: session.intensityPreset,
+        manual: session.intensitySource === 'manual' ? session.minutes : undefined,
+        muscle: session.muscle,
+        bone: session.bone,
+        note: session.note,
+        label: session.label,
+      });
+    }
+    return { sessionId, created, durationMin };
+  }
+
   /** "Merkitse loput tehdyiksi": kuittaa kaikki; palauttaa luodut kerrat kumoamista varten. */
   async function confirmMany(planIds: UUID[], today: ISODate): Promise<UUID[]> {
     noteLocalChange();
@@ -1454,6 +1524,7 @@ export function createRepositories(db: AppDB = defaultDb) {
       const prev = await db.footballDetails.get(sessionId);
       const d: FootballDetails = await stamp({ sessionId, attendance: input.attendance, focusTags: [...new Set(input.focusTags)] });
       if (prev && !prev.deletedAt && prev.gameLengthMin !== undefined) d.gameLengthMin = prev.gameLengthMin;
+      if (prev && !prev.deletedAt && prev.warmupMin !== undefined) d.warmupMin = prev.warmupMin;
       // Tuloskuvan kommentti muokataan jakopaneelista (setResultNote); lomake ei koske siihen.
       if (prev && !prev.deletedAt && prev.shareNote) d.shareNote = prev.shareNote;
       const set = <K extends keyof FootballDetails>(k: K, v: FootballDetails[K] | undefined) => {
@@ -1494,23 +1565,24 @@ export function createRepositories(db: AppDB = defaultDb) {
       }
       // Harjoituspeli (17.11.2026): vastustajat ja valinnaiset tulokset; ei peliaikalaskentaa eikä V–T–H-tilastoa.
       if (type.footballKind === 'friendly') {
-        const games = (input.games ?? [])
-          .map((g) => {
-            const r: GameResult = {};
-            if (clean(g.opponent)) r.opponent = clean(g.opponent);
-            if (num(g.goalsFor) !== undefined) r.goalsFor = g.goalsFor;
-            if (num(g.goalsAgainst) !== undefined) r.goalsAgainst = g.goalsAgainst;
-            if (num(g.playerGoals) !== undefined) r.playerGoals = g.playerGoals;
-            if (g.note?.trim()) r.note = g.note.trim().slice(0, 500);
-            return r;
-          })
-          .filter((g) => Object.keys(g).length > 0);
+        const games = (input.games ?? []).map((g) => {
+          const r: GameResult = {};
+          if (clean(g.opponent)) r.opponent = clean(g.opponent);
+          if (num(g.goalsFor) !== undefined) r.goalsFor = g.goalsFor;
+          if (num(g.goalsAgainst) !== undefined) r.goalsAgainst = g.goalsAgainst;
+          if (num(g.playerGoals) !== undefined) r.playerGoals = g.playerGoals;
+          if (g.note?.trim()) r.note = g.note.trim().slice(0, 500);
+          return r;
+        });
+        // Pelien paikat säilyvät (pikakirjaus, 24.11.2026): tyhjä peli välissä jää, lopun tyhjät pois.
+        while (games.length && Object.keys(games[games.length - 1]).length === 0) games.pop();
+        const count = Math.max(games.length, num(input.gamesCount) ?? 0);
         if (games.length) {
           d.games = games;
-          d.gamesCount = games.length;
           const withGoals = games.filter((g) => g.playerGoals !== undefined);
           if (withGoals.length) d.playerGoals = withGoals.reduce((a, g) => a + g.playerGoals!, 0);
         } else set('playerGoals', num(input.playerGoals));
+        if (count > 0) d.gamesCount = Math.min(20, count);
       }
       if (type.footballKind === 'tournament') {
         set('eventName', clean(input.eventName));
@@ -2622,6 +2694,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     confirmMany,
     recordTournamentGame,
     recordGameResult,
+    recordFriendlyDay,
     undoConfirm,
     skipPlanned,
     setSkipNote,
