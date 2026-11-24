@@ -17,6 +17,26 @@ export function DemoBanner() {
   );
 }
 
+/** PC:n sivupalkki (24.11.2026): esimerkkitilan merkintä ja Poistu aina näkyvissä yläpalkin sijaan. */
+export function DemoSidebar() {
+  return (
+    <div role="status" className="rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10">
+      <div className="flex items-center gap-2 text-sm font-semibold text-[var(--side-ink)]">
+        <IconSparkle size="1.05rem" className="shrink-0 text-[var(--hero-accent)]" />
+        Esimerkkitila
+      </div>
+      <p className="mt-1 text-xs leading-snug text-[var(--side-ink-soft)]">Tiedot ovat keksittyjä. Omat tietosi eivät muutu.</p>
+      <button
+        type="button"
+        onClick={exitDemo}
+        className="press mt-2.5 min-h-9 w-full rounded-xl bg-[var(--hero-accent)] px-3 text-sm font-bold text-[var(--side-from)] hover:brightness-105"
+      >
+        Poistu esimerkistä
+      </button>
+    </div>
+  );
+}
+
 /** Esimerkkitilaan siirtyminen (aloitus ja Asetukset); painike näyttää valmistelun ajan tilan. */
 export function useEnterDemo(): [busy: boolean, start: () => void] {
   const [busy, setBusy] = useState(false);

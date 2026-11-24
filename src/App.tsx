@@ -29,7 +29,7 @@ import { setThemeChoice, useIsDark } from './ui/theme';
 import { useUnconfirmedCounts } from './features/review/unconfirmed';
 import { requestWeek } from './features/desktop/settings';
 import { DEMO } from './demo/demoMode';
-import { DemoBanner } from './demo/DemoBanner';
+import { DemoBanner, DemoSidebar } from './demo/DemoBanner';
 
 // Analyysi (Recharts) ladataan omana osanaan; service worker esivälimuistittaa senkin.
 const loadAnalysis = () => import('./features/analysis/AnalysisView');
@@ -318,7 +318,7 @@ export default function App() {
         )}
         <div className="mt-auto space-y-3 px-4 pb-7">
           <SidebarUpdate />
-          {!DEMO && <SyncBar variant="sidebar" />}
+          {DEMO ? <DemoSidebar /> : <SyncBar variant="sidebar" />}
           <button
             type="button"
             onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
@@ -390,7 +390,12 @@ export default function App() {
       </header>
 
       <main className="mx-auto max-w-xl px-4 pb-[calc(max(0.75rem,env(safe-area-inset-bottom))+7.5rem)] pt-2 md:max-w-2xl lg:max-w-none lg:px-10 lg:pb-12 lg:pt-10 2xl:px-14">
-        {DEMO && <DemoBanner />}
+        {/* PC:llä esimerkkitilan merkintä ja Poistu ovat sivupalkissa. */}
+        {DEMO && (
+          <div className="lg:hidden">
+            <DemoBanner />
+          </div>
+        )}
         <div className="mb-5 flex items-end justify-between gap-3 lg:mb-8">
           <div className="min-w-0">
             <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">{dateLine}</div>

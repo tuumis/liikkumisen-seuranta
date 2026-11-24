@@ -9,6 +9,13 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.66',
+    date: '24.11.2026',
+    items: [
+      'Esimerkkitila PC:llä: merkintä ja Poistu esimerkistä -painike ovat nyt sivupalkissa, joten ne ovat aina näkyvissä. Puhelimessa ne ovat edelleen yläreunassa.',
+    ],
+  },
+  {
     version: '1.1.65',
     date: '24.11.2026',
     items: [
