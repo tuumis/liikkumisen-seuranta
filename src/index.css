@@ -449,9 +449,14 @@ html[data-bg] body::before {
   --hero-glass: rgb(255 255 255 / 0.08);
   --hero-glass-strong: rgb(255 255 255 / 0.15);
   --hero-line: rgb(255 255 255 / 0.4);
+  --hero-accent-ink: #1c2b24;
 }
 .hero-glass {
   background: var(--hero-glass);
+  box-shadow: inset 0 0 0 1px var(--hero-glass);
+}
+.hero-glass-strong {
+  background: var(--hero-glass-strong);
   box-shadow: inset 0 0 0 1px var(--hero-glass);
 }
 .hero::after {
@@ -1620,6 +1625,7 @@ html[data-bg] body::before {
   --hero-glass: rgb(31 74 91 / 0.06);
   --hero-glass-strong: rgb(31 74 91 / 0.1);
   --hero-line: rgb(29 51 64 / 0.35);
+  --hero-accent-ink: #f6f1e7;
   box-shadow: var(--shadow-lg), inset 0 0 0 1px rgb(60 50 30 / 0.08);
 }
 .hero[data-hero='morning']::after {

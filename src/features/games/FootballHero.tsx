@@ -14,13 +14,15 @@ import { today as todayFn } from '../../ui/today';
 import { useFootball } from '../football/useFootball';
 import { goalsLabel } from '../../ui/labels';
 import { dispatchCommand } from '../desktop/commands';
+import { heroThemeProps } from '../week/HeroThemePicker';
+import { useIsDark } from '../../ui/theme';
 
 // Puhelimella (alle 640 px) luvut ovat yhdellä rivillä pienempinä (19.11.2026), jotta sivun valinnat mahtuvat ensimmäiseen ruutuun.
 function Stat({ label, value, i }: { label: ReactNode; value: number | string; i: number }) {
   const n = typeof value === 'number' ? value : NaN;
   const long = String(value).length > 5;
   return (
-    <div className="anim-rise min-w-0 rounded-2xl bg-white/[0.08] px-1 py-1.5 text-center ring-1 ring-white/[0.08] sm:px-3 sm:py-2.5 sm:text-left" style={{ ['--i' as string]: i }}>
+    <div className="hero-glass anim-rise min-w-0 rounded-2xl px-1 py-1.5 text-center sm:px-3 sm:py-2.5 sm:text-left" style={{ ['--i' as string]: i }}>
       <dt className="truncate text-[9.5px] sm:overflow-visible sm:whitespace-normal font-bold uppercase tracking-wide text-[var(--hero-ink-soft)] sm:text-[10px]">{label}</dt>
       <dd className={`stat mt-0.5 whitespace-nowrap font-semibold sm:mt-1.5 sm:text-[24px] lg:text-[28px] ${long ? 'text-[15px]' : 'text-[19px]'}`}>{Number.isFinite(n) ? <CountUp value={n} format={(v) => String(Math.round(v))} /> : value}</dd>
     </div>
@@ -29,6 +31,8 @@ function Stat({ label, value, i }: { label: ReactNode; value: number | string; i
 
 export function FootballHero({ profile }: { profile: Profile }) {
   const today = todayFn();
+  // Sama teema kuin Viikko-näkymän pääkortissa (profiilin valinta, vaalea / tumma tila; 24.11.2026).
+  const theme = heroThemeProps(profile, useIsDark());
   const season = seasonPeriod(today);
   const data = useFootball(profile.id, season.start, season.end);
   const fixtures = useLiveQuery(() => repo.listFixtures(profile.id, today), [profile.id, today]);
@@ -42,7 +46,7 @@ export function FootballHero({ profile }: { profile: Profile }) {
   }, [data]);
 
   return (
-    <section className="hero anim-rise p-3.5 sm:p-6" aria-label="Kauden yhteenveto">
+    <section className="hero anim-rise p-3.5 sm:p-6" data-hero={theme['data-hero']} style={theme.style} aria-label="Kauden yhteenveto">
       <div className="relative z-10 flex flex-col gap-2.5 sm:gap-5 lg:flex-row lg:items-center">
         <div className="min-w-0 lg:w-64">
           <div className="flex items-center justify-between gap-3 sm:block">
@@ -53,13 +57,13 @@ export function FootballHero({ profile }: { profile: Profile }) {
             <button
               type="button"
               onClick={() => dispatchCommand({ kind: 'story' })}
-              className="press hit inline-flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--hero-accent)] px-3 text-xs sm:gap-2 sm:px-3.5 font-bold text-[#1c2b24] shadow-md hover:brightness-105 sm:mt-3"
+              className="press hit inline-flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--hero-accent)] px-3 text-xs sm:gap-2 sm:px-3.5 font-bold text-[var(--hero-accent-ink)] shadow-md hover:brightness-105 sm:mt-3"
             >
               <IconSparkle size="0.95rem" /> Kauden kooste
             </button>
           </div>
           {next ? (
-            <div className="mt-3 hidden items-center gap-3 rounded-2xl bg-white/[0.1] p-3 ring-1 ring-white/10 sm:flex">
+            <div className="hero-glass-strong mt-3 hidden items-center gap-3 rounded-2xl p-3 sm:flex">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--hero-accent)] text-[var(--hero-to)]" aria-hidden>
                 <IconTrophy size="1.25rem" />
               </span>
@@ -95,7 +99,7 @@ export function FootballHero({ profile }: { profile: Profile }) {
         )}
         {/* Puhelimella seuraava peli yhtenä rivinä lukujen alla. */}
         {next ? (
-          <div className="flex min-w-0 items-center gap-2 rounded-xl bg-white/[0.1] px-2.5 py-2 ring-1 ring-white/10 sm:hidden">
+          <div className="hero-glass-strong flex min-w-0 items-center gap-2 rounded-xl px-2.5 py-2 sm:hidden">
             <IconTrophy size="1rem" className="shrink-0 text-[var(--hero-accent)]" />
             <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-[var(--hero-ink-soft)]">Seuraava</span>
             <span className="min-w-0 truncate text-[13px] font-semibold">

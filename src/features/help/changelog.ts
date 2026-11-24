@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.61',
+    date: '24.11.2026',
+    items: ['Jalkapallo-välilehden Kausi tähän mennessä -kortti käyttää samaa teemaa kuin Viikko-näkymän pääkortti (myös vaalean ja tumman tilan valinnat).'],
+  },
+  {
     version: '1.1.60',
     date: '24.11.2026',
     items: [
