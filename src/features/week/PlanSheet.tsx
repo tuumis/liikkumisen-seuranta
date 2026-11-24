@@ -101,6 +101,7 @@ export function PlanSheet({
             </>
           )}
         </p>
+        {plan.status === 'skipped' && <SkipNoteField plan={plan} />}
 
         {!future && plan.status !== 'done' && (
           <div className="space-y-2">
@@ -189,7 +190,7 @@ export function PlanSheet({
         {plan.status === 'open' ? (
           <div>
             <div className="mb-1 text-sm font-medium text-slate-700">Ei tehty, syy (valinnainen)</div>
-            <SkipReasons onPick={(r) => void run(() => actions.skip(plan, r))()} />
+            <SkipReasons onPick={(r, note) => void run(() => actions.skip(plan, r, note))()} />
             {future && <p className="mt-1 text-xs text-slate-500">Tuleva kerta kuitataan tehdyksi sen päivänä tai myöhemmin; peruuntumisen voi merkitä jo nyt.</p>}
           </div>
         ) : (
@@ -224,5 +225,26 @@ export function PlanSheet({
         )}
       </div>
     </Sheet>
+  );
+}
+
+/** Väliin jääneen kerran kommentti (24.11.2026): lisättävissä ja muokattavissa jälkikäteen; tallentuu kentästä poistuttaessa. */
+function SkipNoteField({ plan }: { plan: PlannedSession }) {
+  const [note, setNote] = useState(plan.skipNote ?? '');
+  useEffect(() => setNote(plan.skipNote ?? ''), [plan.id, plan.skipNote]);
+  return (
+    <Field label="Kommentti (valinnainen)">
+      <input
+        className={inputClass}
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        onBlur={() => void repo.setSkipNote(plan.id, note)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') e.currentTarget.blur();
+        }}
+        maxLength={200}
+        placeholder="esim. kipeä kurkku"
+      />
+    </Field>
   );
 }

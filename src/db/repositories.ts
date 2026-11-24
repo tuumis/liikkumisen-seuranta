@@ -249,6 +249,9 @@ export interface TrainingSelf {
 /** Tarkenne siistittynä (välilyönnit, enintään 40 merkkiä); tyhjä → undefined. */
 const cleanLabel = (s?: string) => s?.trim().replace(/\s+/g, ' ').slice(0, 40) || undefined;
 
+/** Väliin jääneen kerran kommentti: välilyönnit siistitään, enintään 200 merkkiä. */
+const cleanSkipNote = (s: string | undefined) => s?.replace(/\s+/g, ' ').trim().slice(0, 200) || undefined;
+
 export function createRepositories(db: AppDB = defaultDb) {
   // ---------- meta (laitekohtainen) ----------
   async function getMeta<T>(key: string): Promise<T | undefined> {
@@ -952,6 +955,7 @@ export function createRepositories(db: AppDB = defaultDb) {
         const reopened: PlannedSession = { ...plan, status: 'open', updatedAt: ts, updatedBy: by };
         delete reopened.sessionId;
         delete reopened.skipReason;
+        delete reopened.skipNote;
         await db.plannedSessions.put(reopened);
       }
       return {
@@ -1148,6 +1152,7 @@ export function createRepositories(db: AppDB = defaultDb) {
         if (plan.status !== 'done' || plan.sessionId !== linked.id) {
           const fixed = await stamp({ ...plan, status: 'done' as const, sessionId: linked.id });
           delete fixed.skipReason;
+          delete fixed.skipNote;
           await db.plannedSessions.put(fixed);
         }
         return { session: linked, created: false };
@@ -1221,7 +1226,9 @@ export function createRepositories(db: AppDB = defaultDb) {
           if (fixture.opponent) fd.opponent = fixture.opponent;
           if (fixture.eventName) fd.eventName = fixture.eventName;
           if (fixture.link) fd.link = fixture.link;
-          if (fixture.series) fd.series = fixture.series;
+          // Sarja tapahtumalta, muuten joukkueen oletus (24.11.2026).
+          const series = fixture.series ?? (fixtureTeam && !fixtureTeam.deletedAt ? fixtureTeam.series : undefined);
+          if (series) fd.series = series;
           if (fixture.homeAway && (type.footballKind === 'game' || type.footballKind === 'friendly')) fd.homeAway = fixture.homeAway;
           if (fixture.gamesCount) fd.gamesCount = fixture.gamesCount;
           // Otteluohjelmasta valmiit pelirivit: tulos ja kommentti kirjataan pelien jälkeen.
@@ -1235,6 +1242,7 @@ export function createRepositories(db: AppDB = defaultDb) {
       }
       const donePlan: PlannedSession = { ...plan, status: 'done', sessionId: sid, updatedAt: ts, updatedBy: by };
       delete donePlan.skipReason;
+      delete donePlan.skipNote;
       await db.plannedSessions.put(donePlan);
       return { session, created: true };
     });
@@ -1323,15 +1331,31 @@ export function createRepositories(db: AppDB = defaultDb) {
     return next;
   }
 
-  /** Ohitus: status skipped ja valinnainen syy. Kuitattua ei ohiteta (poista kerta ensin). */
-  async function skipPlanned(planId: UUID, reason?: SkipReason): Promise<void> {
+  /** Ohitus: status skipped, valinnainen syy ja vapaa kommentti. Kuitattua ei ohiteta (poista kerta ensin). */
+  async function skipPlanned(planId: UUID, reason?: SkipReason, note?: string): Promise<void> {
     noteLocalChange();
     const plan = await db.plannedSessions.get(planId);
     if (!plan || plan.deletedAt) throw new Error('Suunnitelmaa ei löydy');
     if (plan.status === 'done') throw new Error('Kuitattu kerta: poista kerta ensin');
     const next = await stamp({ ...plan, status: 'skipped' as const });
     delete next.skipReason;
+    delete next.skipNote;
     if (reason) next.skipReason = reason;
+    const clean = cleanSkipNote(note);
+    if (clean) next.skipNote = clean;
+    await db.plannedSessions.put(next);
+  }
+
+  /** Väliin jääneen kerran kommentin muutos (24.11.2026); tyhjä poistaa. */
+  async function setSkipNote(planId: UUID, note: string): Promise<void> {
+    noteLocalChange();
+    const plan = await db.plannedSessions.get(planId);
+    if (!plan || plan.deletedAt || plan.status !== 'skipped') return;
+    const clean = cleanSkipNote(note);
+    if ((plan.skipNote ?? '') === (clean ?? '')) return;
+    const next = await stamp({ ...plan });
+    if (clean) next.skipNote = clean;
+    else delete next.skipNote;
     await db.plannedSessions.put(next);
   }
 
@@ -1341,6 +1365,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     if (!plan || plan.deletedAt || plan.status !== 'skipped') return;
     const next = await stamp({ ...plan, status: 'open' as const });
     delete next.skipReason;
+    delete next.skipNote;
     await db.plannedSessions.put(next);
   }
 
@@ -1768,7 +1793,7 @@ export function createRepositories(db: AppDB = defaultDb) {
   }
 
   /** `photo`: undefined poistaa kuvan, kenttä puuttuu = kuva ennallaan. */
-  async function saveTeam(profileId: UUID, input: { name: string; photo?: string; format?: GameFormat; playShare?: number; kind?: 'team' | 'group' }, id?: UUID): Promise<Team> {
+  async function saveTeam(profileId: UUID, input: { name: string; photo?: string; format?: GameFormat; series?: string; playShare?: number; kind?: 'team' | 'group' }, id?: UUID): Promise<Team> {
     const group = input.kind === 'group';
     const share = !group && input.playShare !== undefined && input.playShare > 0 && input.playShare <= 1 ? input.playShare : undefined;
     const name = input.name.trim().replace(/\s+/g, ' ');
@@ -1790,6 +1815,11 @@ export function createRepositories(db: AppDB = defaultDb) {
         if (share !== undefined) next.playShare = share;
         else delete next.playShare;
       }
+      if ('series' in input) {
+        const series = cleanSeries(input.series);
+        if (series) next.series = series;
+        else delete next.series;
+      }
       if ('kind' in input) {
         if (group) next.kind = 'group';
         else delete next.kind;
@@ -1798,6 +1828,7 @@ export function createRepositories(db: AppDB = defaultDb) {
         // Treeniryhmällä ei ole pelien tietoja.
         delete next.format;
         delete next.playShare;
+        delete next.series;
       }
       await db.teams.put(next);
       return next;
@@ -1807,6 +1838,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     if (input.photo) team.photo = input.photo;
     if (group) team.kind = 'group';
     else if (isGameFormat(input.format)) team.format = input.format;
+    if (!group && cleanSeries(input.series)) team.series = cleanSeries(input.series);
     if (share !== undefined) team.playShare = share;
     const prevSole = await soleTeamId(profileId);
     await db.teams.add(team);
@@ -2535,6 +2567,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     recordTournamentGame,
     undoConfirm,
     skipPlanned,
+    setSkipNote,
     updatePlannedOccurrence,
     reopenPlanned,
     listTeams,

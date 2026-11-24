@@ -35,7 +35,7 @@ import { FootballHero } from './FootballHero';
 import { TeamBreakdownCard } from '../football/TeamBreakdownCard';
 import { UnassignedTrainings } from '../football/TrainingTeam';
 import { IconCalendarClock, IconPencil, IconPlus, IconReport, IconShare, IconWarning } from '../../ui/icons';
-import { InfoLink } from '../../ui/InfoLink';
+import { InfoLink, SHARE_PILL } from '../../ui/InfoLink';
 import { openPreviewShare } from '../share/PreviewShare';
 import { playSound } from '../../ui/sound';
 
@@ -297,8 +297,8 @@ function CalendarView({ profile, onEdit, onAdd }: { profile: Profile; onEdit: (e
                   {skipping === e.plan.id ? (
                     <div className="mt-2">
                       <SkipReasons
-                        onPick={async (r) => {
-                          await repo.skipPlanned(e.plan.id, r);
+                        onPick={async (r, note) => {
+                          await repo.skipPlanned(e.plan.id, r, note);
                           setSkipping(null);
                           toast('Merkitty pelaamattomaksi');
                         }}
@@ -325,14 +325,17 @@ function CalendarView({ profile, onEdit, onAdd }: { profile: Profile; onEdit: (e
           <Card title="Viimeksi väliin jääneet">
             <ul className="divide-y divide-slate-100 text-sm">
               {skipped.map((e) => (
-                <li key={e.plan.id} className="flex justify-between gap-2 py-2">
-                  <span className="truncate text-slate-700">
-                    {dayLabel(e.plan.date)} ·{' '}
-                    {e.fixture?.opponent ??
-                      e.fixture?.eventName ??
-                      (fixtureKindOf(e.plan.activityTypeId) === 'tournament' ? 'Turnaus' : fixtureKindOf(e.plan.activityTypeId) === 'friendly' ? 'Harjoituspeli' : 'Peli')}
-                  </span>
-                  <span className="shrink-0 text-slate-500">{e.plan.skipReason ? SKIP_REASON_LABEL[e.plan.skipReason] : 'ei syytä'}</span>
+                <li key={e.plan.id} className="py-2">
+                  <div className="flex justify-between gap-2">
+                    <span className="truncate text-slate-700">
+                      {dayLabel(e.plan.date)} ·{' '}
+                      {e.fixture?.opponent ??
+                        e.fixture?.eventName ??
+                        (fixtureKindOf(e.plan.activityTypeId) === 'tournament' ? 'Turnaus' : fixtureKindOf(e.plan.activityTypeId) === 'friendly' ? 'Harjoituspeli' : 'Peli')}
+                    </span>
+                    <span className="shrink-0 text-slate-500">{e.plan.skipReason ? SKIP_REASON_LABEL[e.plan.skipReason] : 'ei syytä'}</span>
+                  </div>
+                  {e.plan.skipNote && <span className="block text-xs italic text-slate-600">“{e.plan.skipNote}”</span>}
                 </li>
               ))}
             </ul>
@@ -442,8 +445,8 @@ function FixtureRow({ e, team, today, history, onClick }: { e: FixtureEntry; tea
         <button
           type="button"
           onClick={() => openPreviewShare(e.plan.id)}
-          className="press hit inline-flex min-h-9 items-center gap-1.5 rounded-full bg-[var(--surface-raised)] px-3 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:text-slate-900"
-          title="Ennakko kuvana (esim. Instagram)"
+          className={`${SHARE_PILL} min-h-9`}
+          title="Ennakko kuvana tai videona (esim. Instagram)"
         >
           <IconShare size="0.9rem" /> Ennakko
         </button>
@@ -462,6 +465,7 @@ function TeamsView({ profile }: { profile: Profile }) {
   const [name, setName] = useState('');
   const [photo, setPhoto] = useState<string | undefined>();
   const [format, setFormat] = useState<GameFormat | ''>('');
+  const [series, setSeries] = useState('');
   const [share, setShare] = useState(70); // peliaika-arvio %
   const logos = useClubLogos();
   const clubs = useClubs();
@@ -486,6 +490,7 @@ function TeamsView({ profile }: { profile: Profile }) {
     setLogo(undefined);
     setLogoTouched(false);
     setFormat(t === 'new' ? '' : (t.format ?? ''));
+    setSeries(t === 'new' ? '' : (t.series ?? ''));
     setShare(Math.round((t === 'new' ? 0.7 : (t.playShare ?? 0.7)) * 100));
     const info = t === 'new' ? undefined : clubFor(clubs, t.name);
     setCountry(info?.country);
@@ -503,7 +508,7 @@ function TeamsView({ profile }: { profile: Profile }) {
       const teamPhoto = logoTouched && !hasClub ? logo : logoTouched && hasClub ? undefined : photo;
       await repo.saveTeam(
         profile.id,
-        group ? { name, photo: teamPhoto, kind } : { name, photo: teamPhoto, format: format || undefined, playShare: share === 70 ? undefined : share / 100, kind },
+        group ? { name, photo: teamPhoto, kind } : { name, photo: teamPhoto, format: format || undefined, series, playShare: share === 70 ? undefined : share / 100, kind },
         editing && editing !== 'new' ? editing.id : undefined,
       );
       toast(group ? 'Ryhmä tallennettu' : 'Joukkue tallennettu');
@@ -563,6 +568,9 @@ function TeamsView({ profile }: { profile: Profile }) {
               ))}
             </div>
           </div>
+          <Field label="Sarja (oletus peleille ja turnauksille)" hint="Esim. P9 tai T12. Esitäytetään uusiin peleihin ja turnauksiin; tapahtumakohtaisesti voi muuttaa.">
+            <input className={inputClass} value={series} onChange={(e) => setSeries(e.target.value)} maxLength={20} placeholder="esim. P9" autoCapitalize="characters" />
+          </Field>
           <div>
             <div className="mb-1 flex items-baseline justify-between gap-2 text-sm font-medium text-slate-700">
               <label htmlFor="team-share">Peliaika-arvio</label>
@@ -613,7 +621,7 @@ function TeamsView({ profile }: { profile: Profile }) {
                 <span className="mt-0.5 block truncate text-xs text-slate-500">
                   {t.kind === 'group'
                     ? 'Treeniryhmä · vain treenit'
-                    : [clubFor(clubs, t.name)?.city, t.format, `peliaika ~${Math.round((t.playShare ?? 0.7) * 100)} %`].filter(Boolean).join(' · ')}
+                    : [clubFor(clubs, t.name)?.city, t.series, t.format, `peliaika ~${Math.round((t.playShare ?? 0.7) * 100)} %`].filter(Boolean).join(' · ')}
                 </span>
               </span>
               <span className="text-slate-400" aria-hidden>

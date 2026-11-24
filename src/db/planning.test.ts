@@ -277,6 +277,19 @@ describe('kuittaus ja ohitus', () => {
     expect(await repo.sessionsInRange('p1', MON, WED)).toEqual([]);
   });
 
+  it('väliin jääneen kerran kommentti: tallennus, muokkaus ja poisto palautettaessa (24.11.2026)', async () => {
+    const planId = await onePlan();
+    await repo.skipPlanned(planId, 'sick', '  kipeä   kurkku ');
+    expect(await db.plannedSessions.get(planId)).toMatchObject({ status: 'skipped', skipReason: 'sick', skipNote: 'kipeä kurkku' });
+    await repo.setSkipNote(planId, 'kuumetta');
+    expect((await db.plannedSessions.get(planId))!.skipNote).toBe('kuumetta');
+    await repo.setSkipNote(planId, ' ');
+    expect('skipNote' in (await db.plannedSessions.get(planId))!).toBe(false);
+    await repo.skipPlanned(planId, undefined, 'mummolassa');
+    await repo.reopenPlanned(planId);
+    expect('skipNote' in (await db.plannedSessions.get(planId))!).toBe(false);
+  });
+
   it('kirjauksen saanut kerta ei ole kuittaamaton, vaikka tila palaisi avoimeksi (24.11.2026)', async () => {
     const planId = await onePlan();
     expect(await repo.isPlanOpen(planId)).toBe(true);

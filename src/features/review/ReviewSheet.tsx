@@ -126,7 +126,7 @@ function ReviewRow({
       {mode === 'skip' && (
         <div className="mt-2">
           <div className="mb-1 text-xs text-slate-600">Syy (valinnainen)</div>
-          <SkipReasons onPick={(r) => actions.skip(plan, r)} onCancel={() => setMode('idle')} />
+          <SkipReasons onPick={(r, note) => actions.skip(plan, r, note)} onCancel={() => setMode('idle')} />
         </div>
       )}
       {mode === 'edit' && (

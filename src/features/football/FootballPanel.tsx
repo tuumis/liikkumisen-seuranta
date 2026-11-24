@@ -161,6 +161,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
     if (existing === null && teams?.length === 1 && kind !== 'training') {
       setTeamId((t) => t || teams[0].id);
       setFormat((f) => f || teams[0].format || '');
+      setSeries((s) => s || teams[0].series || '');
     }
   }, [existing, names, kind, teams]);
 
@@ -339,6 +340,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
                     if (t) {
                       setTeam(t.name);
                       if (t.format) setFormat(t.format);
+                      if (t.series) setSeries(t.series);
                     }
                   }}
                 >

@@ -28,6 +28,19 @@ async function rowsFor(sessionId: string) {
 }
 
 describe('sarja ja koti/vieras', () => {
+  it('joukkueen sarja: tallennus, oletus ennakkoon ja kuittaukseen, tapahtuman sarja voittaa (24.11.2026)', async () => {
+    const team = await repo.saveTeam('p1', { name: 'P2017 Valkoinen', series: ' P9 ' });
+    expect(team.series).toBe('P9');
+    const e = await repo.createFixture('p1', { kind: 'game', date: DAY, durationMin: 90, startTime: '10:00', opponent: 'HJK', teamId: team.id });
+    expect(previewCard(e.plan, e.fixture, team).series).toBe('P9');
+    const { session } = await repo.confirmPlanned(e.plan.id, DAY);
+    expect((await repo.getFootballDetails(session.id))?.series).toBe('P9');
+    const own = await repo.createFixture('p1', { kind: 'game', date: DAY, durationMin: 90, startTime: '12:00', opponent: 'PK', teamId: team.id, series: 'P10' });
+    expect(previewCard(own.plan, own.fixture, team).series).toBe('P10');
+    const cleared = await repo.saveTeam('p1', { name: team.name, series: '' }, team.id);
+    expect('series' in cleared).toBe(false);
+  });
+
   it('ottelu: kalenterista ennakkoon, kuittauksessa tulokseen; lomake voi muuttaa', async () => {
     const e = await repo.createFixture('p1', { kind: 'game', date: DAY, durationMin: 90, startTime: '10:00', opponent: 'PK-35', series: '  P9 ', homeAway: 'away' });
     expect(e.fixture).toMatchObject({ series: 'P9', homeAway: 'away' });

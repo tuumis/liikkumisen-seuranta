@@ -256,7 +256,7 @@ const STYLE_SAMPLE: Record<ShareStyle, string> = {
   clean: 'linear-gradient(180deg,#1f5137 0 5px,#f4f7f5 5px)',
   scoreboard: 'radial-gradient(circle,#fbbf24 1.2px,transparent 1.6px) 0 0/7px 7px,#0b0b0c',
   narrow: 'linear-gradient(90deg,#e64773 0 5px,#161616 5px)',
-  brand: 'linear-gradient(#e64773,#e64773) 0 0/5px 45% no-repeat,#161616',
+  brand: 'linear-gradient(#e64773,#e64773) 0 0/5px 45% no-repeat,#000',
 };
 
 function StylePicker({ styles, value, onChange }: { styles: readonly ShareStyle[]; value: ShareStyle; onChange: (v: ShareStyle) => void }) {

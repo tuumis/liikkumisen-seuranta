@@ -28,7 +28,7 @@ import { goalsLabel } from '../../ui/labels';
 import { resultLine } from './FootballSection';
 import { useFootball } from './useFootball';
 import { IconChevronLeft, IconShare } from '../../ui/icons';
-import { InfoLink } from '../../ui/InfoLink';
+import { InfoLink, SHARE_PILL } from '../../ui/InfoLink';
 import { openResultShare } from '../share/ResultShare';
 
 const ALL = '';
@@ -229,7 +229,8 @@ function GameLine({ r, showDate }: { r: GameRow; showDate: boolean }) {
   const friendly = r.kind === 'friendly';
   const res = r.outcome ? `${r.goalsFor}–${r.goalsAgainst}` : r.games > 1 ? `${r.games} peliä` : 'ei tulosta';
   return (
-    <li className="flex items-center gap-2 border-b border-slate-100 py-2 last:border-0">
+    <li className="border-b border-slate-100 py-2 last:border-0">
+      <div className="flex items-center gap-2">
       <span className="w-14 shrink-0 text-xs text-slate-600">{showDate ? dayLabel(r.date) : friendly ? (r.index ? `${r.index}.` : '') : `Peli ${r.index ?? ''}`}</span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm text-slate-900">
@@ -254,8 +255,14 @@ function GameLine({ r, showDate }: { r: GameRow; showDate: boolean }) {
       </span>
       <span className={`shrink-0 text-sm tabular-nums ${r.outcome ? 'font-semibold text-slate-900' : 'text-slate-500'}`}>{res}</span>
       {r.outcome && !friendly && <span className="w-6 shrink-0 rounded bg-slate-100 text-center text-xs font-semibold text-slate-700">{OUTCOME_LABEL[r.outcome]}</span>}
-      {showDate && r.link && <InfoLink href={r.link} compact />}
-      {showDate && r.outcome && !friendly && <ShareButton sessionId={r.sessionId} />}
+      </div>
+      {/* Toiminnot omalla rivillään (24.11.2026): tekstipainikkeet eivät mahtuneet tuloksen viereen. */}
+      {showDate && (r.link || (r.outcome && !friendly)) && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-2 pl-16">
+          {r.outcome && !friendly && <ShareButton sessionId={r.sessionId} />}
+          {r.link && <InfoLink href={r.link} compact />}
+        </div>
+      )}
     </li>
   );
 }
@@ -265,11 +272,10 @@ function ShareButton({ sessionId }: { sessionId: string }) {
     <button
       type="button"
       onClick={() => openResultShare(sessionId)}
-      className="press hit flex size-8 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-[var(--surface-sunk)] hover:text-slate-900"
-      aria-label="Jaa tuloskuva"
-      title="Jaa tuloskuva (esim. Instagram)"
+      className={SHARE_PILL}
+      title="Tulos kuvana tai videona (esim. Instagram)"
     >
-      <IconShare size="1rem" />
+      <IconShare size="0.9rem" /> Tuloskuva
     </button>
   );
 }

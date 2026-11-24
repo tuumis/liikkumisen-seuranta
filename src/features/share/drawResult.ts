@@ -340,9 +340,13 @@ function narrowBackground(ctx: CanvasRenderingContext2D, H: number, color?: Shar
   ctx.fillRect(0, 0, 16, Math.round(H * 0.17));
   ctx.fillRect(0, H - 8, W, 8);
 }
-/** Brändi (oma asettelu, drawBrand.ts): pelkkä tasainen pohja; korostuspalkki piirretään otsikon kohdalle. */
-function brandBackground(ctx: CanvasRenderingContext2D, H: number, color?: ShareColor) {
-  ctx.fillStyle = !color || isLightColor(color.base) ? '#161616' : mix('#161616', color.base, isDark(color.base) ? 0.5 : 0.07);
+/**
+ * Brändi (oma asettelu, drawBrand.ts): pelkkä tasainen pohja; korostuspalkki piirretään otsikon kohdalle.
+ * Pohja on aina täysin musta (24.11.2026, käyttäjän havainto: ennakkovideon tausta ei ollut täysin musta);
+ * valittu väri näkyy korostuksissa.
+ */
+function brandBackground(ctx: CanvasRenderingContext2D, H: number, _color?: ShareColor) {
+  ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, W, H);
 }
 

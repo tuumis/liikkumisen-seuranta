@@ -175,6 +175,8 @@ export interface PlannedSession extends SyncFields {
   templateItemId?: UUID; // puuttuu, jos lisätty käsin
   status: PlannedStatus;
   skipReason?: SkipReason;
+  /** Vapaa kommentti väliin jääneelle kerralle (24.11.2026), esim. "kipeä kurkku". */
+  skipNote?: string;
   sessionId?: UUID; // kun status = 'done'
   /** Tätä kertaa on muutettu yksittäin (kesto/kellonaika); viikkopohjan muokkaus ei kumoa muutosta. */
   overridden?: boolean;
@@ -343,6 +345,8 @@ export interface Team extends SyncFields {
   photo?: string;
   /** Joukkueen tavallinen pelimuoto (oletus peleille), esim. 8v8. */
   format?: GameFormat;
+  /** Joukkueen sarja, esim. P9 (24.11.2026): oletus uusille peleille ja turnauksille. */
+  series?: string;
   /** Peliaika-arvio: osuus peliajasta kentällä (0,1–1); puuttuessa 0,7. */
   playShare?: number;
   archived: boolean;

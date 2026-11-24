@@ -68,6 +68,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
   const [missingNote, setMissingNote] = useState('');
   const [link, setLink] = useState('');
   const [series, setSeries] = useState('');
+  const [seriesTouched, setSeriesTouched] = useState(false);
   const [homeAway, setHomeAway] = useState<HomeAway | ''>('');
   const [schedule, setSchedule] = useState<ScheduleRow[]>([]);
   // Turnauksen kesto otteluohjelmasta (aktiivinen aika): pelit × (lämmittely + pelin pituus) + loppuverryttely.
@@ -101,6 +102,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
     setMissingNote(f?.missingNote ?? '');
     setLink(f?.link ?? '');
     setSeries(f?.series ?? '');
+    setSeriesTouched(false);
     setHomeAway(f?.homeAway ?? '');
     setSchedule(
       (f?.games ?? []).map((g) => ({
@@ -122,6 +124,12 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
   useEffect(() => {
     if (draft && !draft.entry && teams?.length === 1) setTeamId((t) => t || teams[0].id);
   }, [draft, teams]);
+
+  // Uudelle tapahtumalle joukkueen sarja oletukseksi (24.11.2026), kunnes käyttäjä muuttaa sarjaa itse.
+  useEffect(() => {
+    if (!draft || draft.entry || seriesTouched) return;
+    setSeries(teams?.find((t) => t.id === teamId)?.series ?? '');
+  }, [draft, teamId, teams, seriesTouched]);
 
   if (!draft) return null;
   const team = teams?.find((t) => t.id === teamId);
@@ -378,7 +386,7 @@ export function FixtureSheet({ profile, draft, onClose }: { profile: Profile; dr
 
         {/* Sarja (18.11.2026): turnauksessa heti nimen alla; näkyy kuvissa merkkinä. */}
         <Field label="Sarja (valinnainen)" hint="Esim. P9 tai T12. Näkyy ennakko- ja tuloskuvassa.">
-          <input className={inputClass} value={series} onChange={(e) => setSeries(e.target.value)} list="fx-series" maxLength={20} placeholder="esim. P9" autoCapitalize="characters" />
+          <input className={inputClass} value={series} onChange={(e) => { setSeries(e.target.value); setSeriesTouched(true); }} list="fx-series" maxLength={20} placeholder="esim. P9" autoCapitalize="characters" />
           <datalist id="fx-series">
             {names?.series.map((o) => (
               <option key={o} value={o} />

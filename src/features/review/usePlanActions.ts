@@ -40,8 +40,8 @@ export function usePlanActions(onOpenSession: (s: Session) => void, onConfirmed?
   }
 
   /** ✗ ei tehty, valinnainen syy. */
-  async function skip(plan: PlannedSession, reason?: SkipReason) {
-    await repo.skipPlanned(plan.id, reason);
+  async function skip(plan: PlannedSession, reason?: SkipReason, note?: string) {
+    await repo.skipPlanned(plan.id, reason, note);
     toast(`Ei tehty: ${dayLabel(plan.date)}${reason ? ` (${SKIP_REASON_LABEL[reason].toLowerCase()})` : ''}`, {
       label: 'Kumoa',
       run: () => repo.reopenPlanned(plan.id),

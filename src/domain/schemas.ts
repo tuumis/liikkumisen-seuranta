@@ -109,6 +109,7 @@ export const plannedSessionSchema = either(
     status: z.enum(['open', 'done', 'skipped']),
     // Tuntematon syy (uudemman version tiedostosta) luetaan muotoon 'other'.
     skipReason: z.enum(['sick', 'injured', 'cancelled', 'holiday', 'other_commitment', 'other']).catch('other').optional(),
+    skipNote: z.string().max(200).optional(),
     sessionId: z.string().optional(),
     createdAt: ts,
     ...sync,

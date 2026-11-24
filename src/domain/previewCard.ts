@@ -75,7 +75,7 @@ function addMin(t: HHmm, min: number): HHmm | undefined {
 export function previewCard(
   plan: Pick<PlannedSession, 'activityTypeId' | 'date' | 'startTime'> & { durationMin?: number },
   fixture: Fixture | undefined,
-  team?: { name: string; format?: GameFormat },
+  team?: { name: string; format?: GameFormat; series?: string },
 ): PreviewCard {
   const tournament = plan.activityTypeId === 't:football_tournament';
   const friendly = plan.activityTypeId === 't:football_friendly';
@@ -84,7 +84,7 @@ export function previewCard(
     date: plan.date,
     ...(clean(f?.eventName) && tournament ? { eventName: clean(f?.eventName) } : {}),
     ...(f?.level ? { level: LEVEL_LABEL[f.level] } : {}),
-    ...(clean(f?.series) ? { series: clean(f?.series) } : {}),
+    ...(clean(f?.series ?? team?.series) ? { series: clean(f?.series ?? team?.series) } : {}),
     ...((f?.format ?? team?.format) ? { format: f?.format ?? team?.format } : {}),
     ...(clean(team?.name) ? { team: clean(team?.name) } : {}),
     ...(clean(f?.location) ? { location: clean(f?.location) } : {}),

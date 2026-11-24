@@ -338,7 +338,7 @@ export function DayRow({
                     {team && <span className="block truncate text-xs font-semibold text-slate-600">{team}</span>}
                     <span className="block truncate text-xs text-slate-500">
                       {skipped
-                        ? `Ei tehty${p.skipReason ? ` · ${SKIP_REASON_LABEL[p.skipReason].toLowerCase()}` : ''}`
+                        ? `Ei tehty${p.skipReason ? ` · ${SKIP_REASON_LABEL[p.skipReason].toLowerCase()}` : ''}${p.skipNote ? ` · “${p.skipNote}”` : ''}`
                         : fixtureText(fixtures?.get(p.id), p.activityTypeId) + `Suunniteltu${p.startTime ? ` klo ${p.startTime}` : ''} · ${p.durationMin} min`}
                     </span>
                   </span>

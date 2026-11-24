@@ -9,6 +9,16 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.45',
+    date: '24.11.2026',
+    items: [
+      'Tuloskuvan ja ennakon painikkeet ovat nyt selkeitä tekstipainikkeita (Tuloskuva, Ennakko), ja pelin linkki näkyy aina tekstinä "Tiedot".',
+      'Joukkueelle voi antaa sarjan (esim. P9) kohdassa Jalkapallo → Joukkueet. Se esitäytetään uusiin peleihin ja turnauksiin ja näkyy ennakko- ja tuloskuvissa.',
+      'Kun kerta jää väliin, voit kirjoittaa syystä vapaan kommentin (esim. kipeä kurkku). Kommentin voi lisätä tai muuttaa myös jälkikäteen kerran tiedoista.',
+      'Brändi-tyylin kuvien ja videoiden tausta on nyt täysin musta.',
+    ],
+  },
+  {
     version: '1.1.44',
     date: '24.11.2026',
     items: [
