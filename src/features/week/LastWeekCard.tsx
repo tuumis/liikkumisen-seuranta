@@ -1,15 +1,15 @@
 // "Viime viikko lyhyesti" (SPEC 16): viikon ensimmäisellä avauksella edellisen viikon kooste
-// Viikko-näkymän yläosassa. Tiivis nauha: pääluku ja muutos edelliseen viikkoon, päivien minipylväät
-// ja muutama tunnusluku. Suljettu kooste tallennetaan profiiliin (synkronoituu laitteiden välillä).
+// Viikko-näkymän yläosassa. Kolme lukukorttia (24.11.2026): pääluku suhteessa suositukseen, liikunta
+// yhteensä ja jalkapallotreenit, kussakin muutos edelliseen viikkoon. Suljettu kooste tallennetaan
+// profiiliin (synkronoituu laitteiden välillä).
 
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { addDays, isoWeek, weekPeriod } from '../../domain/dates';
 import { footballPeriodSummary } from '../../domain/football';
 import { formatHours } from '../../domain/hours';
-import { DAY_TARGET, dayGoalMet, dayGoalValue } from '../../domain/dayTarget';
 import { DEFAULT_SETTINGS } from '../../domain/recommendations';
-import type { DayTotals, ISODate, Profile, RecommendationGroup } from '../../domain/types';
+import type { ISODate, Profile } from '../../domain/types';
 import { previousWeekStart, shouldShowDigest } from '../../domain/weekDigest';
 import { repo } from '../../db/repositories';
 import { formatDate } from '../../ui/format';
@@ -17,7 +17,7 @@ import { useReport } from '../analysis/useReport';
 import { useFootball } from '../football/useFootball';
 import { useFootballEnabled } from '../football/useFootballEnabled';
 import { weekModel } from './WeekSummary';
-import { IconClose } from '../../ui/icons';
+import { IconBall, IconBolt, IconCheck, IconClock, IconClose } from '../../ui/icons';
 import { DigestInsights } from '../analysis/InsightsCard';
 
 // Vanha laitekohtainen muisti (ennen profiiliin tallennusta); luetaan edelleen, ettei suljettu palaa.
@@ -39,49 +39,27 @@ function writeSeen(profileId: string, week: ISODate) {
 const later = (...ds: (ISODate | undefined)[]) => ds.filter((d): d is ISODate => !!d).sort().pop();
 
 const STATUS_TEXT = { met: 'Suositus täyttyi', near: 'Lähellä suositusta', below: 'Alle suosituksen' } as const;
-const STATUS_CLASS = {
-  met: 'bg-green-100 text-green-900',
-  near: 'bg-amber-100 text-amber-900',
-  below: 'bg-slate-100 text-slate-700',
+// Pääkortin sävy suosituksen mukaan: tausta, palkin pohja ja täyttö, teksti.
+const STATUS_TONE = {
+  met: { card: 'bg-green-50 ring-1 ring-green-100', track: 'bg-green-100', fill: 'bg-green-700', text: 'text-green-900' },
+  near: { card: 'bg-amber-50 ring-1 ring-amber-100', track: 'bg-amber-100', fill: 'bg-amber-600', text: 'text-amber-900' },
+  below: { card: 'card-sunk', track: 'bg-slate-200', fill: 'bg-slate-500', text: 'text-slate-700' },
 } as const;
 
-const WD = ['ma', 'ti', 'ke', 'to', 'pe', 'la', 'su'];
+/** Kesto tunteina ja minuutteina: "4 h 30 min", "45 min". */
+function hm(min: number): string {
+  const m = Math.round(min);
+  const h = Math.floor(m / 60);
+  return h ? `${h} h${m % 60 ? ` ${m % 60} min` : ''}` : `${m} min`;
+}
+const arrow = (d: number) => (d > 0 ? '↑' : '↓');
 
-/**
- * Viikon päivät minipylväinä: reipas ja rasittava (aikuisella reipas + 2 × rasittava), katkoviiva = päivän
- * tavoite. Vihreä = päivän tavoite täyttyi samalla säännöllä kuin muualla (dayGoalMet).
- */
-function DayBars({ days, valid, target, group }: { days: DayTotals[]; valid: Set<ISODate>; target: number; group: RecommendationGroup }) {
-  const value = (d: DayTotals) => dayGoalValue(group, d.combined);
-  const max = Math.max(target * 1.5, ...days.map(value));
-  const H = 44;
-  const label = days.map((d, i) => `${WD[i]} ${Math.round(value(d))} min`).join(', ');
-  return (
-    <div className="w-full max-w-[13rem] shrink-0" role="img" aria-label={`${group === 'adult' ? 'Reipas + 2 × rasittava' : 'Reipas ja rasittava'} päivittäin: ${label}. Tavoite ${Math.round(target)} min.`}>
-      <div className="relative flex items-end gap-1.5" style={{ height: H }}>
-        <div className="absolute inset-x-0 border-t border-dashed border-slate-400/70" style={{ bottom: (target / max) * H }} aria-hidden />
-        {days.map((d) => {
-          const v = value(d);
-          const met = dayGoalMet(group, d);
-          return (
-            <div
-              key={d.date}
-              title={`${formatDate(d.date, 'EEEEEE d.M.')}: ${Math.round(v)} min`}
-              className={`flex-1 rounded-t-[4px] ${met ? 'bg-green-700' : 'bg-slate-300'} ${valid.has(d.date) ? '' : 'opacity-40'}`}
-              style={{ height: Math.max(3, (v / max) * H) }}
-            />
-          );
-        })}
-      </div>
-      <div className="mt-1 flex gap-1.5 text-center text-[11px] font-semibold uppercase text-slate-500" aria-hidden>
-        {WD.map((w) => (
-          <span key={w} className="flex-1">
-            {w}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
+type Tile = { key: string; icon: React.ReactNode; label: string; value: string; unit?: string; sub?: string; delta?: string; up?: boolean };
+
+/** Muutosrivi: nousu vihreällä, lasku neutraalina (ei arvottava). */
+function Delta({ text, up }: { text?: string; up?: boolean }) {
+  if (!text) return null;
+  return <div className={`mt-0.5 text-xs ${up ? 'font-semibold text-green-800' : 'text-slate-600'}`}>{text}</div>;
 }
 
 export function LastWeekCard({ profile, today, onOpenWeek }: { profile: Profile; today: ISODate; onOpenWeek: (weekStart: ISODate) => void }) {
@@ -96,6 +74,7 @@ export function LastWeekCard({ profile, today, onOpenWeek }: { profile: Profile;
   const week = useLiveQuery(async () => (await repo.sessionsInRange(profile.id, period.start, period.end)).filter((s) => !s.deletedAt), [profile.id, period.start, period.end]);
   const footballOn = useFootballEnabled(profile);
   const football = useFootball(footballOn ? profile.id : undefined, period.start, period.end);
+  const prevFootball = useFootball(footballOn ? profile.id : undefined, prevPeriod.start, prevPeriod.end);
 
   if (!report || !week) return null;
   const dismissedFor = later(profile.digestSeenWeek, readSeen()[profile.id], closedNow[profile.id]);
@@ -112,25 +91,56 @@ export function LastWeekCard({ profile, today, onOpenWeek }: { profile: Profile;
   const prevMain = prev && prev.evaluation.evaluable ? weekModel(prev, settings).main : null;
   const delta = showMain && prevMain && prevMain.unit === main.unit ? Math.round(main.value) - Math.round(prevMain.value) : undefined;
   const deltaText =
-    delta === undefined ? undefined : delta === 0 ? 'sama kuin edellisellä viikolla' : `${delta > 0 ? '↑' : '↓'} ${Math.abs(delta)} edelliseen viikkoon`;
+    delta === undefined ? undefined : delta === 0 ? 'sama kuin edellisellä viikolla' : `${arrow(delta)} ${Math.abs(delta)}${main?.unit.startsWith('min') ? ' min' : ''} edelliseen viikkoon`;
+  // Edellinen viikko vertailuun vain, jos seuranta oli jo alkanut.
+  const prevTracked = !!prev && prevPeriod.end >= report.trackingStart;
 
-  // Tunnusluvut: liikunta yhteensä ja jalkapallo, tai ilman jalkapalloa viikkonäkymän omat luvut.
-  const fb = football && football.sessions.length ? footballPeriodSummary(football, period) : undefined;
-  const g = fb?.games;
-  const stats: { value: string; label: string }[] = [{ value: formatHours(report.hours.actualMin), label: 'liikuntaa' }];
+  const tiles: Tile[] = [];
+  const hoursDelta = prevTracked ? Math.round((report.hours.actualMin - prev!.hours.actualMin) / 6) / 10 : undefined;
+  tiles.push({
+    key: 'hours',
+    icon: <IconClock size="1rem" />,
+    label: 'Liikuntaa yhteensä',
+    value: formatHours(report.hours.actualMin).replace(' h', ''),
+    unit: 'h',
+    delta:
+      hoursDelta === undefined
+        ? undefined
+        : hoursDelta === 0
+          ? 'sama kuin edellisellä viikolla'
+          : `${arrow(hoursDelta)} ${Math.abs(hoursDelta).toFixed(1).replace('.', ',')} h edelliseen viikkoon`,
+    up: (hoursDelta ?? 0) > 0,
+  });
   if (footballOn) {
-    if (fb?.training.count) stats.push({ value: String(fb.training.count), label: fb.training.count === 1 ? 'treeni' : 'treeniä' });
-    if (g?.games) stats.push({ value: `${g.wins}–${g.draws}–${g.losses}`, label: g.noResult ? `V–T–H (+${g.noResult})` : 'pelit V–T–H' });
-    if (g?.playerGoalsGames) stats.push({ value: `⚽ ${g.playerGoals}`, label: `${profile.name}: maalit` });
+    // Jalkapallotreenit: määrä ja aika sekä muutos edelliseen viikkoon (määrä ja aika).
+    const t = football?.sessions.length ? footballPeriodSummary(football, period).training : { count: 0, minutes: 0 };
+    const pt = prevFootball ? (prevFootball.sessions.length ? footballPeriodSummary(prevFootball, prevPeriod).training : { count: 0, minutes: 0 }) : undefined;
+    let fbDelta: string | undefined;
+    if (pt && prevTracked) {
+      const dc = t.count - pt.count;
+      const dm = t.minutes - pt.minutes;
+      const parts = [
+        dc ? `${arrow(dc)} ${Math.abs(dc)} ${Math.abs(dc) === 1 ? 'treeni' : 'treeniä'}` : '',
+        dm ? `${arrow(dm)} ${hm(Math.abs(dm))}` : '',
+      ].filter(Boolean);
+      fbDelta = parts.length ? `${parts.join(' · ')} edelliseen viikkoon` : 'sama kuin edellisellä viikolla';
+    }
+    tiles.push({
+      key: 'football',
+      icon: <IconBall size="1rem" />,
+      label: 'Jalkapallotreenit',
+      value: String(t.count),
+      unit: t.count === 1 ? 'treeni' : 'treeniä',
+      sub: t.minutes ? `yhteensä ${hm(t.minutes)}` : undefined,
+      delta: fbDelta,
+      up: !!pt && t.minutes > pt.minutes,
+    });
   } else {
-    for (const t of weekTiles.slice(1)) stats.push({ value: t.value, label: t.label.toLowerCase() });
+    const w = weekTiles[1];
+    if (w) tiles.push({ key: 'extra', icon: <IconBolt size="1rem" />, label: w.label, value: w.value, sub: w.sub });
   }
-
-  // Kiinnostava poiminta: tavoitepäivät ja viikon paras päivä.
-  const target = DAY_TARGET[report.group.group];
-  const valid = new Set(report.validDates);
-  const best = [...report.allDays].sort((a, b) => b.mvpaCombined - a.mvpaCombined)[0];
-  const metDays = report.allDays.filter((d) => dayGoalMet(report.group.group, d)).length;
+  const tone = showMain ? STATUS_TONE[main.m.status] : undefined;
+  const progress = showMain && main.m.target > 0 ? Math.min(1, main.m.actual / main.m.target) : 0;
 
   const open = () => {
     close();
@@ -161,44 +171,44 @@ export function LastWeekCard({ profile, today, onOpenWeek }: { profile: Profile;
         </button>
       </div>
 
-      <div className="mt-1 flex flex-wrap items-center gap-x-6 gap-y-4">
-        {showMain && (
-          <div className="min-w-0">
-            <div className="text-xs font-semibold text-slate-500">{main.label}</div>
-            <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
-              <span className="stat text-[2.5rem] font-semibold leading-none tabular-nums text-slate-900">{Math.round(main.value)}</span>
-              <span className="text-sm font-semibold text-slate-600">{main.unit}</span>
-              <span className={`ml-1 self-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-bold ${STATUS_CLASS[main.m.status]}`}>{STATUS_TEXT[main.m.status]}</span>
+      <div className={`mt-2 grid gap-2.5 ${tiles.length + (showMain ? 1 : 0) >= 3 ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2'}`}>
+        {showMain && tone && (
+          <div className={`col-span-2 min-w-0 rounded-2xl p-3.5 sm:col-span-1 ${tone.card}`}>
+            <div className={`flex items-start gap-1.5 text-xs font-semibold leading-tight ${tone.text}`}>
+              <IconBolt size="1rem" className="shrink-0" />
+              <span className="min-w-0">{main.label}</span>
             </div>
-            <div className="mt-1 text-xs text-slate-500">
-              {main.target}
-              {deltaText && (
-                <>
-                  {' · '}
-                  <span className={delta! > 0 ? 'font-semibold text-green-800' : delta! < 0 ? 'font-semibold text-slate-700' : ''}>{deltaText}</span>
-                </>
-              )}
+            <div className="mt-1.5 flex items-baseline gap-1.5">
+              <span className={`stat text-[2.25rem] font-semibold leading-none tabular-nums ${tone.text}`}>{Math.round(main.value)}</span>
+              <span className={`text-sm font-semibold ${tone.text} opacity-80`}>{main.unit}</span>
             </div>
+            <div className={`mt-2.5 h-1.5 overflow-hidden rounded-full ${tone.track}`} role="img" aria-label={`${Math.round(progress * 100)} % suosituksesta`}>
+              <div className={`h-full rounded-full ${tone.fill}`} style={{ width: `${progress * 100}%` }} />
+            </div>
+            <div className={`mt-1.5 flex flex-wrap items-center justify-between gap-x-2 text-xs ${tone.text}`}>
+              <span className="flex items-center gap-1 font-semibold">
+                {main.m.status === 'met' && <IconCheck size="0.85rem" />}
+                {STATUS_TEXT[main.m.status]}
+              </span>
+              <span className="opacity-80">{main.target}</span>
+            </div>
+            <Delta text={deltaText} up={delta !== undefined && delta > 0} />
           </div>
         )}
-
-        <div className="flex min-w-0 flex-col gap-1">
-          <DayBars days={report.allDays} valid={valid} target={target} group={report.group.group} />
-          {best && best.mvpaCombined > 0 && (
-            <div className="text-xs leading-tight text-slate-500">
-              {metDays}/7 päivää tavoitteessa · paras {formatDate(best.date, 'EEEEEE')} {Math.round(best.mvpaCombined)} min
+        {tiles.map((t) => (
+          <div key={t.key} className="card-sunk min-w-0 rounded-2xl p-3.5">
+            <div className="flex items-start gap-1.5 text-xs font-semibold leading-tight text-slate-600">
+              <span className="shrink-0">{t.icon}</span>
+              <span className="min-w-0">{t.label}</span>
             </div>
-          )}
-        </div>
-
-        <dl className="flex flex-wrap gap-x-5 gap-y-2 sm:border-l sm:border-slate-200 sm:pl-6">
-          {stats.map((s) => (
-            <div key={s.label} className="flex min-w-0 flex-col-reverse">
-              <dt className="text-xs text-slate-500">{s.label}</dt>
-              <dd className="stat text-xl font-semibold leading-tight tabular-nums text-slate-900">{s.value}</dd>
+            <div className="mt-1.5 flex items-baseline gap-1.5">
+              <span className="stat text-[2.25rem] font-semibold leading-none tabular-nums text-slate-900">{t.value}</span>
+              {t.unit && <span className="text-sm font-semibold text-slate-600">{t.unit}</span>}
             </div>
-          ))}
-        </dl>
+            {t.sub && <div className="mt-2 text-xs text-slate-600">{t.sub}</div>}
+            <Delta text={t.delta} up={t.up} />
+          </div>
+        ))}
       </div>
       <DigestInsights profile={profile} weekStart={start} />
     </section>

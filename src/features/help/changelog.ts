@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.58',
+    date: '24.11.2026',
+    items: [
+      'Viime viikon kooste on selkeämpi: kolme lukukorttia, joissa reipas ja rasittava liikunta suhteessa suositukseen, liikunta yhteensä ja jalkapallotreenit (määrä ja aika).',
+      'Jokaisessa kortissa näkyy muutos edelliseen viikkoon, jalkapallotreeneissä sekä treenien määrä että aika. Päiväpylväät, pelien tulokset ja maalit jäivät pois koosteesta (ne löytyvät viikosta ja Jalkapallo-välilehdeltä).',
+    ],
+  },
+  {
     version: '1.1.57',
     date: '24.11.2026',
     items: [
