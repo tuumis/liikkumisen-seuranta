@@ -7,6 +7,8 @@ import { requestPersistentStorage } from '../../db/storage';
 import { Avatar } from '../../ui/Avatar';
 import { IconChevronLeft, IconChevronRight, IconContrast, IconDevices, IconLock, IconRepeat, IconSun, IconTarget, IconUser, IconPlus } from '../../ui/icons';
 import { Button, Card, EmptyState } from '../../ui/components';
+import { DEMO, exitDemo } from '../../demo/demoMode';
+import { useEnterDemo } from '../../demo/DemoBanner';
 import { useToast } from '../../ui/Toast';
 import { GROUP_LABEL, MONTHS } from '../../ui/labels';
 import { today } from '../../ui/today';
@@ -102,7 +104,10 @@ export function SettingsView({
 
   return (
     <div className="lg:grid lg:grid-cols-12 lg:items-start lg:gap-6">
-      <div className={`lg:col-span-4 lg:block 2xl:col-span-3 ${current ? 'hidden' : ''}`}>{menu}</div>
+      <div className={`lg:col-span-4 lg:block 2xl:col-span-3 ${current ? 'hidden' : ''}`}>
+        {menu}
+        <DemoCard />
+      </div>
       <div className="lg:col-span-8 2xl:col-span-9">
         {content ?? (
           <p className="hidden card p-6 text-sm text-slate-600 lg:block">Valitse asetusryhmä vasemmalta.</p>
@@ -133,6 +138,13 @@ function SectionContent({ id, profile, onProfileCreated }: { id: SettingsSection
         </>
       );
     case 'devices':
+      if (DEMO)
+        return (
+          <>
+            <DeviceSection />
+            <Card className="text-sm text-slate-600">Esimerkkitilassa synkronointi, varmuuskopiointi ja PC:n ilmoitukset eivät ole käytössä. Ne toimivat omilla tiedoillasi.</Card>
+          </>
+        );
       return (
         <>
           <DeviceSection />
@@ -270,5 +282,23 @@ function DeviceSection() {
       )}
       <InstallHint />
     </Card>
+  );
+}
+
+/** Esimerkkitila (24.11.2026): tutustuminen keksityillä tiedoilla tai paluu omiin tietoihin. */
+function DemoCard() {
+  const [busy, start] = useEnterDemo();
+  return (
+    <div className="card mt-4 p-4">
+      <p className="font-semibold text-slate-900">{DEMO ? 'Esimerkkitila on käytössä' : 'Esimerkkitila'}</p>
+      <p className="mt-1 text-xs leading-snug text-slate-500">
+        {DEMO
+          ? 'Tiedot ovat keksittyjä. Poistuessa palaat omiin tietoihisi.'
+          : 'Kaksi keksittyä lasta: viikot, joukkueet, pelit ja analyysi. Omat tietosi eivät muutu.'}
+      </p>
+      <Button variant="secondary" className="mt-3" onClick={DEMO ? exitDemo : start} disabled={busy}>
+        {DEMO ? 'Poistu esimerkistä' : busy ? 'Valmistellaan…' : 'Tutustu esimerkkiin'}
+      </Button>
+    </div>
   );
 }

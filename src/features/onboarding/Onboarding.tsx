@@ -23,6 +23,7 @@ import { InstallHint } from '../settings/InstallHint';
 import { pickTextFile } from '../sync/fileIO';
 import { summaryText } from '../sync/useSync';
 import { IconCheck, IconImport, IconLock, IconSync } from '../../ui/icons';
+import { useEnterDemo } from '../../demo/DemoBanner';
 
 type Step = 0 | 1 | 2 | 3 | 4;
 
@@ -163,6 +164,7 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
 /** Tervetulosivu kutsukoodin jälkeen (18.11.2026, alkusivun ilme): mitä aloituksessa tehdään, Aloita, tiedostontuonti sekä
  *  missä tiedot ovat ja miten ne varmuuskopioidaan. Ominaisuuksia ei esitellä uudelleen, koska alkusivu kertoi ne jo. */
 function Welcome({ onStart, onImport, onSkip, error, fromQuiz }: { onStart: () => void; onImport: () => void; onSkip: () => void; error?: string; fromQuiz?: boolean }) {
+  const [demoBusy, startDemo] = useEnterDemo();
   return (
     <div className="lp-page">
       <header className="lp-top">
@@ -199,9 +201,15 @@ function Welcome({ onStart, onImport, onSkip, error, fromQuiz }: { onStart: () =
               </li>
             ))}
           </ol>
-          <button type="button" onClick={onStart} className="lp-btn lp-btn-dark press mt-7 h-[54px] w-full px-12 text-base font-bold sm:w-auto">
-            Aloita
-          </button>
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <button type="button" onClick={onStart} className="lp-btn lp-btn-dark press h-[54px] w-full px-12 text-base font-bold sm:w-auto">
+              Aloita
+            </button>
+            <button type="button" onClick={startDemo} disabled={demoBusy} className="lp-btn lp-btn-line press h-[54px] w-full px-7 text-base font-bold sm:w-auto">
+              {demoBusy ? 'Valmistellaan…' : 'Tutustu esimerkkiin'}
+            </button>
+          </div>
+          <p className="mt-2.5 max-w-[34em] text-sm text-[var(--lp-ink-3)]">Esimerkissä on kaksi keksittyä lasta. Voit kokeilla kaikkea, ja palata aloitukseen palkin Poistu-painikkeella.</p>
 
           <div className="mt-9 max-w-[34em] border-t border-[var(--lp-line)] pt-5">
             <p className="text-sm font-bold text-[var(--lp-ink-2)]">Onko tiedot jo toisella laitteella?</p>

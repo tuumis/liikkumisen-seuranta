@@ -8,6 +8,7 @@
 // ne muistissa.
 
 import { Dexie, type EntityTable } from 'dexie';
+import { DEMO, DEMO_DB_NAME } from '../demo/demoMode';
 import type {
   ActivityType,
   Club,
@@ -74,4 +75,5 @@ export class AppDB extends Dexie {
   }
 }
 
-export const db = new AppDB();
+/** Esimerkkitilassa (demo/demoMode) käytetään erillistä tietokantaa; omat tiedot eivät muutu. */
+export const db = new AppDB(DEMO ? DEMO_DB_NAME : DB_NAME);

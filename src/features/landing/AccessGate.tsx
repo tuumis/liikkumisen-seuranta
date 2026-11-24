@@ -2,6 +2,7 @@
 // (`#kutsu=KOODI`). Laite, jolla on jo tietoja, avautuu suoraan. Hyväksyntä muistetaan laitteelle.
 
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
+import { DEMO } from '../../demo/demoMode';
 import { checkInvite, inviteFromHash, stripInvite } from '../../domain/invite';
 import { db } from '../../db/schema';
 
@@ -11,7 +12,8 @@ const KEY = 'inviteAccepted';
 let acceptedInSession = false;
 
 function isAccepted() {
-  if (acceptedInSession) return true;
+  // Esimerkkitilaan pääsee vain kutsukoodin jälkeen; tila jatkuu uudelleenlatauksessa ilman uutta tarkistusta.
+  if (acceptedInSession || DEMO) return true;
   try {
     return localStorage.getItem(KEY) === '1';
   } catch {

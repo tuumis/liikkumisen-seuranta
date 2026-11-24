@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.51',
+    date: '24.11.2026',
+    items: [
+      'Uusi esimerkkitila: sovellukseen voi tutustua kahden keksityn lapsen tiedoilla (koululainen jalkapalloilija ja alle kouluikäinen sisarus). Mukana viikot, viikkorytmi, joukkueet, pelit, turnaus, harjoituspeli ja analyysi.',
+      'Esimerkin saa auki aloitusnäkymästä tai Asetuksista. Omat tiedot eivät muutu, ja palkin Poistu-painike palaa niihin. Esimerkki luodaan joka kerta uudelleen tämän päivän mukaan.',
+    ],
+  },
+  {
     version: '1.1.50',
     date: '24.11.2026',
     items: [

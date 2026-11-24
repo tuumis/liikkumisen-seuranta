@@ -28,6 +28,8 @@ import { IconBall, IconCalendarClock, IconChart, IconHelp, IconLeaf, IconMoon, I
 import { setThemeChoice, useIsDark } from './ui/theme';
 import { useUnconfirmedCounts } from './features/review/unconfirmed';
 import { requestWeek } from './features/desktop/settings';
+import { DEMO } from './demo/demoMode';
+import { DemoBanner } from './demo/DemoBanner';
 
 // Analyysi (Recharts) ladataan omana osanaan; service worker esivälimuistittaa senkin.
 const loadAnalysis = () => import('./features/analysis/AnalysisView');
@@ -104,6 +106,12 @@ export default function App() {
   useEffect(() => {
     repo
       .initialize()
+      // Esimerkkitila: keksityt tiedot luodaan tämän päivän mukaan ensimmäisellä käynnistyksellä (demo/seedDemo).
+      .then(async () => {
+        if (!DEMO) return;
+        const { seedDemoOnce } = await import('./demo/seedDemo');
+        await seedDemoOnce(repo, today());
+      })
       // Välitunnit vain arkiliikunnassa: aiemmat erilliset välituntikerrat arvion vahvistuksiksi.
       .then(() => repo.foldEstimateOnlySessions(today()).catch(() => 0))
       .then(() => repo.applyHolidaySkips().catch(() => 0))
@@ -310,7 +318,7 @@ export default function App() {
         )}
         <div className="mt-auto space-y-3 px-4 pb-7">
           <SidebarUpdate />
-          <SyncBar variant="sidebar" />
+          {!DEMO && <SyncBar variant="sidebar" />}
           <button
             type="button"
             onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
@@ -349,7 +357,7 @@ export default function App() {
               <span className="font-display text-[15px] font-semibold text-slate-900">Liikkumisen seuranta</span>
             </div>
             <div className="-mr-1 flex items-center gap-1">
-              <SyncBar variant="header" />
+              {!DEMO && <SyncBar variant="header" />}
               <button type="button" onClick={() => setHelpOpen(true)} className="press hit flex size-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100" aria-label="Ohje">
                 <IconHelp size="1.35rem" />
               </button>
@@ -382,6 +390,7 @@ export default function App() {
       </header>
 
       <main className="mx-auto max-w-xl px-4 pb-[calc(max(0.75rem,env(safe-area-inset-bottom))+7.5rem)] pt-2 md:max-w-2xl lg:max-w-none lg:px-10 lg:pb-12 lg:pt-10 2xl:px-14">
+        {DEMO && <DemoBanner />}
         <div className="mb-5 flex items-end justify-between gap-3 lg:mb-8">
           <div className="min-w-0">
             <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">{dateLine}</div>
@@ -424,7 +433,7 @@ export default function App() {
       {ready && <ResultShareHost />}
       {ready && <PreviewShareHost />}
 
-      {ready && profiles && profiles.length > 0 && (
+      {ready && !DEMO && profiles && profiles.length > 0 && (
         <DesktopAgent
           onOpen={(id) => {
             select(id);

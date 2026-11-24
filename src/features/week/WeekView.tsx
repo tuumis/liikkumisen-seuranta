@@ -9,6 +9,7 @@ import type { ActivityType, DayFlag, ISODate, PlannedSession, Profile, Recommend
 import { displayTeamName } from '../../domain/opponent';
 import { repo } from '../../db/repositories';
 import { Button, Card } from '../../ui/components';
+import { DEMO } from '../../demo/demoMode';
 import { formatDate } from '../../ui/format';
 import { hideUntilSettled } from '../../ui/settle';
 import { useReport } from '../analysis/useReport';
@@ -576,8 +577,8 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
       <div className="space-y-3 empty:hidden">
         <UpdateBanner />
         {/* Puhelimella synkronointi on yläpalkin kuvakkeessa (19.11.2026). */}
-        {isLg && <SyncBar />}
-        <BackupReminder onOpenSettings={() => onOpenSettings('devices')} />
+        {isLg && !DEMO && <SyncBar />}
+        {!DEMO && <BackupReminder onOpenSettings={() => onOpenSettings('devices')} />}
       </div>
 
       {!isLg && profile && dayStrip}
