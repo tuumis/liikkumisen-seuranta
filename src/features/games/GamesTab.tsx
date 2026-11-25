@@ -244,8 +244,9 @@ function CalendarView({ profile, onEdit, onAdd }: { profile: Profile; onEdit: (e
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="w-full max-w-xs flex-1 basis-56">
+      {/* Puhelimessa yksi rivi (26.11.2026): valitsin täyttää rivin ja toiminnot ovat kuvakepainikkeina; leveämmällä tekstein. */}
+      <div className="flex items-center gap-2 sm:flex-wrap">
+        <div className="min-w-0 flex-1 sm:w-full sm:max-w-xs sm:basis-56">
           <Segmented<'list' | 'month'>
             label="Kalenterin esitystapa"
             value={mode}
@@ -257,11 +258,11 @@ function CalendarView({ profile, onEdit, onAdd }: { profile: Profile; onEdit: (e
           />
         </div>
         <div className="ml-auto flex shrink-0 gap-2">
-          <Button variant="secondary" onClick={() => setPrinting(true)}>
-            <IconReport size="1rem" /> Tulosta
+          <Button variant="secondary" className="w-11 !px-0 sm:w-auto sm:!px-4" aria-label="Tulosta" title="Tulosta" onClick={() => setPrinting(true)}>
+            <IconReport size="1.1rem" /> <span className="hidden sm:inline">Tulosta</span>
           </Button>
-          <Button variant="secondary" onClick={() => setExporting(true)}>
-            <IconCalendarClock size="1rem" /> Vie kalenteriin
+          <Button variant="secondary" className="w-11 !px-0 sm:w-auto sm:!px-4" aria-label="Vie kalenteriin" title="Vie kalenteriin" onClick={() => setExporting(true)}>
+            <IconCalendarClock size="1.1rem" /> <span className="hidden sm:inline">Vie kalenteriin</span>
           </Button>
         </div>
       </div>

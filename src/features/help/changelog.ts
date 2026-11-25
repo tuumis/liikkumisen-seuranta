@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.80',
+    date: '26.11.2026',
+    items: ['Puhelimessa Jalkapallo → Kalenteri: Lista/Kuukausi-valinta sekä Tulosta- ja Vie kalenteriin -painikkeet ovat nyt samalla rivillä; painikkeet näkyvät kuvakkeina.'],
+  },
+  {
     version: '1.1.79',
     date: '26.11.2026',
     items: [
