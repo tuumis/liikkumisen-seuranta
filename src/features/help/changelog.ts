@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.79',
+    date: '26.11.2026',
+    items: [
+      'Puhelimessa Jalkapallo-välilehden valikko (Päiväkirja, Kalenteri, Tulokset, Joukkueet) on nyt heti otsikon alla, ja se pysyy ylhäällä näkyvissä vieritettäessä.',
+      'Valikon painallus vie suoraan valitun näkymän alkuun. Kauden kortti ja pelipäivän pikakirjaus löytyvät vierittämällä ylös.',
+    ],
+  },
+  {
     version: '1.1.78',
     date: '25.11.2026',
     items: [

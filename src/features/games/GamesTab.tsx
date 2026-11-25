@@ -39,6 +39,7 @@ import { IconCalendarClock, IconPencil, IconPlus, IconReport, IconShare, IconWar
 import { InfoLink, SHARE_PILL } from '../../ui/InfoLink';
 import { openPreviewShare } from '../share/PreviewShare';
 import { playSound } from '../../ui/sound';
+import { holdHeader } from '../../ui/useCompactHeader';
 
 type View = 'diary' | 'calendar' | 'results' | 'teams';
 
@@ -57,19 +58,29 @@ export function GamesTab({ profile }: { profile?: Profile }) {
   const [view, setViewState] = useState<View>('diary');
   // Kerran avatut näkymät pysyvät taustalla valmiina: vaihto ei näytä latautumista (sivu ei hetkeksi lyhene).
   const [visited, setVisited] = useState<ReadonlySet<View>>(() => new Set(['diary']));
-  // Puhelimella ja tabletilla välilehdet kiinnittyvät yläpalkin alle (19.11.2026). Jos ne ovat kiinni vaihdettaessa,
-  // sivu vieritetään niin, että uuden näkymän alku on heti välilehtien alla.
+  // Puhelimella ja tabletilla välilehdet ovat sivun ylimpänä ja kiinnittyvät yläpalkin alle (19.11. / 26.11.2026).
+  // Välilehden valinta vierittää sivun niin, että näkymän alku on heti välilehtien alla (kausikortin ja pelipäivän
+  // kortin ohi); ne näkyvät vierittämällä ylös.
   const tabsRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const setView = (v: View) => {
     const el = tabsRef.current;
-    if (el && getComputedStyle(el).position === 'sticky') {
-      const prev = el.previousElementSibling as HTMLElement | null;
+    const content = contentRef.current;
+    if (el && content && getComputedStyle(el).position === 'sticky') {
       const stickTop = parseFloat(getComputedStyle(el).top) || 0;
-      if (prev && el.getBoundingClientRect().top <= stickTop + 1) {
-        const gap = (parseFloat(getComputedStyle(prev).marginBottom) || 0) + (parseFloat(getComputedStyle(el).marginTop) || 0);
-        const natural = prev.getBoundingClientRect().bottom + window.scrollY + gap;
-        window.scrollTo({ top: Math.max(0, natural - stickTop) });
-      }
+      const target = content.getBoundingClientRect().top + window.scrollY - stickTop - el.offsetHeight - 8;
+      holdHeader();
+      window.scrollTo({ top: Math.max(0, target) });
+      // Tarkennus piirron jälkeen: näkymän alku tarkalleen välilehtien alle.
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          const d = content.getBoundingClientRect().top - el.getBoundingClientRect().bottom - 8;
+          if (Math.abs(d) > 1 && window.scrollY > 0) {
+            holdHeader();
+            window.scrollBy({ top: d });
+          }
+        }),
+      );
     }
     setVisited((s) => (s.has(v) ? s : new Set([...s, v])));
     setViewState(v);
@@ -78,7 +89,7 @@ export function GamesTab({ profile }: { profile?: Profile }) {
   const [adding, setAdding] = useState(false);
   if (!profile) return <Card>Lisää profiili Asetukset-välilehdellä.</Card>;
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-5">
       <FootballHero profile={profile} />
       {/* Pelipäivän pikakirjaus myös täällä (24.11.2026, käyttäjän valinta). */}
       <GameDayCard profile={profile} today={todayFn()} />
@@ -111,7 +122,7 @@ export function GamesTab({ profile }: { profile?: Profile }) {
 
       <div
         ref={tabsRef}
-        className="sticky top-[var(--mobile-header-h,0px)] z-10 -mx-4 bg-[color-mix(in_oklab,var(--bg)_82%,transparent)] px-4 py-2 backdrop-blur-xl lg:static lg:mx-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none"
+        className="sticky top-[var(--mobile-header-h,0px)] z-10 order-first -mx-4 lg:order-none bg-[color-mix(in_oklab,var(--bg)_82%,transparent)] px-4 py-2 backdrop-blur-xl lg:static lg:mx-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none"
       >
         <Segmented<View>
           label="Jalkapallon näkymä"
@@ -127,7 +138,7 @@ export function GamesTab({ profile }: { profile?: Profile }) {
       </div>
 
       {/* Vähintään näytön korkuinen: lyhyempi näkymä ei vedä vierityskohtaa ylös, joten valitsin pysyy paikallaan. */}
-      <div className="min-h-screen">
+      <div ref={contentRef} className="min-h-screen">
         {visited.has('diary') && (
           <div hidden={view !== 'diary'}>
             <DiaryView profile={profile} />

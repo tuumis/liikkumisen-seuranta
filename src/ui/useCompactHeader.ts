@@ -9,6 +9,12 @@ const DOWN = 24; // alaspäin näin paljon yhtäjaksoisesti: pienennä
 const UP = 40; // ylöspäin näin paljon: palauta
 const JUMP = 400; // yhden ruudun aikana tätä suurempi siirto ei muuta palkkia
 
+// Ohjelman tekemä vieritys (esim. välilehden valinta ja sen tarkennus, 26.11.2026): palkki pysyy ennallaan.
+let quietUntil = 0;
+export function holdHeader(ms = 400): void {
+  quietUntil = performance.now() + ms;
+}
+
 export function useCompactHeader(): boolean {
   const [compact, setCompact] = useState(false);
   useEffect(() => {
@@ -24,6 +30,10 @@ export function useCompactHeader(): boolean {
         const y = window.scrollY;
         const d = y - lastY;
         lastY = y;
+        if (performance.now() < quietUntil) {
+          acc = 0;
+          return;
+        }
         if (y < TOP) {
           acc = 0;
           setCompact(false);
