@@ -23,7 +23,12 @@ const OUTCOME_CLASS: Record<GameOutcome, string> = {
 export function useGameRows(profileId: UUID | undefined): GameRow[] | undefined {
   const data = useFootball(profileId);
   return useMemo(
-    () => data && gameRows(data.sessions, data.details, data.types).map((r) => (r.index || r.note ? r : { ...r, note: data.details.get(r.sessionId)?.ratingNote })),
+    () =>
+      data &&
+      gameRows(data.sessions, data.details, data.types)
+        // Seuran sisäiset pelit (25.11.2026) eivät ole vastustajahistoriaa.
+        .filter((r) => !r.internal)
+        .map((r) => (r.index || r.note ? r : { ...r, note: data.details.get(r.sessionId)?.ratingNote })),
     [data],
   );
 }

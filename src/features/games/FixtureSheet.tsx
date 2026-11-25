@@ -18,6 +18,7 @@ import { Sheet } from '../../ui/Sheet';
 import { useToast } from '../../ui/Toast';
 import { today as todayFn } from '../../ui/today';
 import { TeamNameFields, useTeamNameSuggestions } from './TeamNameFields';
+import { isOwnClub } from '../../domain/opponent';
 import { OpponentHistoryCard } from './OpponentHistory';
 import { DateInput } from '../../ui/DateInput';
 import { IconClose, IconPlus } from '../../ui/icons';
@@ -43,7 +44,8 @@ const LEVELS: GameLevel[] = ['elite', 'kilpa', 'haaste'];
 const KIND_LABEL: Record<FixtureKind, string> = { game: 'Peli', tournament: 'Turnaus', friendly: 'Harjoituspeli' };
 const KIND_EDIT: Record<FixtureKind, string> = { game: 'Muokkaa peliä', tournament: 'Muokkaa turnausta', friendly: 'Muokkaa harjoituspeliä' };
 
-type ScheduleRow = { time: string; opponent: string; location: string; homeAway: HomeAway | '' };
+/** internal: undefined = ehdotus seuran perusteella (25.11.2026), true/false = käyttäjän valinta. */
+type ScheduleRow = { time: string; opponent: string; location: string; homeAway: HomeAway | ''; internal?: boolean };
 const emptyRow = (): ScheduleRow => ({ time: '', opponent: '', location: '', homeAway: '' });
 
 export function FixtureSheet({
@@ -122,6 +124,7 @@ export function FixtureSheet({
         opponent: g.opponent ?? '',
         location: g.location ?? '',
         homeAway: g.homeAway ?? '',
+        ...(g.internal !== undefined ? { internal: g.internal } : {}),
       })),
     );
     setAuto(!f?.durationManual);
@@ -146,6 +149,10 @@ export function FixtureSheet({
   if (!draft) return null;
   const team = teams?.find((t) => t.id === teamId);
   const editing = !!draft.entry;
+  // Seuran sisäinen peli (25.11.2026): ehdotus, kun vastustajan seura on sama kuin oman joukkueen seura.
+  const ownNames = team ? [team.name] : (teams ?? []).filter((t) => t.kind !== 'group').map((t) => t.name);
+  const autoInternal = (g: ScheduleRow) => isOwnClub(g.opponent, ownNames);
+  const isInternal = (g: ScheduleRow) => g.internal ?? autoInternal(g);
 
   const rowsNow = schedule.filter((g) => g.time || g.opponent.trim() || g.location.trim() || g.homeAway).map((g) => ({ ...g, homeAway: g.homeAway || undefined }));
   const gamesN = rowsNow.length || (/^\d+$/.test(gamesCount.trim()) ? Number(gamesCount) : 0);
@@ -202,6 +209,8 @@ export function FixtureSheet({
               opponent: g.opponent,
               location: g.location,
               homeAway: g.homeAway || undefined,
+              // Tallennetaan päällä oleva merkintä; false vain, kun käyttäjä poisti ehdotuksen.
+              internal: isInternal(g) ? true : autoInternal(g) ? false : undefined,
             }))
           : kind === 'friendly'
             ? opponents.map((o) => ({ opponent: o }))
@@ -465,6 +474,12 @@ export function FixtureSheet({
                     >
                       <IconClose size="1.1rem" />
                     </button>
+                    <div className="col-span-3 flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <ToggleChip on={isInternal(g)} onChange={(v) => setSchedule((cur) => cur.map((x, j) => (j === i ? { ...x, internal: v } : x)))}>
+                        Seuran sisäinen
+                      </ToggleChip>
+                      {isInternal(g) && <span className="text-xs text-slate-500">Aika lasketaan, ei tuloksissa{g.internal === undefined ? ' · ehdotettu seuran perusteella' : ''}</span>}
+                    </div>
                   </li>
                 ))}
               </ul>

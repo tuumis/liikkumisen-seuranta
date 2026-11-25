@@ -9,6 +9,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.78',
+    date: '25.11.2026',
+    items: [
+      'Turnauksen pelin voi merkitä seuran sisäiseksi (oman seuran joukkuetta vastaan): Seuran sisäinen -valinta on otteluohjelman ja tulosten jokaisella pelirivillä. Se ehdotetaan valmiiksi, kun vastustajan seura on sama kuin oma seura, ja ehdotuksen voi poistaa.',
+      'Sisäisen pelin peliaika ja liikunta lasketaan normaalisti, ja kommentit toimivat kuten ennenkin. Peli ei kuitenkaan kuulu tuloksiin: ei V–T–H:hon, maaleihin, kauden lukuihin eikä vastustajahistoriaan. Tulokset-listassa se näkyy harmaana merkinnällä "seuran sisäinen".',
+      'Ennakko- ja tuloskuvasta sisäiset pelit jäävät oletuksena pois. Valinnalla "Seuran sisäiset pelit" ne näkyvät kuvassa merkinnällä Sisäinen, mutta eivät silloinkaan tuloskuvan yhteenvedossa.',
+    ],
+  },
+  {
     version: '1.1.77',
     date: '25.11.2026',
     items: ['Korjattu: iPhonessa pyyhkäisy ruudun oikeasta reunasta ei enää tuo hetkeksi esiin äsken suljettua paneelia.'],

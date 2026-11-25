@@ -21,10 +21,11 @@ import { TeamNameFields, useTeamNameSuggestions } from '../games/TeamNameFields'
 import { openResultShare } from '../share/ResultShare';
 import { IconPlus } from '../../ui/icons';
 import { TrainingTeamField } from './TrainingTeam';
+import { isOwnClub } from '../../domain/opponent';
 
 const PLAYED_PICKS = [10, 15, 20, 30, 40, 50, 60];
 
-type GameDraft = { opponent: string; goalsFor: string; goalsAgainst: string; playedMin: string; played: PlayedState | ''; playerGoals: string; time?: string; location?: string; note: string; homeAway?: HomeAway | '' };
+type GameDraft = { opponent: string; goalsFor: string; goalsAgainst: string; playedMin: string; played: PlayedState | ''; playerGoals: string; time?: string; location?: string; note: string; homeAway?: HomeAway | ''; internal?: boolean };
 
 /** Pelasiko: Ei / Osan / Koko pelin (uudelleen painallus poistaa valinnan). */
 export function PlayedChips({ value, onChange, label, shareText }: { value: PlayedState | ''; onChange: (v: PlayedState | '') => void; label: string; shareText: string }) {
@@ -146,6 +147,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
         location: g.location,
         note: g.note ?? '',
         homeAway: g.homeAway ?? '',
+        ...(g.internal !== undefined ? { internal: g.internal } : {}),
       })),
     );
     setPlayerGoals(str(d?.games?.length ? undefined : d?.playerGoals));
@@ -173,6 +175,11 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
   const goals = goalsLabel(playerName);
   const showSelf = kind === 'training' && isClubTraining(type) && !session.linkedTo;
   const showTeam = showSelf;
+  // Seuran sisäinen peli (25.11.2026): ehdotus, kun vastustajan seura on oman joukkueen seura; käyttäjä voi muuttaa.
+  const ownTeam = teams?.find((t) => t.id === teamId);
+  const ownNames = ownTeam ? [ownTeam.name] : team.trim() ? [team] : (teams ?? []).filter((t) => t.kind !== 'group').map((t) => t.name);
+  const autoInternal = (g: GameDraft) => isOwnClub(g.opponent, ownNames);
+  const isInternal = (g: GameDraft) => g.internal ?? autoInternal(g);
 
   async function save() {
     const nums = { gf: toNum(gf), ga: toNum(ga), played: toNum(played), count: toNum(gamesCount), own: toNum(playerGoals) };
@@ -187,6 +194,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
       location: g.location,
       note: g.note,
       homeAway: g.homeAway || undefined,
+      ...(kind === 'tournament' ? { internal: isInternal(g) ? true : autoInternal(g) ? false : undefined } : {}),
     }));
     const bad = [...Object.values(nums), ...rows.flatMap((r) => [r.goalsFor, r.goalsAgainst, r.playedMin, r.playerGoals])].some((n) => Number.isNaN(n));
     if (bad) return setError('Anna luvut kokonaislukuina');
@@ -582,6 +590,12 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
                   label={`Peli ${i + 1}: koti vai vieras`}
                   onChange={(v) => setGames((cur) => cur.map((x, j) => (j === i ? { ...x, homeAway: v } : x)))}
                 />
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <ToggleChip on={isInternal(g)} onChange={(v) => setGames((cur) => cur.map((x, j) => (j === i ? { ...x, internal: v } : x)))}>
+                    Seuran sisäinen
+                  </ToggleChip>
+                  {isInternal(g) && <span className="text-xs text-slate-500">Aika lasketaan, ei tuloksissa eikä tilastoissa</span>}
+                </div>
                 <PlayedChips
                   value={g.played}
                   onChange={(v) => setGames((cur) => cur.map((x, j) => (j === i ? { ...x, played: v, playedMin: v ? '' : x.playedMin } : x)))}

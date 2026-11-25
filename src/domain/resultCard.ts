@@ -14,6 +14,8 @@ export interface ResultCardGame {
   playerGoals?: number;
   /** Koti- vai vieraspeli oman joukkueen kannalta (18.11.2026). */
   homeAway?: HomeAway;
+  /** Seuran sisäinen peli (25.11.2026): tulos ilman V/T/H:ta, ei yhteenvedossa; kuvassa vain valittaessa. */
+  internal?: true;
 }
 
 export interface ResultCard {
@@ -54,11 +56,14 @@ export function resultCard(rows: GameRow[]): ResultCard | undefined {
   const games: ResultCardGame[] = sorted.map((r) => ({
     ...(r.opponent ? { opponent: r.opponent } : {}),
     ...(r.outcome ? { goalsFor: r.goalsFor, goalsAgainst: r.goalsAgainst, outcome: r.outcome } : {}),
+    ...(r.internal && r.goalsFor !== undefined && r.goalsAgainst !== undefined ? { goalsFor: r.goalsFor, goalsAgainst: r.goalsAgainst } : {}),
     ...(r.time ? { time: r.time } : {}),
     ...(r.playerGoals ? { playerGoals: r.playerGoals } : {}),
     ...(r.homeAway ? { homeAway: r.homeAway } : {}),
+    ...(r.internal ? { internal: true as const } : {}),
   }));
   const played = games.filter((g) => g.outcome);
+  const counted = games.filter((g) => !g.internal);
   return {
     kind: first.kind,
     date: first.date,
@@ -71,11 +76,19 @@ export function resultCard(rows: GameRow[]): ResultCard | undefined {
     wins: played.filter((g) => g.outcome === 'W').length,
     draws: played.filter((g) => g.outcome === 'D').length,
     losses: played.filter((g) => g.outcome === 'L').length,
-    noResult: games.length - played.length,
+    noResult: counted.length - played.length,
     goalsFor: played.reduce((a, g) => a + (g.goalsFor ?? 0), 0),
     goalsAgainst: played.reduce((a, g) => a + (g.goalsAgainst ?? 0), 0),
-    playerGoals: games.reduce((a, g) => a + (g.playerGoals ?? 0), 0),
+    playerGoals: counted.reduce((a, g) => a + (g.playerGoals ?? 0), 0),
   };
+}
+
+/** Pelattujen (tuloksellisten) pelien määrä yhteenvetoon: seuran sisäiset eivät ole mukana. */
+export const playedCount = (card: Pick<ResultCard, 'wins' | 'draws' | 'losses'>): number => card.wins + card.draws + card.losses;
+
+/** Seuran sisäiset pelit pois kuvasta (25.11.2026, oletus); ennakko- ja tuloskortille. */
+export function withoutInternal<T extends { games: { internal?: true }[] }>(card: T): T {
+  return card.games.some((g) => g.internal) ? { ...card, games: card.games.filter((g) => !g.internal) } : card;
 }
 
 export const OUTCOME_WORD: Record<GameOutcome, string> = { W: 'Voitto', D: 'Tasapeli', L: 'Tappio' };

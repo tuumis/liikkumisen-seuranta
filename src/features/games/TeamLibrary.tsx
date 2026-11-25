@@ -41,7 +41,8 @@ function useLibrary(profile: Profile) {
   const library = useMemo(() => {
     if (!data) return undefined;
     // Harjoituspelit mukana historiana; seuran V–T–H ja pelimäärä lasketaan ilman niitä (summarizeGames).
-    const rows = [...gameRows(data.sessions, data.details, data.types), ...friendlyRows(data.sessions, data.details, data.types)];
+    // Seuran sisäiset pelit (25.11.2026) eivät ole vastustajahistoriaa.
+    const rows = [...gameRows(data.sessions, data.details, data.types).filter((r) => !r.internal), ...friendlyRows(data.sessions, data.details, data.types)];
     const upcoming: UpcomingGame[] = [];
     for (const e of fixtures ?? []) {
       if (e.plan.status !== 'open' || !e.fixture) continue;

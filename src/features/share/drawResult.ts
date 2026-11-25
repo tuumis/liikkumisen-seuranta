@@ -3,7 +3,7 @@
 
 import { HOME_AWAY_LABEL, type GameOutcome } from '../../domain/football';
 import type { HomeAway } from '../../domain/types';
-import { initials, OUTCOME_WORD, type ResultCard } from '../../domain/resultCard';
+import { initials, OUTCOME_WORD, playedCount, type ResultCard } from '../../domain/resultCard';
 import { formatDate } from '../../ui/format';
 import { drawFlag } from '../../ui/flags';
 import { alpha, isLightColor, mix, resolveShareColor, type ShareColor } from './shareColors';
@@ -610,7 +610,7 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
         ctx.textBaseline = 'alphabetic';
         scoreRight = right - chipH - 24;
       }
-      const score = g.outcome ? `${g.goalsFor}–${g.goalsAgainst}` : '–';
+      const score = g.outcome || (g.internal && g.goalsFor !== undefined) ? `${g.goalsFor}–${g.goalsAgainst}` : '–';
       ctx.font = `${heavyOf(opts.style)} ${Math.round(Math.min(rowH * 0.46, story ? 72 : 60))}px ${p.display}`;
       ctx.fillStyle = g.outcome ? p.ink : p.soft;
       const sw = ctx.measureText(score).width;
@@ -622,7 +622,7 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
       const name = fit(ctx, g.opponent ?? 'Vastustaja', tw, nameFont(p), Math.round(Math.min(44, rowH * 0.3)), 24);
       ctx.fillText(name, tx, top + rowH / 2 - 2);
       const ha = opts.homeAway !== false && g.homeAway ? HOME_AWAY_LABEL[g.homeAway] : undefined;
-      const sub = [`${k + 1}. peli`, g.time && `klo ${g.time}`, ha, opts.player && g.playerGoals ? `⚽ ${g.playerGoals}` : undefined].filter(Boolean).join('  ·  ');
+      const sub = [`${k + 1}. peli`, g.internal && 'Sisäinen', g.time && `klo ${g.time}`, ha, opts.player && g.playerGoals ? `⚽ ${g.playerGoals}` : undefined].filter(Boolean).join('  ·  ');
       const subPx = Math.round(Math.min(30, rowH * 0.21));
       const subY = top + rowH / 2 + Math.min(40, rowH * 0.3);
       ctx.font = `500 ${subPx}px ${p.sans}`;
@@ -642,7 +642,7 @@ export function drawResultCard(card: ResultCard, opts: DrawOptions): HTMLCanvasE
     }
     // Yhteenvetolaatikot
     const stats: [string, string][] = [
-      ['Pelit', String(card.games.length - card.noResult)],
+      ['Pelit', String(playedCount(card))],
       ['V – T – H', `${card.wins}–${card.draws}–${card.losses}`],
       ['Maalit', `${card.goalsFor}–${card.goalsAgainst}`],
     ];

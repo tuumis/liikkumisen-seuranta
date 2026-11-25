@@ -1611,6 +1611,7 @@ export function createRepositories(db: AppDB = defaultDb) {
           if (clean(g.location)) r.location = clean(g.location);
           if (g.note?.trim()) r.note = g.note.trim().slice(0, 500);
           if (isHomeAway(g.homeAway)) r.homeAway = g.homeAway;
+          if (typeof g.internal === 'boolean') r.internal = g.internal;
           return r;
         });
         if (games.length) {
@@ -1623,7 +1624,8 @@ export function createRepositories(db: AppDB = defaultDb) {
             g.playedMin !== undefined ? g.playedMin : g.played === 'full' ? len : g.played === 'none' ? 0 : g.played === 'part' ? roundMinutes(len * share) : undefined,
           );
           if (perGame.some((m) => m !== undefined)) playedMin = perGame.reduce<number>((a, m) => a + (m ?? roundMinutes(len * share)), 0);
-          const withGoals = games.filter((g) => g.playerGoals !== undefined);
+          // Seuran sisäisten pelien (25.11.2026) maalit näkyvät pelirivillä, mutta eivät kuulu kauden maaleihin.
+          const withGoals = games.filter((g) => g.playerGoals !== undefined && !g.internal);
           if (withGoals.length) d.playerGoals = withGoals.reduce((a, g) => a + g.playerGoals!, 0);
         } else {
           set('gamesCount', num(input.gamesCount));
@@ -2092,9 +2094,10 @@ export function createRepositories(db: AppDB = defaultDb) {
         if (g.time) r.time = g.time;
         if (clean(g.location)) r.location = clean(g.location);
         if (isHomeAway(g.homeAway)) r.homeAway = g.homeAway;
+        if (typeof g.internal === 'boolean') r.internal = g.internal;
         return r;
       })
-      .filter((g) => g.opponent || g.time || g.location || g.homeAway);
+      .filter((g) => g.opponent || g.time || g.location || g.homeAway || g.internal);
     if (input.kind === 'tournament' && games.length) {
       f.games = games;
       f.gamesCount = games.length;

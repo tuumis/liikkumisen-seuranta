@@ -169,6 +169,11 @@ export interface GameRow {
   gameMin?: number;
   /** Pelasiko (ei / osan / koko pelin), jos merkitty. */
   played?: PlayedState;
+  /**
+   * Seuran sisäinen turnauspeli (25.11.2026): aika lasketaan, mutta rivillä ei ole tulosta (outcome) eikä se kuulu
+   * V–T–H:hon, maaleihin, vastustajahistoriaan eikä tilastoihin. Maalimäärät säilyvät näytettäviksi.
+   */
+  internal?: true;
 }
 
 export interface GameSummary {
@@ -265,7 +270,8 @@ export function gameRows(sessions: Session[], details: Map<UUID, FootballDetails
           opponent: cleanName(g.opponent),
           goalsFor: g.goalsFor,
           goalsAgainst: g.goalsAgainst,
-          outcome: outcomeOf(g.goalsFor, g.goalsAgainst),
+          outcome: g.internal ? undefined : outcomeOf(g.goalsFor, g.goalsAgainst),
+          ...(g.internal ? { internal: true as const } : {}),
           playedMin: g.playedMin ?? playedMinOf(g.played, len, s.playShare),
           ...(g.playedMin === undefined && g.played === 'part' ? { playedEstimate: true as const } : {}),
           games: 1,
@@ -340,7 +346,10 @@ export function friendlyRows(sessions: Session[], details: Map<UUID, FootballDet
   return rows.sort((a, b) => a.date.localeCompare(b.date) || a.sessionId.localeCompare(b.sessionId) || (a.index ?? 0) - (b.index ?? 0));
 }
 
-/** V–T–H ja maalit vain peleistä, joissa molemmat maalimäärät on kirjattu (SPEC 8). Harjoituspelit eivät ole mukana. */
+/**
+ * V–T–H ja maalit vain peleistä, joissa molemmat maalimäärät on kirjattu (SPEC 8). Harjoituspelit ja seuran
+ * sisäiset pelit (25.11.2026) eivät ole mukana.
+ */
 export function summarizeGames(rows: GameRow[]): GameSummary {
   let games = 0;
   let wins = 0;
@@ -354,7 +363,7 @@ export function summarizeGames(rows: GameRow[]): GameSummary {
   let pg = 0;
   let pgGames = 0;
   for (const r of rows) {
-    if (r.kind === 'friendly') continue;
+    if (r.kind === 'friendly' || r.internal) continue;
     games += r.games;
     if (r.playerGoals !== undefined && r.playerGoals !== null) {
       pg += r.playerGoals;
@@ -629,7 +638,7 @@ export function gamesCsv(rows: GameRow[]): string {
       r.opponent,
       r.goalsFor,
       r.goalsAgainst,
-      r.outcome ? OUTCOME_LABEL[r.outcome] : 'ei tulosta',
+      r.outcome ? OUTCOME_LABEL[r.outcome] : r.internal ? 'sisäinen' : 'ei tulosta',
       r.playedMin,
       r.games,
       r.playerGoals,

@@ -48,6 +48,15 @@ export function clubKey(name: string): string {
   return clean(name).toLocaleLowerCase('fi');
 }
 
+/**
+ * Seuran sisäisen pelin ehdotus (25.11.2026): vastustajan seura on sama kuin jonkin oman joukkueen seura.
+ * Tyhjä seura ei täsmää.
+ */
+export function isOwnClub(opponent: string | undefined, ownTeamNames: (string | undefined)[]): boolean {
+  const key = clubKey(parseTeamName(opponent).club);
+  return !!key && ownTeamNames.some((n) => clubKey(parseTeamName(n).club) === key);
+}
+
 /** Seuran tunniste johdetaan nimestä, joten kaksi laitetta tuottaa saman tietueen. */
 export const clubIdOf = (name: string): string => `club:${clubKey(name)}`;
 

@@ -446,8 +446,29 @@ export function TeamDetailChips({ team, opponents, prefs, onChange }: { team?: s
 export { useStoredFlag } from '../../ui/storedPref';
 
 /** Kuvan lisävalinnat: kommentin harmaa tausta ja koti/vieras-merkinnät (vain kun tietoa on). */
-export function ShareExtrasChips({ hasComment, hasHomeAway, panel, onPanel, homeAway, onHomeAway }: { hasComment: boolean; hasHomeAway: boolean; panel: boolean; onPanel: (v: boolean) => void; homeAway: boolean; onHomeAway: (v: boolean) => void }) {
-  if (!hasComment && !hasHomeAway) return null;
+export function ShareExtrasChips({
+  hasComment,
+  hasHomeAway,
+  panel,
+  onPanel,
+  homeAway,
+  onHomeAway,
+  hasInternal = false,
+  internal = false,
+  onInternal,
+}: {
+  hasComment: boolean;
+  hasHomeAway: boolean;
+  panel: boolean;
+  onPanel: (v: boolean) => void;
+  homeAway: boolean;
+  onHomeAway: (v: boolean) => void;
+  /** Seuran sisäiset pelit (25.11.2026): valinta näkyy vain, kun kortilla on niitä; oletus pois. */
+  hasInternal?: boolean;
+  internal?: boolean;
+  onInternal?: (v: boolean) => void;
+}) {
+  if (!hasComment && !hasHomeAway && !hasInternal) return null;
   return (
     <div className="flex flex-wrap gap-2" role="group" aria-label="Kuvan lisävalinnat">
       {hasComment && (
@@ -458,6 +479,11 @@ export function ShareExtrasChips({ hasComment, hasHomeAway, panel, onPanel, home
       {hasHomeAway && (
         <ToggleChip on={homeAway} onChange={onHomeAway}>
           Koti/vieras
+        </ToggleChip>
+      )}
+      {hasInternal && onInternal && (
+        <ToggleChip on={internal} onChange={onInternal}>
+          Seuran sisäiset pelit
         </ToggleChip>
       )}
     </div>

@@ -295,6 +295,11 @@ export interface GameResult {
   note?: string;
   /** Koti- vai vieraspeli (valinnainen, 18.11.2026); näkyy halutessa ennakko- ja tuloskuvassa. */
   homeAway?: HomeAway;
+  /**
+   * Seuran sisäinen peli (25.11.2026): oman seuran joukkuetta vastaan. Aika lasketaan normaalisti, mutta peli ei
+   * kuulu tuloksiin, tilastoihin eikä (oletuksena) ennakko- ja tuloskuviin. false = käyttäjä poisti ehdotuksen.
+   */
+  internal?: boolean;
 }
 
 /** Turnauksen otteluohjelman rivi (ennen pelejä). */
@@ -304,6 +309,8 @@ export interface ScheduledGame {
   location?: string;
   /** Koti- vai vieraspeli (valinnainen, 18.11.2026); näkyy halutessa ennakko- ja tuloskuvassa. */
   homeAway?: HomeAway;
+  /** Seuran sisäinen peli (25.11.2026), ks. GameResult.internal; siirtyy kuitatessa tulosriville. */
+  internal?: boolean;
 }
 
 export interface FootballDetails extends SyncFields {

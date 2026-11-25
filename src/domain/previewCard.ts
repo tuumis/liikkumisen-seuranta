@@ -11,6 +11,8 @@ export interface PreviewGame {
   location?: string;
   /** Koti- vai vieraspeli oman joukkueen kannalta (18.11.2026). */
   homeAway?: HomeAway;
+  /** Seuran sisäinen peli (25.11.2026): kuvassa vain valittaessa (withoutInternal). */
+  internal?: true;
 }
 
 export interface PreviewCard {
@@ -117,6 +119,7 @@ export function previewCard(
     ...(g.time ? { time: g.time } : {}),
     ...(clean(g.location) ? { location: clean(g.location) } : {}),
     ...(g.homeAway ? { homeAway: g.homeAway } : {}),
+    ...(g.internal ? { internal: true as const } : {}),
   }));
   // Järjestys kellonajan mukaan; ajattomat säilyttävät järjestyksensä lopussa.
   const games = scheduled

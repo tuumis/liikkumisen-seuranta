@@ -5,7 +5,7 @@
 
 import { HOME_AWAY_LABEL, type GameOutcome } from '../../domain/football';
 import { previewKicker, previewTimeBoxes, type PreviewBox, type PreviewCard } from '../../domain/previewCard';
-import { OUTCOME_WORD, type ResultCard } from '../../domain/resultCard';
+import { OUTCOME_WORD, playedCount, type ResultCard } from '../../domain/resultCard';
 import { drawFlag } from '../../ui/flags';
 import { formatDate } from '../../ui/format';
 import { commentLayout, dateLabelOf, drawComment, drawLogo, PAD, rr, setup, spaced, W, wrap, type DrawOptions, type Origin, type Palette } from './drawResult';
@@ -271,7 +271,7 @@ export function drawBrandPreview(card: PreviewCard, opts: PreviewOptions): HTMLC
           opponent: g.opponent,
           logo: opts.logos.opponents[i],
           lead: g.time ?? `${i + 1}.`,
-          sub: [opts.homeAway !== false && g.homeAway ? HOME_AWAY_LABEL[g.homeAway] : undefined, g.location].filter((s): s is string => !!s),
+          sub: [g.internal ? 'Sisäinen' : undefined, opts.homeAway !== false && g.homeAway ? HOME_AWAY_LABEL[g.homeAway] : undefined, g.location].filter((s): s is string => !!s),
           origin: origins?.opponents[i],
         })),
         y,
@@ -331,7 +331,7 @@ export function drawBrandResult(card: ResultCard, opts: DrawOptions): HTMLCanvas
   let lowTop = bottom;
   if (card.kind === 'tournament') {
     const stats = [
-      { label: 'Pelit', value: String(card.games.length - card.noResult) },
+      { label: 'Pelit', value: String(playedCount(card)) },
       { label: 'V – T – H', value: `${card.wins}–${card.draws}–${card.losses}`, accent: true },
       { label: 'Maalit', value: `${card.goalsFor}–${card.goalsAgainst}` },
     ];
@@ -372,7 +372,7 @@ export function drawBrandResult(card: ResultCard, opts: DrawOptions): HTMLCanvas
       card.games.map((g, i) => ({
         opponent: g.opponent,
         logo: opts.logos.opponents[i],
-        sub: [`${i + 1}. peli`, g.time && `klo ${g.time}`, opts.homeAway !== false && g.homeAway ? HOME_AWAY_LABEL[g.homeAway] : undefined, player && g.playerGoals ? `${player} ${g.playerGoals}` : undefined].filter((s): s is string => !!s),
+        sub: [`${i + 1}. peli`, g.internal && 'Sisäinen', g.time && `klo ${g.time}`, opts.homeAway !== false && g.homeAway ? HOME_AWAY_LABEL[g.homeAway] : undefined, player && g.playerGoals ? `${player} ${g.playerGoals}` : undefined].filter((s): s is string => !!s),
         origin: origins?.opponents[i],
       })),
       y,
@@ -397,7 +397,7 @@ export function drawBrandResult(card: ResultCard, opts: DrawOptions): HTMLCanvas
           ctx.textBaseline = 'alphabetic';
           right -= chip + Math.round(24 * k);
         }
-        const score = g.outcome ? `${g.goalsFor}–${g.goalsAgainst}` : '–';
+        const score = g.outcome || (g.internal && g.goalsFor !== undefined) ? `${g.goalsFor}–${g.goalsAgainst}` : '–';
         const px = Math.round(Math.min(h * 0.5, 84 * k));
         ctx.font = big(p)(px);
         ctx.fillStyle = g.outcome ? p.ink : p.soft;

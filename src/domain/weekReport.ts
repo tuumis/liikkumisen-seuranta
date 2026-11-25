@@ -81,7 +81,8 @@ export function footballBrief(s: Session, t: ActivityType | undefined, d: Footba
   }
   if (t?.footballKind === 'tournament' && d) {
     const games = d.games ?? [];
-    const res = games.map((g) => outcomeOf(g.goalsFor, g.goalsAgainst)).filter(Boolean);
+    // Seuran sisäiset pelit (25.11.2026) eivät ole V–T–H:ssa.
+    const res = games.filter((g) => !g.internal).map((g) => outcomeOf(g.goalsFor, g.goalsAgainst)).filter(Boolean);
     parts.push(res.length ? `${res.filter((r) => r === 'W').length}–${res.filter((r) => r === 'D').length}–${res.filter((r) => r === 'L').length}` : `${games.length || d.gamesCount || '?'} peliä`);
   }
   // Harjoituspeli: vastustajat ja tulokset ilman V–T–H-merkintää (17.11.2026).

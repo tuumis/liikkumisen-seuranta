@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { gameRows } from '../../domain/football';
-import { resultCard } from '../../domain/resultCard';
+import { resultCard, withoutInternal } from '../../domain/resultCard';
 import type { UUID } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { db } from '../../db/schema';
@@ -97,14 +97,17 @@ export function ResultShareSheet({ sessionId, onClose }: { sessionId: UUID | nul
   useEffect(() => () => window.clearTimeout(saveTimer.current), []);
   const stored = data?.card;
   const comment = draft ?? stored?.comment ?? '';
+  // Seuran sisäiset pelit (25.11.2026): oletuksena pois kuvasta; valinta muistetaan laitteella.
+  const [showInternal, setShowInternal] = useStoredFlag('shareInternal', false);
+  const hasInternal = !!stored?.games.some((g) => g.internal);
   const card = useMemo(() => {
     if (!stored) return stored;
-    const c = { ...stored };
+    const c = { ...(showInternal ? stored : withoutInternal(stored)) };
     const t = comment.replace(/\s+/g, ' ').trim().slice(0, 140);
     if (t) c.comment = t;
     else delete c.comment;
     return c;
-  }, [stored, comment]);
+  }, [stored, comment, showInternal]);
   // Ryhmä ja ikäluokka kuvassa (17.11.2026): logot ja seuran tiedot haetaan alkuperäisillä nimillä.
   const [details, setDetails] = useTeamDetailPrefs();
   const drawn = useMemo(() => (card ? applyTeamDetails(card, details) : card), [card, details]);
@@ -166,6 +169,9 @@ export function ResultShareSheet({ sessionId, onClose }: { sessionId: UUID | nul
           onPanel={setPanel}
           homeAway={showHomeAway}
           onHomeAway={setShowHomeAway}
+          hasInternal={hasInternal}
+          internal={showInternal}
+          onInternal={setShowInternal}
         />
       )}
       {card && card.playerGoals > 0 && (

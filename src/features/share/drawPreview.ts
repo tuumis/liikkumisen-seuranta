@@ -122,7 +122,7 @@ export function drawPreviewCard(card: PreviewCard, opts: PreviewOptions): HTMLCa
         const o = origins?.opponents[k];
         // Kentän vieressä koti/vieras (18.11.2026).
         const ha = opts.homeAway !== false && g.homeAway ? HOME_AWAY_LABEL[g.homeAway] : undefined;
-        const extra = [ha, g.location].filter(Boolean).join(' · ');
+        const extra = [g.internal ? 'Sisäinen' : undefined, ha, g.location].filter(Boolean).join(' · ');
         const hasSub = !!(o?.country || o?.city || extra);
         ctx.fillText(name, tx, hasSub ? top + rowH / 2 - 2 : top + rowH / 2 + namePx * 0.35);
         const subPx = Math.round(Math.min(29, rowH * 0.21));
