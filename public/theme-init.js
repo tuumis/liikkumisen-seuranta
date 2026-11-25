@@ -22,6 +22,11 @@
   var root = document.documentElement;
   if (dark) root.classList.add('dark');
   if (accent === 'fjord' || accent === 'heather' || accent === 'graphite') root.setAttribute('data-accent', accent);
+  // Fonttivalinta (25.11.2026, sama kuin src/ui/theme.ts applyFont).
+  try {
+    var font = localStorage.getItem('font');
+    if (font === 'sport' || font === 'modern') root.setAttribute('data-font', font);
+  } catch (e) {}
   root.style.colorScheme = dark ? 'dark' : 'light';
   // Yläpalkin väri heti (sama kuin src/ui/theme.ts), ettei tumman teeman ikkunapalkki välähdä vaaleana (17.11.2026).
   var meta = document.querySelector('meta[name="theme-color"]');

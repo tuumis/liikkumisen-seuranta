@@ -85,6 +85,49 @@ export const HERO_THEMES: { id: HeroTheme; label: string; text: string; swatch: 
   { id: 'profile', label: 'Profiilin väri', text: 'Profiilin oma väri', swatch: '' },
 ];
 
+/** Fonttivalinta (25.11.2026): laitekohtainen kuten väriteema; Klassinen on oletus (ei attribuuttia). */
+export type FontChoice = 'classic' | 'sport' | 'modern';
+export const FONT_CHOICES: { id: FontChoice; label: string; text: string; display: string; sans: string }[] = [
+  { id: 'classic', label: 'Klassinen', text: 'Kaunokkaat otsikot ja selkeä teksti', display: "'Fraunces', Georgia, serif", sans: "'Manrope', system-ui, sans-serif" },
+  { id: 'sport', label: 'Sportti', text: 'Kapeat isot kirjaimet kuten Brändi-kuvissa', display: "'Sportti Display', 'Arial Narrow', sans-serif", sans: "'Work Sans', system-ui, sans-serif" },
+  { id: 'modern', label: 'Moderni', text: 'Selkeä fontti myös otsikoissa', display: "'Manrope', system-ui, sans-serif", sans: "'Manrope', system-ui, sans-serif" },
+];
+const FONT_KEY = 'font';
+
+export function getFont(): FontChoice {
+  try {
+    const v = localStorage.getItem(FONT_KEY);
+    return FONT_CHOICES.some((f) => f.id === v) ? (v as FontChoice) : 'classic';
+  } catch {
+    return 'classic';
+  }
+}
+
+export function applyFont(f: FontChoice = getFont()): void {
+  const root = document.documentElement;
+  if (f === 'classic') root.removeAttribute('data-font');
+  else root.setAttribute('data-font', f);
+}
+
+export function useFontChoice(): [FontChoice, (f: FontChoice) => void] {
+  const [font, setFont] = useState<FontChoice>(getFont);
+  return [
+    font,
+    (f) => {
+      try {
+        if (f === 'classic') localStorage.removeItem(FONT_KEY);
+        else localStorage.setItem(FONT_KEY, f);
+      } catch {
+        /* ei tallennusta */
+      }
+      applyFont(f);
+      setFont(f);
+      // Kaaviot ja mittaukset päivittyvät kuten teeman vaihtuessa.
+      window.dispatchEvent(new Event('themechange'));
+    },
+  ];
+}
+
 export type AccentTheme = 'forest' | 'fjord' | 'heather' | 'graphite';
 export const ACCENT_THEMES: { id: AccentTheme; label: string; text: string; swatch: [string, string, string] }[] = [
   { id: 'fjord', label: 'Vuono', text: 'Syvä sinivihreä ja persikka', swatch: ['#1f4a5b', '#d6e8ee', '#efbf94'] },

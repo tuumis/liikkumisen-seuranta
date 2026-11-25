@@ -3,7 +3,7 @@ import { Segmented } from '../../ui/controls';
 import { playSound, soundsSupported, useSoundsEnabled } from '../../ui/sound';
 import type { Profile } from '../../domain/types';
 import { heroThemeFor, saveHeroTheme, swatchStyle } from '../week/HeroThemePicker';
-import { ACCENT_THEMES, BACKGROUNDS, HERO_THEMES, useIsDark, useAccent, useBackground, useThemeChoice, useViewMode, type BackgroundId, type ThemeChoice, type ViewMode } from '../../ui/theme';
+import { ACCENT_THEMES, BACKGROUNDS, FONT_CHOICES, HERO_THEMES, useIsDark, useAccent, useBackground, useFontChoice, useThemeChoice, useViewMode, type BackgroundId, type ThemeChoice, type ViewMode } from '../../ui/theme';
 import { useRef, useState } from 'react';
 import { resizeBackground } from '../../ui/image';
 import { useToast } from '../../ui/Toast';
@@ -98,6 +98,8 @@ export function AppearanceSection({ profile }: { profile?: Profile }) {
         <p className="mt-3 text-xs text-slate-500">Väriteema vaihtaa korostevärit, navigaation ja kaavioiden pääsävyn. Kaaviovärit on tarkistettu erottuviksi myös värisokeille.</p>
       </Card>
 
+      <FontCard name={profile?.name} />
+
       {profile && <HeroThemeCard profile={profile} />}
 
       <BackgroundCard />
@@ -138,6 +140,53 @@ const CHECK = (
 );
 
 /** Sovelluksen tausta (17.11.2026): piirretyt taustat (vaalea ja tumma) ja oma kuva himmennettynä, vain tällä laitteella. */
+/** Fonttivalinta (25.11.2026): jokainen vaihtoehto näytetään omalla fontillaan. */
+function FontCard({ name }: { name?: string }) {
+  const [font, setFont] = useFontChoice();
+  return (
+    <Card title="Fontti">
+      <div className="grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label="Fontti">
+        {FONT_CHOICES.map((f) => {
+          const on = font === f.id;
+          return (
+            <button
+              key={f.id}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => setFont(f.id)}
+              className={`press card-interactive flex flex-col gap-2 rounded-[1.25rem] p-4 text-left ${on ? 'bg-[var(--surface-raised)] shadow-md ring-2 ring-green-700' : 'card'}`}
+            >
+              <span className="flex items-center justify-between gap-2">
+                <span className="text-sm font-semibold text-slate-900">{f.label}</span>
+                {on && <span className="rounded-full bg-green-700 px-2 py-0.5 text-[11px] font-bold text-white">Käytössä</span>}
+              </span>
+              <span
+                className="block truncate text-[22px] leading-tight text-slate-900"
+                style={{ fontFamily: f.display, fontWeight: f.id === 'sport' ? 400 : 600, letterSpacing: f.id === 'sport' ? '0.01em' : '-0.015em', fontSynthesis: 'none' }}
+              >
+                Viikko{name ? ` · ${name}` : ''}
+              </span>
+              <span className="flex items-baseline gap-1.5 text-slate-800">
+                <span className="text-[30px] leading-none tabular-nums" style={{ fontFamily: f.display, fontWeight: f.id === 'sport' ? 400 : 600, fontSynthesis: 'none' }}>
+                  18,1
+                </span>
+                <span className="text-sm" style={{ fontFamily: f.sans }}>
+                  h liikuntaa
+                </span>
+              </span>
+              <span className="block text-xs leading-snug text-slate-500" style={{ fontFamily: f.sans }}>
+                {f.text}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-3 text-xs text-slate-500">Fontti koskee otsikoita, lukuja ja tekstiä koko sovelluksessa tällä laitteella. Jakokuvilla on omat tyylinsä.</p>
+    </Card>
+  );
+}
+
 function BackgroundCard() {
   const toast = useToast();
   const b = useBackground();

@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.70',
+    date: '25.11.2026',
+    items: [
+      'Uusi: fonttivalinta (Asetukset → Ulkoasu → Fontti). Klassinen on entinen fontti, Sportti käyttää Brändi-kuvien kapeaa otsikkofonttia ja tekstifonttia, ja Moderni käyttää selkeää fonttia myös otsikoissa.',
+      'Valinta koskee otsikoita, lukuja ja tekstiä koko sovelluksessa tällä laitteella. Jakokuvilla on omat tyylinsä.',
+    ],
+  },
+  {
     version: '1.1.69',
     date: '25.11.2026',
     items: [
