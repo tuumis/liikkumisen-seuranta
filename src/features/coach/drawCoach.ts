@@ -6,8 +6,8 @@ import { PAD, spaced, W, wrap } from '../share/drawResult';
 
 type Ctx = CanvasRenderingContext2D;
 
-/** Osien värit tummalla pohjalla (sininen, oranssi, vihreä, violetti); tunnistus myös selitteestä. */
-export const COACH_COLOR: Record<CoachPart, string> = { football: '#4c8ff0', own: '#ea7a3f', other: '#33b886', school: '#a98bf5' };
+/** Osien värit tummalla pohjalla (sininen, oranssi, vihreä, violetti, harmaa); tunnistus myös selitteestä. */
+export const COACH_COLOR: Record<CoachPart, string> = { football: '#4c8ff0', own: '#ea7a3f', other: '#33b886', school: '#a98bf5', everyday: '#8f969e' };
 
 const BG = '#0c0c0c';
 const INK = '#f5f5f5';
@@ -165,11 +165,11 @@ export function drawCoachCard(head: CoachCardText, v: CoachView): HTMLCanvasElem
     ctx.font = sans(30, 700);
     ctx.fillStyle = INK;
     ctx.textAlign = 'right';
+    // Arvo samalle riville, jos se mahtuu nimen viereen; muuten nimen alle (enintään kaksi riviä).
     const room = maxW - lw - 40;
-    const lines = ctx.measureText(r.value).width <= room ? [r.value] : wrap(ctx, r.value, maxW, 2);
-    if (lines.length === 1) ctx.fillText(lines[0], right, y);
+    if (ctx.measureText(r.value).width <= room) ctx.fillText(r.value, right, y);
     else
-      lines.forEach((l) => {
+      wrap(ctx, r.value, maxW, 2).forEach((l) => {
         y += 44;
         ctx.fillText(l, right, y);
       });

@@ -33,7 +33,7 @@ describe('coachSummary', () => {
     expect(coachPartOf(est, types)).toBeUndefined();
 
     const r = coachSummary(input({ sessions: [tr, wu, recess, pe, fb, est] }));
-    expect(r.minutes).toEqual({ football: 90, own: 15, other: 60, school: 45 });
+    expect(r.minutes).toEqual({ football: 90, own: 15, other: 60, school: 45, everyday: 0 });
     expect(r.title).toBe('vk 45–48');
     expect(r.buckets.map((b) => b.label)).toEqual(['vk 45', 'vk 46', 'vk 47', 'vk 48']);
     expect(r.buckets[0].total).toBe(210);
@@ -110,7 +110,7 @@ describe('coachView', () => {
   it('oletusvalinnoilla liikunta, jalkapallon osuus ja lepopäivät', () => {
     const s = coachSummary(input({ sessions: [tr(), own(), fb()], plans: [planned({ date: at(7), status: 'skipped', skipReason: 'sick' })] }));
     const v = coachView(s, DEFAULT_COACH_OPTIONS);
-    expect(v.parts).toEqual(['football', 'own', 'other', 'school']);
+    expect(v.parts).toEqual(['football', 'own', 'other', 'school', 'everyday']);
     expect(v.tiles.map((t) => t.label)).toEqual(['Liikuntaa', 'Jalkapalloa', 'Lepopäiviä']);
     expect(v.tiles[1].value).toBe('67 %');
     expect(v.rows.find((r) => r.label === 'Muut lajit')?.value).toBe('salibandy 0,3 /vko');
@@ -120,11 +120,36 @@ describe('coachView', () => {
 
   it('piilotetut osat jäävät pois summista; syyt näkyvät valittaessa', () => {
     const s = coachSummary(input({ sessions: [tr(), own(), fb()], plans: [planned({ date: at(7), status: 'skipped', skipReason: 'sick' })] }));
-    const v = coachView(s, { other: false, own: false, days: false, absences: true, reasons: true, notes: false });
+    const v = coachView(s, { other: false, own: false, everyday: false, days: false, absences: true, reasons: true, notes: false });
     expect(v.parts).toEqual(['football']);
     expect(v.buckets[0].total).toBe(90);
     expect(v.tiles.map((t) => t.label)).toEqual(['Jalkapalloa', 'Seuran treenejä', 'Pelejä ja turnauksia']);
     expect(v.rows.map((r) => r.label)).toEqual(['Seuran treenit', 'Pelit ja turnaukset', 'Poissaolot']);
     expect(v.rows[2].value).toBe('1 kerta (sairas 1)');
+  });
+});
+
+describe('arkiliikunta', () => {
+  it('päivän liikunta miinus lajikerrat; summa vastaa Viikko-näkymän tunteja', () => {
+    const tr = session({ date: at(0), activityTypeId: activityTypeId('football_training'), minutes: m(90) });
+    const recess = session({ date: at(0), activityTypeId: activityTypeId('school_recess'), minutes: m(40) });
+    // Päivä 0: 90 treeni + 40 välitunnit + 60 arvio = 190; päivä 1: vain arvio 120; päivä 2: summa alle kertojen → 0.
+    const dayTotalMin = new Map([
+      [at(0), 190],
+      [at(1), 120],
+      [at(2), 50],
+    ]);
+    const fb = session({ date: at(2), activityTypeId: 'floorball', minutes: m(60) });
+    const r = coachSummary(input({ sessions: [tr, recess, fb], dayTotalMin }));
+    expect(r.minutes.everyday).toBe(100 + 120);
+    expect(r.buckets[0].total).toBe(90 + 60 + 220);
+    // Arkiliikunta ei tee päivästä liikuntapäivää lepopäivien laskussa.
+    expect(r.restDaysPerWeek).toBeCloseTo(((28 - 2) / 28) * 7);
+    const v = coachView(r, DEFAULT_COACH_OPTIONS);
+    expect(v.tiles[0].value).toBe(fi1((370 / 4) / 60));
+    expect(v.rows.find((x) => x.label === 'Arkiliikunta')?.value).toBe('0,9 h /vko');
+    const off = coachView(r, { ...DEFAULT_COACH_OPTIONS, everyday: false });
+    expect(off.buckets[0].total).toBe(150);
+    expect(off.rows.some((x) => x.label === 'Arkiliikunta')).toBe(false);
   });
 });

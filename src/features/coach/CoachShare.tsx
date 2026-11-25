@@ -6,7 +6,10 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { coachSummary, coachView, COACH_PART_LABEL, DEFAULT_COACH_OPTIONS, fi1, type CoachOptions, type CoachView } from '../../domain/coachSummary';
+import { trackingStart } from '../../domain/aggregate';
 import { addDays, seasonPeriod, startOfIsoWeek } from '../../domain/dates';
+import { holidayDates } from '../../domain/holidays';
+import { weeklyHours } from '../../domain/hours';
 import { displayTeamName } from '../../domain/opponent';
 import type { ISODate, Profile, UUID } from '../../domain/types';
 import { vigorousDayThreshold } from '../../domain/vigorous';
@@ -68,15 +71,33 @@ export interface CoachData {
 function useCoachData(profile: Profile | undefined, start: ISODate, end: ISODate, options: CoachOptions): CoachData | undefined {
   const raw = useLiveQuery(async () => {
     if (!profile || end < start) return undefined;
-    const [sessions, plans, flags, types, settings, teams] = await Promise.all([
+    const [sessions, plans, flags, types, settings, teams, estimates] = await Promise.all([
       repo.sessionsInRange(profile.id, start, end),
       repo.plansInRange(profile.id, start, end),
       repo.dayFlagsInRange(profile.id, start, end),
       repo.listActivityTypes({ includeArchived: true }),
       repo.getSettings(),
       repo.listTeams(profile.id),
+      repo.listEstimates(profile.id),
     ]);
     const today = todayFn();
+    const typeMap = new Map(types.map((t) => [t.id, t]));
+    // Päivän liikunta samoin kuin Viikko-näkymän tunneissa (kerrat + arkiliikunnan arvio).
+    const last = end > today ? today : end;
+    const hours =
+      last >= start
+        ? weeklyHours({
+            period: { kind: 'week', start, end: last },
+            sessions,
+            planned: plans,
+            estimates,
+            flags,
+            types: typeMap,
+            today,
+            holidays: holidayDates(settings.holidays, profile.id, start, last),
+            trackingStart: trackingStart(profile),
+          })
+        : undefined;
     const summary = coachSummary({
       start,
       end,
@@ -84,8 +105,9 @@ function useCoachData(profile: Profile | undefined, start: ISODate, end: ISODate
       sessions,
       plans,
       flags,
-      types: new Map(types.map((t) => [t.id, t])),
-      vigorousMin: vigorousDayThreshold(settings, profile, end > today ? today : end).min,
+      types: typeMap,
+      vigorousMin: vigorousDayThreshold(settings, profile, last).min,
+      dayTotalMin: new Map((hours?.days ?? []).filter((d) => !d.future).map((d) => [d.date, d.actualMin])),
     });
     const team = teams.find((t) => !t.archived && t.kind !== 'group');
     return { summary, team: team ? displayTeamName(team.name) : undefined };
@@ -176,6 +198,7 @@ function CoachShareSheet({ profile, onClose }: { profile: Profile | undefined; o
   const chips: { k: keyof CoachOptions; label: string }[] = [
     { k: 'other', label: 'Muut lajit ja koululiikunta' },
     { k: 'own', label: 'Omatoiminen harjoittelu' },
+    { k: 'everyday', label: 'Arkiliikunta' },
     { k: 'days', label: 'Rasittavat päivät ja lepopäivät' },
     { k: 'absences', label: 'Poissaolot (määrä)' },
     { k: 'reasons', label: 'Poissaolojen syyt' },
@@ -226,7 +249,7 @@ function CoachShareSheet({ profile, onClose }: { profile: Profile | undefined; o
             </div>
             <p className="text-xs leading-relaxed text-slate-500">
               Jako tehdään puhelimen jakovalikosta (esim. WhatsApp tai sähköposti) tai tallennetusta tiedostosta. Sovellus ei lähetä mitään itse. Luvut lasketaan kirjatuista
-              kerroista; arkiliikunnan arvio ei ole mukana.
+              kerroista ja arkiliikunnasta kuten Viikko-näkymän tunneissa.
             </p>
             <div className="sticky bottom-[calc(-1*max(1.25rem,env(safe-area-inset-bottom)))] z-10 -mx-5 -mb-[max(1.25rem,env(safe-area-inset-bottom))] border-t border-[var(--line)] bg-[var(--surface)] px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-10px_18px_-14px_rgb(0_0_0/0.35)] lg:-bottom-7 lg:-mx-7 lg:-mb-7 lg:px-7 lg:pb-6">
               <div className="flex gap-2">
@@ -249,7 +272,7 @@ function CoachShareSheet({ profile, onClose }: { profile: Profile | undefined; o
 }
 
 /** PDF-paperin osavärit (vaalea pohja). */
-const PAPER_COLOR = { football: '#2a64c9', own: '#c95420', other: '#13865f', school: '#7a58d4' } as const;
+const PAPER_COLOR = { football: '#2a64c9', own: '#c95420', other: '#13865f', school: '#7a58d4', everyday: '#8a9097' } as const;
 
 /** Tulostettava kooste (vaalea paperi; tulostusikkunasta Tallenna PDF-muodossa). */
 function CoachPrint({ profile, data, onClose }: { profile: Profile; data: CoachData; onClose: () => void }) {
@@ -393,7 +416,7 @@ function CoachPrint({ profile, data, onClose }: { profile: Profile; data: CoachD
           )}
 
           <footer className="flex flex-wrap justify-between gap-2 border-t pt-2 text-[11px]" style={{ borderColor: pal.line, color: pal.soft }}>
-            <span>Luvut ovat arvioita lajien tyypillisestä tehosta. Mukana kirjatut kerrat, ei arkiliikunnan arviota.</span>
+            <span>Luvut ovat arvioita lajien tyypillisestä tehosta.</span>
             <span className="font-semibold">Liikkumisen seuranta</span>
           </footer>
         </div>

@@ -1,20 +1,22 @@
 // Kokonaiskuormitus valmentajalle (25.11.2026): jakson koko liikunta yhdellä kuvalla – jalkapallo, omatoiminen
-// harjoittelu, muut lajit ja koululiikunta viikoittain, lepo- ja rasittavat päivät sekä osallistuminen. Puhdas
-// funktio; lähteenä kirjatut kerrat (ei arkiliikunnan arviota eikä arkiliikunnan vahvistuksia) kuten
-// jalkapallon osuudessa (longTerm). Luvut ovat arvioita lajien tyypillisestä tehosta.
+// harjoittelu, muut lajit, koululiikunta ja arkiliikunta viikoittain, lepo- ja rasittavat päivät sekä osallistuminen.
+// Puhdas funktio. Lajit kirjatuista kerroista; arkiliikunta (25.11.2026 korjaus, käyttäjä: "todellisuus on yli 20 h")
+// = päivän liikunta kuten Viikko-näkymän tunneissa (weeklyHours actualMin: kerrat + arkiliikunnan arvio) miinus
+// lajikerrat, joten koosteen summa vastaa sovelluksen liikuntatunteja. Luvut ovat arvioita lajien tyypillisestä tehosta.
 
 import { addDays, datesBetween, isoWeek, isoWeekday, parseISODate, startOfIsoWeek } from './dates';
 import { isClubFootball, isClubTraining } from './football';
 import { isEstimateConfirmation } from './hours';
 import type { ActivityType, DayFlag, ISODate, PlannedSession, Session, SkipReason, UUID } from './types';
 
-export type CoachPart = 'football' | 'own' | 'other' | 'school';
-export const COACH_PARTS: readonly CoachPart[] = ['football', 'own', 'other', 'school'];
+export type CoachPart = 'football' | 'own' | 'other' | 'school' | 'everyday';
+export const COACH_PARTS: readonly CoachPart[] = ['football', 'own', 'other', 'school', 'everyday'];
 export const COACH_PART_LABEL: Record<CoachPart, string> = {
   football: 'Jalkapallo',
   own: 'Omatoiminen',
   other: 'Muut lajit',
   school: 'Koululiikunta',
+  everyday: 'Arkiliikunta',
 };
 
 /** Kuvassa näytettävät tiedot (jakopaneelin valinnat). */
@@ -31,9 +33,11 @@ export interface CoachOptions {
   reasons: boolean;
   /** Jalkapallokertojen muistiinpanot. */
   notes: boolean;
+  /** Arkiliikunta (välitunnit, koulumatkat, päiväkoti ym.). */
+  everyday: boolean;
 }
 
-export const DEFAULT_COACH_OPTIONS: CoachOptions = { other: true, own: true, days: true, absences: true, reasons: false, notes: false };
+export const DEFAULT_COACH_OPTIONS: CoachOptions = { other: true, own: true, everyday: true, days: true, absences: true, reasons: false, notes: false };
 
 export interface CoachBucket {
   /** "vk 46" tai "marras". */
@@ -61,7 +65,7 @@ export interface CoachSummary {
   hoursPerWeek: number;
   /** Jalkapallo + omatoiminen (h/vko). */
   footballHoursPerWeek: number;
-  /** Jalkapallon osuus kaikesta kirjatusta liikunnasta (0–1); null, jos ei liikuntaa. */
+  /** Jalkapallon osuus kaikesta liikunnasta (myös arkiliikunta; 0–1); null, jos ei liikuntaa. */
   footballShare: number | null;
   restDaysPerWeek: number;
   vigorousDaysPerWeek: number;
@@ -90,6 +94,8 @@ export interface CoachInput {
   types: Map<UUID, ActivityType>;
   /** Rasittavan päivän raja (min). */
   vigorousMin: number;
+  /** Päivän liikunta (min) kuten Viikko-näkymän tunneissa (kerrat + arkiliikunnan arvio); puuttuessa ei arkiliikuntaa. */
+  dayTotalMin?: ReadonlyMap<ISODate, number>;
 }
 
 const MONTHS = ['tammi', 'helmi', 'maalis', 'huhti', 'touko', 'kesä', 'heinä', 'elo', 'syys', 'loka', 'marras', 'joulu'];
@@ -111,7 +117,8 @@ export function coachPartOf(s: Session, types: Map<UUID, ActivityType>): CoachPa
   return 'other';
 }
 
-const emptyParts = (): Record<CoachPart, number> => ({ football: 0, own: 0, other: 0, school: 0 });
+const emptyParts = (): Record<CoachPart, number> => ({ football: 0, own: 0, other: 0, school: 0, everyday: 0 });
+const sumParts = (m: Record<CoachPart, number>) => COACH_PARTS.reduce((a, p) => a + m[p], 0);
 const fiDate = (d: ISODate) => {
   const p = parseISODate(d);
   return `${p.day}.${p.month}.`;
@@ -171,6 +178,13 @@ export function coachSummary(input: CoachInput): CoachSummary {
     if (s.deletedAt || isEstimateConfirmation(s)) continue;
     dayVigorous.set(s.date, (dayVigorous.get(s.date) ?? 0) + (s.minutes?.vigorous ?? 0));
   }
+  // Arkiliikunta: päivän liikunta miinus koosteen lajikerrat (ei negatiivinen).
+  const everyday = new Map<ISODate, number>();
+  for (const d of dates) {
+    const e = Math.max(0, Math.round((input.dayTotalMin?.get(d) ?? 0) - (dayMinutes.get(d) ?? 0)));
+    if (e > 0) everyday.set(d, e);
+    minutes.everyday += e;
+  }
   const vigorousDates = dates.filter((d) => (dayVigorous.get(d) ?? 0) >= vigorousMin && vigorousMin > 0);
   const restDates = dates.filter((d) => !dayMinutes.get(d));
 
@@ -178,11 +192,12 @@ export function coachSummary(input: CoachInput): CoachSummary {
   const bucketList: CoachBucket[] = b.list.map((x) => {
     const m = emptyParts();
     for (const { s, part } of counted) if (s.date >= x.start && s.date <= x.end) m[part] += s.durationMin;
+    for (const [d, e] of everyday) if (d >= x.start && d <= x.end) m.everyday += e;
     const full = b.kind === 'week' ? isoWeekday(x.end) === 7 : parseISODate(addDays(x.end, 1)).day === 1;
-    return { ...x, minutes: m, total: m.football + m.own + m.other + m.school, partial: x.end === today && !full };
+    return { ...x, minutes: m, total: sumParts(m), partial: x.end === today && !full };
   });
 
-  const total = minutes.football + minutes.own + minutes.other + minutes.school;
+  const total = sumParts(minutes);
   const fb = minutes.football + minutes.own;
 
   // Seuran treenit ja osallistuminen suunnitelluista kerroista (peruttu ei ole poissaolo).
@@ -337,7 +352,7 @@ const SKIP_WORD: Record<SkipReason, string> = { sick: 'sairas', injured: 'loukka
 
 /** Näytettävät osat valintojen mukaan (piilotettu osa jää pois myös summista). */
 export function coachParts(o: CoachOptions): CoachPart[] {
-  return COACH_PARTS.filter((p) => (p === 'own' ? o.own : p === 'other' || p === 'school' ? o.other : true));
+  return COACH_PARTS.filter((p) => (p === 'own' ? o.own : p === 'other' || p === 'school' ? o.other : p === 'everyday' ? o.everyday : true));
 }
 
 const hours = (min: number) => `${fi1(min / 60)} h`;
@@ -351,14 +366,16 @@ export function coachView(s: CoachSummary, o: CoachOptions): CoachView {
   const buckets = s.buckets.map((b) => ({ ...b, total: parts.reduce((a, p) => a + b.minutes[p], 0) }));
 
   const training: CoachTile = { value: fi1(s.clubTrainings.perWeek), unit: '/vko', label: 'Seuran treenejä' };
-  const tiles: CoachTile[] = o.other
+  // Kokonaisliikunta ja osuus, kun mukana on muutakin kuin jalkapallo.
+  const broad = o.other || o.everyday;
+  const tiles: CoachTile[] = broad
     ? [
         { value: fi1(perWeek(visible) / 60), unit: 'h/vko', label: 'Liikuntaa' },
         { value: visible > 0 ? `${Math.round((fbMin / visible) * 100)} %` : '–', unit: '', label: 'Jalkapalloa' },
       ]
     : [{ value: fi1(perWeek(fbMin) / 60), unit: 'h/vko', label: 'Jalkapalloa' }, training];
   if (o.days) tiles.push({ value: fi1(s.restDaysPerWeek), unit: '/vko', label: 'Lepopäiviä' });
-  else if (o.other) tiles.push(training);
+  else if (broad) tiles.push(training);
   else tiles.push({ value: String(s.games.count + s.games.tournaments), unit: '', label: 'Pelejä ja turnauksia' });
 
   const rows: CoachRow[] = [];
@@ -375,6 +392,7 @@ export function coachView(s: CoachSummary, o: CoachOptions): CoachView {
     rows.push({ label: 'Muut lajit', value: top.join(', ') || 'ei muita lajeja' });
     if (s.schoolPerWeek > 0) rows.push({ label: 'Koululiikunta', value: `${fi1(s.schoolPerWeek)} /vko` });
   }
+  if (o.everyday && s.minutes.everyday > 0) rows.push({ label: 'Arkiliikunta', value: `${hours(perWeek(s.minutes.everyday))} /vko` });
   if (o.days) rows.push({ label: 'Rasittavia päiviä', value: `${fi1(s.vigorousDaysPerWeek)} /vko` });
   if (o.absences) {
     const reasons = o.reasons && s.absences.reasons.length ? ` (${s.absences.reasons.map((r) => `${SKIP_WORD[r.reason]} ${r.count}`).join(', ')})` : '';

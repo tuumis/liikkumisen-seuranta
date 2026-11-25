@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.73',
+    date: '25.11.2026',
+    items: [
+      'Jaa valmentajalle: liikuntatunnit lasketaan nyt samoin kuin Viikko-näkymässä. Arkiliikunta (välitunnit, koulumatkat ym.) on mukana omana harmaana osanaan, ja sen voi jättää kuvasta pois.',
+      'Korjattu: pitkä arvo (esim. muut lajit) ei enää mene rivin otsikon päälle, vaan siirtyy otsikon alle.',
+    ],
+  },
+  {
     version: '1.1.72',
     date: '25.11.2026',
     items: [
