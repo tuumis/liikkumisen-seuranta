@@ -1,4 +1,5 @@
 import type { ActivityType, DayFlag, DayTotals, Fixture, FootballDetails, ISODate, PlannedSession, Session, UUID } from '../../domain/types';
+import { formatClock } from '../../domain/stopwatch';
 import type { DayHours } from '../../domain/hours';
 import { InfoTip } from '../../ui/InfoTip';
 import { foldTrainingSelves, isClubFootball, isClubTraining, LEVEL_LABEL, OUTCOME_LABEL, outcomeOf, trainingSelfText } from '../../domain/football';
@@ -239,6 +240,7 @@ export function DayRow({
                       ) : (
                         <>
                           {s.durationMin} min
+                      {s.timedSec !== undefined && ` (kellotettu ${formatClock(s.timedSec)})`}
                       {plan && plan.durationMin !== s.durationMin && ` (suunn. ${plan.durationMin})`}
                       {s.playedMin !== undefined && ` · pelattu ${s.playedMin}`}
                       {s.parts?.length ? ` · ${s.parts.map((x) => `${(types.get(x.activityTypeId)?.name ?? 'muu').toLowerCase()} ${x.durationMin}`).join(', ')}` : ''} ·{' '}

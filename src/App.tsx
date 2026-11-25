@@ -30,6 +30,7 @@ import { useUnconfirmedCounts } from './features/review/unconfirmed';
 import { requestWeek } from './features/desktop/settings';
 import { DEMO } from './demo/demoMode';
 import { DemoBanner, DemoSidebar } from './demo/DemoBanner';
+import { StopwatchBar, StopwatchHost } from './features/stopwatch/StopwatchBar';
 
 // Analyysi (Recharts) ladataan omana osanaan; service worker esivälimuistittaa senkin.
 const loadAnalysis = () => import('./features/analysis/AnalysisView');
@@ -274,6 +275,10 @@ export default function App() {
             );
           })}
         </nav>
+        {/* Sekuntikello (25.11.2026): käynnissä olevat kellot aina näkyvissä. */}
+        <div className="mt-4 px-4 empty:hidden">
+          <StopwatchBar variant="sidebar" profiles={profiles} />
+        </div>
         {pendingTotal > 0 && (
           <div className="mt-4 px-4">
             <button
@@ -387,6 +392,7 @@ export default function App() {
             })}
           </div>
         )}
+        <StopwatchBar variant="header" profiles={profiles} />
       </header>
 
       <main className="mx-auto max-w-xl px-4 pb-[calc(max(0.75rem,env(safe-area-inset-bottom))+7.5rem)] pt-2 md:max-w-2xl lg:max-w-none lg:px-10 lg:pb-12 lg:pt-10 2xl:px-14">
@@ -436,6 +442,7 @@ export default function App() {
 
       {ready && selected && <GoalSound key={selected.id} profile={selected} />}
       {ready && <ResultShareHost />}
+      {ready && <StopwatchHost profiles={profiles} />}
       {ready && <PreviewShareHost />}
 
       {ready && !DEMO && profiles && profiles.length > 0 && (

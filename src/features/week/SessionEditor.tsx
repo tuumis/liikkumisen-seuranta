@@ -1,5 +1,6 @@
 // Kerran muokkaus ja poisto (SPEC 10: poisto pyytää vahvistusta ja tarjoaa kumoamisen 5 s).
 
+import { formatTimed, timedMinutes } from '../../domain/stopwatch';
 import { PartsEditor, partCandidates, partDraftsOf, partsFromDrafts, type PartDraft } from './PartsEditor';
 import { partsShares, supportsParts } from '../../domain/intensity';
 import { useEffect, useMemo, useState } from 'react';
@@ -212,6 +213,13 @@ export function SessionEditor({
             <Field label="Kesto (min)">
               <input className={inputClass} inputMode="numeric" value={duration} onChange={(e) => setDuration(e.target.value)} />
               {errors.duration && <span className="mt-1 block text-sm text-red-700">{errors.duration}</span>}
+              {session.timedSec !== undefined && (
+                <span className="mt-1 block text-xs text-slate-500">
+                  {Number(duration) === timedMinutes(session.timedSec)
+                    ? `Kellotettu ${formatTimed(session.timedSec)}`
+                    : `Kellotettu ${formatTimed(session.timedSec)}; muutettu kesto korvaa sen`}
+                </span>
+              )}
             </Field>
           </div>
 

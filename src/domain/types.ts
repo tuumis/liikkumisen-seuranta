@@ -205,6 +205,11 @@ export interface Session extends SyncFields {
   date: ISODate;
   startTime?: HHmm;
   durationMin: number;
+  /**
+   * Sekuntikellolla kellotettu tarkka aika sekunteina (25.11.2026); durationMin on sen pyöristys minuutteihin.
+   * Poistuu, jos kestoa muutetaan käsin.
+   */
+  timedSec?: number;
   playedMin?: number; // peli ja turnaus
   /** Peli ja turnaus: lämmittely (min, treenin teholla); puuttuessa 15. */
   warmupMin?: number;

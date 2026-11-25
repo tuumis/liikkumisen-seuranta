@@ -126,6 +126,7 @@ export const sessionSchema = either(
     activityTypeId: z.string(),
     date: iso,
     durationMin: z.number().min(0),
+    timedSec: z.number().min(0).optional(),
     playedMin: z.number().min(0).optional(),
     effort: z.union([z.literal(-1), z.literal(0), z.literal(1)]),
     intensitySource: z.enum(['profile', 'manual']),

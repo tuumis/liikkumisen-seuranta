@@ -9,7 +9,8 @@ import { addDays } from '../../domain/dates';
 import type { ActivityType, Category, Effort, IntensityMinutes, ISODate, Profile, Session } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { requestPersistentStorage } from '../../db/storage';
-import { IconBall, IconChevronLeft } from '../../ui/icons';
+import { IconBall, IconChevronLeft, IconClock } from '../../ui/icons';
+import { formatClock, formatTimed, newStopwatch, timedMinutes, type Stopwatch } from '../../domain/stopwatch';
 import { LabelField } from '../week/LabelField';
 import { useHiddenTypes, visibleTypes } from '../week/useLoggableTypes';
 import { useFootballEnabled, withoutClubFootball } from '../football/useFootballEnabled';
@@ -70,6 +71,7 @@ export function QuickAdd({
   profile,
   initialDate,
   onSaved,
+  timer,
 }: {
   open: boolean;
   onClose: () => void;
@@ -77,6 +79,8 @@ export function QuickAdd({
   initialDate?: ISODate;
   /** Tallennuksen jälkeen (esim. jalkapallon lisätietopaneeli). */
   onSaved?: (s: Session) => void;
+  /** Pysäytetyn sekuntikellon kirjaus (25.11.2026): päivä, alkamisaika, kesto ja laji valmiina. */
+  timer?: { stopwatch: Stopwatch; seconds: number };
 }) {
   const today = todayFn();
   const toast = useToast();
@@ -87,6 +91,7 @@ export function QuickAdd({
   const types = useMemo(() => withoutClubFootball(visibleTypes(allTypes, hidden), footballOn), [allTypes, hidden, footballOn]);
   const inFootballGroup = (t: ActivityType) => footballOn && isFootball(t);
   const recentIds = useLiveQuery(() => repo.recentActivityTypeIds(profile.id, 6), [profile.id]);
+  const running = useLiveQuery(async () => (await repo.listStopwatches()).some((x) => x.profileId === profile.id), [profile.id]);
 
   const [type, setType] = useState<ActivityType | null>(null);
   const [showAll, setShowAll] = useState(false);
@@ -109,28 +114,53 @@ export function QuickAdd({
   const [saving, setSaving] = useState(false);
 
   // Paneelin avaus nollaa valinnat jo piirron aikana (24.11.2026: ei toista piirtoa avausanimaation alussa).
-  const resetKey = open ? `${initialDate ?? ''}|${today}` : '';
+  const resetKey = open ? `${initialDate ?? ''}|${today}|${timer?.stopwatch.startedAt ?? ''}` : '';
   const [seenKey, setSeenKey] = useState('');
+  const [autoPicked, setAutoPicked] = useState(false);
   if (resetKey !== seenKey) {
     setSeenKey(resetKey);
     if (open) resetForm();
   }
+  // Kellon laji valitaan valmiiksi, kun lajit on luettu.
+  if (open && timer?.stopwatch.activityTypeId && !autoPicked && !type && allTypes) {
+    setAutoPicked(true);
+    const t = allTypes.find((x) => x.id === timer.stopwatch.activityTypeId && !x.deletedAt);
+    if (t) pick(t);
+  }
+  const timedMin = timer ? timedMinutes(timer.seconds) : undefined;
   function resetForm() {
     setType(null);
     setShowAll(false);
-    setDate(initialDate && initialDate <= today ? initialDate : today);
+    setAutoPicked(false);
+    setDate(timer ? timer.stopwatch.date : initialDate && initialDate <= today ? initialDate : today);
     setEffort(0);
     setNote('');
     setLabel('');
     setMode('profile');
     setManual({ light: '', moderate: '', vigorous: '' });
     setPlayed('');
-    setDuration('');
-    setCustom(false);
+    setDuration(timer ? String(timedMinutes(timer.seconds)) : '');
+    setCustom(!!timer);
     setParts([]);
     setCompanions([]);
     setError(undefined);
   }
+
+  /** Käynnistää sekuntikellon tälle profiilille (laji valinnainen) ja sulkee paneelin. */
+  async function startTimer(t?: ActivityType) {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await repo.saveStopwatch(newStopwatch(profile.id, t?.id, new Date()));
+      onClose();
+      toast(`Kello käynnistyi${t ? `: ${t.name}` : ''}. Lopeta kello, kun liikunta päättyy.`, undefined, 'success');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+  const canStartTimer = !timer && running === false && date === today;
 
   const recent = useMemo(() => {
     if (!types) return [];
@@ -228,13 +258,18 @@ export function QuickAdd({
       if (partsMin > min) return setError(`${nameOf(c.profileId)}: tekemisten minuutit ylittävät keston`);
       others.push({ c, min });
     }
+    // Kellotettu tarkka aika tallentuu, jos kesto on yhä sen pyöristys.
+    const timedSec = timer && dur.data === timedMin ? timer.seconds : undefined;
+    const startTime = timer && day.data === timer.stopwatch.date ? timer.stopwatch.startTime : undefined;
     setSaving(true);
     try {
       const s = await repo.createSession({
         profileId: profile.id,
         activityTypeId: type.id,
         date: day.data,
+        startTime,
         durationMin: dur.data,
+        timedSec,
         playedMin: type.usesPlayedMinutes ? pl.data : undefined,
         effort: mode === 'profile' ? effort : 0,
         intensityPreset: isPreset(mode) ? mode : undefined,
@@ -254,7 +289,9 @@ export function QuickAdd({
             profileId: c.profileId,
             activityTypeId: type.id,
             date: day.data,
+            startTime,
             durationMin: min,
+            timedSec: min === dur.data ? timedSec : undefined,
             // Oma jako ei siirry toiselle (minuutit ovat tämän profiilin); muuten sama teho ja oma ponnistelu.
             effort: mode === 'profile' || mode === 'manual' ? c.effort : 0,
             intensityPreset: isPreset(mode) ? mode : undefined,
@@ -267,10 +304,17 @@ export function QuickAdd({
         );
       }
       void requestPersistentStorage();
+      if (timer) await repo.removeStopwatch(timer.stopwatch.profileId);
       onClose();
       const all = [s, ...extra];
       const who = extra.length ? ` – ${[profile.name, ...others.map((o) => nameOf(o.c.profileId))].join(', ')}` : '';
-      toast(`Tallennettu: ${type.name}${label.trim() ? ` (${label.trim()})` : ''} ${dur.data} min${who}`, { label: 'Kumoa', run: () => Promise.all(all.map((x) => repo.deleteSession(x.id))).then(() => {}) }, 'success');
+      const timed = timedSec !== undefined ? ` (kellotettu ${formatTimed(timedSec)})` : '';
+      // Kumoa palauttaa myös kellon (tauolle), jotta aika ei katoa.
+      const undo = async () => {
+        await Promise.all(all.map((x) => repo.deleteSession(x.id)));
+        if (timer) await repo.saveStopwatch(timer.stopwatch);
+      };
+      toast(`Tallennettu: ${type.name}${label.trim() ? ` (${label.trim()})` : ''} ${dur.data} min${timed}${who}`, { label: 'Kumoa', run: undo }, 'success');
       onSaved?.(s);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -284,6 +328,28 @@ export function QuickAdd({
     <Sheet open={open} onClose={onClose} title={type ? type.name : 'Uusi kerta'}>
       {!type ? (
         <div className="space-y-3">
+          {timer && (
+            <p className="flex items-center gap-2 rounded-2xl bg-[var(--surface-sage)] p-3.5 text-sm text-slate-800">
+              <IconClock size="1.1rem" className="shrink-0 text-green-800" />
+              Kellotettu {formatClock(timer.seconds)}. Valitse laji, niin kerta tallennetaan.
+            </p>
+          )}
+          {canStartTimer && (
+            <button
+              type="button"
+              onClick={() => void startTimer()}
+              disabled={saving}
+              className="press card-interactive card flex w-full items-center gap-3 rounded-[1.25rem] px-3.5 py-3 text-left"
+            >
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface-sage)] text-green-800" aria-hidden>
+                <IconClock size="1.35rem" />
+              </span>
+              <span className="min-w-0 flex-1 leading-tight">
+                <span className="block text-sm font-semibold text-slate-900">Käynnistä kello</span>
+                <span className="block text-xs text-slate-500">Kellota todellinen aika, laji valitaan lopuksi</span>
+              </span>
+            </button>
+          )}
           {football.length > 0 && (
             <section className="card-sage p-2.5" aria-label="Jalkapallo">
               <h3 className="mb-2 flex items-center gap-1.5 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-green-800">
@@ -323,7 +389,16 @@ export function QuickAdd({
         </div>
       ) : (
         <div className="space-y-4">
-          {openPlan && (
+          {timer && (
+            <div className="flex items-start gap-2.5 rounded-2xl bg-[var(--surface-sage)] p-3.5 text-sm text-slate-800">
+              <IconClock size="1.15rem" className="mt-px shrink-0 text-green-800" />
+              <p>
+                Kellotettu <strong>{formatTimed(timer.seconds)}</strong>, alkaen klo {timer.stopwatch.startTime.replace(':', '.')}. Kestoksi kirjataan {timedMin} min; tarkka aika
+                näkyy kerran tiedoissa.
+              </p>
+            </div>
+          )}
+          {openPlan && !timer && (
             <div className="space-y-2 rounded-2xl bg-amber-100 p-3.5">
               <p className="text-sm text-amber-900">
                 Päivälle {dayLabel(date)} on suunniteltu {type.name.toLowerCase()}
@@ -398,7 +473,7 @@ export function QuickAdd({
               <input
                 className={`${inputClass} mt-2`}
                 inputMode="numeric"
-                autoFocus
+                autoFocus={!timer}
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && void save()}
@@ -407,6 +482,18 @@ export function QuickAdd({
               />
             )}
           </div>
+
+          {canStartTimer && (
+            <button
+              type="button"
+              onClick={() => void startTimer(type)}
+              disabled={saving}
+              className="press flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--surface-sunk)] px-3 py-2.5 text-sm font-semibold text-slate-800 shadow-[inset_0_0_0_1px_var(--line)] hover:bg-slate-100"
+            >
+              <IconClock size="1.1rem" className="text-green-800" />
+              Tai käynnistä kello ja kirjaa todellinen aika
+            </button>
+          )}
 
           {type.usesPlayedMinutes && (
             <label className="block">

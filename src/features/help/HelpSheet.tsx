@@ -11,6 +11,7 @@ const TOPICS: { q: string; a: string[] }[] = [
     q: 'Miten kirjaan liikuntaa?',
     a: [
       'Paina Viikko-näkymässä +, valitse laji ja kesto ja paina Tallenna. Päivän voi vaihtaa ylhäältä.',
+      'Todellisen ajan voi kellottaa: paina + ja Käynnistä kello (laji valitaan lopuksi) tai valitse laji ja paina Tai käynnistä kello. Käynnissä oleva kello näkyy puhelimessa yläreunassa ja PC:llä sivupalkissa, ja sen voi laittaa tauolle. Lopeta avaa kirjauksen, jossa kesto on valmiina minuutteihin pyöristettynä. Tarkka aika näkyy päivän kerralla (esim. 48 min, kellotettu 47:32) ja kerran tiedoissa. Kello jatkaa oikein, vaikka sovelluksen sulkisi, ja jokaisella profiililla voi olla oma kello. Kello on vain tällä laitteella; valmis kerta synkronoituu tavalliseen tapaan.',
       'Toistuvat treenit kannattaa lisätä Viikkorytmiin (Asetukset). Ne näkyvät viikolla valmiina, ja ne kuitataan yhdellä painalluksella. Kynästä (tai päiväkortin kohdasta Kuittaa tiedoilla) saa kuitatessa samalla kirjattua toteutuneen keston, tehon, lihas- ja luustovalinnat sekä treenin omatoimisen verryttelyn. Lihas- ja luustovalinnan voi tallentaa lajin oletukseksi, ja suosikkilajit (tähti kohdassa Asetukset → Liikkumismuodot ja tehoprofiilit) näkyvät lajivalinnoissa ensimmäisinä.',
     ],
   },

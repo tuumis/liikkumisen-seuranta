@@ -9,6 +9,16 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.67',
+    date: '25.11.2026',
+    items: [
+      'Uusi: sekuntikello. Kellota liikunnan todellinen aika: + → Käynnistä kello (laji valitaan lopuksi) tai lajin kirjauksesta Tai käynnistä kello.',
+      'Käynnissä oleva kello näkyy puhelimessa yläreunassa ja PC:llä sivupalkissa. Tauko ei kerrytä aikaa. Lopeta avaa kirjauksen, jossa päivä, alkamisaika ja kesto (pyöristettynä minuutteihin) ovat valmiina.',
+      'Tarkka aika säilyy: päivän kerralla näkyy esim. 48 min (kellotettu 47:32) ja kerran tiedoissa Kellotettu 47 min 32 s.',
+      'Jokaisella profiililla voi olla oma kello samaan aikaan. Kello jatkaa oikein, vaikka sovelluksen sulkisi tai näyttö sammuisi.',
+    ],
+  },
+  {
     version: '1.1.66',
     date: '24.11.2026',
     items: [

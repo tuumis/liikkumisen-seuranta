@@ -57,6 +57,7 @@ import { nowTimestamp } from './clock';
 import { createPlanner } from './ensurePlanned';
 import { noteLocalChange } from './localChange';
 import { normalizeLink } from '../domain/link';
+import { timedMinutes, type Stopwatch } from '../domain/stopwatch';
 import { AppDB, db as defaultDb } from './schema';
 
 /** Seuran tietojen muutos (repo.saveClub): vain annetut kentät muuttuvat. */
@@ -91,6 +92,8 @@ export interface SessionInput {
   date: ISODate;
   startTime?: HHmm;
   durationMin: number;
+  /** Sekuntikellolla kellotettu tarkka aika (s); tallentuu vain, kun kesto on sen pyöristys. */
+  timedSec?: number;
   playedMin?: number;
   /** Peli ja turnaus: lämmittely (min) ja peliaika-arvio (osuus); puuttuessa säilyy entinen tai oletus. */
   warmupMin?: number;
@@ -658,6 +661,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     if (type.usesPlayedMinutes && input.playedMin !== undefined) session.playedMin = input.playedMin;
     setFootballTiming(session, type, input.warmupMin, input.playShare);
     if (input.startTime) session.startTime = input.startTime;
+    if (input.timedSec !== undefined && input.timedSec > 0 && timedMinutes(input.timedSec) === input.durationMin) session.timedSec = Math.floor(input.timedSec);
     if (input.note?.trim()) session.note = input.note.trim();
     const label = cleanLabel(input.label);
     if (label) session.label = label;
@@ -792,6 +796,8 @@ export function createRepositories(db: AppDB = defaultDb) {
         ...sessionIntensity(type, eff, current, warmupShares, p.shares),
       });
       if (p.parts) next.parts = p.parts;
+      // Kellotettu tarkka aika säilyy vain, jos kesto on yhä sen pyöristys (käsin muutettu kesto poistaa sen).
+      if (next.timedSec !== undefined && timedMinutes(next.timedSec) !== next.durationMin) delete next.timedSec;
       if (type.usesPlayedMinutes && input.playedMin !== undefined) next.playedMin = input.playedMin;
       setFootballTiming(next, type, eff.warmupMin, eff.playShare);
       if (input.startTime) next.startTime = input.startTime;
@@ -2697,6 +2703,25 @@ export function createRepositories(db: AppDB = defaultDb) {
 
   // ---------- laite ----------
 
+  // ---------- sekuntikellot (25.11.2026; laitekohtaisia, yksi kello profiilia kohden) ----------
+  async function listStopwatches(): Promise<Stopwatch[]> {
+    return (await getMeta<Stopwatch[]>('stopwatches')) ?? [];
+  }
+  async function saveStopwatch(sw: Stopwatch): Promise<void> {
+    await db.transaction('rw', db.meta, async () => {
+      // Paikka säilyy (tauko ja jatko eivät vaihda kellojen järjestystä).
+      const list = await listStopwatches();
+      const i = list.findIndex((x) => x.profileId === sw.profileId);
+      await setMeta('stopwatches', i < 0 ? [...list, sw] : list.map((x, j) => (j === i ? sw : x)));
+    });
+  }
+  async function removeStopwatch(profileId: UUID): Promise<void> {
+    await db.transaction('rw', db.meta, async () => {
+      const list = (await listStopwatches()).filter((x) => x.profileId !== profileId);
+      await setMeta('stopwatches', list);
+    });
+  }
+
   async function getDeviceRole(): Promise<DeviceRole | undefined> {
     return getMeta<DeviceRole>('deviceRole');
   }
@@ -2708,6 +2733,9 @@ export function createRepositories(db: AppDB = defaultDb) {
     db,
     getMeta,
     setMeta,
+    listStopwatches,
+    saveStopwatch,
+    removeStopwatch,
     deviceId,
     softDelete,
     initialize,

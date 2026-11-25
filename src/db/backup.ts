@@ -30,9 +30,10 @@ export const DEVICE_META_KEYS = [
   'deliveredKeys',
   'pendingThere',
   'autoBackupAt',
+  'stopwatches',
 ];
-/** Ei voi tallentaa JSONiin. */
-const NON_EXPORTABLE_META = ['syncFolderHandle'];
+/** Ei voi tallentaa JSONiin (kahva) tai kuuluu vain tälle laitteelle (käynnissä olevat sekuntikellot). */
+const NON_EXPORTABLE_META = ['syncFolderHandle', 'stopwatches'];
 
 export interface BackupFile {
   format: typeof BACKUP_FORMAT;
