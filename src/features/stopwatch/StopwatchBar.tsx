@@ -5,7 +5,10 @@
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { repo } from '../../db/repositories';
-import { elapsedSec, formatClock, isPaused, pauseStopwatch, resumeStopwatch, type Stopwatch } from '../../domain/stopwatch';
+import { elapsedSec, formatClock, formatTimed, isPaused, pauseStopwatch, resumeStopwatch, timedMinutes, type Stopwatch } from '../../domain/stopwatch';
+import { today } from '../../ui/today';
+import { useToast } from '../../ui/Toast';
+import { playSound } from '../../ui/sound';
 import type { Profile } from '../../domain/types';
 import { Avatar } from '../../ui/Avatar';
 import { IconClock, IconClose, IconPause, IconPlay } from '../../ui/icons';
@@ -163,15 +166,53 @@ export function StopwatchBar({ variant, profiles }: { variant: 'header' | 'sideb
   );
 }
 
+/**
+ * Suunnitellun kerran kello (vaihe 2): Lopeta kuittaa kerran kellotetulla ajalla ilman lisäkysymyksiä.
+ * Palauttaa false, jos kertaa ei voi kuitata (poistettu tai jo kuitattu); silloin aukeaa tavallinen kirjaus.
+ */
+async function confirmTimedPlan(sw: Stopwatch, toast: ReturnType<typeof useToast>): Promise<boolean> {
+  if (!sw.plannedSessionId) return false;
+  const sec = elapsedSec(sw, sw.pausedAt ?? Date.now());
+  try {
+    const r = await repo.confirmPlanned(sw.plannedSessionId, today(), { durationMin: timedMinutes(sec), timedSec: sec, startTime: sw.startTime });
+    if (!r.created) return false;
+    await repo.removeStopwatch(sw.profileId);
+    playSound('confirm');
+    const type = await repo.getActivityType(r.session.activityTypeId).catch(() => undefined);
+    toast(
+      `Kuitattu: ${r.session.label ?? type?.name ?? 'kerta'} ${r.session.durationMin} min (kellotettu ${formatTimed(sec)})`,
+      {
+        label: 'Kumoa',
+        run: async () => {
+          await repo.undoConfirm([r.session.id]);
+          await repo.saveStopwatch(sw);
+        },
+      },
+      'success',
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Kellon kirjauspaneeli (yksi koko sovelluksessa): avautuu Lopeta- tai Tallenna-painikkeesta. */
 export function StopwatchHost({ profiles }: { profiles: Profile[] | null }) {
   const list = useStopwatches();
+  const toast = useToast();
   const [profileId, setProfileId] = useState<string | null>(null);
   useEffect(() => {
-    const onSave = (e: Event) => setProfileId((e as CustomEvent<string>).detail);
+    const onSave = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail;
+      void (async () => {
+        const sw = (await repo.listStopwatches()).find((x) => x.profileId === id);
+        if (sw && (await confirmTimedPlan(sw, toast))) return;
+        setProfileId(id);
+      })();
+    };
     window.addEventListener(SAVE_EVENT, onSave);
     return () => window.removeEventListener(SAVE_EVENT, onSave);
-  }, []);
+  }, [toast]);
   const sw = list.find((x) => x.profileId === profileId);
   const profile = profiles?.find((p) => p.id === profileId);
   // Kirjauspaneeli pysyy auki tallennuksen ajan, vaikka kello poistuu listalta.

@@ -9,6 +9,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.68',
+    date: '25.11.2026',
+    items: [
+      'Sekuntikello suunnitellulle kerralle: avaa tämän päivän treeni tai muu suunniteltu kerta ja paina Käynnistä kello. Lopeta kuittaa kerran kellotetulla ajalla ja todellisella alkamisajalla.',
+      'Kumoa palauttaa kerran kuittaamattomaksi ja kellon tauolle, joten aika ei katoa.',
+      'Kun kirjaat lajin, jolle on tälle päivälle suunniteltu kerta, kello liitetään siihen (Tai käynnistä kello suunnitellulle kerralle).',
+    ],
+  },
+  {
     version: '1.1.67',
     date: '25.11.2026',
     items: [

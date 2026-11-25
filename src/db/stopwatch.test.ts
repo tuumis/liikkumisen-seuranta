@@ -51,4 +51,17 @@ describe('sekuntikello', () => {
     const changed = await repo.updateSession(s.id, { ...base, durationMin: 50 });
     expect(changed.timedSec).toBeUndefined();
   });
+
+  it('suunnitellun kerran kuittaus kellotetulla ajalla ja todellisella alkamisajalla (vaihe 2)', async () => {
+    const p = await repo.createProfile({ name: 'Aino', kind: 'child', birthYear: 2016, birthMonth: 5, color: '#0891b2' });
+    const plan = await repo.createPlannedOnce(p.id, { activityTypeId: 't:swimming', date: '2026-11-25', durationMin: 45, startTime: '17:00' });
+    const r = await repo.confirmPlanned(plan.id, '2026-11-25', { durationMin: 52, timedSec: 51 * 60 + 40, startTime: '17:08' });
+    expect(r.created).toBe(true);
+    expect(r.session).toMatchObject({ durationMin: 52, timedSec: 3100, startTime: '17:08', plannedSessionId: plan.id });
+    // Tavallinen kuittaus ilman kelloa: suunniteltu alkamisaika, ei tarkkaa aikaa.
+    const plan2 = await repo.createPlannedOnce(p.id, { activityTypeId: 't:swimming', date: '2026-11-24', durationMin: 45, startTime: '17:00' });
+    const r2 = await repo.confirmPlanned(plan2.id, '2026-11-25');
+    expect(r2.session.startTime).toBe('17:00');
+    expect(r2.session.timedSec).toBeUndefined();
+  });
 });

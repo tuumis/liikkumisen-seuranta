@@ -10,6 +10,8 @@ export interface Stopwatch {
   profileId: UUID;
   /** Laji, jos valittu käynnistettäessä; muuten valitaan tallennettaessa. */
   activityTypeId?: UUID;
+  /** Suunniteltu kerta (vaihe 2): Lopeta kuittaa sen kellotetulla ajalla. */
+  plannedSessionId?: UUID;
   /** Käynnistyshetki (ms). */
   startedAt: number;
   /** Kirjauksen päivä ja alkamisaika (käynnistyshetken mukaan). */
@@ -23,7 +25,7 @@ export interface Stopwatch {
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
-export function newStopwatch(profileId: UUID, activityTypeId: UUID | undefined, now: Date): Stopwatch {
+export function newStopwatch(profileId: UUID, activityTypeId: UUID | undefined, now: Date, plannedSessionId?: UUID): Stopwatch {
   const sw: Stopwatch = {
     profileId,
     startedAt: now.getTime(),
@@ -32,6 +34,7 @@ export function newStopwatch(profileId: UUID, activityTypeId: UUID | undefined, 
     pausedMs: 0,
   };
   if (activityTypeId) sw.activityTypeId = activityTypeId;
+  if (plannedSessionId) sw.plannedSessionId = plannedSessionId;
   return sw;
 }
 

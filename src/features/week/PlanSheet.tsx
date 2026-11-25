@@ -16,6 +16,9 @@ import { usePlanActions } from '../review/usePlanActions';
 import { ConfirmForm } from '../review/ConfirmForm';
 import { HOME_AWAY_LABEL, isClubTraining, LEVEL_LABEL } from '../../domain/football';
 import { durationSchema } from './sessionForm';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { newStopwatch } from '../../domain/stopwatch';
+import { IconClock } from '../../ui/icons';
 
 /** Kestovaihtoehdot kuittaukseen: suunniteltu ja sitä lyhyemmät/pidemmät yleiset kestot. */
 function durationChoices(planned: number): number[] {
@@ -67,6 +70,7 @@ export function PlanSheet({
   const [details, setDetails] = useState(false);
   const [error, setError] = useState<string>();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const stopwatch = useLiveQuery(async () => (plan ? ((await repo.listStopwatches()).find((x) => x.profileId === plan.profileId) ?? null) : null), [plan?.profileId]);
 
   useEffect(() => {
     setCustom('');
@@ -140,6 +144,34 @@ export function PlanSheet({
               </Button>
             )}
           </div>
+        )}
+
+        {/* Sekuntikello (vaihe 2): tämän päivän avoimen kerran todellinen aika; Lopeta kuittaa kerran. */}
+        {plan.status === 'open' && plan.date === todayFn() && stopwatch !== undefined && (
+          stopwatch?.plannedSessionId === plan.id ? (
+            <p className="flex items-center gap-2.5 rounded-2xl bg-[var(--surface-sage)] p-3.5 text-sm text-slate-800">
+              <IconClock size="1.15rem" className="shrink-0 text-green-800" />
+              Kello on käynnissä tälle kerralle. Lopeta kello, niin kerta kuitataan kellotetulla ajalla.
+            </p>
+          ) : !stopwatch ? (
+            <button
+              type="button"
+              onClick={async () => {
+                await repo.saveStopwatch(newStopwatch(plan.profileId, plan.activityTypeId, new Date(), plan.id));
+                onClose();
+                toast(`Kello käynnistyi: ${plan.label ?? type?.name ?? 'kerta'}. Lopeta kuittaa kerran kellotetulla ajalla.`, undefined, 'success');
+              }}
+              className="press card-interactive card flex w-full items-center gap-3 rounded-[1.25rem] px-3.5 py-3 text-left"
+            >
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface-sage)] text-green-800" aria-hidden>
+                <IconClock size="1.35rem" />
+              </span>
+              <span className="min-w-0 flex-1 leading-tight">
+                <span className="block text-sm font-semibold text-slate-900">Käynnistä kello</span>
+                <span className="block text-xs text-slate-500">Kellota todellinen aika; Lopeta kuittaa kerran sillä kestolla</span>
+              </span>
+            </button>
+          ) : null
         )}
 
         {!future && plan.status !== 'done' && (

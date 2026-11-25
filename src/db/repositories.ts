@@ -85,6 +85,9 @@ export interface ConfirmDetails {
   bone?: boolean;
   /** Seuran treenin omatoiminen verryttely; annettuna korvaa viikkorytmin oletuksen (0 ja 0 = ei verryttelyä). */
   self?: TrainingSelf;
+  /** Sekuntikellon kuittaus (25.11.2026): tarkka aika (s; tallentuu, kun kesto on sen pyöristys) ja todellinen alkamisaika. */
+  timedSec?: number;
+  startTime?: HHmm;
 }
 
 export interface SessionInput {
@@ -1175,7 +1178,7 @@ export function createRepositories(db: AppDB = defaultDb) {
       const input: SessionInput = {
         activityTypeId: type.id,
         date: plan.date,
-        startTime: plan.startTime,
+        startTime: opts.startTime ?? plan.startTime,
         durationMin: opts.durationMin ?? plan.durationMin,
         // Tehon esiasetus kuittauksessa (24.11.2026) korvaa tason ponnistelukertoimen kuten kerran muokkauksessa.
         effort: opts.intensityPreset ? 0 : fixtureLevel ? LEVEL_EFFORT[fixtureLevel] : 0,
@@ -1202,7 +1205,8 @@ export function createRepositories(db: AppDB = defaultDb) {
         updatedAt: ts,
         updatedBy: by,
       };
-      if (plan.startTime) session.startTime = plan.startTime;
+      if (input.startTime) session.startTime = input.startTime;
+      if (opts.timedSec !== undefined && opts.timedSec > 0 && timedMinutes(opts.timedSec) === session.durationMin) session.timedSec = Math.floor(opts.timedSec);
       if (plan.label) session.label = plan.label;
       setFootballTiming(session, type, input.warmupMin, input.playShare);
       // Seuran treeni: joukkue yksittäiseltä suunnitelmalta tai viikkorytmin riviltä, muuten ainoa oma joukkue (19.11.2026).

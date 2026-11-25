@@ -147,13 +147,17 @@ export function QuickAdd({
   }
 
   /** Käynnistää sekuntikellon tälle profiilille (laji valinnainen) ja sulkee paneelin. */
-  async function startTimer(t?: ActivityType) {
+  async function startTimer(t?: ActivityType, planId?: string) {
     if (saving) return;
     setSaving(true);
     try {
-      await repo.saveStopwatch(newStopwatch(profile.id, t?.id, new Date()));
+      await repo.saveStopwatch(newStopwatch(profile.id, t?.id, new Date(), planId));
       onClose();
-      toast(`Kello käynnistyi${t ? `: ${t.name}` : ''}. Lopeta kello, kun liikunta päättyy.`, undefined, 'success');
+      toast(
+        `Kello käynnistyi${t ? `: ${t.name}` : ''}. ${planId ? 'Lopeta kuittaa suunnitellun kerran kellotetulla ajalla.' : 'Lopeta kello, kun liikunta päättyy.'}`,
+        undefined,
+        'success',
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -395,6 +399,7 @@ export function QuickAdd({
               <p>
                 Kellotettu <strong>{formatTimed(timer.seconds)}</strong>, alkaen klo {timer.stopwatch.startTime.replace(':', '.')}. Kestoksi kirjataan {timedMin} min; tarkka aika
                 näkyy kerran tiedoissa.
+                {timer.stopwatch.plannedSessionId && ' Suunniteltu kerta oli jo kuitattu tai poistettu, joten tämä tallennetaan erillisenä kertana.'}
               </p>
             </div>
           )}
@@ -486,12 +491,12 @@ export function QuickAdd({
           {canStartTimer && (
             <button
               type="button"
-              onClick={() => void startTimer(type)}
+              onClick={() => void startTimer(type, openPlan?.id)}
               disabled={saving}
               className="press flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--surface-sunk)] px-3 py-2.5 text-sm font-semibold text-slate-800 shadow-[inset_0_0_0_1px_var(--line)] hover:bg-slate-100"
             >
               <IconClock size="1.1rem" className="text-green-800" />
-              Tai käynnistä kello ja kirjaa todellinen aika
+              {openPlan ? 'Tai käynnistä kello suunnitellulle kerralle' : 'Tai käynnistä kello ja kirjaa todellinen aika'}
             </button>
           )}
 
