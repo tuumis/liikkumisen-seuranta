@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.74',
+    date: '25.11.2026',
+    items: ['Jaa valmentajalle: rivi Seuran treenit on nyt Jalkapallotreenit. Mukana ovat kaikki seuran treenit, myös esim. talenttitreenit.'],
+  },
+  {
     version: '1.1.73',
     date: '25.11.2026',
     items: [

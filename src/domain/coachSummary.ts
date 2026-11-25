@@ -365,7 +365,7 @@ export function coachView(s: CoachSummary, o: CoachOptions): CoachView {
   const fbMin = s.minutes.football + (o.own ? s.minutes.own : 0);
   const buckets = s.buckets.map((b) => ({ ...b, total: parts.reduce((a, p) => a + b.minutes[p], 0) }));
 
-  const training: CoachTile = { value: fi1(s.clubTrainings.perWeek), unit: '/vko', label: 'Seuran treenejä' };
+  const training: CoachTile = { value: fi1(s.clubTrainings.perWeek), unit: '/vko', label: 'Jalkapallotreenejä' };
   // Kokonaisliikunta ja osuus, kun mukana on muutakin kuin jalkapallo.
   const broad = o.other || o.everyday;
   const tiles: CoachTile[] = broad
@@ -380,7 +380,8 @@ export function coachView(s: CoachSummary, o: CoachOptions): CoachView {
 
   const rows: CoachRow[] = [];
   const ct = s.clubTrainings;
-  rows.push({ label: 'Seuran treenit', value: `${fi1(ct.perWeek)} /vko${ct.planned > 0 ? ` · osallistui ${ct.attended}/${ct.planned}` : ''}` });
+  // Nimi 25.11.2026 (käyttäjä): "jalkapallotreenit" – mukana kaikki seuran treenit, myös talenttitreenit.
+  rows.push({ label: 'Jalkapallotreenit', value: `${fi1(ct.perWeek)} /vko${ct.planned > 0 ? ` · osallistui ${ct.attended}/${ct.planned}` : ''}` });
   const g = s.games;
   const gameParts: string[] = [];
   if (g.count > 0) gameParts.push(`${g.count} ${g.count === 1 ? 'peli' : 'peliä'}`);

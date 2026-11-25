@@ -123,8 +123,8 @@ describe('coachView', () => {
     const v = coachView(s, { other: false, own: false, everyday: false, days: false, absences: true, reasons: true, notes: false });
     expect(v.parts).toEqual(['football']);
     expect(v.buckets[0].total).toBe(90);
-    expect(v.tiles.map((t) => t.label)).toEqual(['Jalkapalloa', 'Seuran treenejä', 'Pelejä ja turnauksia']);
-    expect(v.rows.map((r) => r.label)).toEqual(['Seuran treenit', 'Pelit ja turnaukset', 'Poissaolot']);
+    expect(v.tiles.map((t) => t.label)).toEqual(['Jalkapalloa', 'Jalkapallotreenejä', 'Pelejä ja turnauksia']);
+    expect(v.rows.map((r) => r.label)).toEqual(['Jalkapallotreenit', 'Pelit ja turnaukset', 'Poissaolot']);
     expect(v.rows[2].value).toBe('1 kerta (sairas 1)');
   });
 });
