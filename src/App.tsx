@@ -24,7 +24,7 @@ import { Avatar } from './ui/Avatar';
 import { hideUntilSettled } from './ui/settle';
 import { markTabSwitch, TabPanel } from './ui/TabPanel';
 import { formatDate } from './ui/format';
-import { IconBall, IconCalendarClock, IconChart, IconHelp, IconLeaf, IconMoon, IconSearch, IconSettings, IconSun, IconWeek } from './ui/icons';
+import { IconBall, IconCalendarClock, IconPlus, IconChart, IconHelp, IconLeaf, IconMoon, IconSearch, IconSettings, IconSun, IconWeek } from './ui/icons';
 import { setThemeChoice, useIsDark } from './ui/theme';
 import { useUnconfirmedCounts } from './features/review/unconfirmed';
 import { requestWeek } from './features/desktop/settings';
@@ -362,6 +362,17 @@ export default function App() {
               <span className="font-display text-[15px] font-semibold text-slate-900">Liikkumisen seuranta</span>
             </div>
             <div className="-mr-1 flex items-center gap-1">
+              {/* Lisää kerta aina ylhäällä (25.11.2026): kelluva +-painike väistyy avattaessa päivän kortin tieltä. */}
+              {selected && (
+                <button
+                  type="button"
+                  onClick={() => runCommand({ kind: 'add' })}
+                  className="press hit mr-1 flex size-9 items-center justify-center rounded-full bg-green-700 text-white shadow-[0_4px_10px_-4px_rgb(var(--accent-rgb)/0.6)] hover:bg-green-800"
+                  aria-label="Lisää kerta"
+                >
+                  <IconPlus size="1.25rem" strokeWidth={2.2} />
+                </button>
+              )}
               {!DEMO && <SyncBar variant="header" />}
               <button type="button" onClick={() => setHelpOpen(true)} className="press hit flex size-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100" aria-label="Ohje">
                 <IconHelp size="1.35rem" />

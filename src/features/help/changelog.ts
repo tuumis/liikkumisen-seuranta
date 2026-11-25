@@ -9,6 +9,13 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.69',
+    date: '25.11.2026',
+    items: [
+      'Puhelimessa Lisää kerta (+) on nyt myös yläreunassa synkronoinnin ja ohjeen vieressä, joten kerran voi lisätä heti sovelluksen avattua vierittämättä. Painike toimii kaikilla välilehdillä ja avaa Viikko-näkymän.',
+    ],
+  },
+  {
     version: '1.1.68',
     date: '25.11.2026',
     items: [
