@@ -8,7 +8,8 @@ import { footballKindOf, gameRows, seasonKey, summarizeGames } from '../../domai
 import type { Profile } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { dayLabel } from '../../ui/format';
-import { IconSparkle, IconTrophy } from '../../ui/icons';
+import { IconShare, IconSparkle, IconTrophy } from '../../ui/icons';
+import { openCoachShare } from '../coach/CoachShare';
 import { CountUp } from '../../ui/CountUp';
 import { today as todayFn } from '../../ui/today';
 import { useFootball } from '../football/useFootball';
@@ -54,13 +55,24 @@ export function FootballHero({ profile }: { profile: Profile }) {
               <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-[var(--hero-ink-soft)] sm:text-[11px]">{seasonKey(today)}</div>
               <div className="mt-0.5 font-display text-[17px] font-semibold leading-snug sm:mt-1 sm:text-2xl">Kausi tähän mennessä</div>
             </div>
-            <button
-              type="button"
-              onClick={() => dispatchCommand({ kind: 'story' })}
-              className="press hit inline-flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--hero-accent)] px-3 text-xs sm:gap-2 sm:px-3.5 font-bold text-[var(--hero-accent-ink)] shadow-md hover:brightness-105 sm:mt-3"
-            >
-              <IconSparkle size="0.95rem" /> Kauden kooste
-            </button>
+            <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:mt-3 sm:gap-2">
+              <button
+                type="button"
+                onClick={() => dispatchCommand({ kind: 'story' })}
+                className="press hit inline-flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--hero-accent)] px-3 text-xs sm:gap-2 sm:px-3.5 font-bold text-[var(--hero-accent-ink)] shadow-md hover:brightness-105"
+              >
+                <IconSparkle size="0.95rem" /> Kauden kooste
+              </button>
+              {/* Kokonaiskuormitus valmentajalle (25.11.2026); puhelimella pelkkä kuvake. */}
+              <button
+                type="button"
+                onClick={() => openCoachShare(profile.id)}
+                aria-label="Jaa valmentajalle"
+                className="press hit hero-glass-strong inline-flex size-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full text-xs font-bold sm:w-auto sm:px-3.5"
+              >
+                <IconShare size="0.95rem" /> <span className="hidden sm:inline">Jaa valmentajalle</span>
+              </button>
+            </div>
           </div>
           {next ? (
             <div className="hero-glass-strong mt-3 hidden items-center gap-3 rounded-2xl p-3 sm:flex">

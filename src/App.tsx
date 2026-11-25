@@ -31,6 +31,7 @@ import { requestWeek } from './features/desktop/settings';
 import { DEMO } from './demo/demoMode';
 import { DemoBanner, DemoSidebar } from './demo/DemoBanner';
 import { StopwatchBar, StopwatchHost } from './features/stopwatch/StopwatchBar';
+import { CoachShareHost } from './features/coach/CoachShare';
 
 // Analyysi (Recharts) ladataan omana osanaan; service worker esivälimuistittaa senkin.
 const loadAnalysis = () => import('./features/analysis/AnalysisView');
@@ -454,6 +455,7 @@ export default function App() {
       {ready && selected && <GoalSound key={selected.id} profile={selected} />}
       {ready && <ResultShareHost />}
       {ready && <StopwatchHost profiles={profiles} />}
+      {ready && <CoachShareHost profiles={profiles} />}
       {ready && <PreviewShareHost />}
 
       {ready && !DEMO && profiles && profiles.length > 0 && (

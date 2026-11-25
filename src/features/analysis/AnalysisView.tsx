@@ -21,12 +21,13 @@ import { FootballSection } from '../football/FootballSection';
 import { GamesView } from '../football/GamesView';
 import { useFootballEnabled } from '../football/useFootballEnabled';
 import { HighlightsCard } from './HighlightsCard';
-import { IconChevronLeft, IconChevronRight, IconSettings, IconSparkle } from '../../ui/icons';
+import { IconChevronLeft, IconChevronRight, IconSettings, IconShare, IconSparkle } from '../../ui/icons';
 import { dispatchCommand } from '../desktop/commands';
 import { EditLayoutSheet } from '../../ui/EditLayoutSheet';
 import { ANALYSIS_TOPICS, LEVEL_INTRO, fullWidthSegments, useAnalysisLayout } from './layout';
 import { LongTermView } from './LongTermView';
 import { WeekReportButton } from './WeekReport';
+import { openCoachShare } from '../coach/CoachShare';
 import { HeatmapCard } from './HeatmapCard';
 import type { LongKind } from '../../domain/longTerm';
 import { Segmented } from '../../ui/controls';
@@ -131,6 +132,11 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
         )}
         <span className="ml-auto flex flex-wrap gap-2">
           {profile && <WeekReportButton profile={profile} weekStart={weekStart} />}
+          {profile && footballOn && (
+            <Button variant="secondary" onClick={() => openCoachShare(profile.id)}>
+              <IconShare size="1rem" /> Jaa valmentajalle
+            </Button>
+          )}
           <Button variant="secondary" onClick={() => setEditing(true)}>
             <IconSettings size="1rem" /> Muokkaa näkymää
           </Button>

@@ -9,6 +9,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.72',
+    date: '25.11.2026',
+    items: [
+      'Uusi: Jaa valmentajalle. Kooste pelaajan koko liikunnasta yhdellä kuvalla: jalkapallo, omatoiminen harjoittelu, muut lajit ja koululiikunta viikoittain sekä liikunta tunteina viikossa, jalkapallon osuus ja lepopäivät.',
+      'Mukana myös seuran treenit ja osallistuminen, pelit ja turnaukset, rasittavat päivät ja poissaolot sekä neutraalit huomiot (esim. kolme rasittavaa päivää peräkkäin tai viikko ilman lepopäivää).',
+      'Valitse jakso (4 viikkoa, kausi tai oma väli) ja mitä kuvassa näytetään. Jaa kuvana puhelimen jakovalikosta tai tulosta PDF. Painike on Jalkapallo-välilehden yläosassa ja Analyysissa.',
+    ],
+  },
+  {
     version: '1.1.71',
     date: '25.11.2026',
     items: [
