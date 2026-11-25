@@ -113,7 +113,7 @@ describe('coachView', () => {
     expect(v.parts).toEqual(['football', 'own', 'other', 'school', 'everyday']);
     expect(v.tiles.map((t) => t.label)).toEqual(['Liikuntaa', 'Jalkapalloa', 'Lepopäiviä']);
     expect(v.tiles[1].value).toBe('67 %');
-    expect(v.rows.find((r) => r.label === 'Muut lajit')?.value).toBe('salibandy 0,3 /vko');
+    expect(v.rows.find((r) => r.label === 'Muut lajit')?.value).toBe('salibandy 0,3 krt/vko');
     expect(v.rows.find((r) => r.label === 'Poissaolot')?.value).toBe('1 kerta');
     expect(v.notes).toEqual([]);
   });
@@ -147,7 +147,7 @@ describe('arkiliikunta', () => {
     expect(r.restDaysPerWeek).toBeCloseTo(((28 - 2) / 28) * 7);
     const v = coachView(r, DEFAULT_COACH_OPTIONS);
     expect(v.tiles[0].value).toBe(fi1((370 / 4) / 60));
-    expect(v.rows.find((x) => x.label === 'Arkiliikunta')?.value).toBe('0,9 h /vko');
+    expect(v.rows.find((x) => x.label === 'Arkiliikunta')?.value).toBe('0,9 h/vko');
     const off = coachView(r, { ...DEFAULT_COACH_OPTIONS, everyday: false });
     expect(off.buckets[0].total).toBe(150);
     expect(off.rows.some((x) => x.label === 'Arkiliikunta')).toBe(false);

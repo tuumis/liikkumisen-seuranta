@@ -355,7 +355,8 @@ export function coachParts(o: CoachOptions): CoachPart[] {
   return COACH_PARTS.filter((p) => (p === 'own' ? o.own : p === 'other' || p === 'school' ? o.other : p === 'everyday' ? o.everyday : true));
 }
 
-const hours = (min: number) => `${fi1(min / 60)} h`;
+/** Yksikkö aina näkyvissä (25.11.2026, käyttäjä): krt/vko = kertoja, pv/vko = päiviä, h/vko = tunteja. */
+const hours = (min: number) => `${fi1(min / 60)} h/vko`;
 
 /** Kuvan ja PDF:n sisältö koosteesta ja valinnoista. */
 export function coachView(s: CoachSummary, o: CoachOptions): CoachView {
@@ -365,7 +366,7 @@ export function coachView(s: CoachSummary, o: CoachOptions): CoachView {
   const fbMin = s.minutes.football + (o.own ? s.minutes.own : 0);
   const buckets = s.buckets.map((b) => ({ ...b, total: parts.reduce((a, p) => a + b.minutes[p], 0) }));
 
-  const training: CoachTile = { value: fi1(s.clubTrainings.perWeek), unit: '/vko', label: 'Jalkapallotreenejä' };
+  const training: CoachTile = { value: fi1(s.clubTrainings.perWeek), unit: 'krt/vko', label: 'Jalkapallotreenejä' };
   // Kokonaisliikunta ja osuus, kun mukana on muutakin kuin jalkapallo.
   const broad = o.other || o.everyday;
   const tiles: CoachTile[] = broad
@@ -374,27 +375,27 @@ export function coachView(s: CoachSummary, o: CoachOptions): CoachView {
         { value: visible > 0 ? `${Math.round((fbMin / visible) * 100)} %` : '–', unit: '', label: 'Jalkapalloa' },
       ]
     : [{ value: fi1(perWeek(fbMin) / 60), unit: 'h/vko', label: 'Jalkapalloa' }, training];
-  if (o.days) tiles.push({ value: fi1(s.restDaysPerWeek), unit: '/vko', label: 'Lepopäiviä' });
+  if (o.days) tiles.push({ value: fi1(s.restDaysPerWeek), unit: 'pv/vko', label: 'Lepopäiviä' });
   else if (broad) tiles.push(training);
   else tiles.push({ value: String(s.games.count + s.games.tournaments), unit: '', label: 'Pelejä ja turnauksia' });
 
   const rows: CoachRow[] = [];
   const ct = s.clubTrainings;
   // Nimi 25.11.2026 (käyttäjä): "jalkapallotreenit" – mukana kaikki seuran treenit, myös talenttitreenit.
-  rows.push({ label: 'Jalkapallotreenit', value: `${fi1(ct.perWeek)} /vko${ct.planned > 0 ? ` · osallistui ${ct.attended}/${ct.planned}` : ''}` });
+  rows.push({ label: 'Jalkapallotreenit', value: `${fi1(ct.perWeek)} krt/vko${ct.planned > 0 ? ` · osallistui ${ct.attended}/${ct.planned}` : ''}` });
   const g = s.games;
   const gameParts: string[] = [];
   if (g.count > 0) gameParts.push(`${g.count} ${g.count === 1 ? 'peli' : 'peliä'}`);
   if (g.tournaments > 0) gameParts.push(`${g.tournaments === 1 ? 'turnaus' : `${g.tournaments} turnausta`} ${g.tournamentLabels.join(', ')}`);
   rows.push({ label: 'Pelit ja turnaukset', value: gameParts.join(' · ') || 'ei pelejä' });
-  if (o.own && s.minutes.own > 0) rows.push({ label: 'Omatoiminen harjoittelu', value: `${hours(perWeek(s.minutes.own))} /vko` });
+  if (o.own && s.minutes.own > 0) rows.push({ label: 'Omatoiminen harjoittelu', value: hours(perWeek(s.minutes.own)) });
   if (o.other) {
-    const top = s.otherTypes.slice(0, 3).map((t) => `${t.name.toLowerCase()} ${fi1(t.perWeek)} /vko`);
+    const top = s.otherTypes.slice(0, 3).map((t) => `${t.name.toLowerCase()} ${fi1(t.perWeek)} krt/vko`);
     rows.push({ label: 'Muut lajit', value: top.join(', ') || 'ei muita lajeja' });
-    if (s.schoolPerWeek > 0) rows.push({ label: 'Koululiikunta', value: `${fi1(s.schoolPerWeek)} /vko` });
+    if (s.schoolPerWeek > 0) rows.push({ label: 'Koululiikunta', value: `${fi1(s.schoolPerWeek)} krt/vko` });
   }
-  if (o.everyday && s.minutes.everyday > 0) rows.push({ label: 'Arkiliikunta', value: `${hours(perWeek(s.minutes.everyday))} /vko` });
-  if (o.days) rows.push({ label: 'Rasittavia päiviä', value: `${fi1(s.vigorousDaysPerWeek)} /vko` });
+  if (o.everyday && s.minutes.everyday > 0) rows.push({ label: 'Arkiliikunta', value: hours(perWeek(s.minutes.everyday)) });
+  if (o.days) rows.push({ label: 'Rasittavia päiviä', value: `${fi1(s.vigorousDaysPerWeek)} pv/vko` });
   if (o.absences) {
     const reasons = o.reasons && s.absences.reasons.length ? ` (${s.absences.reasons.map((r) => `${SKIP_WORD[r.reason]} ${r.count}`).join(', ')})` : '';
     const injured = s.injuredDays > 0 ? ` · loukkaantuneena ${s.injuredDays} pv` : '';

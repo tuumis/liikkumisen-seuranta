@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.75',
+    date: '25.11.2026',
+    items: [
+      'Jaa valmentajalle: yksikkö näkyy nyt joka luvussa – krt/vko (kertoja), pv/vko (päiviä) tai h/vko (tunteja).',
+      'Jaa valmentajalle -painike on nyt Analyysissa myös kuukausi-, kausi- ja vuosinäkymässä.',
+    ],
+  },
+  {
     version: '1.1.74',
     date: '25.11.2026',
     items: ['Jaa valmentajalle: rivi Seuran treenit on nyt Jalkapallotreenit. Mukana ovat kaikki seuran treenit, myös esim. talenttitreenit.'],

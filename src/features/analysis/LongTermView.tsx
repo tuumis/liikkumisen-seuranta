@@ -23,7 +23,8 @@ import { LONG_TOPICS, fullWidthSegments, useLongTermLayout, type LongCardId } fr
 import { HighlightsCard } from './HighlightsCard';
 import { useFootballEnabled } from '../football/useFootballEnabled';
 import { EditLayoutSheet } from '../../ui/EditLayoutSheet';
-import { IconSettings } from '../../ui/icons';
+import { IconSettings, IconShare } from '../../ui/icons';
+import { openCoachShare } from '../coach/CoachShare';
 
 const KIND_TEXT: Record<LongKind, { this: string; prev: string; bucket: string }> = {
   month: { this: 'Tämä kuukausi', prev: 'Edellinen kuukausi', bucket: 'viikoittain' },
@@ -151,6 +152,11 @@ export function LongTermView({ profile, kind }: { profile: Profile; kind: LongKi
           {s && s.validDays > 0 && (
             <Button variant="secondary" onClick={() => setReportOpen(true)}>
               Raportti (PDF)
+            </Button>
+          )}
+          {footballOn && (
+            <Button variant="secondary" onClick={() => openCoachShare(profile.id)}>
+              <IconShare size="1rem" /> Jaa valmentajalle
             </Button>
           )}
           <Button variant="secondary" onClick={() => setEditing(true)}>
