@@ -414,7 +414,7 @@ html[data-bg] body::before {
 }
 
 /*
- * Fonttivalinta (25.11.2026, Asetukset → Ulkoasu, laitekohtainen): Klassinen = Fraunces + Manrope (oletus),
+ * Fonttivalinta (25.11.2026, Asetukset → Ulkoasu, laitekohtainen): Klassinen = Fraunces + Manrope (ei attribuuttia; oletus on Moderni 1.1.71),
  * Sportti = kapea otsikkofontti + Work Sans (Brändi-kuvien pari), Moderni = Manrope myös otsikoissa.
  */
 :root[data-font='sport'] {

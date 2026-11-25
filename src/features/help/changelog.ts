@@ -9,6 +9,13 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.71',
+    date: '25.11.2026',
+    items: [
+      'Moderni on nyt sovelluksen oletusfontti: uusi käyttäjä näkee sen heti. Jo käytössä olevilla laitteilla fontti pysyy ennallaan; sen voi vaihtaa kohdassa Asetukset → Ulkoasu → Fontti.',
+    ],
+  },
+  {
     version: '1.1.70',
     date: '25.11.2026',
     items: [

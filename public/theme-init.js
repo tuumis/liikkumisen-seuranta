@@ -22,11 +22,17 @@
   var root = document.documentElement;
   if (dark) root.classList.add('dark');
   if (accent === 'fjord' || accent === 'heather' || accent === 'graphite') root.setAttribute('data-accent', accent);
-  // Fonttivalinta (25.11.2026, sama kuin src/ui/theme.ts applyFont).
+  // Fonttivalinta (25.11.2026, sama kuin src/ui/theme.ts applyFont). Oletus on Moderni (1.1.71): uusi laite saa
+  // Modernin, mutta jo käytössä oleva laite (kutsu hyväksytty) pitää entisen Klassisen. Valinta tallennetaan heti.
+  var font = 'modern';
   try {
-    var font = localStorage.getItem('font');
-    if (font === 'sport' || font === 'modern') root.setAttribute('data-font', font);
+    font = localStorage.getItem('font');
+    if (font !== 'classic' && font !== 'sport' && font !== 'modern') {
+      font = localStorage.getItem('inviteAccepted') === '1' ? 'classic' : 'modern';
+      localStorage.setItem('font', font);
+    }
   } catch (e) {}
+  if (font === 'sport' || font === 'modern') root.setAttribute('data-font', font);
   root.style.colorScheme = dark ? 'dark' : 'light';
   // Yläpalkin väri heti (sama kuin src/ui/theme.ts), ettei tumman teeman ikkunapalkki välähdä vaaleana (17.11.2026).
   var meta = document.querySelector('meta[name="theme-color"]');

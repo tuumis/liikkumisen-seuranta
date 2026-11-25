@@ -85,21 +85,25 @@ export const HERO_THEMES: { id: HeroTheme; label: string; text: string; swatch: 
   { id: 'profile', label: 'Profiilin väri', text: 'Profiilin oma väri', swatch: '' },
 ];
 
-/** Fonttivalinta (25.11.2026): laitekohtainen kuten väriteema; Klassinen on oletus (ei attribuuttia). */
+/**
+ * Fonttivalinta (25.11.2026): laitekohtainen kuten väriteema. Oletus on Moderni (1.1.71); public/theme-init.js
+ * tallentaa valinnan ensimmäisellä käynnistyksellä (jo käytössä olleet laitteet pitävät Klassisen).
+ */
 export type FontChoice = 'classic' | 'sport' | 'modern';
+export const DEFAULT_FONT: FontChoice = 'modern';
 export const FONT_CHOICES: { id: FontChoice; label: string; text: string; display: string; sans: string }[] = [
+  { id: 'modern', label: 'Moderni', text: 'Selkeä fontti myös otsikoissa (oletus)', display: "'Manrope', system-ui, sans-serif", sans: "'Manrope', system-ui, sans-serif" },
   { id: 'classic', label: 'Klassinen', text: 'Kaunokkaat otsikot ja selkeä teksti', display: "'Fraunces', Georgia, serif", sans: "'Manrope', system-ui, sans-serif" },
   { id: 'sport', label: 'Sportti', text: 'Kapeat isot kirjaimet kuten Brändi-kuvissa', display: "'Sportti Display', 'Arial Narrow', sans-serif", sans: "'Work Sans', system-ui, sans-serif" },
-  { id: 'modern', label: 'Moderni', text: 'Selkeä fontti myös otsikoissa', display: "'Manrope', system-ui, sans-serif", sans: "'Manrope', system-ui, sans-serif" },
 ];
 const FONT_KEY = 'font';
 
 export function getFont(): FontChoice {
   try {
     const v = localStorage.getItem(FONT_KEY);
-    return FONT_CHOICES.some((f) => f.id === v) ? (v as FontChoice) : 'classic';
+    return FONT_CHOICES.some((f) => f.id === v) ? (v as FontChoice) : DEFAULT_FONT;
   } catch {
-    return 'classic';
+    return DEFAULT_FONT;
   }
 }
 
@@ -115,8 +119,8 @@ export function useFontChoice(): [FontChoice, (f: FontChoice) => void] {
     font,
     (f) => {
       try {
-        if (f === 'classic') localStorage.removeItem(FONT_KEY);
-        else localStorage.setItem(FONT_KEY, f);
+        // Aina tallennettuna (myös Klassinen), koska oletus ei ole Klassinen.
+        localStorage.setItem(FONT_KEY, f);
       } catch {
         /* ei tallennusta */
       }
