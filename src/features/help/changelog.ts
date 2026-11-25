@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.77',
+    date: '25.11.2026',
+    items: ['Korjattu: iPhonessa pyyhkäisy ruudun oikeasta reunasta ei enää tuo hetkeksi esiin äsken suljettua paneelia.'],
+  },
+  {
     version: '1.1.76',
     date: '25.11.2026',
     items: [
