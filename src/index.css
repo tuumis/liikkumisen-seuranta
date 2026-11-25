@@ -780,6 +780,59 @@ html[data-bg] body::before {
 ::view-transition-old(bottom-nav) {
   display: none;
 }
+
+/*
+ * Lasinen alapalkki (25.11.2026, käyttäjän valinta B, iOS:n "liquid glass" -henkinen): läpikuultava pohja, jonka
+ * läpi sisältö näkyy sumennettuna ja kylläisempänä, valoheijastus yläreunassa, ohut vaalea reuna ja syvempi
+ * varjo. Aktiivinen kohta on kirkkaampi lasilinssi, kuvake ja teksti teeman värillä. Aitoa valon taittumista
+ * (SVG-suodin) ei käytetä, koska se ei toimi iPhonen Safarissa. Vähennä läpinäkyvyyttä -asetuksella umpinainen.
+ */
+.glass-nav {
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.58), rgb(255 255 255 / 0.36));
+  -webkit-backdrop-filter: blur(16px) saturate(190%);
+  backdrop-filter: blur(16px) saturate(190%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.95),
+    inset 0 -1px 0 rgb(255 255 255 / 0.4),
+    inset 0 0 0 1px rgb(255 255 255 / 0.55),
+    0 0 0 0.5px rgb(0 0 0 / 0.08),
+    0 16px 34px -12px rgb(0 0 0 / 0.38);
+}
+.glass-lens {
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.92), rgb(255 255 255 / 0.66));
+  box-shadow:
+    inset 0 1px 0 #fff,
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.9),
+    0 3px 10px -3px rgb(0 0 0 / 0.22);
+}
+.glass-nav [data-active] {
+  color: var(--accent);
+}
+.dark .glass-nav {
+  background: linear-gradient(180deg, rgb(52 60 56 / 0.62), rgb(22 28 25 / 0.5));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.22),
+    inset 0 -1px 0 rgb(255 255 255 / 0.06),
+    inset 0 0 0 1px rgb(255 255 255 / 0.1),
+    0 16px 34px -12px rgb(0 0 0 / 0.7);
+}
+.dark .glass-lens {
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.2), rgb(255 255 255 / 0.1));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.3),
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.14),
+    0 3px 10px -3px rgb(0 0 0 / 0.5);
+}
+.dark .glass-nav [data-active] {
+  color: var(--on-dark-accent);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass-nav {
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
 ::view-transition-new(bottom-nav) {
   animation: none;
 }

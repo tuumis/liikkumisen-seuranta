@@ -469,9 +469,10 @@ export default function App() {
 
       {/* Puhelin: kelluva alanavigaatio, aktiivinen kohta liukuu paikalleen. */}
       <nav className="bottom-nav fixed inset-x-0 bottom-0 z-20 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden" aria-label="Päävalikko">
-        <div className="relative mx-auto grid max-w-md rounded-[1.75rem] bg-[color-mix(in_oklab,var(--surface)_88%,transparent)] p-1.5 shadow-xl ring-1 ring-slate-200/70 backdrop-blur-xl" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
+        {/* Lasipalkki (25.11.2026, index.css .glass-nav): aktiivinen kohta kirkkaampana lasilinssinä. */}
+        <div className="glass-nav relative mx-auto grid max-w-md rounded-[1.75rem] p-1.5" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
           <span
-            className="absolute inset-y-1.5 left-1.5 rounded-[1.35rem] bg-green-700 shadow-[0_8px_20px_-8px_rgb(var(--accent-rgb)/0.7)] transition-transform duration-500 [transition-timing-function:var(--ease-out)]"
+            className="glass-lens absolute inset-y-1.5 left-1.5 rounded-[1.35rem] transition-transform duration-500 [transition-timing-function:var(--ease-out)]"
             style={{ width: `calc((100% - 0.75rem) / ${tabs.length})`, transform: `translateX(${tabIndex * 100}%)` }}
             aria-hidden
           />
@@ -483,7 +484,8 @@ export default function App() {
                 type="button"
                 onClick={() => setTab(t.id)}
                 aria-current={active ? 'page' : undefined}
-                className={`press relative z-10 flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-[1.35rem] text-[11px] font-semibold transition-colors ${active ? 'text-white' : 'text-slate-500'}`}
+                data-active={active || undefined}
+                className={`press relative z-10 flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-[1.35rem] text-[11px] transition-colors ${active ? 'font-bold' : 'font-semibold text-slate-600'}`}
               >
                 <span className="relative">
                   <t.Icon size="1.4rem" />

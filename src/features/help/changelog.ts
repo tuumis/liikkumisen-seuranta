@@ -9,6 +9,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.76',
+    date: '25.11.2026',
+    items: [
+      'Puhelimen alapalkki on nyt lasinen: sisältö näkyy sen läpi sumennettuna, ja yläreunan valoheijastus ja ohut reuna erottavat palkin taustasta.',
+      'Valittu kohta näkyy kirkkaampana lasina, ja sen kuvake ja teksti ovat teeman värillä. Tummassa tilassa lasi on tumma.',
+      'Jos puhelimessa on päällä Vähennä läpinäkyvyyttä, palkki näytetään umpinaisena.',
+    ],
+  },
+  {
     version: '1.1.75',
     date: '25.11.2026',
     items: [
