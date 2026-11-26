@@ -88,6 +88,8 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
   // Peli, turnaus tai harjoituspeli Viikko-näkymästä (24.11.2026): tuleva avoin suoraan muokkaukseen.
   const [fixtureDraft, setFixtureDraft] = useState<FixtureDraft | null>(null);
   const [planFixture, setPlanFixture] = useState<Fixture>();
+  // "Ei tehty" -painike avaa paneelin pelkkiin syihin (27.11.2026).
+  const [planSkipMode, setPlanSkipMode] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewFocus, setReviewFocus] = useState<string>();
   const [football, setFootball] = useState<Session | null>(null);
@@ -137,6 +139,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
    * valmiina (avausanimaatio lähtee kortista), muiden viikkojen haetaan.
    */
   const openPlan = (p: PlannedSession) => {
+    setPlanSkipMode(false);
     if (!profile || !footballOn || !isFixturePlan(p)) {
       setPlanFixture(undefined);
       setPlanOpen(p);
@@ -151,6 +154,12 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     };
     if (p.date >= period.start && p.date <= period.end) show(fixtureByPlan.get(p.id));
     else void repo.listFixtures(profile.id, p.date, p.date).then((es) => show(es.find((e) => e.plan.id === p.id)?.fixture));
+  };
+  /** Punainen X / pyyhkäisy vasemmalle: aina kuittauspaneeli "Ei tehty" -tilassa, myös tulevalle pelille. */
+  const skipPlan = (p: PlannedSession) => {
+    setPlanFixture(fixtureByPlan.get(p.id));
+    setPlanSkipMode(true);
+    setPlanOpen(p);
   };
   const minute = useMinuteTick();
   const unconfirmed = useLiveQuery(
@@ -515,6 +524,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             teamName={teamName}
             onFootball={footballOn ? setFootball : () => undefined}
             onPlanOpen={openPlan}
+            onPlanSkip={skipPlan}
             onPlanConfirm={(p) => void planActions.confirm(p)}
             types={typeMap}
             flag={flagByDate.get(d)}
@@ -587,6 +597,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
           teamName={teamName}
           onFootball={footballOn ? setFootball : () => undefined}
           onPlanOpen={openPlan}
+          onPlanSkip={skipPlan}
           onPlanConfirm={(p) => void planActions.confirm(p)}
           types={typeMap}
           flag={flagByDate.get(day)}
@@ -727,6 +738,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             plan={planOpen}
             type={planOpen ? typeMap.get(planOpen.activityTypeId) : undefined}
             onClose={() => setPlanOpen(null)}
+            skipMode={planSkipMode}
             onOpenSession={setEditing}
             onConfirmed={openFootballIfAny}
             fixture={planOpen ? (fixtureByPlan.get(planOpen.id) ?? planFixture) : undefined}
@@ -750,6 +762,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
                 setFixtureDraft(null);
                 if (p) {
                   setPlanFixture(fixtureDraft?.entry?.fixture);
+                  setPlanSkipMode(true);
                   setPlanOpen(p);
                 }
               }}

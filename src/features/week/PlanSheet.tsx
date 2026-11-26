@@ -50,6 +50,7 @@ export function PlanSheet({
   onConfirmed,
   fixture,
   onEditFixture,
+  skipMode = false,
 }: {
   plan: PlannedSession | null;
   type?: ActivityType;
@@ -60,6 +61,8 @@ export function PlanSheet({
   fixture?: Fixture;
   /** Avaa tapahtuman muokkauksen (pelikalenterin paneeli). Annetaan vain peleille ja turnauksille. */
   onEditFixture?: (plan: PlannedSession) => void;
+  /** "Ei tehty" -painike (27.11.2026): avautuu pelkkiin syihin; "Muut toiminnot" näyttää koko paneelin. */
+  skipMode?: boolean;
 }) {
   const toast = useToast();
   const actions = usePlanActions(onOpenSession, onConfirmed);
@@ -70,6 +73,7 @@ export function PlanSheet({
   const [details, setDetails] = useState(false);
   const [error, setError] = useState<string>();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [skipOnly, setSkipOnly] = useState(skipMode);
   const stopwatch = useLiveQuery(async () => (plan ? ((await repo.listStopwatches()).find((x) => x.profileId === plan.profileId) ?? null) : null), [plan?.profileId]);
 
   useEffect(() => {
@@ -80,7 +84,8 @@ export function PlanSheet({
     setDetails(false);
     setError(undefined);
     setConfirmDelete(false);
-  }, [plan]);
+    setSkipOnly(skipMode);
+  }, [plan, skipMode]);
   if (!plan) return null;
   const future = plan.date > todayFn();
   const run = (f: () => Promise<void>) => async () => {
@@ -112,8 +117,32 @@ export function PlanSheet({
     }
   }
 
+  const title = `${type?.icon ?? ''} ${plan.label ?? type?.name ?? 'Suunnitelma'}`.trim();
+  if (skipOnly && plan.status === 'open')
+    return (
+      <Sheet open onClose={onClose} title={`${title} · ei tehty`}>
+        <div className="space-y-4">
+          <p className="text-sm text-slate-700">
+            Suunniteltu {dayLabel(plan.date)}
+            {plan.startTime && ` klo ${plan.startTime}`} · <strong>{plan.durationMin} min</strong>
+          </p>
+          {error && <p className="text-sm text-red-700">{error}</p>}
+          <div>
+            <div className="mb-1 text-sm font-medium text-slate-700">Miksi jäi väliin? (valinnainen)</div>
+            <SkipReasons onPick={(r, note) => void run(() => actions.skip(plan, r, note))()} />
+            <p className="mt-1.5 text-xs text-slate-500">
+              Valinta kuittaa kerran ei tehdyksi. Merkintä jää näkyviin, ja sen voi palauttaa avoimeksi.
+            </p>
+          </div>
+          <button type="button" className="press w-full rounded-xl px-1 py-2 text-left text-sm font-medium text-green-800" onClick={() => setSkipOnly(false)}>
+            Muut toiminnot (kuittaus tehdyksi, muutos, poisto)
+          </button>
+        </div>
+      </Sheet>
+    );
+
   return (
-    <Sheet open onClose={onClose} title={`${type?.icon ?? ''} ${plan.label ?? type?.name ?? 'Suunnitelma'}`.trim()}>
+    <Sheet open onClose={onClose} title={title}>
       <div className="space-y-4">
         <p className="text-sm text-slate-700">
           Suunniteltu {dayLabel(plan.date)}

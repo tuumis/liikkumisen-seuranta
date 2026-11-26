@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.82',
+    date: '27.11.2026',
+    items: [
+      'Kerran punainen rasti (ja pyyhkäisy vasemmalle) avaa nyt suoraan "Ei tehty" -valinnan: syy ja kommentti, ei kestovalintoja. Muut toiminnot (kuittaus tehdyksi, muutos, poisto) löytyvät linkin takaa.',
+      'Tulevan pelin tai turnauksen rasti avaa myös "Ei tehty" -valinnan eikä pelin muokkausta. Pelin muokkauksen "merkitse poissaolo" avautuu samaan näkymään.',
+    ],
+  },
+  {
     version: '1.1.81',
     date: '26.11.2026',
     items: [

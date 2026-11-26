@@ -57,6 +57,7 @@ export function DayRow({
   onPlan,
   onEdit,
   onPlanOpen,
+  onPlanSkip,
   onPlanConfirm,
   onEstimate,
 }: {
@@ -93,6 +94,8 @@ export function DayRow({
   onPlan?: () => void;
   onEdit: (s: Session) => void;
   onPlanOpen: (p: PlannedSession) => void;
+  /** Punainen X ja pyyhkäisy vasemmalle: pelkät "Ei tehty" -syyt (27.11.2026). */
+  onPlanSkip?: (p: PlannedSession) => void;
   onPlanConfirm: (p: PlannedSession) => void;
   /** Avaa päivän arkiliikunnan tarkistuksen (vahvista / muuta / ei tänään). */
   onEstimate?: () => void;
@@ -327,7 +330,7 @@ export function DayRow({
               <SwipeRow
                 key={p.id}
                 right={swipe ? { label: 'Tehty', icon: <IconCheck />, tone: 'green', run: () => confirmWithFeedback(p) } : undefined}
-                left={swipe ? { label: 'Ei tehty', icon: <IconClose />, tone: 'red', run: () => onPlanOpen(p) } : undefined}
+                left={swipe ? { label: 'Ei tehty', icon: <IconClose />, tone: 'red', run: () => (onPlanSkip ?? onPlanOpen)(p) } : undefined}
                 className={`rounded-2xl border border-dashed border-slate-300 bg-[color-mix(in_oklab,var(--surface)_60%,transparent)] ${leaving.has(p.id) ? 'plan-leaving' : ''}`}
                 innerClassName="flex items-center gap-2 pr-1"
               >
@@ -350,7 +353,7 @@ export function DayRow({
                     <IconButton label="Tehty kuten suunniteltu" tone="green" disabled={isFuture} onClick={() => confirmWithFeedback(p)}>
                       <IconCheck />
                     </IconButton>
-                    <IconButton label="Ei tehty" tone="red" onClick={() => onPlanOpen(p)}>
+                    <IconButton label="Ei tehty" tone="red" onClick={() => (onPlanSkip ?? onPlanOpen)(p)}>
                       <IconClose />
                     </IconButton>
                   </div>
