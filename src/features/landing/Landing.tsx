@@ -215,7 +215,7 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
         <div className="lp-wrap mt-20 min-[900px]:mt-[104px]">
           <section
             id="pikatesti"
-            className="relative scroll-mt-4 overflow-hidden rounded-[1.5rem] bg-[#0c2230] px-4 py-9 sm:px-8 lg:rounded-[2rem] lg:px-14 lg:py-16"
+            className="relative scroll-mt-[84px] overflow-hidden rounded-[1.5rem] bg-[#0c2230] px-4 py-9 sm:px-8 lg:rounded-[2rem] lg:px-14 lg:py-16"
             aria-labelledby="quiz-title"
           >
             <div

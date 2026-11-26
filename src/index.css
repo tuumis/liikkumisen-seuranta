@@ -1366,9 +1366,16 @@ html[data-bg] body::before {
     padding-inline: 16px;
   }
 }
+/* Yläpalkki pysyy näkyvissä vieritettäessä (27.11.2026): läpikuultava paperi ja sumennus. */
 .lp-top {
+  position: sticky;
+  top: 0;
+  z-index: 40;
   padding-top: env(safe-area-inset-top);
   border-bottom: 1px solid var(--lp-line);
+  background: color-mix(in oklab, var(--lp-paper) 86%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
 }
 .lp-navlink:hover,
 .lp-footlink:hover {

@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.85',
+    date: '27.11.2026',
+    items: ['Alkusivun yläpalkki (osiot ja Syötä kutsukoodi) pysyy näkyvissä sivua vieritettäessä.'],
+  },
+  {
     version: '1.1.84',
     date: '27.11.2026',
     items: [
