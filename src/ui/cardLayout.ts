@@ -44,8 +44,8 @@ function defaults<Id extends string>(cards: CardDef<Id>[], hidden: Id[]): CardLa
   return { order: cards.map((c) => c.id), hidden, side: cards.filter((c) => c.side).map((c) => c.id) };
 }
 
-function read<Id extends string>(key: string, cards: CardDef<Id>[], hidden: Id[]): CardLayout<Id> {
-  const def = defaults(cards, hidden);
+function read<Id extends string>(key: string, cards: CardDef<Id>[], hidden: Id[], preset?: CardLayout<Id>): CardLayout<Id> {
+  const def = preset ?? defaults(cards, hidden);
   try {
     const v = JSON.parse(localStorage.getItem(key) ?? 'null') as Partial<CardLayout<Id>> | null;
     if (!v || !Array.isArray(v.order)) return def;
@@ -58,8 +58,8 @@ function read<Id extends string>(key: string, cards: CardDef<Id>[], hidden: Id[]
       if (order.includes(c.id)) return;
       const prev = i > 0 ? order.indexOf(cards[i - 1].id) : -1;
       order.splice(prev + 1, 0, c.id);
-      if (hidden.includes(c.id)) hiddenStored.push(c.id);
-      if (c.side && Array.isArray(v.side)) side.push(c.id);
+      if (def.hidden.includes(c.id)) hiddenStored.push(c.id);
+      if (def.side.includes(c.id) && Array.isArray(v.side)) side.push(c.id);
     });
     return { order, hidden: hiddenStored, side };
   } catch {
@@ -67,10 +67,10 @@ function read<Id extends string>(key: string, cards: CardDef<Id>[], hidden: Id[]
   }
 }
 
-export function useCardLayout<Id extends string>(key: string, cards: CardDef<Id>[], defaultHidden: Id[] = []): CardLayoutApi<Id> {
+export function useCardLayout<Id extends string>(key: string, cards: CardDef<Id>[], defaultHidden: Id[] = [], preset?: CardLayout<Id>): CardLayoutApi<Id> {
   // Avain voi vaihtua (esim. kuukausi/kausi/vuosi omilla asetuksillaan): luetaan uuden avaimen asetus.
-  const [state, setState] = useState(() => ({ key, layout: read(key, cards, defaultHidden) }));
-  const layout = state.key === key ? state.layout : read(key, cards, defaultHidden);
+  const [state, setState] = useState(() => ({ key, layout: read(key, cards, defaultHidden, preset) }));
+  const layout = state.key === key ? state.layout : read(key, cards, defaultHidden, preset);
   if (state.key !== key) setState({ key, layout });
   const setLayout = (next: CardLayout<Id>) => setState({ key, layout: next });
   const locked = new Set(cards.filter((c) => c.locked).map((c) => c.id));
@@ -100,7 +100,7 @@ export function useCardLayout<Id extends string>(key: string, cards: CardDef<Id>
     },
     setSide: (id, side) => save({ ...layout, side: side ? [...layout.side.filter((x) => x !== id), id] : layout.side.filter((x) => x !== id) }),
     setShown: (ids, shown) => save({ ...layout, hidden: shown ? layout.hidden.filter((x) => !ids.includes(x)) : [...layout.hidden.filter((x) => !ids.includes(x)), ...ids] }),
-    reset: () => save(defaults(cards, defaultHidden)),
+    reset: () => save(preset ?? defaults(cards, defaultHidden)),
   };
 }
 

@@ -256,8 +256,16 @@ function read(key: string): string | null {
   }
 }
 
+/**
+ * Oletusten sukupolvi (27.11.2026, public/theme-init.js): '1' = ennen 1.1.86 käytössä ollut laite (vanhat oletukset),
+ * '2' = uusi laite (Revontulet-tausta ja uusi Viikko-näkymän asettelu).
+ */
+export const legacyDefaults = (): boolean => read('defaultsGen') === '1';
+/** Uuden profiilin tumman tilan pääkortti (27.11.2026): Hiili. */
+export const DEFAULT_HERO_DARK = 'graphite' as const;
+
 export function getBackground(): BackgroundId {
-  const v = read(BG_KEY);
+  const v = read(BG_KEY) ?? (legacyDefaults() ? null : 'aurora');
   if (v === 'photo' && !read(BG_PHOTO_KEY)) return 'default';
   return BG_IDS.includes(v as BackgroundId) ? (v as BackgroundId) : 'default';
 }
@@ -294,7 +302,8 @@ export function useBackground() {
     ...state,
     setBackground(bg: BackgroundId) {
       try {
-        write(BG_KEY, bg === 'default' ? undefined : bg);
+        // Myös "Oletus" tallennetaan: uuden laitteen oletus on Revontulet (27.11.2026).
+        write(BG_KEY, bg === 'default' && legacyDefaults() ? undefined : bg);
       } catch {
         /* ei tallennusta */
       }
@@ -307,7 +316,7 @@ export function useBackground() {
       } else {
         try {
           write(BG_PHOTO_KEY, undefined);
-          if (read(BG_KEY) === 'photo') write(BG_KEY, undefined);
+          if (read(BG_KEY) === 'photo') write(BG_KEY, legacyDefaults() ? undefined : 'default');
         } catch {
           /* ei tallennusta */
         }

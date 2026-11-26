@@ -1,6 +1,7 @@
 // Viikko-näkymän kortit: näkyvyys, järjestys ja PC:llä palsta (laitekohtainen). Päivät ovat aina näkyvissä.
 
-import { useCardLayout, type CardDef } from '../../ui/cardLayout';
+import { useCardLayout, type CardDef, type CardLayout } from '../../ui/cardLayout';
+import { legacyDefaults } from '../../ui/theme';
 
 export type WeekCardId = 'hero' | 'daily' | 'rhythm' | 'gauge' | 'hours' | 'hoursDetail' | 'upcoming' | 'days' | 'recent' | 'details';
 
@@ -17,4 +18,15 @@ export const WEEK_CARDS: CardDef<WeekCardId>[] = [
   { id: 'details', title: 'Tarkemmat luvut', text: 'Tavoitteet ja suositusvertailu yksityiskohtaisesti', side: true },
 ];
 
-export const useWeekLayout = () => useCardLayout('weekLayout', WEEK_CARDS, ['hoursDetail']);
+/**
+ * Uuden laitteen oletus (27.11.2026, ylläpitäjän oma näkymä): pääpalstassa viikon tilanne ja päivät, sivupalstassa
+ * liikuntatunnit, päiväkaavio, liikuntaa viikossa ja tunnit päivittäin. Puhelimella päivät heti tilanteen jälkeen.
+ * Jo käytössä olevat laitteet pitävät vanhan oletuksen (legacyDefaults).
+ */
+export const WEEK_DEFAULT_LAYOUT: CardLayout<WeekCardId> = {
+  order: ['hero', 'days', 'hours', 'daily', 'rhythm', 'gauge', 'hoursDetail', 'upcoming', 'recent', 'details'],
+  hidden: ['rhythm', 'upcoming', 'recent', 'details'],
+  side: ['hours', 'daily', 'rhythm', 'gauge', 'hoursDetail', 'upcoming', 'recent', 'details'],
+};
+
+export const useWeekLayout = () => useCardLayout('weekLayout', WEEK_CARDS, ['hoursDetail'], legacyDefaults() ? undefined : WEEK_DEFAULT_LAYOUT);

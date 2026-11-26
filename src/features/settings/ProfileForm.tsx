@@ -1,5 +1,5 @@
 import { Switch } from './DesktopSection';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { z } from 'zod';
 import { isISODate, timestampToLocalDate } from '../../domain/dates';
 import { recommendationGroup } from '../../domain/groups';
@@ -51,6 +51,7 @@ export function ProfileForm({
   onCancel,
   wide,
   defaults,
+  actions,
 }: {
   initial?: Profile;
   /** Uuden profiilin esitäyttö (pikatestin vastauksista). */
@@ -59,6 +60,8 @@ export function ProfileForm({
   onCancel: () => void;
   /** Leveällä näytöllä kentät kahteen palstaan (aloitus). */
   wide?: boolean;
+  /** Oma painikerivi (aloituksen Takaisin / Ohita / Seuraava, 27.11.2026); tallennus on lomakkeen submit. */
+  actions?: (saving: boolean) => ReactNode;
 }) {
   const [raw, setRaw] = useState({
     name: initial?.name ?? '',
@@ -326,14 +329,18 @@ export function ProfileForm({
       </div>
       </div>
 
-      <div className="flex gap-2 pt-2">
-        <Button type="submit" disabled={saving} className="flex-1">
-          {initial ? 'Tallenna' : 'Lisää profiili'}
-        </Button>
-        <Button variant="secondary" onClick={onCancel}>
-          Peruuta
-        </Button>
-      </div>
+      {actions ? (
+        actions(saving)
+      ) : (
+        <div className="flex gap-2 pt-2">
+          <Button type="submit" disabled={saving} className="flex-1">
+            {initial ? 'Tallenna' : 'Lisää profiili'}
+          </Button>
+          <Button variant="secondary" onClick={onCancel}>
+            Peruuta
+          </Button>
+        </div>
+      )}
     </form>
   );
 }

@@ -9,6 +9,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.86',
+    date: '27.11.2026',
+    items: [
+      'Aloituksen painikkeet ovat joka vaiheessa samat: Takaisin vasemmalla, oikealla Ohita ja Seuraava (tai Tallenna ja jatka / Valmis). Takaisin vie edelliseen vaiheeseen, ja jo lisätyn profiilin tiedot ja arkiliikunnan arvot pysyvät tallessa.',
+      'Viikkorytmin listan alla on selkeä "Lisää toistuva kerta" -painike, aloituksessa ja Asetuksissa.',
+      'Uusi oletusnäkymä uusille laitteille ja esimerkille: Viikko-näkymässä pääpalstassa viikon tilanne ja päivät, sivupalstassa liikuntatunnit, päiväkaavio, liikuntaa viikossa ja tunnit päivittäin. Tausta Revontulet, ja uuden profiilin pääkortti on tummassa tilassa Hiili. Käytössä olevien laitteiden näkymä ei muutu.',
+    ],
+  },
+  {
     version: '1.1.85',
     date: '27.11.2026',
     items: ['Alkusivun yläpalkki (osiot ja Syötä kutsukoodi) pysyy näkyvissä sivua vieritettäessä.'],

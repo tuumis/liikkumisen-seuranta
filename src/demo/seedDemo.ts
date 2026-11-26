@@ -9,6 +9,7 @@ import { activityTypeId } from '../domain/ids';
 import type { Category, FocusTag, GameResult, ISODate, PlannedSession, UUID } from '../domain/types';
 import { ESTIMATE_DEFAULT_TYPE_KEY } from '../seed/activityTypes';
 import { readDemoOwn } from './demoMode';
+import { DEFAULT_HERO_DARK } from '../ui/theme';
 
 type Repo = Repositories;
 
@@ -53,7 +54,9 @@ async function applyOwnSettings(repo: Repo): Promise<void> {
   if (!own) return;
   await repo.updateSettings(own.settings);
   for (const p of await repo.listProfiles()) {
-    await repo.updateProfile(p.id, { heroTheme: own.heroTheme, heroThemeDark: own.heroThemeDark, insightsRec: own.insightsRec, insightsLoad: own.insightsLoad });
+    // Ilman omaa tumman tilan valintaa: oma vaalean tilan teema periytyy, muuten uuden profiilin oletus (Hiili).
+    const dark = own.heroThemeDark ?? (own.heroTheme ? undefined : DEFAULT_HERO_DARK);
+    await repo.updateProfile(p.id, { heroTheme: own.heroTheme, heroThemeDark: dark, insightsRec: own.insightsRec, insightsLoad: own.insightsLoad });
   }
 }
 
@@ -86,8 +89,9 @@ export async function seedDemo(repo: Repo, today: ISODate): Promise<DemoIds> {
     color: '#0891b2',
     trackingStart: start,
     football: true,
+    heroThemeDark: DEFAULT_HERO_DARK,
   });
-  const eino = await repo.createProfile({ name: DEMO_NAMES.early, kind: 'child', birthYear: year - 5, birthMonth: 2, color: '#ea580c', trackingStart: start, football: true });
+  const eino = await repo.createProfile({ name: DEMO_NAMES.early, kind: 'child', birthYear: year - 5, birthMonth: 2, color: '#ea580c', trackingStart: start, football: true, heroThemeDark: DEFAULT_HERO_DARK });
   await repo.setTypeHidden(eino.id, t('floorball'), true);
   await repo.updateActivityType(t('football_self'), { favorite: true });
   await repo.updateActivityType(t('cycling'), { favorite: true });

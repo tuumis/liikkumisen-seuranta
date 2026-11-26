@@ -33,6 +33,16 @@
     }
   } catch (e) {}
   if (font === 'sport' || font === 'modern') root.setAttribute('data-font', font);
+  // Oletukset 1.1.86 (27.11.2026): uusi laite saa Revontulet-taustan ja uuden Viikko-näkymän asettelun; jo käytössä
+  // oleva laite (kutsu hyväksytty) pitää entiset oletukset. Sukupolvi tallennetaan heti (sama kuin src/ui/theme.ts).
+  var gen = '2';
+  try {
+    gen = localStorage.getItem('defaultsGen');
+    if (gen !== '1' && gen !== '2') {
+      gen = localStorage.getItem('inviteAccepted') === '1' ? '1' : '2';
+      localStorage.setItem('defaultsGen', gen);
+    }
+  } catch (e) {}
   root.style.colorScheme = dark ? 'dark' : 'light';
   // Yläpalkin väri heti (sama kuin src/ui/theme.ts), ettei tumman teeman ikkunapalkki välähdä vaaleana (17.11.2026).
   var meta = document.querySelector('meta[name="theme-color"]');
@@ -40,6 +50,7 @@
   // Tausta (17.11.2026, sama kuin src/ui/theme.ts applyBackground): piirretty tai oma kuva himmennettynä.
   try {
     var bg = localStorage.getItem('background');
+    if (bg === null && gen === '2') bg = 'aurora';
     var photo = localStorage.getItem('bgPhoto');
     var dim = Number(localStorage.getItem('bgDim'));
     if (bg === 'photo' && !photo) bg = null;

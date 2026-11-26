@@ -18,11 +18,12 @@ import { recommendationGroup } from '../../domain/groups';
 import { Button, Card } from '../../ui/components';
 import { today } from '../../ui/today';
 import { ProfileForm } from '../settings/ProfileForm';
+import { DEFAULT_HERO_DARK } from '../../ui/theme';
 import { TemplateSection } from '../settings/TemplateSection';
 import { InstallHint } from '../settings/InstallHint';
 import { pickTextFile } from '../sync/fileIO';
 import { summaryText } from '../sync/useSync';
-import { IconCheck, IconImport, IconLock, IconSync } from '../../ui/icons';
+import { IconCheck, IconChevronLeft, IconImport, IconLock, IconSync } from '../../ui/icons';
 import { useEnterDemo } from '../../demo/DemoBanner';
 
 type Step = 0 | 1 | 2 | 3 | 4;
@@ -40,6 +41,8 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
   const [profile, setProfile] = useState<Profile>();
   const [message, setMessage] = useState<string>();
   const [error, setError] = useState<string>();
+  // Arkiliikunnan tallennetut arvot: Takaisin-painikkeella palattaessa vaihe näyttää ne (27.11.2026).
+  const [savedEstimates, setSavedEstimates] = useState<EstimateValues>();
   // Alkusivun pikatestin vastaukset (vain muistissa): ikä, harrastukset ja arkiliikunta valmiiksi.
   const [prefill] = useState(getQuickPrefill);
 
@@ -126,16 +129,35 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
       {step === 1 && (
         <Card title="Kenen liikkumista seurataan?">
           {prefill && <QuizNote>Syntymävuosi, koulun aloitusvuosi ja jalkapallo on täytetty pikatestin vastauksista. Lisää nimi ja tarkista tiedot.</QuizNote>}
+          {/* Takaisin-painikkeella palattaessa lisätyn profiilin muokkaus (27.11.2026). */}
           <ProfileForm
+            key={profile?.id ?? 'new'}
             wide
+            initial={profile}
             defaults={prefill ? { birthYear: prefill.birthYear, schoolStartYear: prefill.schoolStartYear, football: prefill.football } : undefined}
             onSubmit={async (v) => {
-              const p = await repo.createProfile(v);
-              void requestPersistentStorage();
-              setProfile(p);
+              if (profile) {
+                await repo.updateProfile(profile.id, v);
+                setProfile((await repo.listProfiles()).find((x) => x.id === profile.id) ?? profile);
+              } else {
+                const p = await repo.createProfile({ ...v, heroThemeDark: DEFAULT_HERO_DARK });
+                void requestPersistentStorage();
+                setProfile(p);
+              }
               setStep(2);
             }}
             onCancel={() => setStep(2)}
+            actions={(saving) => (
+              <WizardNav
+                onBack={() => setStep(0)}
+                onSkip={profile ? undefined : () => setStep(2)}
+                next={
+                  <Button type="submit" disabled={saving}>
+                    {profile ? 'Tallenna ja jatka' : 'Seuraava'}
+                  </Button>
+                }
+              />
+            )}
           />
           <div className="mt-4 border-t border-slate-100 pt-3 text-sm lg:hidden">
             Onko tiedot jo PC:llä?{' '}
@@ -152,20 +174,29 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
           <>
             {prefill && prefill.hobbies.length > 0 && <QuizHobbies profile={profile} hobbies={prefill.hobbies} />}
             <TemplateSection profile={profile} />
-            <StepNav onNext={() => setStep(3)} />
+            <WizardNav onBack={() => setStep(1)} next={<Button onClick={() => setStep(3)}>Seuraava</Button>} />
           </>
         ) : (
-          <Skipped text="Viikkorytmi lisätään profiilille. Voit tehdä sen myöhemmin Asetuksissa." onNext={() => setStep(3)} />
+          <Skipped text="Viikkorytmi lisätään profiilille. Voit tehdä sen myöhemmin Asetuksissa." onBack={() => setStep(1)} onNext={() => setStep(3)} />
         ))}
 
       {step === 3 &&
         (profile ? (
-          <EstimatesStep profile={profile} prefill={prefill?.estimates} onNext={() => setStep(4)} />
+          <EstimatesStep
+            profile={profile}
+            prefill={prefill?.estimates}
+            saved={savedEstimates}
+            onBack={() => setStep(2)}
+            onNext={(v) => {
+              if (v) setSavedEstimates(v);
+              setStep(4);
+            }}
+          />
         ) : (
-          <Skipped text="Perusarviot lisätään profiilille. Voit tehdä sen myöhemmin Asetuksissa." onNext={() => setStep(4)} />
+          <Skipped text="Perusarviot lisätään profiilille. Voit tehdä sen myöhemmin Asetuksissa." onBack={() => setStep(2)} onNext={() => setStep(4)} />
         ))}
 
-      {step === 4 && <DeviceStep message={message} onDone={finish} />}
+      {step === 4 && <DeviceStep message={message} onBack={() => setStep(3)} onDone={finish} />}
         </div>
       </div>
     </div>
@@ -290,33 +321,63 @@ function Welcome({ onStart, onImport, onSkip, error, fromQuiz }: { onStart: () =
   );
 }
 
-function StepNav({ onNext, label = 'Seuraava' }: { onNext: () => void; label?: string }) {
+/**
+ * Aloituksen painikerivi (27.11.2026): aina samassa järjestyksessä. Takaisin vasemmalla, oikealla Ohita (vain kun
+ * vaiheessa on tallentamatonta syötettä, jonka voi jättää pois) ja päätoiminto (Seuraava / Tallenna ja jatka / Valmis).
+ */
+function WizardNav({ onBack, onSkip, next }: { onBack?: () => void; onSkip?: () => void; next: ReactNode }) {
   return (
-    <div className="flex justify-end gap-2">
-      <Button variant="ghost" onClick={onNext}>
-        Ohita
-      </Button>
-      <Button onClick={onNext}>{label}</Button>
+    <div className="flex flex-wrap items-center gap-2 pt-2">
+      {onBack && (
+        <Button variant="secondary" onClick={onBack}>
+          <IconChevronLeft size="1rem" /> Takaisin
+        </Button>
+      )}
+      <div className="ml-auto flex flex-wrap justify-end gap-2">
+        {onSkip && (
+          <Button variant="ghost" onClick={onSkip}>
+            Ohita
+          </Button>
+        )}
+        {next}
+      </div>
     </div>
   );
 }
 
-function Skipped({ text, onNext }: { text: string; onNext: () => void }) {
+function Skipped({ text, onBack, onNext }: { text: string; onBack: () => void; onNext: () => void }) {
   return (
     <Card>
       <p className="text-sm text-slate-600">{text}</p>
       <div className="mt-3">
-        <StepNav onNext={onNext} />
+        <WizardNav onBack={onBack} next={<Button onClick={onNext}>Seuraava</Button>} />
       </div>
     </Card>
   );
 }
 
-function EstimatesStep({ profile, prefill, onNext }: { profile: Profile; prefill?: QuickPrefill['estimates']; onNext: () => void }) {
+type EstimateValues = Record<string, { weekday: number; weekend: number }>;
+
+function EstimatesStep({
+  profile,
+  prefill,
+  saved,
+  onBack,
+  onNext,
+}: {
+  profile: Profile;
+  prefill?: QuickPrefill['estimates'];
+  /** Aiemmin tässä aloituksessa tallennetut arvot (Takaisin). */
+  saved?: EstimateValues;
+  onBack: () => void;
+  /** Tallennetut arvot tai undefined (Ohita). */
+  onNext: (saved?: EstimateValues) => void;
+}) {
   const types = useLiveQuery(() => repo.listActivityTypes(), []);
   // Alle kouluikäiselle päiväkotipäivä ja leikki; koululaiselle välitunnit, koulumatkat ja leikki.
   const suggestions = estimateSuggestions(recommendationGroup(profile, today()));
-  const [values, setValues] = useState<Record<string, { weekday: number; weekend: number }>>(() =>
+  const [values, setValues] = useState<EstimateValues>(() =>
+    saved ??
     Object.fromEntries(
       suggestions.map((s) => {
         const p = prefill?.find((x) => x.category === s.category);
@@ -334,7 +395,7 @@ function EstimatesStep({ profile, prefill, onNext }: { profile: Profile; prefill
       const shares = types?.find((t) => t.id === activityTypeId(key))?.shares;
       if (shares) await repo.saveEstimate(profile.id, { category: s.category, label: s.label, weekdayMin: v.weekday, weekendMin: v.weekend, shares }, today());
     }
-    onNext();
+    onNext(values);
   }
 
   const slider = (cat: string, k: 'weekday' | 'weekend', label: string) => (
@@ -374,13 +435,13 @@ function EstimatesStep({ profile, prefill, onNext }: { profile: Profile; prefill
         ))}
       </div>
       <div className="mt-4">
-        <StepNav onNext={save} label="Tallenna ja jatka" />
+        <WizardNav onBack={onBack} onSkip={saved ? undefined : () => onNext()} next={<Button onClick={() => void save()}>Tallenna ja jatka</Button>} />
       </div>
     </Card>
   );
 }
 
-function DeviceStep({ message, onDone }: { message?: string; onDone: () => void }) {
+function DeviceStep({ message, onBack, onDone }: { message?: string; onBack: () => void; onDone: () => void }) {
   const role = useLiveQuery(() => repo.getDeviceRole(), []);
   return (
     <Card title="Mikä laite tämä on?">
@@ -400,8 +461,8 @@ function DeviceStep({ message, onDone }: { message?: string; onDone: () => void 
         ))}
       </div>
       <InstallHint />
-      <div className="mt-4 flex justify-end">
-        <Button onClick={onDone}>Valmis</Button>
+      <div className="mt-4">
+        <WizardNav onBack={onBack} next={<Button onClick={onDone}>Valmis</Button>} />
       </div>
     </Card>
   );
@@ -458,7 +519,7 @@ function QuizHobbies({ profile, hobbies }: { profile: Profile; hobbies: QuickPre
               )}
             </div>
             {h.typeKey === 'other' && (
-              <p className="mt-1.5 text-sm text-slate-600">Lisää tämä alta kohdasta "+ Lisää" ja valitse oikea laji, niin teho vastaa lajia.</p>
+              <p className="mt-1.5 text-sm text-slate-600">Lisää tämä alta kohdasta "Lisää toistuva kerta" ja valitse oikea laji, niin teho vastaa lajia.</p>
             )}
             {!added[i] && h.typeKey !== 'other' && (
               <div className="mt-2.5 flex flex-wrap gap-1.5" role="group" aria-label={`${h.label}: treenipäivät`}>

@@ -87,9 +87,11 @@ export function TemplateSection({ profile }: { profile: Profile }) {
     <Card
       title={`Viikkorytmi · ${profile.name}`}
       action={
-        <Button variant="ghost" onClick={() => setEditing('new')}>
-          <IconPlus size="1rem" /> Lisää
-        </Button>
+        (items?.length ?? 0) >= 4 ? (
+          <Button variant="ghost" onClick={() => setEditing('new')}>
+            <IconPlus size="1rem" /> Lisää
+          </Button>
+        ) : undefined
       }
     >
       <p className="text-sm text-slate-600">
@@ -137,6 +139,20 @@ export function TemplateSection({ profile }: { profile: Profile }) {
           );
         })}
       </ul>
+      {/* Selkeä lisäyspainike listan alla (27.11.2026): aloituksessa ja Asetuksissa helppo huomata. */}
+      {items?.length === 0 ? (
+        <Button className="mt-3 min-h-12 w-full" onClick={() => setEditing('new')}>
+          <IconPlus size="1.1rem" /> Lisää toistuva kerta
+        </Button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setEditing('new')}
+          className="press mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-green-700/45 bg-[var(--surface-sage)] px-4 text-sm font-semibold text-green-900 hover:border-green-700/70"
+        >
+          <IconPlus size="1.1rem" /> Lisää toistuva kerta
+        </button>
+      )}
     </Card>
     <TrainingSelfBackfill profile={profile} />
     </>

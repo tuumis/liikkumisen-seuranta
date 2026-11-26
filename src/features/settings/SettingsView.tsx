@@ -13,6 +13,7 @@ import { useToast } from '../../ui/Toast';
 import { GROUP_LABEL, MONTHS } from '../../ui/labels';
 import { today } from '../../ui/today';
 import { ProfileForm, type ProfileFormValues } from './ProfileForm';
+import { DEFAULT_HERO_DARK } from '../../ui/theme';
 import { TemplateSection } from './TemplateSection';
 import { EstimatesSection } from './EstimatesSection';
 import { HolidaysSection } from './HolidaysSection';
@@ -167,7 +168,7 @@ function ProfilesSection({ onProfileCreated }: { onProfileCreated: (id: string) 
 
   async function save(v: ProfileFormValues) {
     if (editing === 'new') {
-      const p = await repo.createProfile(v);
+      const p = await repo.createProfile({ ...v, heroThemeDark: DEFAULT_HERO_DARK });
       void requestPersistentStorage(); // ensimmäisen tallennuksen yhteydessä (SPEC 10)
       onProfileCreated(p.id);
     } else if (editing) {
