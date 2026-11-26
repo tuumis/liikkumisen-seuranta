@@ -101,7 +101,7 @@ const TOPICS: { q: string; a: string[] }[] = [
     q: 'Voiko PC:n sivupalkin pienentää?',
     a: [
       'Kyllä. Sivupalkin yläreunan nuoli (tai Ctrl+B) pienentää palkin pelkiksi kuvakkeiksi, ja sisältö saa enemmän tilaa. Kuvakkeen nimi näkyy, kun viet hiiren sen päälle. Profiilit näkyvät kuvina, ja kuittaamattomien kertojen määrä pienenä numerona. Nuoli logon alla (tai Ctrl+B) suurentaa palkin takaisin. Valinta muistetaan tällä laitteella.',
-      'Kun tilaa on riittävästi (pienennetty palkki tai iso näyttö), kuukausikalentereissa valittu päivä näkyy kalenterin vieressä, viikon päiväkortit kahdessa sarakkeessa ja Analyysin kortit kolmessa palstassa.',
+      'Kun tilaa on riittävästi (pienennetty palkki tai iso näyttö), kuukausikalentereissa valittu päivä näkyy kalenterin vieressä (Jalkapallossa sen alla myös Odottaa tulosta), kalenterin ruuduissa nimet kahdella rivillä ja neljä tapahtumaa, viikon päiväkortit kahdessa sarakkeessa ja Analyysin kortit kolmessa palstassa.',
     ],
   },
 ];

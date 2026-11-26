@@ -9,6 +9,21 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.102',
+    date: '27.11.2026',
+    items: [
+      'Kuukausikalentereissa (Viikko ja Jalkapallo) tapahtumien nimet näkyvät PC:llä kahdella rivillä katkaisun sijaan, ja yhdessä ruudussa näkyy neljä tapahtumaa kolmen sijaan.',
+      'Jalkapallon kuukausikalenterissa Odottaa tulosta ja Viimeksi väliin jääneet näkyvät leveällä näytöllä kalenterin vieressä valitun päivän alla, joten niitä ei tarvitse vierittää esiin.',
+    ],
+  },
+  {
+    version: '1.1.101',
+    date: '27.11.2026',
+    items: [
+      'Jalkapallon kalenterissa päivän lisäyspainikkeet (Peli, Harjoituspeli, Turnaus, Muu merkintä) ovat tasakokoisia ja asettuvat siististi kahteen sarakkeeseen puhelimella ja kalenterin vieressä.',
+    ],
+  },
+  {
     version: '1.1.100',
     date: '27.11.2026',
     items: [

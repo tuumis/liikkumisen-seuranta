@@ -2,7 +2,7 @@
 // tekstinä ruuduissa, puhelimella merkkeinä; valitun päivän tapahtumat ja lisäyspainikkeet ruudukon alla.
 // Kuukautta vaihdetaan nuolilla, "Tämä kuukausi" -painikkeella tai puhelimella pyyhkäisemällä.
 
-import { useRef, useState, type TouchEvent } from 'react';
+import { useRef, useState, type ReactNode, type TouchEvent } from 'react';
 import { addDays } from '../../domain/dates';
 import { HOME_AWAY_LABEL, OUTCOME_LABEL } from '../../domain/football';
 import { addMonths, clashes, clockText, eventTitle, gridRange, isSubdued, teamNameFor, windowText, KIND_ICON, KIND_LABEL, monthGrid, monthKeyOf, type CalEvent, type MonthKey } from '../../domain/monthCalendar';
@@ -82,6 +82,7 @@ export function MonthCalendar({
   onEdit,
   onAdd,
   onOpenSession,
+  side,
 }: {
   profile: Profile;
   today: ISODate;
@@ -90,6 +91,8 @@ export function MonthCalendar({
   onEdit: (e: FixtureEntry) => void;
   onAdd: (kind: FixtureKind, date: ISODate) => void;
   onOpenSession: (s: Session) => void;
+  /** Leveänä valitun päivän alle sivusarakkeeseen näytettävä sisältö (27.11.2026: Odottaa tulosta). */
+  side?: ReactNode;
 }) {
   const [selected, setSelected] = useState<ISODate | undefined>(() => (month === monthKeyOf(today) ? today : undefined));
   const [trainings, setTrainings] = useStoredFlag('calendarTrainings', false);
@@ -200,9 +203,11 @@ export function MonthCalendar({
         </div>
       </div>
 
-      {/* Leveä kortti (27.11.2026): kalenteri ja valitun päivän tapahtumat rinnakkain. */}
+      {/* Leveä näkymä (27.11.2026): kalenteri ja valitun päivän tapahtumat rinnakkain. Leveys luetaan Jalkapallo-näkymän
+          säiliöstä (GamesTab: @container/fcal), jotta sivusarakkeen Odottaa tulosta ja näkymän oma kortti vaihtuvat
+          samassa kohdassa. 67rem kortin ulkoleveydestä ≈ 64rem sisältöä. */}
       <div className="@container">
-      <div className="@min-[64rem]:grid @min-[64rem]:grid-cols-[minmax(0,1fr)_19rem] @min-[64rem]:items-start @min-[64rem]:gap-6">
+      <div className="@min-[67rem]/fcal:grid @min-[67rem]/fcal:grid-cols-[minmax(0,1fr)_19rem] @min-[67rem]/fcal:items-start @min-[67rem]/fcal:gap-6">
       <div className="mt-3 select-none" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         <div className="grid grid-cols-[1.5rem_repeat(7,minmax(0,1fr))] gap-px text-center text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:grid-cols-[2rem_repeat(7,minmax(0,1fr))]" aria-hidden>
           <div className="py-1">Vk</div>
@@ -267,9 +272,10 @@ export function MonthCalendar({
         </div>
       </div>
 
-      {!selected && <p className="mt-3 hidden pl-5 text-sm text-slate-500 @min-[64rem]:block">Valitse päivä kalenterista.</p>}
+      <div className="min-w-0 border-slate-100 @min-[67rem]/fcal:mt-3 @min-[67rem]/fcal:border-l @min-[67rem]/fcal:pl-5">
+      {!selected && <p className="hidden pt-1 text-sm text-slate-500 @min-[67rem]/fcal:block">Valitse päivä kalenterista.</p>}
       {selected && (
-        <section className="mt-4 border-t border-slate-100 pt-3 @min-[64rem]:mt-3 @min-[64rem]:border-l @min-[64rem]:border-t-0 @min-[64rem]:pl-5 @min-[64rem]:pt-1" aria-label={`Valittu päivä ${dayLabel(selected)}`}>
+        <section className="mt-4 border-t border-slate-100 pt-3 @min-[67rem]/fcal:mt-0 @min-[67rem]/fcal:border-t-0 @min-[67rem]/fcal:pt-1" aria-label={`Valittu päivä ${dayLabel(selected)}`}>
           <h3 className="text-sm font-semibold text-slate-900">{formatDate(selected, 'cccc d.M.yyyy').replace(/^./, (c) => c.toUpperCase())}</h3>
           {dayClashes.length > 0 && (
             <div className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-900 ring-1 ring-red-200" role="status">
@@ -339,8 +345,11 @@ export function MonthCalendar({
           {/* Muokkausvihje kerran listan alla (27.11.2026), ei nimirivillä, jossa se rivittyi kapeassa sarakkeessa. */}
           {family && dayEvents.some((e) => !own(e)) && <p className="mt-1 px-2 text-xs text-slate-500">Muiden perheenjäsenten tapahtumia muokataan heidän omassa profiilissaan.</p>}
           {selected >= today ? (
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              {family && <span className="text-xs font-semibold text-slate-600">Lisää ({profile.name}):</span>}
+            // Lisäyspainikkeet (27.11.2026): yhtä suuret painikkeet 2 × 2 -ruudukossa kapeassa tilassa (puhelin, leveän
+            // kortin sivusarake), keskileveällä yhdellä rivillä. Perhetilassa otsikko omalla rivillään.
+            <div className="mt-3">
+              {family && <p className="mb-1.5 text-xs font-semibold text-slate-600">Lisää ({profile.name})</p>}
+              <div className="grid grid-cols-2 gap-2 @lg:flex @lg:flex-wrap @min-[67rem]/fcal:grid">
               {(
                 [
                   ['game', 'Peli'],
@@ -348,23 +357,22 @@ export function MonthCalendar({
                   ['tournament', 'Turnaus'],
                 ] as const
               ).map(([kind, label]) => (
-                <Button key={kind} variant={kind === 'game' ? 'soft' : 'secondary'} className="min-h-9 px-3" onClick={() => onAdd(kind, selected)}>
+                <Button key={kind} variant={kind === 'game' ? 'soft' : 'secondary'} className="min-h-10 whitespace-nowrap px-2.5" onClick={() => onAdd(kind, selected)}>
                   <IconPlus size="0.9rem" /> {label}
                 </Button>
               ))}
-              <button
-                type="button"
-                onClick={() => setNoteDraft({ date: selected })}
-                className="press inline-flex min-h-9 items-center gap-1.5 rounded-full px-2.5 text-sm font-semibold text-slate-600 hover:bg-[var(--surface-sunk)] hover:text-slate-900"
-              >
+              <Button variant="secondary" className="min-h-10 whitespace-nowrap px-2.5 text-slate-700" onClick={() => setNoteDraft({ date: selected })}>
                 <IconCalendarClock size="0.95rem" /> Muu merkintä
-              </button>
+              </Button>
+              </div>
             </div>
           ) : (
             dayEvents.length === 0 && <p className="mt-1 text-xs text-slate-500">Jo pelatun pelin kirjaat Viikko-näkymän +-painikkeella.</p>
           )}
         </section>
       )}
+      {side && <div className="hidden @min-[67rem]/fcal:block">{side}</div>}
+      </div>
       </div>
       </div>
       <CalendarNoteSheet profile={profile} draft={noteDraft} onClose={() => setNoteDraft(null)} />
@@ -404,8 +412,11 @@ function DayCell({
   const games = events.filter((e) => !isSubdued(e)).length;
   const label = `${dayLabel(date)}${today ? ', tänään' : ''}${clash ? ', päällekkäisiä tapahtumia' : ''}${events.length ? `, ${events.map((e) => `${eventTitle(e, 'full') === KIND_LABEL[e.kind] ? '' : `${KIND_LABEL[e.kind]} `}${eventTitle(e, 'full')}${e.result ? ` ${e.result}` : ''}`).join(', ')}` : ''}`;
   const more = events.length - 3;
+  // Ruutu on oma kyselysäiliönsä (27.11.2026): kun ruutu on vähintään 5rem (sisältö) leveä, tapahtuman nimi näkyy kahdella
+  // rivillä katkaisun sijaan ja ruudussa on neljä tapahtumaa kolmen sijaan.
+  const hide4 = (i: number) => (i === 3 ? `hidden @min-[5rem]:[display:-webkit-box]` : '');
   return (
-    <div role="gridcell" aria-selected={selected} className={`relative min-h-14 p-1 sm:min-h-24 sm:p-1.5 ${inMonth ? 'bg-[var(--surface-raised)]' : 'bg-[var(--surface-sunk)]'} ${selected ? 'z-[1] outline-2 -outline-offset-2 outline-green-700' : ''}`}>
+    <div role="gridcell" aria-selected={selected} className={`@container relative min-h-14 p-1 sm:min-h-24 sm:p-1.5 ${inMonth ? 'bg-[var(--surface-raised)]' : 'bg-[var(--surface-sunk)]'} ${selected ? 'z-[1] outline-2 -outline-offset-2 outline-green-700' : ''}`}>
       <button type="button" onClick={onSelect} className="absolute inset-0 rounded-none hover:bg-green-50/40" aria-label={label} aria-pressed={selected} />
       <div className="pointer-events-none relative flex items-center justify-between">
         <span
@@ -440,14 +451,14 @@ function DayCell({
 
       {/* PC: tapahtumat tekstinä; painallus avaa muokkauksen tai kirjatun pelin tiedot. */}
       <div className="relative mt-1 hidden space-y-0.5 sm:block">
-        {events.slice(0, 3).map((e) =>
+        {events.slice(0, 4).map((e, idx) =>
           clickable(e) ? (
             <button
               key={e.key}
               type="button"
               onClick={() => onOpen(e)}
               title={`${KIND_LABEL[e.kind]}: ${eventTitle(e, 'full')}${e.result ? ` ${e.result}` : ''}${STATE_NOTE[e.state] ? ` – ${STATE_NOTE[e.state]}` : ''}`}
-              className={`press block w-full truncate rounded-md px-1 py-0.5 text-left text-[11px] font-medium leading-tight ring-1 ${chipClass(e)}`}
+              className={`press block w-full truncate @min-[5rem]:line-clamp-2 @min-[5rem]:whitespace-normal rounded-md px-1 py-0.5 text-left text-[11px] font-medium leading-tight ring-1 ${chipClass(e)} ${hide4(idx)}`}
               style={colorOf(e) ? { borderLeft: `3px solid ${colorOf(e)}` } : undefined}
             >
               <span aria-hidden>{KIND_ICON[e.kind]}</span>{' '}
@@ -455,12 +466,13 @@ function DayCell({
               {chipText(e)}
             </button>
           ) : (
-            <div key={e.key} className={`pointer-events-none truncate rounded-md px-1 py-0.5 text-[11px] leading-tight ring-1 ${chipClass(e)}`} style={colorOf(e) ? { borderLeft: `3px solid ${colorOf(e)}` } : undefined}>
+            <div key={e.key} className={`pointer-events-none truncate @min-[5rem]:line-clamp-2 @min-[5rem]:whitespace-normal rounded-md px-1 py-0.5 text-[11px] leading-tight ring-1 ${chipClass(e)} ${hide4(idx)}`} style={colorOf(e) ? { borderLeft: `3px solid ${colorOf(e)}` } : undefined}>
               <span aria-hidden>{KIND_ICON[e.kind]}</span> {chipText(e)}
             </div>
           ),
         )}
-        {more > 0 && <div className="pointer-events-none px-1 text-[11px] font-semibold text-slate-500">+{more} muuta</div>}
+        {more > 0 && <div className="pointer-events-none px-1 text-[11px] font-semibold text-slate-500 @min-[5rem]:hidden">+{more} muuta</div>}
+        {more > 1 && <div className="pointer-events-none hidden px-1 text-[11px] font-semibold text-slate-500 @min-[5rem]:block">+{more - 1} muuta</div>}
       </div>
     </div>
   );

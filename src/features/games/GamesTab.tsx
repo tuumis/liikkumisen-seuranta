@@ -1,7 +1,7 @@
 // Pelit-välilehti: pelikalenteri (tulevat pelit ja turnaukset), tulosta odottavat, tulokset ja
 // analyysi sekä omat joukkueet. Tulokset ovat joukkueen tuloksia eivätkä vaikuta lapsen arvioihin.
 
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { Sheet } from '../../ui/Sheet';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { GAME_FORMATS, HOME_AWAY_LABEL, LEVEL_LABEL } from '../../domain/football';
@@ -242,62 +242,11 @@ function CalendarView({ profile, onEdit, onAdd }: { profile: Profile; onEdit: (e
     }
   }
 
-  return (
-    <div className="space-y-4">
-      {/* Puhelimessa yksi rivi (26.11.2026): valitsin täyttää rivin ja toiminnot ovat kuvakepainikkeina; leveämmällä tekstein. */}
-      <div className="flex items-center gap-2 sm:flex-wrap">
-        <div className="min-w-0 flex-1 sm:w-full sm:max-w-xs sm:basis-56">
-          <Segmented<'list' | 'month'>
-            label="Kalenterin esitystapa"
-            value={mode}
-            onChange={setMode}
-            options={[
-              { value: 'list', label: 'Lista' },
-              { value: 'month', label: 'Kuukausi' },
-            ]}
-          />
-        </div>
-        <div className="ml-auto flex shrink-0 gap-2">
-          <Button variant="secondary" className="w-11 !px-0 sm:w-auto sm:!px-4" aria-label="Tulosta" title="Tulosta" onClick={() => setPrinting(true)}>
-            <IconReport size="1.1rem" /> <span className="hidden sm:inline">Tulosta</span>
-          </Button>
-          <Button variant="secondary" className="w-11 !px-0 sm:w-auto sm:!px-4" aria-label="Vie kalenteriin" title="Vie kalenteriin" onClick={() => setExporting(true)}>
-            <IconCalendarClock size="1.1rem" /> <span className="hidden sm:inline">Vie kalenteriin</span>
-          </Button>
-        </div>
-      </div>
-      {mode === 'month' && <MonthCalendar profile={profile} today={today} month={month} onMonth={setMonth} onEdit={onEdit} onAdd={onAdd} onOpenSession={setPanel} />}
-      {printing && <CalendarPrint profile={profile} today={today} startMonth={mode === 'month' ? month : monthKeyOf(today)} onClose={() => setPrinting(false)} />}
-      <IcsExport profile={profile} today={today} startMonth={mode === 'month' ? month : monthKeyOf(today)} open={exporting} onClose={() => setExporting(false)} />
-    <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
-      {mode === 'list' && (
-      <Card title={`Tulevat pelit ja turnaukset (${upcoming.length})`}>
-        {!entries ? (
-          <div className="skeleton h-24 rounded-2xl" aria-busy="true" aria-label="Ladataan" />
-        ) : upcoming.length === 0 ? (
-          <EmptyState art="calendar" title="Kalenteri on tyhjä" compact>
-            Lisää tuleva peli tai turnaus yläreunan painikkeista.
-          </EmptyState>
-        ) : (
-          <div className="space-y-4">
-            {[...byMonth.entries()].map(([month, list]) => (
-              <div key={month}>
-                <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{formatDate(`${month}-01`, 'LLLL yyyy')}</h3>
-                <ul className="space-y-2">
-                  {list.map((e) => (
-                    <FixtureRow key={e.plan.id} e={e} team={e.fixture?.teamId ? teamById.get(e.fixture.teamId) : undefined} today={today} history={history} onClick={() => onEdit(e)} />
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        )}
-        <p className="mt-3 text-xs text-slate-500">Tulevat pelit näkyvät myös Viikko-näkymässä suunnitelmina. Pelin jälkeen kirjaa tulos.</p>
-      </Card>
-      )}
-
-      <div className="space-y-4">
-        <Card title={`Odottaa tulosta (${pending.length})`}>
+  // Odottaa tulosta ja väliin jääneet (27.11.2026): kuukausinäkymässä leveänä kalenterin sivusarakkeessa
+  // valitun päivän alla (side), muuten omina kortteinaan kalenterin alla. Leveysraja sama säiliö (fcal) kuin kalenterissa.
+  const resultCards = (side: boolean) => (
+      <>
+        <ResultBox side={side} title={`Odottaa tulosta (${pending.length})`}>
           {!entries ? (
             <div className="skeleton h-24 rounded-2xl" aria-busy="true" aria-label="Ladataan" />
           ) : pending.length === 0 ? (
@@ -335,9 +284,9 @@ function CalendarView({ profile, onEdit, onAdd }: { profile: Profile; onEdit: (e
               ))}
             </ul>
           )}
-        </Card>
+        </ResultBox>
         {skipped.length > 0 && (
-          <Card title="Viimeksi väliin jääneet">
+          <ResultBox side={side} title="Viimeksi väliin jääneet">
             <ul className="divide-y divide-slate-100 text-sm">
               {skipped.map((e) => (
                 <li key={e.plan.id} className="py-2">
@@ -354,13 +303,83 @@ function CalendarView({ profile, onEdit, onAdd }: { profile: Profile; onEdit: (e
                 </li>
               ))}
             </ul>
-          </Card>
+          </ResultBox>
         )}
+      </>
+  );
+
+  return (
+    <div className="@container/fcal space-y-4">
+      {/* Puhelimessa yksi rivi (26.11.2026): valitsin täyttää rivin ja toiminnot ovat kuvakepainikkeina; leveämmällä tekstein. */}
+      <div className="flex items-center gap-2 sm:flex-wrap">
+        <div className="min-w-0 flex-1 sm:w-full sm:max-w-xs sm:basis-56">
+          <Segmented<'list' | 'month'>
+            label="Kalenterin esitystapa"
+            value={mode}
+            onChange={setMode}
+            options={[
+              { value: 'list', label: 'Lista' },
+              { value: 'month', label: 'Kuukausi' },
+            ]}
+          />
+        </div>
+        <div className="ml-auto flex shrink-0 gap-2">
+          <Button variant="secondary" className="w-11 !px-0 sm:w-auto sm:!px-4" aria-label="Tulosta" title="Tulosta" onClick={() => setPrinting(true)}>
+            <IconReport size="1.1rem" /> <span className="hidden sm:inline">Tulosta</span>
+          </Button>
+          <Button variant="secondary" className="w-11 !px-0 sm:w-auto sm:!px-4" aria-label="Vie kalenteriin" title="Vie kalenteriin" onClick={() => setExporting(true)}>
+            <IconCalendarClock size="1.1rem" /> <span className="hidden sm:inline">Vie kalenteriin</span>
+          </Button>
+        </div>
+      </div>
+      {mode === 'month' && <MonthCalendar profile={profile} today={today} month={month} onMonth={setMonth} onEdit={onEdit} onAdd={onAdd} onOpenSession={setPanel} side={resultCards(true)} />}
+      {printing && <CalendarPrint profile={profile} today={today} startMonth={mode === 'month' ? month : monthKeyOf(today)} onClose={() => setPrinting(false)} />}
+      <IcsExport profile={profile} today={today} startMonth={mode === 'month' ? month : monthKeyOf(today)} open={exporting} onClose={() => setExporting(false)} />
+    <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
+      {mode === 'list' && (
+      <Card title={`Tulevat pelit ja turnaukset (${upcoming.length})`}>
+        {!entries ? (
+          <div className="skeleton h-24 rounded-2xl" aria-busy="true" aria-label="Ladataan" />
+        ) : upcoming.length === 0 ? (
+          <EmptyState art="calendar" title="Kalenteri on tyhjä" compact>
+            Lisää tuleva peli tai turnaus yläreunan painikkeista.
+          </EmptyState>
+        ) : (
+          <div className="space-y-4">
+            {[...byMonth.entries()].map(([month, list]) => (
+              <div key={month}>
+                <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{formatDate(`${month}-01`, 'LLLL yyyy')}</h3>
+                <ul className="space-y-2">
+                  {list.map((e) => (
+                    <FixtureRow key={e.plan.id} e={e} team={e.fixture?.teamId ? teamById.get(e.fixture.teamId) : undefined} today={today} history={history} onClick={() => onEdit(e)} />
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="mt-3 text-xs text-slate-500">Tulevat pelit näkyvät myös Viikko-näkymässä suunnitelmina. Pelin jälkeen kirjaa tulos.</p>
+      </Card>
+      )}
+
+      <div className={`space-y-4 ${mode === 'month' ? '@min-[67rem]/fcal:hidden' : ''}`}>
+        {resultCards(false)}
       </div>
 
       <FootballPanel session={panel} type={panel ? typeMap.get(panel.activityTypeId) : undefined} onClose={() => setPanel(null)} />
     </div>
     </div>
+  );
+}
+
+/** Kortti tai (kalenterin sivusarakkeessa) otsikoitu osio ilman korttikehystä. */
+function ResultBox({ side, title, children }: { side: boolean; title: string; children: ReactNode }) {
+  if (!side) return <Card title={title}>{children}</Card>;
+  return (
+    <section className="mt-5 border-t border-slate-100 pt-3" aria-label={title}>
+      <h3 className="mb-2 text-sm font-semibold text-slate-900">{title}</h3>
+      {children}
+    </section>
   );
 }
 

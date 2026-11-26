@@ -415,8 +415,9 @@ function DayCell({
   const more = items.length - 3;
   const label = `${dayLabel(date)}${today ? ', tänään' : ''}${items.length ? `, ${items.map((i) => `${nameOf(i) ? `${nameOf(i)}: ` : ''}${i.kind === 'note' ? 'merkintä ' : i.kind === 'open' ? 'suunniteltu ' : i.kind === 'skipped' ? 'ei tehty ' : ''}${i.title}${i.time ? ` ${hhmm(i.time)}` : ''}`).join(', ')}` : ''}`;
   const glyph = (i: MonthItem) => (i.kind === 'note' ? '📅' : <TypeGlyph t={i.typeId ? types.get(i.typeId) : undefined} />);
+  // Ruutu on oma kyselysäiliönsä (27.11.2026): vähintään 5rem (sisältö) leveänä nimi kahdella rivillä ja neljä riviä kolmen sijaan.
   return (
-    <div role="gridcell" aria-selected={selected} className={`relative min-h-14 p-1 sm:min-h-24 sm:p-1.5 ${inMonth ? (flagged ? 'bg-[var(--surface-sunk)]' : 'bg-[var(--surface-raised)]') : 'bg-[var(--surface-sunk)]'} ${selected ? 'z-[1] outline-2 -outline-offset-2 outline-green-700' : ''}`}>
+    <div role="gridcell" aria-selected={selected} className={`@container relative min-h-14 p-1 sm:min-h-24 sm:p-1.5 ${inMonth ? (flagged ? 'bg-[var(--surface-sunk)]' : 'bg-[var(--surface-raised)]') : 'bg-[var(--surface-sunk)]'} ${selected ? 'z-[1] outline-2 -outline-offset-2 outline-green-700' : ''}`}>
       <button type="button" onClick={onSelect} className="absolute inset-0 rounded-none hover:bg-green-50/40" aria-label={label} aria-pressed={selected} />
       <div className="pointer-events-none relative">
         <span className={`flex size-6 items-center justify-center rounded-full text-xs font-semibold tabular-nums ${today ? 'bg-green-700 text-white' : inMonth ? 'text-slate-800' : 'text-slate-400'}`}>{day}</span>
@@ -433,13 +434,14 @@ function DayCell({
       </div>
       {/* PC: rivit tekstinä. */}
       <div className="pointer-events-none relative mt-1 hidden space-y-0.5 sm:block" aria-hidden>
-        {items.slice(0, 3).map((i) => (
-          <div key={i.key} className={`truncate rounded-md px-1 py-0.5 text-[11px] font-medium leading-tight ${itemClass(i)}`} style={colorOf(i) ? { borderLeft: `3px solid ${colorOf(i)}` } : undefined}>
+        {items.slice(0, 4).map((i, idx) => (
+          <div key={i.key} className={`truncate @min-[5rem]:line-clamp-2 @min-[5rem]:whitespace-normal rounded-md px-1 py-0.5 text-[11px] font-medium leading-tight ${itemClass(i)} ${idx === 3 ? 'hidden @min-[5rem]:[display:-webkit-box]' : ''}`} style={colorOf(i) ? { borderLeft: `3px solid ${colorOf(i)}` } : undefined}>
             <span>{glyph(i)}</span> {i.title}
             {i.time && <span className="font-normal opacity-75"> {hhmm(i.time)}</span>}
           </div>
         ))}
-        {more > 0 && <div className="px-1 text-[11px] font-semibold text-slate-500">+{more} muuta</div>}
+        {more > 0 && <div className="px-1 text-[11px] font-semibold text-slate-500 @min-[5rem]:hidden">+{more} muuta</div>}
+        {more > 1 && <div className="hidden px-1 text-[11px] font-semibold text-slate-500 @min-[5rem]:block">+{more - 1} muuta</div>}
       </div>
     </div>
   );
