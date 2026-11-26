@@ -45,6 +45,9 @@ import { GettingStarted } from './GettingStarted';
 import { LastWeekCard } from './LastWeekCard';
 import { PlanOnceSheet } from './PlanOnceSheet';
 import { CalendarNoteSheet, type NoteDraft } from './CalendarNoteSheet';
+import { MonthView } from './MonthView';
+import { monthKeyOf, type MonthKey } from '../../domain/monthCalendar';
+import { useStoredChoice } from '../../ui/storedPref';
 import { useFootballEnabled } from '../football/useFootballEnabled';
 import { GameDayCard } from '../games/TournamentDay';
 import { FixtureSheet, fixtureKindOf, type FixtureDraft } from '../games/FixtureSheet';
@@ -78,6 +81,10 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
   }, [weekStart]);
   // Päivänauhan valittu päivä (puhelin ja tabletti); oletuksena tänään.
   const [selDay, setSelDay] = useState<ISODate>(today);
+  // Viikko / Kuukausi (27.11.2026): kuukausikalenteri kaikista lajeista; valinta muistetaan laitteella.
+  const [calMode, setCalMode] = useStoredChoice<'week' | 'month'>('weekMode', ['week', 'month'], 'week');
+  const [month, setMonth] = useState<MonthKey>(() => monthKeyOf(today));
+  const monthMode = calMode === 'month';
   const [quickAdd, setQuickAdd] = useState<{ date?: ISODate } | null>(null);
   const [editing, setEditing] = useState<Session | null>(null);
   // Loukkaantumisjakson paneeli: päivä, jolta se avattiin (24.11.2026).
@@ -343,6 +350,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
         if (c.kind === 'add') setQuickAdd({});
         else if (c.kind === 'review') setReviewOpen(true);
         else if (c.kind === 'week') {
+          setCalMode('week');
           if (c.delta === 0) {
             setWeekStart(startOfIsoWeek(todayFn()));
             setSelDay(todayFn());
@@ -400,10 +408,44 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     </button>
   );
 
+  /** Viikosta kuukauteen: viikon kuukausi (kuluvalla viikolla tämä päivä). */
+  const showMonth = () => {
+    setMonth(monthKeyOf(isCurrent ? today : addDays(weekStart, 3)));
+    setCalMode('month');
+  };
+  /** Kuukaudesta viikkoon: valitun päivän viikko. */
+  const openWeek = (d: ISODate) => {
+    setWeekStart(startOfIsoWeek(d));
+    setSelDay(d);
+    setCalMode('week');
+  };
+  const modeToggle = (
+    <div className="flex shrink-0 rounded-xl bg-[var(--surface-sunk)] p-0.5 text-xs font-semibold" role="radiogroup" aria-label="Näkymä">
+      {(
+        [
+          ['week', 'Viikko'],
+          ['month', 'Kuukausi'],
+        ] as const
+      ).map(([v, l]) => (
+        <button
+          key={v}
+          type="button"
+          role="radio"
+          aria-checked={calMode === v}
+          onClick={() => (v === 'month' ? showMonth() : setCalMode('week'))}
+          className={`press hit flex min-h-9 items-center rounded-[0.6rem] px-3 ${calMode === v ? 'bg-[var(--surface-raised)] text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
+        >
+          {l}
+        </button>
+      ))}
+    </div>
+  );
+
   const weekSwitcher = (
     // Puhelimella (18.11.2026) viikon valitsin on omalla rivillään ja painikkeet sen alla: muuten "Tämä viikko"
     // työnsi Muokkaa näkymää -painikkeen ruudun ulkopuolelle, ja nuolet siirtyivät viikkoa vaihdettaessa.
     <div className="anim-fade flex flex-wrap items-center gap-2 sm:flex-nowrap">
+      {profile && modeToggle}
       {isLg && (
       <div className="flex flex-1 basis-full items-center gap-1 rounded-2xl bg-[var(--surface)] p-1 shadow-sm sm:basis-auto lg:flex-none">
         <button type="button" onClick={() => go(-1)} className="press hit flex size-10 items-center justify-center rounded-xl text-slate-600 hover:bg-[var(--surface-sunk)] hover:text-slate-900" aria-label="Edellinen viikko">
@@ -639,18 +681,53 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
         {!DEMO && <BackupReminder onOpenSettings={() => onOpenSettings('devices')} />}
       </div>
 
-      {!isLg && profile && dayStrip}
-      {!isLg && profile && dayCard}
-      {weekSwitcher}
+      {!isLg && profile && !monthMode && dayStrip}
+      {!isLg && profile && !monthMode && dayCard}
+      {profile && monthMode ? (
+        <MonthView
+          profile={profile}
+          today={today}
+          month={month}
+          onMonth={setMonth}
+          types={typeMap}
+          teamName={teamName}
+          footballOn={footballOn}
+          header={
+            <>
+              {modeToggle}
+              <span className="hidden lg:block">
+                <Button onClick={() => setQuickAdd({})}>
+                  <IconPlus size="1.1rem" /> Lisää kerta
+                </Button>
+              </span>
+            </>
+          }
+          actions={{
+            onAdd: (date) => setQuickAdd({ date }),
+            onPlan: setPlanOnce,
+            onEdit: setEditing,
+            onPlanOpen: openPlan,
+            onPlanSkip: skipPlan,
+            onPlanConfirm: (p) => void planActions.confirm(p),
+            onEstimate: setEstimateDay,
+            onOpenMenu: setDayMenu,
+            onNoteOpen: openNote,
+            onFootball: footballOn ? setFootball : () => undefined,
+            onOpenWeek: openWeek,
+          }}
+        />
+      ) : (
+        weekSwitcher
+      )}
       {!profile && <Card>Lisää profiili Asetukset-välilehdellä.</Card>}
 
       {profile && hasAnySessions === false && <GettingStarted onAdd={() => setQuickAdd({})} onOpenSettings={onOpenSettings} />}
       {profile && isCurrent && <InjuryNotice profile={profile} today={today} onEdit={() => setInjuryDay(today)} />}
       {profile && isCurrent && <GameDayCard profile={profile} today={today} />}
-      {profile && isCurrent && <LastWeekCard profile={profile} today={today} onOpenWeek={setWeekStart} />}
+      {profile && isCurrent && !monthMode && <LastWeekCard profile={profile} today={today} onOpenWeek={setWeekStart} />}
 
       <div ref={weekBody} className="settle empty:hidden">
-      {profile && report && (() => {
+      {profile && report && !monthMode && (() => {
         // Käyttäjän valitsemat kortit järjestyksessään; PC:llä pää- ja sivupalstaan valinnan mukaan.
         const mainIds = cardIds.filter((id) => !sideIds.includes(id));
         const card = (id: WeekCardId) => {

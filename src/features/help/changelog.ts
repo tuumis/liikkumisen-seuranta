@@ -9,6 +9,13 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.91',
+    date: '27.11.2026',
+    items: [
+      'Viikko-näkymässä on uusi valinta Viikko / Kuukausi. Kuukausikalenterissa näkyvät kaikki lajit: kirjatut kerrat, viikkorytmin ja suunnitellut kerrat, pelit ja kalenterimerkinnät. Päivää napauttamalla saat sen kortin, josta voi kuitata, lisätä ja muokata kuten viikolla. Viikkonumero tai Avaa viikko vie päivän viikolle.',
+    ],
+  },
+  {
     version: '1.1.90',
     date: '27.11.2026',
     items: [
