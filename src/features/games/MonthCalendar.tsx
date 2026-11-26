@@ -200,6 +200,9 @@ export function MonthCalendar({
         </div>
       </div>
 
+      {/* Leveä kortti (27.11.2026): kalenteri ja valitun päivän tapahtumat rinnakkain. */}
+      <div className="@container">
+      <div className="@min-[64rem]:grid @min-[64rem]:grid-cols-[minmax(0,1fr)_19rem] @min-[64rem]:items-start @min-[64rem]:gap-6">
       <div className="mt-3 select-none" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         <div className="grid grid-cols-[1.5rem_repeat(7,minmax(0,1fr))] gap-px text-center text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:grid-cols-[2rem_repeat(7,minmax(0,1fr))]" aria-hidden>
           <div className="py-1">Vk</div>
@@ -264,8 +267,9 @@ export function MonthCalendar({
         </div>
       </div>
 
+      {!selected && <p className="mt-3 hidden pl-5 text-sm text-slate-500 @min-[64rem]:block">Valitse päivä kalenterista.</p>}
       {selected && (
-        <section className="mt-4 border-t border-slate-100 pt-3" aria-label={`Valittu päivä ${dayLabel(selected)}`}>
+        <section className="mt-4 border-t border-slate-100 pt-3 @min-[64rem]:mt-3 @min-[64rem]:border-l @min-[64rem]:border-t-0 @min-[64rem]:pl-5 @min-[64rem]:pt-1" aria-label={`Valittu päivä ${dayLabel(selected)}`}>
           <h3 className="text-sm font-semibold text-slate-900">{formatDate(selected, 'cccc d.M.yyyy').replace(/^./, (c) => c.toUpperCase())}</h3>
           {dayClashes.length > 0 && (
             <div className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-900 ring-1 ring-red-200" role="status">
@@ -360,6 +364,8 @@ export function MonthCalendar({
           )}
         </section>
       )}
+      </div>
+      </div>
       <CalendarNoteSheet profile={profile} draft={noteDraft} onClose={() => setNoteDraft(null)} />
 
     </Card>

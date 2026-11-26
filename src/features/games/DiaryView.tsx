@@ -121,7 +121,7 @@ export function DiaryView({ profile }: { profile: Profile }) {
             <h3 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
               {formatDate(`${month}-01`, 'LLLL yyyy')} · {list.length}
             </h3>
-            <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 2xl:grid-cols-3">
+            <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 @min-[68rem]:grid-cols-3">
               {list.map((e) => (
                 <DiaryEntry key={e.s.id} s={e.s} t={e.t} d={e.d} self={e.self} onDetails={() => setPanel(e.s)} />
               ))}

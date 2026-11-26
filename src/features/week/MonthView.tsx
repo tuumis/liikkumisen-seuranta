@@ -197,8 +197,11 @@ export function MonthView({
   const selPlans = sel ? shownData!.plans.filter((p) => p.date === sel && p.status !== 'done') : [];
   const selNotes = sel ? shownData!.notes.filter((n) => n.date === sel) : [];
 
+  // Leveä sisältöalue (27.11.2026, pienennetty sivupalkki tai iso näyttö): kalenteri ja valittu päivä rinnakkain,
+  // jolloin päivää ei tarvitse vierittää esiin. Kapeammalla päivä on kalenterin alla kuten ennen.
   return (
-    <div className="space-y-4">
+    <div className="@container">
+    <div className="space-y-4 @min-[68rem]:grid @min-[68rem]:grid-cols-[minmax(0,1fr)_20rem] @min-[68rem]:items-start @min-[68rem]:gap-5 @min-[68rem]:space-y-0">
       <Card>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex flex-1 basis-full items-center gap-1 rounded-2xl bg-[var(--surface-sunk)] p-1 sm:basis-auto sm:flex-none">
@@ -297,8 +300,13 @@ export function MonthView({
         </div>
       </Card>
 
+      {!sel && (
+        <p className="hidden rounded-[1.25rem] bg-[var(--surface)] px-4 py-6 text-center text-sm text-slate-500 shadow-xs ring-1 ring-[var(--line)] @min-[68rem]:block">
+          Valitse päivä kalenterista.
+        </p>
+      )}
       {sel && (
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 @min-[68rem]:sticky @min-[68rem]:top-6">
           <ol aria-label="Valittu päivä">
             <DayRow
               key={sel}
@@ -369,6 +377,7 @@ export function MonthView({
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

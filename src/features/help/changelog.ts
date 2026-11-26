@@ -9,6 +9,13 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.99',
+    date: '27.11.2026',
+    items: [
+      'Kun PC:n sivupalkki on pienennetty (tai näyttö on iso), sisältö käyttää vapautuvan tilan: Viikko-näkymän ja Jalkapallon kuukausikalenterissa valittu päivä näkyy kalenterin vieressä, viikon päiväkortit ovat kahdessa sarakkeessa ja Analyysin kortit kolmessa palstassa.',
+    ],
+  },
+  {
     version: '1.1.98',
     date: '27.11.2026',
     items: [

@@ -562,7 +562,7 @@ export function WeekView({
           />
         </div>
       ) : (
-      <ol className={`space-y-2.5 2xl:grid 2xl:grid-cols-2 2xl:gap-3 2xl:space-y-0 ${wideDays ? 'lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0' : ''}`} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} aria-label="Viikon päivät">
+      <ol className={`space-y-2.5 @min-[68rem]:grid @min-[68rem]:grid-cols-2 @min-[68rem]:gap-3 @min-[68rem]:space-y-0 ${wideDays ? 'lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0' : ''}`} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} aria-label="Viikon päivät">
         {dates.map((d, i) => (
           <DayRow
             key={d}
@@ -764,9 +764,9 @@ export function WeekView({
             // Kaavio ja rytmi rinnakkain hyvin leveällä näytöllä, kun ne ovat peräkkäin.
             if (id === 'daily' && list[k + 1] === 'rhythm') {
               out.push(
-                <div key="daily-rhythm" className="grid grid-cols-1 gap-5 2xl:grid-cols-5">
-                  <div className="2xl:col-span-3">{card('daily')}</div>
-                  <div className="2xl:col-span-2">{card('rhythm')}</div>
+                <div key="daily-rhythm" className="grid grid-cols-1 gap-5 @min-[68rem]:grid-cols-5">
+                  <div className="@min-[68rem]:col-span-3">{card('daily')}</div>
+                  <div className="@min-[68rem]:col-span-2">{card('rhythm')}</div>
                 </div>,
               );
               k++;
@@ -783,7 +783,7 @@ export function WeekView({
         };
         return (
           <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12 lg:gap-6">
-            <div className={`min-w-0 space-y-5 ${sideIds.length ? 'lg:col-span-7 xl:col-span-8' : 'lg:col-span-12'}`}>
+            <div className={`min-w-0 space-y-5 ${sideIds.length ? 'lg:col-span-7 @4xl:col-span-8' : 'lg:col-span-12'}`}>
               {render(mainIds, true)}
               {simple && (
                 <p className="text-center text-xs text-slate-500">
@@ -792,7 +792,7 @@ export function WeekView({
               )}
             </div>
             {sideIds.length > 0 && (
-              <aside className="min-w-0 space-y-5 lg:col-span-5 xl:col-span-4" aria-label="Viikon yhteenveto">
+              <aside className="min-w-0 space-y-5 lg:col-span-5 @4xl:col-span-4" aria-label="Viikon yhteenveto">
                 {render(sideIds, false)}
               </aside>
             )}

@@ -103,7 +103,7 @@ export function GamesTab({ profile }: { profile?: Profile }) {
           </h2>
           <span className="text-xs text-slate-500">Tulevat pelit näkyvät myös Viikko-näkymässä</span>
         </div>
-        <AddChoices className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3" onPick={(kind) => setDraft({ kind })} />
+        <AddChoices className="mt-3 grid gap-2 sm:grid-cols-2 @4xl:grid-cols-3" onPick={(kind) => setDraft({ kind })} />
         <p className="mt-2 text-xs text-slate-500">{ADD_HINT}</p>
       </section>
       <Button className="w-full shadow-md lg:hidden" onClick={() => setAdding(true)}>

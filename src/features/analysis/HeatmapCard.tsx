@@ -205,7 +205,7 @@ export function HeatmapCard({ profile, focus }: { profile: Profile; focus?: Heat
   const data = useHeatData(profile, range.start, range.end, withEstimates);
 
   const controls = (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.9fr)]">
+    <div className="grid gap-3 sm:grid-cols-2 @4xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.9fr)]">
       <Segmented<PeriodKey>
         label="Kartan jakso"
         value={periodKey}
@@ -214,7 +214,7 @@ export function HeatmapCard({ profile, focus }: { profile: Profile; focus?: Heat
       />
       <Segmented<HeatMeasure> label="Mittari" value={prefs.measure} onChange={(measure) => setPrefs({ measure })} options={MEASURES} />
       {prefs.measure === 'sessions' ? (
-        <p className="flex min-h-12 items-center text-xs leading-snug text-slate-500 sm:col-span-2 xl:col-span-1">Kerrat lasketaan aina kirjauksista; arkiliikunnan arvio ei ole kerta.</p>
+        <p className="flex min-h-12 items-center text-xs leading-snug text-slate-500 sm:col-span-2 @4xl:col-span-1">Kerrat lasketaan aina kirjauksista; arkiliikunnan arvio ei ole kerta.</p>
       ) : (
         <Segmented<'logged' | 'all'>
           label="Arkiliikunnan arvio"
@@ -492,7 +492,7 @@ function HeatBody({
       </div>
       <p className="-mt-2 text-right text-[11px] text-slate-500">Asteikko: {['ei liikuntaa', ...LEVEL_LABELS[measure]].join(' · ')}</p>
 
-      <div className={`grid grid-cols-2 gap-3 ${planned ? `sm:grid-cols-3 ${big ? 'lg:grid-cols-5 lg:gap-5' : 'xl:grid-cols-5'}` : big ? 'lg:grid-cols-4 lg:gap-5' : 'sm:grid-cols-4'}`}>
+      <div className={`grid grid-cols-2 gap-3 ${planned ? `sm:grid-cols-3 ${big ? 'lg:grid-cols-5 lg:gap-5' : '@4xl:grid-cols-5'}` : big ? 'lg:grid-cols-4 lg:gap-5' : 'sm:grid-cols-4'}`}>
         <Stat
           label="Liikuntaa yhteensä"
           value={`${formatHours(stats.hours)} h`}

@@ -544,7 +544,9 @@ export default function App() {
           </div>
         </div>
         {/* Avatut välilehdet pidetään muistissa (piilotettuina, laskenta pysäytettynä), jotta palatessa sisältö näkyy heti. */}
-        <div className="page-view" ref={pageRef}>
+        {/* PC (27.11.2026): sisältöalue on kyselysäiliö, joten asettelut seuraavat sisällön leveyttä eivätkä ikkunaa
+            (pienennetty sivupalkki antaa tilaa). Entinen xl ≈ @4xl ja 2xl ≈ @min-[68rem] täydellä palkilla. */}
+        <div className="page-view lg:@container" ref={pageRef}>
           {!ready ? (
             <LoadingSkeleton />
           ) : (

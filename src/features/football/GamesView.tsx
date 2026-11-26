@@ -146,7 +146,7 @@ export function GamesView({ profile, onBack }: { profile: Profile; onBack?: () =
         </div>
       </Card>
 
-      <div className="space-y-4 lg:col-span-5 xl:col-span-4">
+      <div className="space-y-4 lg:col-span-5 @4xl:col-span-4">
       <Card title="Kokonaisuus">
         <SummaryBlock s={total} name={profile.name} />
       </Card>
@@ -156,7 +156,7 @@ export function GamesView({ profile, onBack }: { profile: Profile; onBack?: () =
       {byPosition.length > 0 && <GroupCard title="Tulokset pelipaikoittain" groups={byPosition} />}
       </div>
 
-      <div className="space-y-4 lg:col-span-7 xl:col-span-8">
+      <div className="space-y-4 lg:col-span-7 @4xl:col-span-8">
       <Card title={`Pelit (${total.games})`} action={rows.length > 0 ? <Button variant="ghost" onClick={exportCsv}>Vie CSV</Button> : undefined}>
         {data && groups.length === 0 && (
           <EmptyState art="ball" title="Ei pelejä valinnoilla" compact>
@@ -205,7 +205,7 @@ export function GamesView({ profile, onBack }: { profile: Profile; onBack?: () =
         </Card>
       )}
 
-      <div className="space-y-4 xl:grid xl:grid-cols-2 xl:items-start xl:gap-4 xl:space-y-0">
+      <div className="space-y-4 @4xl:grid @4xl:grid-cols-2 @4xl:items-start @4xl:gap-4 @4xl:space-y-0">
       {byTeam.length > 1 && <GroupCard title="Oma joukkue" groups={byTeam} />}
       {byOpponent.length > 0 && <GroupCard title="Vastustajat" groups={byOpponent} />}
       {byEvent.length > 0 && <GroupCard title="Turnaukset" groups={byEvent} />}

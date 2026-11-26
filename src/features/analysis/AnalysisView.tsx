@@ -167,7 +167,7 @@ export function AnalysisView({ profile }: { profile?: Profile }) {
                 <HeatmapCard profile={profile} />
               </div>
             ) : (
-          <div key={seg[0]} className="columns-1 gap-5 lg:columns-2 lg:gap-6 2xl:columns-3">
+          <div key={seg[0]} className="columns-1 gap-5 lg:columns-2 lg:gap-6 @min-[68rem]:columns-3">
             {seg.map((id) => {
               const card =
                 id === 'goals' ? (
