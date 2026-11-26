@@ -773,7 +773,7 @@ export function WeekView({
       {profile && hasAnySessions === false && <GettingStarted onAdd={() => setQuickAdd({})} onOpenSettings={onOpenSettings} />}
       {profile && isCurrent && <InjuryNotice profile={profile} today={today} onEdit={() => setInjuryDay(today)} />}
       {profile && isCurrent && <GameDayCard profile={profile} today={today} />}
-      {profile && isCurrent && !monthMode && <LastWeekCard profile={profile} today={today} onOpenWeek={setWeekStart} />}
+      {profile && isCurrent && !monthMode && !familyWeek && <LastWeekCard profile={profile} today={today} onOpenWeek={setWeekStart} />}
 
       <div ref={weekBody} className="settle empty:hidden">
       {profile && report && !monthMode && (() => {
@@ -797,7 +797,7 @@ export function WeekView({
               return <UpcomingCard profile={profile} today={today} types={typeMap} onOpen={openPlan} teamName={teamName} />;
             case 'days':
               // Puhelimella ja tabletilla päivät ovat päivänauhassa (19.11.2026).
-              return isLg && !familyWeek ? dayList : null;
+              return isLg ? dayList : null;
             case 'recent':
               return <RecentCard profile={profile} today={today} types={typeMap} onOpen={setEditing} teamName={teamName} />;
             case 'details':
@@ -829,10 +829,11 @@ export function WeekView({
           }
           return out;
         };
+        // Koko perheen viikko (27.11.2026): vain perheen taulukko koko sivun levyisenä; valitun profiilin
+        // viikkokortit (yhteenveto, kaaviot, tunnit) näkyvät, kun Koko perheen viikko on pois päältä.
+        if (familyWeek) return dayList;
         return (
           <>
-          {/* Koko perheen viikko koko sivun levyisenä (27.11.2026): sarakkeille tilaa. */}
-          {isLg && familyWeek && <div className="mb-5">{dayList}</div>}
           <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12 lg:gap-6">
             <div className={`min-w-0 space-y-5 ${sideIds.length ? 'lg:col-span-7 @4xl:col-span-8' : 'lg:col-span-12'}`}>
               {render(mainIds, true)}

@@ -9,6 +9,13 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.108',
+    date: '27.11.2026',
+    items: [
+      'Koko perheen viikossa sivulla näkyy nyt vain perheen taulukko. Valitun profiilin viikkokortit (yhteenveto, kaaviot, liikuntatunnit ja edellinen viikko) palaavat, kun Koko perhe -valinnan ottaa pois.',
+    ],
+  },
+  {
     version: '1.1.107',
     date: '27.11.2026',
     items: [
