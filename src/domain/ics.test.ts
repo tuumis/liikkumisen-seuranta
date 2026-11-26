@@ -104,10 +104,12 @@ describe('kalenterimerkinnät kalenterissa (27.11.2026)', () => {
   });
 
   it('.ics: merkinnän nimi ja kuvaus', () => {
-    const e = ev({ key: 'f1', kind: 'note', state: 'planned', title: 'Mummolaan', family: true });
+    const e = ev({ key: 'f1', kind: 'note', state: 'planned', title: 'Mummolaan', family: true, location: 'Mummola', memo: 'Kakku mukaan' });
     expect(icsSummary(e, { results: true, prefix: () => undefined })).toBe('📅 Mummolaan');
     const ics = buildIcs([e], { calName: 'x', now: NOW, results: true });
     expect(ics).toContain('DTSTART;VALUE=DATE:20261121');
+    expect(ics).toContain('LOCATION:Mummola');
+    expect(ics).toContain('Kakku mukaan');
     expect(ics).toContain('DESCRIPTION:Muu merkintä\\nKoko perhe');
   });
 });

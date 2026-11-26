@@ -407,7 +407,7 @@ export function DayTable({
                           type="button"
                           onClick={() => onNoteOpen?.(n)}
                           className={`${chip} text-slate-500 hover:bg-[var(--surface-sunk)]`}
-                          title={`Kalenterimerkintä: ${n.title}${n.startTime ? ` ${noteTimeText(n)}` : ''}${n.profileId ? '' : ' (koko perhe)'}`}
+                          title={`Kalenterimerkintä: ${n.title}${n.startTime ? ` ${noteTimeText(n)}` : ''}${n.location ? `, ${n.location}` : ''}${n.profileId ? '' : ' (koko perhe)'}${n.memo ? `\n${n.memo}` : ''}`}
                         >
                           <IconCalendarClock size="0.9rem" />
                           <span className="truncate font-medium">{n.title}</span>

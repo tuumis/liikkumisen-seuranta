@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import type { CalendarNote, ISODate, Profile } from '../../domain/types';
-import { NOTE_TITLE_MAX, noteError } from '../../domain/calendarNotes';
+import { NOTE_MEMO_MAX, NOTE_PLACE_MAX, NOTE_TITLE_MAX, noteError } from '../../domain/calendarNotes';
 import { repo } from '../../db/repositories';
 import { Button, Field, inputClass } from '../../ui/components';
 import { ToggleChip } from '../../ui/controls';
@@ -30,13 +30,15 @@ function NoteForm({ profile, draft, onClose }: { profile: Profile; draft: NoteDr
   const [date, setDate] = useState<ISODate>(note?.date ?? draft.date!);
   const [start, setStart] = useState(note?.startTime ?? '');
   const [end, setEnd] = useState(note?.endTime ?? '');
+  const [place, setPlace] = useState(note?.location ?? '');
+  const [memo, setMemo] = useState(note?.memo ?? '');
   // Uusi merkintä valitulle profiilille; koko perheen merkintä näkyy kaikilla profiileilla.
   const [family, setFamily] = useState(note ? !note.profileId : false);
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
 
   async function save() {
-    const input = { profileId: family ? undefined : profile.id, date, title, startTime: start || undefined, endTime: start && end ? end : undefined };
+    const input = { profileId: family ? undefined : profile.id, date, title, startTime: start || undefined, endTime: end || undefined, location: place, memo };
     const err = noteError(input);
     if (err) return setError(err);
     setSaving(true);
@@ -79,19 +81,31 @@ function NoteForm({ profile, draft, onClose }: { profile: Profile; draft: NoteDr
           autoFocus={!note}
         />
       </Field>
+      <Field label="Päivä">
+        <DateInput className={inputClass} value={date} onChange={setDate} aria-label="Merkinnän päivä" />
+      </Field>
+      {/* Alku ja loppu rinnakkain (27.11.2026); molemmat valinnaisia, loppu vain alun kanssa. */}
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Päivä">
-          <DateInput className={inputClass} value={date} onChange={setDate} aria-label="Merkinnän päivä" />
-        </Field>
-        <Field label="Alkaa (valinnainen)">
+        <Field label="Alkaa">
           <TimeField label="Alkaa" value={start} onChange={setStart} />
         </Field>
-      </div>
-      {start && (
-        <Field label="Päättyy (valinnainen)">
+        <Field label="Päättyy">
           <TimeField label="Päättyy" value={end} onChange={setEnd} />
         </Field>
-      )}
+      </div>
+      <Field label="Paikka (valinnainen)">
+        <input className={inputClass} value={place} onChange={(e) => setPlace(e.target.value)} maxLength={NOTE_PLACE_MAX} placeholder="esim. Terveyskeskus" autoComplete="off" />
+      </Field>
+      <Field label="Muistiinpanot (valinnainen)">
+        <textarea
+          className={`${inputClass} min-h-16 py-2`}
+          value={memo}
+          onChange={(e) => setMemo(e.target.value)}
+          maxLength={NOTE_MEMO_MAX}
+          rows={2}
+          placeholder="esim. Kela-kortti mukaan"
+        />
+      </Field>
       <div>
         <div className="mb-1.5 text-[13px] font-semibold text-slate-700">Kenelle</div>
         <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Kenelle">

@@ -108,6 +108,8 @@ export interface CalEvent {
   profileId?: UUID;
   /** Kalenterimerkintä koko perheelle (ei profiilia, 27.11.2026). */
   family?: boolean;
+  /** Kalenterimerkinnän muistiinpanot. */
+  memo?: string;
 }
 
 export interface CalTraining {
@@ -281,6 +283,8 @@ export function monthEvents(input: MonthEventsInput): Map<ISODate, CalEvent[]> {
       title: n.title,
       ...(n.startTime ? { time: n.startTime } : {}),
       ...(dur !== undefined ? { durationMin: dur } : {}),
+      ...(n.location ? { location: n.location } : {}),
+      ...(n.memo ? { memo: n.memo } : {}),
       ...(n.profileId ? {} : { family: true }),
     });
   }

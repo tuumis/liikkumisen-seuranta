@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.90',
+    date: '27.11.2026',
+    items: [
+      'Kalenterimerkintään voi lisätä paikan ja muistiinpanot (esim. mitä pitää muistaa ottaa mukaan). Ne näkyvät päivän kortissa ja kuukausikalenterissa, ja kalenteriviennissä paikka ja muistiinpanot siirtyvät tapahtuman tietoihin.',
+      'Merkinnän alkamis- ja päättymisaika ovat lomakkeella vierekkäin.',
+    ],
+  },
+  {
     version: '1.1.89',
     date: '27.11.2026',
     items: [

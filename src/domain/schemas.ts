@@ -204,6 +204,8 @@ export const calendarNoteSchema = either(
     title: z.string().min(1).max(120),
     startTime: clock.optional(),
     endTime: clock.optional(),
+    location: z.string().max(200).optional(),
+    memo: z.string().max(2000).optional(),
     createdAt: ts,
     ...sync,
   }),

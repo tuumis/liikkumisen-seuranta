@@ -464,6 +464,10 @@ export interface CalendarNote extends SyncFields {
   startTime?: string;
   /** Päättymisaika HH:MM (valinnainen, vain alkamisajan kanssa). */
   endTime?: string;
+  /** Paikka (valinnainen, 27.11.2026). */
+  location?: string;
+  /** Muistiinpanot, esim. mitä pitää muistaa (valinnainen, 27.11.2026). */
+  memo?: string;
   createdAt: Timestamp;
 }
 

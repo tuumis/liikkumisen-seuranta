@@ -2270,12 +2270,14 @@ export function createRepositories(db: AppDB = defaultDb) {
       ...(input.profileId ? { profileId: input.profileId } : {}),
       ...(input.startTime ? { startTime: input.startTime } : {}),
       ...(input.startTime && input.endTime ? { endTime: input.endTime } : {}),
+      ...(input.location?.trim() ? { location: input.location.trim() } : {}),
+      ...(input.memo?.trim() ? { memo: input.memo.trim() } : {}),
     };
     return db.transaction('rw', db.calendarNotes, db.meta, async () => {
       if (id) {
         const current = await db.calendarNotes.get(id);
         if (!current || current.deletedAt) throw new Error('Merkintää ei löydy');
-        const { profileId: _p, startTime: _s, endTime: _e, ...rest } = current;
+        const { profileId: _p, startTime: _s, endTime: _e, location: _l, memo: _m, ...rest } = current;
         const next = await stamp({ ...rest, ...fields });
         await db.calendarNotes.put(next);
         return next;

@@ -44,9 +44,11 @@ describe('kalenterimerkinnät', () => {
     const { repo } = await device();
     const a = await repo.createProfile(child);
     const note = await repo.saveCalendarNote({ profileId: a.id, date: '2026-11-27', title: 'Hammaslääkäri', startTime: '14:30', endTime: '15:00' });
-    const next = await repo.saveCalendarNote({ date: '2026-11-28', title: 'Hammaslääkäri' }, note.id);
+    const placed = await repo.saveCalendarNote({ profileId: a.id, date: '2026-11-27', title: 'Hammaslääkäri', location: ' Terveyskeskus ', memo: ' Kela-kortti mukaan ' }, note.id);
+    expect(placed).toMatchObject({ location: 'Terveyskeskus', memo: 'Kela-kortti mukaan' });
+    const next = await repo.saveCalendarNote({ date: '2026-11-28', title: 'Hammaslääkäri', location: ' ', memo: '' }, note.id);
     expect(next).toMatchObject({ id: note.id, date: '2026-11-28', createdAt: note.createdAt });
-    expect('startTime' in next || 'endTime' in next || 'profileId' in next).toBe(false);
+    expect('startTime' in next || 'endTime' in next || 'profileId' in next || 'location' in next || 'memo' in next).toBe(false);
 
     await repo.deleteCalendarNote(note.id);
     expect(await repo.listCalendarNotes(a.id, '2026-11-23', '2026-11-29')).toEqual([]);
@@ -60,6 +62,7 @@ describe('kalenterimerkinnät', () => {
     expect(noteError({ date: '2026-11-27', title: 'x', endTime: '10:00' })).toBe('Anna myös alkamisaika');
     expect(noteError({ date: '2026-11-27', title: 'x', startTime: '10:00', endTime: '09:00' })).toBe('Päättymisajan pitää olla alkamisajan jälkeen');
     expect(noteError({ date: '2026-11-27', title: 'x', startTime: '25:00' })).toBe('Tarkista alkamisaika');
+    expect(noteError({ date: '2026-11-27', title: 'x', memo: 'a'.repeat(501) })).toMatch(/^Muistiinpanot ovat liian pitkät/);
     await expect(repo.saveCalendarNote({ date: '27.11.2026', title: 'x' })).rejects.toThrow('Tarkista päivä');
     expect(noteTimeText({ startTime: '14:30', endTime: '15:00' })).toBe('klo 14.30–15.00');
     expect(noteTimeText({})).toBe('');

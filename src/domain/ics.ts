@@ -97,7 +97,7 @@ export function icsSummary(e: CalEvent, opts: Pick<IcsOptions, 'prefix' | 'resul
 /** Kuvaus: aikataulu, sarja ja taso, otteluohjelma, tulos, puuttuvat tiedot ja linkki. */
 export function icsDescription(e: CalEvent, opts: Pick<IcsOptions, 'results'>): string {
   const lines: string[] = [];
-  if (e.kind === 'note') return [KIND_LABEL.note, e.family && 'Koko perhe'].filter(Boolean).join('\n');
+  if (e.kind === 'note') return [KIND_LABEL.note, e.family && 'Koko perhe', e.memo].filter(Boolean).join('\n');
   if (e.kind !== 'training') lines.push(KIND_LABEL[e.kind]);
   if (e.arrival && e.state !== 'played') lines.push(`Paikalla klo ${clockText(e.arrival)}`);
   if (e.time && e.kind !== 'training') lines.push(`${e.kind === 'tournament' ? 'Ensimmäinen peli' : 'Alkaa'} klo ${clockText(e.time)}`);

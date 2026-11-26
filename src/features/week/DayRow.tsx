@@ -380,7 +380,8 @@ export function DayRow({
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium text-slate-700">{n.title}</span>
-                  <span className="block truncate text-xs text-slate-500">{[noteTimeText(n), n.profileId ? undefined : 'Koko perhe'].filter(Boolean).join(' · ') || 'Muu merkintä'}</span>
+                  <span className="block truncate text-xs text-slate-500">{[noteTimeText(n), n.location, n.profileId ? undefined : 'Koko perhe'].filter(Boolean).join(' · ') || 'Muu merkintä'}</span>
+                  {n.memo && <span className="block truncate text-xs italic text-slate-500">{n.memo}</span>}
                 </span>
               </button>
             </li>

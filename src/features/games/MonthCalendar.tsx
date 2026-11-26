@@ -51,7 +51,7 @@ function chipText(e: CalEvent): string {
 function detailLine(e: CalEvent, team?: string): string {
   if (e.kind === 'note') {
     const end = e.time && e.durationMin !== undefined ? endClock(e.time, e.durationMin) : undefined;
-    return [KIND_LABEL.note, noteTimeText({ startTime: e.time, endTime: end }), e.family && 'Koko perhe'].filter(Boolean).join(' · ');
+    return [KIND_LABEL.note, noteTimeText({ startTime: e.time, endTime: end }), e.location, e.family && 'Koko perhe'].filter(Boolean).join(' · ');
   }
   const parts: (string | undefined | false)[] = [
     e.kind !== 'training' && KIND_LABEL[e.kind],
@@ -310,6 +310,7 @@ export function MonthCalendar({
                         )}
                       </span>
                       <span className="block text-xs text-slate-600">{detailLine(e, trainingTeam(e))}</span>
+                      {e.memo && <span className="block text-xs italic text-slate-500">{e.memo}</span>}
                       {e.games && e.kind === 'tournament' && (
                         <span className="mt-0.5 block text-xs text-slate-500">
                           {e.games.map((g, i) => [hhmm(g.time), g.opponent ? teamNameFor(g.opponent, 'compact') : 'vastustaja ?', g.result].filter(Boolean).join(' ') + (i < e.games!.length - 1 ? ' · ' : ''))}

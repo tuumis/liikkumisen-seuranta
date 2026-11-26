@@ -94,7 +94,7 @@ export async function seedDemo(repo: Repo, today: ISODate): Promise<DemoIds> {
   const eino = await repo.createProfile({ name: DEMO_NAMES.early, kind: 'child', birthYear: year - 5, birthMonth: 2, color: '#ea580c', trackingStart: start, football: true, heroThemeDark: DEFAULT_HERO_DARK });
   await repo.setTypeHidden(eino.id, t('floorball'), true);
   // Kalenterimerkinnät (27.11.2026): arjen muut menot tällä ja ensi viikolla, yksi koko perheelle.
-  await repo.saveCalendarNote({ profileId: aino.id, date: wd(0, 3), title: 'Hammaslääkäri', startTime: '14:30', endTime: '15:15' });
+  await repo.saveCalendarNote({ profileId: aino.id, date: wd(0, 3), title: 'Hammaslääkäri', startTime: '14:30', endTime: '15:15', location: 'Terveyskeskus', memo: 'Kela-kortti mukaan' });
   await repo.saveCalendarNote({ date: wd(0, 6), title: 'Mummolaan kylään', startTime: '12:00' });
   await repo.saveCalendarNote({ profileId: eino.id, date: wd(0, 2), title: 'Neuvola', startTime: '09:30' });
   await repo.saveCalendarNote({ profileId: aino.id, date: wd(1, 4), title: 'Kuvaus koululla' });
