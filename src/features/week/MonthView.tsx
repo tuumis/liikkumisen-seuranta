@@ -6,7 +6,8 @@ import { useEffect, useMemo, useRef, useState, type ReactNode, type TouchEvent }
 import { useLiveQuery } from 'dexie-react-hooks';
 import { addDays, maxDate } from '../../domain/dates';
 import { addMonths, gridRange, monthGrid, monthKeyOf, type MonthKey } from '../../domain/monthCalendar';
-import { mergeMonthItems, monthItems, type MonthItem } from '../../domain/monthView';
+import { mergeMonthItems, monthItemDetail, monthItems, type MonthItem } from '../../domain/monthView';
+import { teamNameResolver } from '../../domain/teamName';
 import { farWeekPlanning, planningThroughForWeek } from '../../domain/planning';
 import type { ActivityType, CalendarNote, DayFlag, Fixture, FootballDetails, ISODate, PlannedSession, Profile, Session, UUID } from '../../domain/types';
 import { repo } from '../../db/repositories';
@@ -20,7 +21,13 @@ import { monthTitle } from '../games/MonthCalendar';
 import { DayRow } from './DayRow';
 
 const WEEKDAYS = ['Ma', 'Ti', 'Ke', 'To', 'Pe', 'La', 'Su'];
-const KIND_TEXT: Record<MonthItem['kind'], string> = { done: 'kirjattu', open: 'suunniteltu', skipped: 'ei tehty', note: 'merkintä' };
+/** Muiden profiilien rivin tila: kirjattu, ei tehty tai kuittaamatta (mennyt suunnitelma). */
+function stateBadge(i: MonthItem, date: ISODate, today: ISODate): { text: string; cls: string } | undefined {
+  if (i.kind === 'done') return { text: 'Kirjattu', cls: 'bg-green-50 text-green-900 ring-green-200' };
+  if (i.kind === 'skipped') return { text: 'Ei tehty', cls: 'text-slate-500 ring-slate-200' };
+  if (i.kind === 'open' && date < today) return { text: 'Kuittaamatta', cls: 'bg-amber-50 text-amber-900 ring-amber-200' };
+  return undefined;
+}
 const hhmm = (t?: string) => t?.replace(/^0(\d)/, '$1').replace(':', '.');
 
 /** Rivin tyyli: kirjattu (vihreä pinta), suunniteltu (katkoviiva), ei tehty (yliviivattu), merkintä (himmeä). */
@@ -98,13 +105,15 @@ export function MonthView({
           .split(',')
           .filter(Boolean)
           .map(async (id) => {
-            const [sessions, plans, notes, fixtures] = await Promise.all([
+            const [sessions, plans, notes, fixtures, teams, templateItems] = await Promise.all([
               repo.sessionsInRange(id, range.from, range.to),
               repo.plansInRange(id, range.from, range.to),
               repo.listCalendarNotes(id, range.from, range.to),
               repo.listFixtures(id, range.from, range.to),
+              repo.listTeams(id, { includeArchived: true, groups: true }),
+              repo.listTemplateItems(id),
             ]);
-            return { profileId: id, sessions, plans, notes, fixtures };
+            return { profileId: id, sessions, plans, notes, fixtures, team: teamNameResolver(teams, templateItems) };
           }),
       ),
     [otherIds, range.from, range.to],
@@ -147,6 +156,7 @@ export function MonthView({
     );
     return mergeMonthItems([own, ...rest]);
   }, [shownData, fixtureByPlan, types, family, otherData, profile.id]);
+  const otherTeam = new Map((otherData ?? []).map((o) => [o.profileId, o.team]));
   const colorOf = (i: MonthItem) => (family && i.profileId ? memberById.get(i.profileId)?.color : undefined);
   const nameOf = (i: MonthItem) => (family && i.profileId ? memberById.get(i.profileId)?.name : undefined);
   const flagByDate = useMemo(() => new Map((shownData?.flags ?? []).map((f) => [f.date, f] as [ISODate, DayFlag])), [shownData]);
@@ -305,21 +315,33 @@ export function MonthView({
             others.map((p) => {
               const list = (items.get(sel) ?? []).filter((i) => i.profileId === p.id);
               if (!list.length) return null;
+              const team = otherTeam.get(p.id);
               return (
-                <section key={p.id} className="rounded-[1.25rem] bg-[var(--surface)] px-3 py-2.5 shadow-xs ring-1 ring-[var(--line)]" aria-label={`${p.name}: ${dayLabel(sel)}`}>
-                  <h3 className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-600">
-                    <span className="size-2.5 rounded-full" style={{ background: p.color }} aria-hidden />
-                    {p.name}
-                    <span className="font-medium normal-case tracking-normal text-slate-500">· muokkaus hänen profiilissaan</span>
-                  </h3>
-                  <ul className="mt-1.5 space-y-1">
-                    {list.map((i) => (
-                      <li key={i.key} className={`flex items-center gap-2 rounded-lg px-2 py-1 text-sm ${itemClass(i)}`}>
-                        <span aria-hidden>{i.kind === 'note' ? '📅' : <TypeGlyph t={i.typeId ? types.get(i.typeId) : undefined} />}</span>
-                        <span className="min-w-0 flex-1 truncate font-medium">{i.title}</span>
-                        <span className="shrink-0 text-xs text-slate-500">{[hhmm(i.time), KIND_TEXT[i.kind]].filter(Boolean).join(' · ')}</span>
-                      </li>
-                    ))}
+                <section key={p.id} className="rounded-[1.25rem] bg-[var(--surface)] px-2 py-1.5 shadow-xs ring-1 ring-[var(--line)]" aria-label={`${p.name}: ${dayLabel(sel)}`}>
+                  <ul className="space-y-0.5">
+                    {list.map((i) => {
+                      const badge = stateBadge(i, sel, today);
+                      return (
+                        <li key={i.key} className="flex items-start gap-2.5 p-2">
+                          <span className="text-lg leading-none" aria-hidden>
+                            {i.kind === 'note' ? '📅' : <TypeGlyph t={i.typeId ? types.get(i.typeId) : undefined} />}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="mb-0.5 inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-slate-600">
+                              <span className="size-2.5 rounded-full" style={{ background: p.color }} aria-hidden />
+                              {p.name}
+                              <span className="font-medium normal-case tracking-normal text-slate-500">· muokkaus hänen profiilissaan</span>
+                            </span>
+                            <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                              <span className={`truncate font-medium ${i.kind === 'skipped' ? 'text-slate-500 line-through' : i.kind === 'note' ? 'text-slate-600' : 'text-slate-900'}`}>{i.title}</span>
+                              {badge && <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${badge.cls}`}>{badge.text}</span>}
+                            </span>
+                            <span className="block text-xs text-slate-600">{monthItemDetail(i, team?.(i, i.kind === 'open'))}</span>
+                            {i.memo && <span className="block text-xs italic text-slate-500">{i.memo}</span>}
+                          </span>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </section>
               );

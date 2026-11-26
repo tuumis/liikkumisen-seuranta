@@ -2,6 +2,7 @@
 // kerroista, avoimista ja väliin jääneistä suunnitelmista (viikkorytmi, yksittäiset, pelit) ja kalenterimerkinnöistä.
 // Puhdas laskenta; näkymä (features/week/MonthView) piirtää ruudut ja valitun päivän kortin.
 
+import { noteTimeText } from './calendarNotes';
 import { foldTrainingSelves } from './football';
 import { isEstimateConfirmation } from './hours';
 import { teamNameFor } from './monthCalendar';
@@ -22,6 +23,13 @@ export interface MonthItem {
   family?: boolean;
   /** Perhenäkymässä: kenen rivi (puuttuu koko perheen merkinnältä). */
   profileId?: UUID;
+  /** Valitun päivän lisätiedot (27.11.2026): kesto, joukkue, paikka; merkinnän päättyminen ja muistiinpanot. */
+  durationMin?: number;
+  teamId?: UUID;
+  templateItemId?: UUID;
+  location?: string;
+  endTime?: string;
+  memo?: string;
 }
 
 export interface MonthItemsInput {
@@ -53,7 +61,15 @@ export function monthItems(input: MonthItemsInput): Map<ISODate, MonthItem[]> {
   // Arkiliikunnan vahvistukset eivät ole kertoja; treenin verryttely näkyy treenin yhteydessä.
   const { rows } = foldTrainingSelves(input.sessions.filter((s) => !isEstimateConfirmation(s)));
   for (const s of rows) {
-    add(s.date, { key: s.id, kind: 'done', title: shortName(s, input.types.get(s.activityTypeId)), typeId: s.activityTypeId, ...(s.startTime ? { time: s.startTime } : {}) });
+    add(s.date, {
+      key: s.id,
+      kind: 'done',
+      title: shortName(s, input.types.get(s.activityTypeId)),
+      typeId: s.activityTypeId,
+      durationMin: s.durationMin,
+      ...(s.startTime ? { time: s.startTime } : {}),
+      ...(s.teamId ? { teamId: s.teamId } : {}),
+    });
   }
   for (const p of input.plans) {
     if (p.status === 'done') continue; // kuitattu näkyy kertana
@@ -62,11 +78,24 @@ export function monthItems(input: MonthItemsInput): Map<ISODate, MonthItem[]> {
       kind: p.status === 'skipped' ? 'skipped' : 'open',
       title: planTitle(p, input.types.get(p.activityTypeId), input.fixtures?.get(p.id)),
       typeId: p.activityTypeId,
+      durationMin: p.durationMin,
       ...(p.startTime ? { time: p.startTime } : {}),
+      ...(p.teamId ? { teamId: p.teamId } : {}),
+      ...(p.templateItemId ? { templateItemId: p.templateItemId } : {}),
+      ...(input.fixtures?.get(p.id)?.location ? { location: input.fixtures.get(p.id)!.location } : {}),
     });
   }
   for (const n of input.notes ?? []) {
-    add(n.date, { key: n.id, kind: 'note', title: n.title, ...(n.startTime ? { time: n.startTime } : {}), ...(n.profileId ? {} : { family: true }) });
+    add(n.date, {
+      key: n.id,
+      kind: 'note',
+      title: n.title,
+      ...(n.startTime ? { time: n.startTime } : {}),
+      ...(n.endTime ? { endTime: n.endTime } : {}),
+      ...(n.location ? { location: n.location } : {}),
+      ...(n.memo ? { memo: n.memo } : {}),
+      ...(n.profileId ? {} : { family: true }),
+    });
   }
   for (const list of out.values()) list.sort(order);
   return out;
@@ -88,4 +117,18 @@ export function mergeMonthItems(maps: ReadonlyMap<ISODate, MonthItem[]>[]): Map<
   }
   for (const list of out.values()) list.sort(order);
   return out;
+}
+
+const GAME_LABEL: Record<string, string> = { 't:football_game': 'Ottelu', 't:football_tournament': 'Turnaus', 't:football_friendly': 'Harjoituspeli' };
+const clock = (t: string) => t.replace(/^0(\d)/, '$1').replace(':', '.');
+
+/**
+ * Valitun päivän rivin lisätiedot (27.11.2026) kuten Jalkapallo-välilehden kalenterissa:
+ * "Ottelu · klo 10.00 · Kisapuisto", "FC 2018 · klo 17.30 · 60 min", "Muu merkintä · klo 13.00–14.00 · Terveyskeskus".
+ */
+export function monthItemDetail(i: MonthItem, team?: string): string {
+  if (i.kind === 'note') return ['Muu merkintä', noteTimeText({ startTime: i.time, endTime: i.endTime }), i.location, i.family && 'Koko perhe'].filter(Boolean).join(' · ');
+  const game = i.typeId ? GAME_LABEL[i.typeId] : undefined;
+  const parts: (string | undefined | false)[] = [game, team, i.time && `klo ${clock(i.time)}`, !game && i.durationMin !== undefined && `${i.durationMin} min`, i.location];
+  return parts.filter(Boolean).join(' · ');
 }

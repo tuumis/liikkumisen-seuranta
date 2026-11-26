@@ -9,6 +9,13 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.93',
+    date: '27.11.2026',
+    items: [
+      'Kuukausikalenterin Koko perhe -tilassa muiden profiilien rivit näyttävät nyt samat tiedot kuin Jalkapallo-välilehden kalenterissa: kellonaika, kesto, joukkue, paikka, muistiinpanot sekä tila (kirjattu, ei tehty, kuittaamatta).',
+    ],
+  },
+  {
     version: '1.1.92',
     date: '27.11.2026',
     items: [
