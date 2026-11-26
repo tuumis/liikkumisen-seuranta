@@ -10,7 +10,7 @@ const fx = (f: Partial<Fixture>): Fixture => ({ plannedSessionId: 'p', updatedAt
 const e = (p: Partial<PlannedSession>, f?: Partial<Fixture>): UpcomingEntry => ({ plan: plan(p), ...(f ? { fixture: fx(f) } : {}) });
 
 describe('kausikortin seuraavat pelit', () => {
-  it('avoimet tulevat aikajärjestyksessä, enintään kolme', () => {
+  it('avoimet tulevat aikajärjestyksessä, enintään neljä', () => {
     const list = [
       e({ id: '1', date: '2026-12-05', startTime: '10:30' }),
       e({ id: '2', date: '2026-11-28' }),
@@ -19,7 +19,7 @@ describe('kausikortin seuraavat pelit', () => {
       e({ id: '5', date: '2026-12-01', status: 'done' }),
       e({ id: '6', date: '2026-12-13' }),
     ];
-    expect(nextFixtures(list, '2026-11-27').map((x) => x.plan.id)).toEqual(['3', '2', '1']);
+    expect(nextFixtures(list, '2026-11-27').map((x) => x.plan.id)).toEqual(['3', '2', '1', '6']);
   });
   it('alku: ottelu kellonajasta, turnaus ensimmäisestä pelistä, muuten paikallaoloajasta', () => {
     expect(kickoffMin(e({ startTime: '14:00' }))).toBe(14 * 60);

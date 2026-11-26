@@ -97,13 +97,13 @@ function Countdown({ e, onRecord }: { e: FixtureEntry; onRecord: () => void }) {
     [p.seconds, 's', 'hidden @min-[40rem]/fh:block'],
   ];
   return (
-    <span role="timer" aria-label={`Alkuun ${p.days} päivää ${p.hours} tuntia ${p.minutes} minuuttia`} className="flex items-start gap-1 @min-[40rem]/fh:gap-1.5">
+    <span role="timer" aria-label={`Alkuun ${p.days} päivää ${p.hours} tuntia ${p.minutes} minuuttia`} className="flex items-start gap-1 @min-[40rem]/fh:gap-1.5 @min-[41rem]/nx:gap-2">
       {parts.map(([v, unit, cls]) => (
         <span key={unit} className={`text-center ${cls}`} aria-hidden>
-          <span className="hero-glass stat block min-w-[2.25rem] rounded-xl px-1.5 py-1 text-[20px] font-semibold leading-none tabular-nums @min-[40rem]/fh:min-w-[2.6rem] @min-[40rem]/fh:text-[24px] @min-[80rem]/fh:text-[28px]">
+          <span className="hero-glass stat block min-w-[2.25rem] rounded-xl px-1.5 py-1 text-[20px] font-semibold leading-none tabular-nums @min-[40rem]/fh:min-w-[2.6rem] @min-[40rem]/fh:text-[24px] @min-[41rem]/nx:min-w-[3.6rem] @min-[41rem]/nx:rounded-2xl @min-[41rem]/nx:px-2 @min-[41rem]/nx:py-2 @min-[41rem]/nx:text-[40px] @min-[44rem]/nx:min-w-[4.2rem] @min-[44rem]/nx:text-[48px]">
             {unit === 'pv' ? v : String(v).padStart(2, '0')}
           </span>
-          <span className="mt-0.5 block text-[10px] font-bold uppercase tracking-wide text-[var(--hero-ink-soft)]">{unit}</span>
+          <span className="mt-0.5 block text-[10px] font-bold uppercase tracking-wide text-[var(--hero-ink-soft)] @min-[41rem]/nx:mt-1 @min-[41rem]/nx:text-[11px]">{unit}</span>
         </span>
       ))}
     </span>
@@ -203,7 +203,7 @@ export function FootballHero({ profile, onOpen, onAdd }: { profile: Profile; onO
         </div>
 
         {/* Seuraava peli ja laskuri */}
-        <div className="hero-glass-strong flex min-w-0 flex-col justify-between gap-2 rounded-2xl p-2.5 @min-[40rem]/fh:p-3">
+        <div className="hero-glass-strong @container/nx flex min-w-0 flex-col justify-between gap-2 rounded-2xl p-2.5 @min-[40rem]/fh:p-3">
           {!fixtures ? (
             <div className="h-16" aria-busy="true" aria-label="Ladataan" />
           ) : next && nextCard ? (
@@ -229,8 +229,8 @@ export function FootballHero({ profile, onOpen, onAdd }: { profile: Profile; onO
                   </button>
                 )}
               </div>
-              <div className="flex items-end justify-between gap-3 @min-[40rem]/fh:flex-col @min-[40rem]/fh:items-stretch @min-[40rem]/fh:gap-2.5">
-                <button type="button" onClick={() => onOpen?.(next)} className="press min-w-0 flex-1 text-left hover:opacity-90" aria-label={`${fixtureTitle(nextCard)}, avaa tiedot`}>
+              <div className="flex items-end justify-between gap-x-3 @min-[40rem]/fh:flex-wrap @min-[40rem]/fh:items-center @min-[40rem]/fh:gap-y-2.5">
+                <button type="button" onClick={() => onOpen?.(next)} className="press min-w-0 flex-1 text-left hover:opacity-90 @min-[40rem]/fh:min-w-[13rem]" aria-label={`${fixtureTitle(nextCard)}, avaa tiedot`}>
                   <span className="block truncate font-display text-base font-semibold leading-tight @min-[40rem]/fh:text-lg">{fixtureTitle(nextCard)}</span>
                   {/* Aika selvästi (myös puhelimella): päivä ja kellonaika vahvemmalla tekstillä. */}
                   <span className="mt-0.5 block truncate text-[13px] font-semibold">

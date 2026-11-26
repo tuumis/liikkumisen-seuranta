@@ -9,6 +9,13 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.110',
+    date: '27.11.2026',
+    items: [
+      'Kausikortin laskuri on leveällä näytöllä isompi ja pelin tietojen vieressä, joten tyhjä tila täyttyy. Tulevat-sarakkeessa näkyy nyt kolme peliä (puhelimella "+ 3 tulevaa").',
+    ],
+  },
+  {
     version: '1.1.109',
     date: '27.11.2026',
     items: [

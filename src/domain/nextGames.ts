@@ -13,8 +13,8 @@ export interface UpcomingEntry {
   fixture?: Fixture;
 }
 
-/** Montako tulevaa peliä kausikortissa näytetään. */
-export const NEXT_GAMES_COUNT = 3;
+/** Montako tulevaa peliä kausikortissa näytetään: seuraava + kolme tulevaa (27.11.2026). */
+export const NEXT_GAMES_COUNT = 4;
 /** Montako viimeisintä tulosta näytetään. */
 export const RECENT_FORM_COUNT = 5;
 
