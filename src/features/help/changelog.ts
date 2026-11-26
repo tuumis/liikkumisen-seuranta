@@ -9,6 +9,13 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.92',
+    date: '27.11.2026',
+    items: [
+      'Kuukausikalenterissa on valinta Koko perhe, kun profiileja on useampi. Silloin kaikkien rivit näkyvät samassa kalenterissa profiilin värillä, ja valitun päivän alla näkyvät muiden profiilien kerrat ja merkinnät. Niitä muokataan omassa profiilissaan.',
+    ],
+  },
+  {
     version: '1.1.91',
     date: '27.11.2026',
     items: [

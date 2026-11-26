@@ -20,6 +20,8 @@ export interface MonthItem {
   typeId?: UUID;
   /** Koko perheen merkintä. */
   family?: boolean;
+  /** Perhenäkymässä: kenen rivi (puuttuu koko perheen merkinnältä). */
+  profileId?: UUID;
 }
 
 export interface MonthItemsInput {
@@ -29,6 +31,8 @@ export interface MonthItemsInput {
   /** Pelien ja turnausten tiedot suunnitelmille (vastustaja, tapahtuman nimi). */
   fixtures?: ReadonlyMap<UUID, Fixture>;
   types: ReadonlyMap<UUID, ActivityType>;
+  /** Perhenäkymä (27.11.2026): rivit merkitään profiilille (ei koko perheen merkintöjä). */
+  profileId?: UUID;
 }
 
 /** Tulevan pelin nimi: vastustaja ("vs HJK Musta") tai tapahtuman nimi; muuten lajin nimi. */
@@ -44,7 +48,8 @@ const order = (a: MonthItem, b: MonthItem) => (a.time ?? '').localeCompare(b.tim
 /** Päivittäiset rivit aikajärjestyksessä (ilman kellonaikaa ensin). */
 export function monthItems(input: MonthItemsInput): Map<ISODate, MonthItem[]> {
   const out = new Map<ISODate, MonthItem[]>();
-  const add = (date: ISODate, item: MonthItem) => out.set(date, [...(out.get(date) ?? []), item]);
+  const who = input.profileId ? { profileId: input.profileId } : {};
+  const add = (date: ISODate, item: MonthItem) => out.set(date, [...(out.get(date) ?? []), item.family ? item : { ...item, ...who }]);
   // Arkiliikunnan vahvistukset eivät ole kertoja; treenin verryttely näkyy treenin yhteydessä.
   const { rows } = foldTrainingSelves(input.sessions.filter((s) => !isEstimateConfirmation(s)));
   for (const s of rows) {
@@ -62,6 +67,24 @@ export function monthItems(input: MonthItemsInput): Map<ISODate, MonthItem[]> {
   }
   for (const n of input.notes ?? []) {
     add(n.date, { key: n.id, kind: 'note', title: n.title, ...(n.startTime ? { time: n.startTime } : {}), ...(n.profileId ? {} : { family: true }) });
+  }
+  for (const list of out.values()) list.sort(order);
+  return out;
+}
+
+/**
+ * Perhenäkymä (27.11.2026): profiilien rivit samaan kalenteriin. Koko perheen merkintä on jokaisen profiilin
+ * listalla, joten se näytetään kerran. Päivän sisällä aikajärjestys.
+ */
+export function mergeMonthItems(maps: ReadonlyMap<ISODate, MonthItem[]>[]): Map<ISODate, MonthItem[]> {
+  const out = new Map<ISODate, MonthItem[]>();
+  const seen = new Set<string>();
+  for (const m of maps) {
+    for (const [d, list] of m) {
+      const add = list.filter((i) => !seen.has(i.key));
+      for (const i of add) seen.add(i.key);
+      if (add.length) out.set(d, [...(out.get(d) ?? []), ...add]);
+    }
   }
   for (const list of out.values()) list.sort(order);
   return out;

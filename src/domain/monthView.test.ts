@@ -1,6 +1,6 @@
 // Viikko-näkymän kuukausikalenteri (27.11.2026): päivän rivit kerroista, suunnitelmista ja merkinnöistä.
 import { describe, expect, it } from 'vitest';
-import { monthItems } from './monthView';
+import { mergeMonthItems, monthItems } from './monthView';
 import type { ActivityType, CalendarNote, Fixture, PlannedSession, Session } from './types';
 
 const sync = { updatedAt: 't', updatedBy: 'd' };
@@ -28,5 +28,15 @@ describe('kuukauden rivit', () => {
     }).get('2026-11-21')!;
     expect(items.map((i) => `${i.kind}:${i.title}`)).toEqual(['note:Mummolaan', 'open:vs HJK Musta', 'done:Uintikoulu', 'skipped:Uinti']);
     expect(items[0].family).toBe(true);
+  });
+});
+
+describe('perhenäkymä', () => {
+  it('rivit profiileittain, koko perheen merkintä kerran', () => {
+    const fam: CalendarNote = { id: 'f', date: '2026-11-21', title: 'Mummolaan', startTime: '12:00', createdAt: 't', ...sync };
+    const a = monthItems({ sessions: [session({ id: 'a1', startTime: '09:00' })], plans: [], notes: [fam], types, profileId: 'A' });
+    const b = monthItems({ sessions: [], plans: [plan({ id: 'b1', profileId: 'B', startTime: '10:00' })], notes: [fam], types, profileId: 'B' });
+    const day = mergeMonthItems([a, b]).get('2026-11-21')!;
+    expect(day.map((i) => `${i.profileId ?? '-'}:${i.key}`)).toEqual(['A:a1', 'B:b1', '-:f']);
   });
 });
