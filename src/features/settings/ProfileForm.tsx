@@ -84,6 +84,29 @@ export function ProfileForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const set = (k: keyof typeof raw) => (e: { target: { value: string } }) => { const val = e.target.value; setRaw((c) => ({ ...c, [k]: val })); };
+  // Aloitus PC:llä (27.11.2026): mahtuu yhteen näkymään. Suositusryhmä ja seurannan alku piilossa (oletukset, Asetuksissa),
+  // lyhyemmät ohjetekstit ja tiiviimmät välit. Vain leveällä näytöllä; puhelimen aloitus ja Asetukset ennallaan.
+  const onlyNarrow = wide ? 'lg:hidden' : '';
+  const onlyWide = wide ? 'hidden lg:block' : 'hidden';
+  const gap = wide ? 'space-y-4 lg:space-y-3' : 'space-y-4';
+  const colorPicker = (
+  <fieldset>
+    <legend className="mb-1 text-sm font-medium text-slate-700">Väri</legend>
+    <div className="flex flex-wrap gap-2">
+      {PROFILE_COLORS.map((c) => (
+        <button
+          key={c}
+          type="button"
+          onClick={() => setRaw((cur) => ({ ...cur, color: c }))}
+          className={`${wide ? 'size-10 lg:size-8' : 'size-10'} rounded-full ring-offset-2 ${raw.color === c ? 'ring-2 ring-slate-900' : ''}`}
+          style={{ backgroundColor: c }}
+          aria-label={`Väri ${c}`}
+          aria-pressed={raw.color === c}
+        />
+      ))}
+    </div>
+  </fieldset>
+  );
 
   const parsed = schema.safeParse(raw);
   const preview: RecommendationGroup | undefined = parsed.success
@@ -139,9 +162,10 @@ export function ProfileForm({
   return (
     <form onSubmit={submit} className="space-y-4" noValidate>
       <div className={wide ? 'space-y-4 lg:grid lg:grid-cols-2 lg:gap-x-8 lg:space-y-0' : 'space-y-4'}>
-      <div className="space-y-4">
-      <Field label="Nimi" hint="Lempinimi riittää.">
-        <input className={inputClass} value={raw.name} onChange={set('name')} autoComplete="off" maxLength={40} />
+      <div className={gap}>
+      <div className={wide ? 'space-y-4 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0' : 'space-y-4'}>
+      <Field label="Nimi" hint={wide ? undefined : 'Lempinimi riittää.'}>
+        <input className={inputClass} value={raw.name} onChange={set('name')} autoComplete="off" maxLength={40} placeholder={wide ? 'Lempinimi riittää' : undefined} />
         {errors.name && <span className="mt-1 block text-sm text-red-700">{errors.name}</span>}
       </Field>
 
@@ -161,6 +185,7 @@ export function ProfileForm({
           ))}
         </div>
       </fieldset>
+      </div>
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Syntymävuosi">
@@ -200,12 +225,19 @@ export function ProfileForm({
             </select>
           </div>
           {errors.schoolStartYear && <span className="mt-1 block text-sm text-red-700">{errors.schoolStartYear}</span>}
-          <span className="mt-1 block text-xs text-slate-500">
+          <span className={`mt-1 block text-xs text-slate-500 ${onlyNarrow}`}>
             Ratkaisee, milloin alle kouluikäisten suositus vaihtuu kouluikäisten suositukseen. Jos tyhjä, vaihto tehdään 7 vuoden iässä.
           </span>
+          <span className={`mt-1 text-xs text-slate-500 ${onlyWide}`}>Kouluikäisten suositus alkaa tästä; jos tyhjä, 7-vuotiaana.</span>
         </div>
       )}
 
+      {wide && preview && (
+        <p className={`text-sm text-slate-600 ${onlyWide}`}>
+          Suositus tänään: <strong>{GROUP_LABEL[preview]}</strong>
+        </p>
+      )}
+      <div className={onlyNarrow}>
       <Field label="Suositusryhmä">
         <select className={inputClass} value={raw.groupOverride} onChange={set('groupOverride')}>
           <option value="">Automaattinen</option>
@@ -221,9 +253,11 @@ export function ProfileForm({
           </span>
         )}
       </Field>
+      </div>
+      {wide && <div className="hidden lg:block">{colorPicker}</div>}
 
       </div>
-      <div className="space-y-4">
+      <div className={gap}>
       <fieldset>
         <legend className="mb-1 text-sm font-medium text-slate-700">Pelaako {raw.name.trim() || 'hän'} jalkapalloa?</legend>
         <div className="grid grid-cols-2 gap-2">
@@ -249,38 +283,45 @@ export function ProfileForm({
 
       <fieldset>
         <legend className="text-sm font-medium text-slate-700">Viikon huomiot</legend>
-        <span className="block text-xs leading-relaxed text-slate-500">Päättyneen viikon lyhyet havainnot lähteineen Viikko-näkymän koosteessa ja Analyysissa.</span>
+        <span className={`block text-xs leading-relaxed text-slate-500 ${onlyNarrow}`}>Päättyneen viikon lyhyet havainnot lähteineen Viikko-näkymän koosteessa ja Analyysissa.</span>
         <div className="divide-y divide-slate-100">
-          <Switch on={insightsRec} onChange={setInsightsRec} label="Liikkumissuositus" text="Mitä suosituksesta jäi vajaaksi, esim. rasittavat päivät tai päivittäinen tunti." />
+          <Switch
+            on={insightsRec}
+            onChange={setInsightsRec}
+            label="Liikkumissuositus"
+            text={wide ? <>Mitä suosituksesta jäi vajaaksi<span className="lg:hidden">, esim. rasittavat päivät tai päivittäinen tunti</span>.</> : 'Mitä suosituksesta jäi vajaaksi, esim. rasittavat päivät tai päivittäinen tunti.'}
+          />
           {raw.kind === 'child' && (
-            <Switch on={insightsLoad} onChange={setInsightsLoad} label="Urheilun kuormitus" text="Ohjatun urheilun vapaapäivät, tunnit suhteessa ikään ja nopea kasvu (tutkimustieto). Myös Kauden koosteen Tauot ja vaihtelu -kortti." />
+            <Switch
+              on={insightsLoad}
+              onChange={setInsightsLoad}
+              label="Urheilun kuormitus"
+              text={
+                wide ? (
+                  <>
+                    <span className="lg:hidden">Ohjatun urheilun vapaapäivät</span>
+                    <span className="hidden lg:inline">Vapaapäivät</span>, tunnit suhteessa ikään ja nopea kasvu
+                    <span className="lg:hidden"> (tutkimustieto). Myös Kauden koosteen Tauot ja vaihtelu -kortti</span>.
+                  </>
+                ) : (
+                  'Ohjatun urheilun vapaapäivät, tunnit suhteessa ikään ja nopea kasvu (tutkimustieto). Myös Kauden koosteen Tauot ja vaihtelu -kortti.'
+                )
+              }
+            />
           )}
         </div>
       </fieldset>
 
+      <div className={onlyNarrow}>
       <Field label="Seuranta alkoi" hint="Analyysi laskee päivät tästä alkaen. Voit siirtää alkua aiemmaksi, jos kirjaat vanhoja kertoja.">
         <DateInput className={inputClass} value={raw.trackingStart} max={today()} onChange={(v) => set('trackingStart')({ target: { value: v } })} aria-label="Seurannan alku" />
         {errors.trackingStart && <span className="mt-1 block text-sm text-red-700">{errors.trackingStart}</span>}
       </Field>
+      </div>
 
       <PhotoPicker label="Profiilikuva" name={raw.name} value={photo} color={raw.color} onChange={setPhoto} />
 
-      <fieldset>
-        <legend className="mb-1 text-sm font-medium text-slate-700">Väri</legend>
-        <div className="flex flex-wrap gap-2">
-          {PROFILE_COLORS.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => setRaw((cur) => ({ ...cur, color: c }))}
-              className={`size-10 rounded-full ring-offset-2 ${raw.color === c ? 'ring-2 ring-slate-900' : ''}`}
-              style={{ backgroundColor: c }}
-              aria-label={`Väri ${c}`}
-              aria-pressed={raw.color === c}
-            />
-          ))}
-        </div>
-      </fieldset>
+      {wide ? <div className="lg:hidden">{colorPicker}</div> : colorPicker}
 
       </div>
       </div>

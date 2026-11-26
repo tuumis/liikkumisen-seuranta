@@ -8,7 +8,7 @@ import { notificationsSupported, showNotification, useDesktopSettings, useInstal
 import { autoSyncReady } from '../sync/useSync';
 import { isStandalone } from './InstallHint';
 
-export function Switch({ on, onChange, label, text, disabled, children }: { on: boolean; onChange: (v: boolean) => void; label: string; text?: string; disabled?: boolean; children?: ReactNode }) {
+export function Switch({ on, onChange, label, text, disabled, children }: { on: boolean; onChange: (v: boolean) => void; label: string; text?: ReactNode; disabled?: boolean; children?: ReactNode }) {
   return (
     <div className={`py-3 ${disabled ? 'opacity-55' : ''}`}>
       <div className="flex items-start gap-3">

@@ -27,11 +27,12 @@ import { useEnterDemo } from '../../demo/DemoBanner';
 
 type Step = 0 | 1 | 2 | 3 | 4;
 
-const STEPS: { n: Exclude<Step, 0>; title: string; text: string }[] = [
-  { n: 1, title: 'Profiili', text: 'Nimi ja syntymävuosi: niistä valitaan ikäryhmän liikkumissuositus.' },
-  { n: 2, title: 'Viikkorytmi', text: 'Toistuvat harrastukset ja koululiikunta. Niistä tulee suunniteltuja kertoja, jotka kuittaat viikolla.' },
-  { n: 3, title: 'Arkiliikunta', text: 'Arvio päiväkodista, välitunneista, koulumatkoista ja leikistä, joita ei kirjata kerta kerralta.' },
-  { n: 4, title: 'Laite', text: 'PC vai puhelin, ja miten sovellus asennetaan kotinäytölle.' },
+/** `short`: tervetulosivun kaksipalstainen luettelo PC:llä (27.11.2026). */
+const STEPS: { n: Exclude<Step, 0>; title: string; text: string; short: string }[] = [
+  { n: 1, title: 'Profiili', text: 'Nimi ja syntymävuosi: niistä valitaan ikäryhmän liikkumissuositus.', short: 'Nimi ja syntymävuosi: ikäryhmän suositus.' },
+  { n: 2, title: 'Viikkorytmi', text: 'Toistuvat harrastukset ja koululiikunta. Niistä tulee suunniteltuja kertoja, jotka kuittaat viikolla.', short: 'Toistuvat harrastukset ja koululiikunta.' },
+  { n: 3, title: 'Arkiliikunta', text: 'Arvio päiväkodista, välitunneista, koulumatkoista ja leikistä, joita ei kirjata kerta kerralta.', short: 'Päiväkoti, välitunnit, koulumatkat, leikki.' },
+  { n: 4, title: 'Laite', text: 'PC vai puhelin, ja miten sovellus asennetaan kotinäytölle.', short: 'PC vai puhelin, asennus kotinäytölle.' },
 ];
 
 export function Onboarding({ onDone }: { onDone: (profileId?: string) => void }) {
@@ -68,11 +69,12 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
 
   const current = STEPS[step - 1];
   return (
-    <div className="mx-auto w-full max-w-[1400px] px-4 py-6 lg:px-10 lg:py-6">
+    <div className="mx-auto w-full max-w-[1400px] px-4 py-6 lg:px-10 lg:py-4">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-xl font-semibold text-slate-900 lg:text-2xl">Liikkumisen seuranta</h1>
-          <p className="text-xs text-slate-500">
+          {/* PC:llä vaihe näkyy vasemman reunan luettelossa (tiivistys 27.11.2026). */}
+          <p className="text-xs text-slate-500 lg:hidden">
             Aloitus · vaihe {step}/4 · {current.title}
           </p>
         </div>
@@ -87,7 +89,7 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
         ))}
       </div>
 
-      <div className="mt-5 lg:mt-5 lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start lg:gap-8">
+      <div className="mt-5 lg:mt-4 lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start lg:gap-8">
         <aside className="hidden lg:block">
           <ol className="space-y-1" aria-label="Aloituksen vaiheet">
             {STEPS.map((x) => {
@@ -109,6 +111,15 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
             })}
           </ol>
           <p className="mt-4 px-3 text-xs leading-snug text-slate-500">Kaikki vaiheet voi ohittaa ja tehdä myöhemmin Asetuksissa.</p>
+          {step === 1 && (
+            <div className="mt-4 border-t border-slate-200 px-3 pt-3 text-sm">
+              Onko tiedot jo PC:llä?{' '}
+              <button type="button" className="font-medium text-green-800 underline" onClick={importFromPc}>
+                Tuo tiedot PC:ltä
+              </button>
+              {error && <p className="mt-2 text-sm text-red-700">{error}</p>}
+            </div>
+          )}
         </aside>
 
         <div className="min-w-0 space-y-4">
@@ -126,7 +137,7 @@ export function Onboarding({ onDone }: { onDone: (profileId?: string) => void })
             }}
             onCancel={() => setStep(2)}
           />
-          <div className="mt-4 border-t border-slate-100 pt-3 text-sm">
+          <div className="mt-4 border-t border-slate-100 pt-3 text-sm lg:hidden">
             Onko tiedot jo PC:llä?{' '}
             <button type="button" className="font-medium text-green-800 underline" onClick={importFromPc}>
               Tuo tiedot PC:ltä
@@ -179,29 +190,31 @@ function Welcome({ onStart, onImport, onSkip, error, fromQuiz }: { onStart: () =
         </div>
       </header>
 
-      <div className="lp-wrap grid gap-10 pb-12 pt-10 min-[900px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] min-[900px]:gap-16 min-[900px]:pb-10 min-[900px]:pt-12">
+      {/* PC (≥900 px): mahtuu yhteen näkymään (tiivistys 27.11.2026); puhelin ennallaan. */}
+      <div className="lp-wrap grid gap-10 pb-12 pt-10 min-[900px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] min-[900px]:gap-16 min-[900px]:pb-6 min-[900px]:pt-7">
         <section className="anim-rise" aria-labelledby="welcome-title">
-          <p className="text-sm font-bold text-[var(--lp-kicker)]">Tervetuloa</p>
-          <h1 id="welcome-title" className="mt-2 font-display text-[clamp(34px,4vw,50px)] font-medium leading-[1.08] tracking-[-0.015em]">
+          <p className="text-sm font-bold text-[var(--lp-kicker)] min-[900px]:hidden">Tervetuloa</p>
+          <h1 id="welcome-title" className="mt-2 min-[900px]:mt-0 font-display text-[clamp(34px,4vw,50px)] font-medium leading-[1.08] tracking-[-0.015em] min-[900px]:text-[clamp(32px,min(3.6vw,6.5vh),50px)]">
             Aloitetaan lapsen tiedoista.
           </h1>
-          <p className="mt-4 max-w-[34em] text-[17px] leading-relaxed text-[var(--lp-ink-2)]">
+          <p className="mt-4 max-w-[34em] text-[17px] leading-relaxed text-[var(--lp-ink-2)] min-[900px]:mt-3 min-[900px]:text-base">
             {fromQuiz
               ? 'Pikatestin vastaukset ovat valmiina: ikä, harrastukset ja arkiliikunta. Tarkistat ne vaiheissa.'
               : 'Aloitus vie muutaman minuutin. Vaiheet voi ohittaa ja kaiken voi muuttaa myöhemmin Asetuksissa.'}
           </p>
-          <ol className="mt-7 max-w-[34em] border-t border-[var(--lp-line)]" aria-label="Aloituksen vaiheet">
+          <ol className="mt-7 max-w-[34em] border-t border-[var(--lp-line)] min-[900px]:mt-5 min-[900px]:grid min-[900px]:max-w-[40em] min-[900px]:grid-cols-2 min-[900px]:gap-x-6" aria-label="Aloituksen vaiheet">
             {STEPS.map((x) => (
-              <li key={x.n} className="flex gap-4 border-b border-[var(--lp-line)] py-3 min-[900px]:py-2.5">
+              <li key={x.n} className="flex gap-4 border-b border-[var(--lp-line)] py-3 min-[900px]:gap-3 min-[900px]:py-2.5">
                 <span className="w-4 shrink-0 font-display text-lg font-medium leading-6 text-[var(--lp-kicker)]">{x.n}</span>
                 <span className="min-w-0">
                   <b className="block text-[15px] font-bold leading-6">{x.title}</b>
-                  <span className="block text-sm leading-snug text-[var(--lp-ink-2)]">{x.text}</span>
+                  <span className="block text-sm leading-snug text-[var(--lp-ink-2)] min-[900px]:hidden">{x.text}</span>
+                  <span className="hidden text-sm leading-snug text-[var(--lp-ink-2)] min-[900px]:block">{x.short}</span>
                 </span>
               </li>
             ))}
           </ol>
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center min-[900px]:mt-6">
             <button type="button" onClick={onStart} className="lp-btn lp-btn-dark press h-[54px] w-full px-12 text-base font-bold sm:w-auto">
               Aloita
             </button>
@@ -209,15 +222,18 @@ function Welcome({ onStart, onImport, onSkip, error, fromQuiz }: { onStart: () =
               {demoBusy ? 'Valmistellaan…' : 'Tutustu esimerkkiin'}
             </button>
           </div>
-          <p className="mt-2.5 max-w-[34em] text-sm text-[var(--lp-ink-3)]">Esimerkissä on kaksi keksittyä lasta. Voit kokeilla kaikkea, ja palata aloitukseen palkin Poistu-painikkeella.</p>
+          <p className="mt-2.5 max-w-[34em] text-sm text-[var(--lp-ink-3)] min-[900px]:hidden">Esimerkissä on kaksi keksittyä lasta. Voit kokeilla kaikkea, ja palata aloitukseen palkin Poistu-painikkeella.</p>
+          <p className="mt-2 hidden text-sm text-[var(--lp-ink-3)] min-[900px]:block">Esimerkissä on kaksi keksittyä lasta. Palaa aloitukseen Poistu-painikkeella.</p>
 
-          <div className="mt-9 max-w-[34em] border-t border-[var(--lp-line)] pt-5">
-            <p className="text-sm font-bold text-[var(--lp-ink-2)]">Onko tiedot jo toisella laitteella?</p>
-            <button type="button" onClick={onImport} className="lp-btn lp-btn-line press mt-3 h-12 w-full px-5 text-[15px] sm:w-auto">
-              <IconImport size="1.15rem" />
-              Tuo tiedosto
-            </button>
-            <p className="mt-2.5 text-sm text-[var(--lp-ink-3)]">PC:n synkronointitiedosto tai varmuuskopio. Tiedot siirtyvät tälle laitteelle.</p>
+          <div className="mt-9 max-w-[34em] border-t border-[var(--lp-line)] pt-5 min-[900px]:mt-5 min-[900px]:pt-4">
+            <div className="min-[900px]:flex min-[900px]:items-center min-[900px]:gap-4">
+              <p className="text-sm font-bold text-[var(--lp-ink-2)]">Onko tiedot jo toisella laitteella?</p>
+              <button type="button" onClick={onImport} className="lp-btn lp-btn-line press mt-3 h-12 w-full px-5 text-[15px] sm:w-auto min-[900px]:mt-0 min-[900px]:h-11">
+                <IconImport size="1.15rem" />
+                Tuo tiedosto
+              </button>
+            </div>
+            <p className="mt-2.5 text-sm text-[var(--lp-ink-3)] min-[900px]:mt-2">PC:n synkronointitiedosto tai varmuuskopio. Tiedot siirtyvät tälle laitteelle.</p>
             {error && (
               <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-900" role="alert">
                 {error}
@@ -226,18 +242,20 @@ function Welcome({ onStart, onImport, onSkip, error, fromQuiz }: { onStart: () =
           </div>
         </section>
 
-        <aside className="anim-rise self-start rounded-2xl border border-[var(--lp-line)] bg-[var(--lp-raised)] p-6 sm:p-8" aria-labelledby="welcome-data">
-          <span className="flex size-10 items-center justify-center rounded-xl bg-[var(--lp-paper-2)] text-[var(--lp-kicker)]" aria-hidden>
-            <IconLock size="1.15rem" />
-          </span>
-          <h2 id="welcome-data" className="mt-4 font-display text-[26px] font-medium leading-tight">
-            Tiedot pysyvät sinulla
-          </h2>
-          <p className="mt-3 leading-relaxed text-[var(--lp-ink-2)]">
+        <aside className="anim-rise self-start rounded-2xl border border-[var(--lp-line)] bg-[var(--lp-raised)] p-6 sm:p-8 min-[900px]:p-7" aria-labelledby="welcome-data">
+          <div className="min-[900px]:flex min-[900px]:items-center min-[900px]:gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--lp-paper-2)] text-[var(--lp-kicker)]" aria-hidden>
+              <IconLock size="1.15rem" />
+            </span>
+            <h2 id="welcome-data" className="mt-4 font-display text-[26px] font-medium leading-tight min-[900px]:mt-0 min-[900px]:text-2xl">
+              Tiedot pysyvät sinulla
+            </h2>
+          </div>
+          <p className="mt-3 leading-relaxed text-[var(--lp-ink-2)] min-[900px]:text-[15px]">
             Ei tiliä eikä palvelinta: tiedot ovat vain tämän laitteen selaimessa, eikä sovellus lähetä niitä minnekään. Ne katoavat, jos selaimen tiedot tyhjennetään tai laite vaihtuu,
             joten tee varmuuskopio.
           </p>
-          <ol className="mt-5 border-t border-[var(--lp-line)] text-[15px] leading-snug text-[var(--lp-ink-2)]" aria-label="Varmuuskopion teko">
+          <ol className="mt-5 border-t border-[var(--lp-line)] text-[15px] leading-snug text-[var(--lp-ink-2)] min-[900px]:mt-4" aria-label="Varmuuskopion teko">
             {[
               <>
                 Asetukset → Laitteet ja varmuuskopio → <strong className="text-[var(--lp-ink)]">Vie varmuuskopio</strong>
@@ -249,20 +267,20 @@ function Welcome({ onStart, onImport, onSkip, error, fromQuiz }: { onStart: () =
                 Palauta samasta kohdasta: <strong className="text-[var(--lp-ink)]">Tuo varmuuskopio</strong>, myös uudelle laitteelle
               </>,
             ].map((t, i) => (
-              <li key={i} className="flex gap-4 border-b border-[var(--lp-line)] py-3">
+              <li key={i} className="flex gap-4 border-b border-[var(--lp-line)] py-3 min-[900px]:py-2.5">
                 <span className="w-4 shrink-0 font-display text-lg font-medium leading-5 text-[var(--lp-kicker)]">{i + 1}</span>
                 <span className="min-w-0">{t}</span>
               </li>
             ))}
           </ol>
-          <h3 className="mt-7 flex items-center gap-2 text-[15px] font-bold">
+          <h3 className="mt-7 flex items-center gap-2 text-[15px] font-bold min-[900px]:mt-5">
             <IconSync size="1.05rem" className="text-[var(--lp-kicker)]" />
             PC ja puhelin
           </h3>
           <p className="mt-1.5 text-sm leading-relaxed text-[var(--lp-ink-2)]">
             PC on päälaite. Yhteisen pilvikansion kautta laitteet vaihtavat tiedot: puhelimella kirjaat ja painat "Lähetä PC:lle". Yksikin laite riittää.
           </p>
-          <p className="mt-5 text-[13px] leading-snug text-[var(--lp-ink-3)]">
+          <p className="mt-5 text-[13px] leading-snug text-[var(--lp-ink-3)] min-[900px]:mt-3">
             Kun PC:lle valitaan synkronoinnin pilvikansio, sinne tehdään myös automaattinen varmuuskopio kerran viikossa. Tiedosto sisältää lapsen tietoja, joten säilytä se omassa
             pilvessäsi.
           </p>

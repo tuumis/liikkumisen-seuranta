@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.84',
+    date: '27.11.2026',
+    items: [
+      'Aloituksen tervetulosivu ja profiilivaihe mahtuvat PC:llä yhteen näkymään ilman vieritystä myös tavallisella kannettavalla.',
+      'Profiilivaiheessa suositusryhmä näkyy valmiina rivinä, ja seurannan alku on oletuksena tänään. Molemmat voi muuttaa myöhemmin Asetuksissa. Puhelimen aloitus on ennallaan.',
+    ],
+  },
+  {
     version: '1.1.83',
     date: '27.11.2026',
     items: [
