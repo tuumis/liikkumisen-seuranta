@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { buildIcs } from '../../domain/ics';
-import { eventsBetween, firstOfMonth, lastOfMonth, type CalEvent, type MonthKey } from '../../domain/monthCalendar';
+import { eventsBetween, firstOfMonth, isSubdued, lastOfMonth, type CalEvent, type MonthKey } from '../../domain/monthCalendar';
 import type { ISODate, Profile } from '../../domain/types';
 import { Button } from '../../ui/components';
 import { ToggleChip } from '../../ui/controls';
@@ -20,17 +20,20 @@ interface IcsOpts {
   span: Span;
   count: number;
   trainings: boolean;
+  /** Kalenterimerkinnät (27.11.2026), oletuksena pois. */
+  notes: boolean;
   results: boolean;
   family: boolean;
   childName: boolean;
 }
 
-const DEFAULT: IcsOpts = { span: 'months', count: 3, trainings: false, results: true, family: false, childName: false };
+const DEFAULT: IcsOpts = { span: 'months', count: 3, trainings: false, notes: false, results: true, family: false, childName: false };
 const KEY = 'calendarIcs';
 const clean = (v: Partial<IcsOpts>): IcsOpts => ({
   span: v.span === 'spring' || v.span === 'autumn' ? v.span : 'months',
   count: Math.max(1, Math.min(12, Math.round(Number(v.count) || 3))),
   trainings: !!v.trainings,
+  notes: !!v.notes,
   results: v.results !== false,
   family: !!v.family,
   childName: !!v.childName,
@@ -68,10 +71,12 @@ function IcsExportBody({ profile, today, startMonth, onDone }: { profile: Profil
     to,
     today,
     opts.trainings,
+    opts.notes,
   );
   const ready = !!data && data.from === from && data.to === to;
   const events: CalEvent[] = ready ? eventsBetween(data.events, from, to, opts.trainings) : [];
-  const games = events.filter((e) => e.kind !== 'training').length;
+  const games = events.filter((e) => !isSubdued(e)).length;
+  const noteCount = events.filter((e) => e.kind === 'note').length;
   const labels = memberLabeler(members, data?.teams ?? new Map(), opts.childName);
   const ownTeams = [...(data?.teams.values() ?? [])].filter((t) => t.profileId === profile.id && !t.archived && t.kind !== 'group');
   const calName = family ? 'Perheen pelit' : ownTeams.length === 1 ? ownTeams[0].name : 'Pelikalenteri';
@@ -122,6 +127,9 @@ function IcsExportBody({ profile, today, startMonth, onDone }: { profile: Profil
         <ToggleChip on={opts.trainings} onChange={(trainings) => set({ trainings })}>
           Treenit
         </ToggleChip>
+        <ToggleChip on={opts.notes} onChange={(notes) => set({ notes })}>
+          Muut merkinnät
+        </ToggleChip>
         {canFamily && (
           <ToggleChip on={opts.family} onChange={(f) => set({ family: f })}>
             Koko perhe
@@ -137,7 +145,8 @@ function IcsExportBody({ profile, today, startMonth, onDone }: { profile: Profil
         ) : (
           <>
             <span className="font-semibold">{periodLabel(opts.span, months)}:</span> {games} {games === 1 ? 'peli tai turnaus' : 'peliä ja turnausta'}
-            {opts.trainings && `, ${events.length - games} treeniä`}
+            {opts.trainings && `, ${events.length - games - noteCount} treeniä`}
+            {opts.notes && `, ${noteCount} ${noteCount === 1 ? 'muu merkintä' : 'muuta merkintää'}`}
           </>
         )}
       </div>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildIcs, icsEscape, icsFold, icsSummary } from './ics';
-import { clashes, eventWindow, mergeProfileEvents, windowText, type CalEvent } from './monthCalendar';
+import { clashes, eventWindow, mergeProfileEvents, monthEvents, windowText, type CalEvent } from './monthCalendar';
 
 const ev = (o: Partial<CalEvent>): CalEvent => ({ key: 'k', date: '2026-11-21', kind: 'game', state: 'upcoming', title: 'x', ...o });
 const NOW = '2026-11-19T10:00:00.000Z';
@@ -82,5 +82,32 @@ describe('perhekalenteri', () => {
     const day = [ev({ key: 'x', profileId: 'A' }), ev({ key: 'y', profileId: 'B', time: '12:00' }), ev({ key: 'z', profileId: 'B', time: '12:30' })];
     expect(clashes(day).map(([p, q]) => `${p.key}-${q.key}`)).toEqual(['x-y', 'x-z']);
     expect(clashes([ev({ key: 'x', profileId: 'A', state: 'skipped' }), ev({ key: 'y', profileId: 'B' })])).toEqual([]);
+  });
+});
+
+describe('kalenterimerkinnät kalenterissa (27.11.2026)', () => {
+  const note = (o: object) => ({ id: 'n1', date: '2026-11-21', title: 'Hammaslääkäri', createdAt: 't', updatedAt: 't', updatedBy: 'd', ...o });
+  it('merkinnästä tapahtuma; koko perheen merkintä kerran ilman profiilia; ei päällekkäisyysvaroitusta', () => {
+    const own = monthEvents({ today: '2026-11-20', fixtures: [], rows: [], notes: [note({ profileId: 'A', startTime: '14:30', endTime: '15:15' })] }).get('2026-11-21')!;
+    expect(own[0]).toMatchObject({ kind: 'note', state: 'planned', time: '14:30', durationMin: 45, title: 'Hammaslääkäri' });
+    expect(own[0].family).toBeUndefined();
+    const fam = note({ id: 'f1', title: 'Mummolaan' });
+    const merged = mergeProfileEvents([
+      { profileId: 'A', events: monthEvents({ today: '2026-11-20', fixtures: [], rows: [], notes: [fam] }) },
+      { profileId: 'B', events: new Map([['2026-11-21', [ev({ key: 'g', time: '12:00' }), ...monthEvents({ today: '2026-11-20', fixtures: [], rows: [], notes: [fam] }).get('2026-11-21')!]]]) },
+    ]);
+    const day = merged.get('2026-11-21')!;
+    expect(day.map((e) => `${e.profileId ?? '-'}:${e.key}`)).toEqual(['B:g', '-:f1']);
+    const timedNote = { ...ev({ key: 'n', kind: 'note', state: 'planned', time: '12:00' }), profileId: 'A' };
+    expect(clashes([...day, timedNote])).toEqual([]);
+    expect(eventWindow(timedNote)).toEqual({ start: 720, end: 780 });
+  });
+
+  it('.ics: merkinnän nimi ja kuvaus', () => {
+    const e = ev({ key: 'f1', kind: 'note', state: 'planned', title: 'Mummolaan', family: true });
+    expect(icsSummary(e, { results: true, prefix: () => undefined })).toBe('📅 Mummolaan');
+    const ics = buildIcs([e], { calName: 'x', now: NOW, results: true });
+    expect(ics).toContain('DTSTART;VALUE=DATE:20261121');
+    expect(ics).toContain('DESCRIPTION:Muu merkintä\\nKoko perhe');
   });
 });

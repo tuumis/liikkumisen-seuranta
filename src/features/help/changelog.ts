@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.89',
+    date: '27.11.2026',
+    items: [
+      'Kalenterimerkinnät näkyvät myös Jalkapallo → Kalenteri → Kuukausi -näkymässä (valinta Merkinnät), myös koko perheen kalenterissa. Valitulle päivälle voi lisätä merkinnän, ja merkintää napauttamalla sen voi muokata.',
+      'Pelikalenterin tulosteeseen ja kalenterivientiin (.ics) voi ottaa mukaan muut merkinnät valinnalla Muut merkinnät.',
+    ],
+  },
+  {
     version: '1.1.88',
     date: '27.11.2026',
     items: ['Turnauksen otteluohjelma järjestyy tallennettaessa kellonajan mukaan, joten pelit voi lisätä missä järjestyksessä tahansa. Rivit ilman kellonaikaa pysyvät paikallaan.'],

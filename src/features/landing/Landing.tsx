@@ -163,6 +163,7 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
             'Arkiliikunta, kuten välitunnit ja koulumatkat, arvioidaan kerran ja lasketaan mukaan',
             'Kuittaa tiedoilla: toteutunut kesto, teho ja omatoiminen verryttely samalla kertaa',
             'Poissaolot ja peruutukset merkitään syineen',
+            'Muut menot, kuten hammaslääkäri tai mummolan kyläily, kalenterimerkintöinä viikolle ja pelikalenteriin',
           ]}
         >
           <Shot name="phone-add" onZoom={setZoom} className="lp-solo-phone" />

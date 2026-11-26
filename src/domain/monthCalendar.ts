@@ -6,7 +6,7 @@ import { addDays, datesBetween, endOfIsoWeek, isoWeek, lastDayOfMonth, startOfIs
 import { OUTCOME_LABEL } from './football';
 import { displayTeamName, parseTeamName } from './opponent';
 import { gameDaySchedule } from './tournamentTime';
-import type { Fixture, GameLevel, HHmm, HomeAway, ISODate, PlannedSession, UUID } from './types';
+import type { CalendarNote, Fixture, GameLevel, HHmm, HomeAway, ISODate, PlannedSession, UUID } from './types';
 import type { GameOutcome, GameRow } from './football';
 
 /** Kuukausi muodossa YYYY-MM. */
@@ -61,7 +61,8 @@ export function monthsFrom(start: MonthKey, count: number): MonthKey[] {
   return Array.from({ length: Math.max(1, Math.min(12, count)) }, (_, i) => addMonths(start, i));
 }
 
-export type CalKind = 'game' | 'tournament' | 'friendly' | 'training';
+/** note = kalenterimerkintä (muu kuin liikunta, 27.11.2026). */
+export type CalKind = 'game' | 'tournament' | 'friendly' | 'training' | 'note';
 /** upcoming = tuleva; pending = pelattu, tulos puuttuu; played = kirjattu; skipped = ei pelattu; planned = treeni. */
 export type CalState = 'upcoming' | 'pending' | 'played' | 'skipped' | 'planned';
 
@@ -105,6 +106,8 @@ export interface CalEvent {
   link?: string;
   /** Perhekalenterissa: kenen tapahtuma (19.11.2026). */
   profileId?: UUID;
+  /** Kalenterimerkintä koko perheelle (ei profiilia, 27.11.2026). */
+  family?: boolean;
 }
 
 export interface CalTraining {
@@ -129,6 +132,8 @@ export interface MonthEventsInput {
   /** Kirjattujen kertojen kestot (min). */
   sessionDuration?: ReadonlyMap<UUID, number>;
   trainings?: CalTraining[];
+  /** Kalenterimerkinnät (profiilin omat ja koko perheen, 27.11.2026). */
+  notes?: CalendarNote[];
 }
 
 const KIND_OF_TYPE: Record<string, CalKind> = {
@@ -266,12 +271,28 @@ export function monthEvents(input: MonthEventsInput): Map<ISODate, CalEvent[]> {
   for (const t of input.trainings ?? []) {
     add({ key: t.id, date: t.date, kind: 'training', state: 'planned', time: t.startTime, title: t.name, durationMin: t.durationMin, ...(t.teamId ? { teamId: t.teamId } : {}) });
   }
+  for (const n of input.notes ?? []) {
+    const dur = n.startTime && n.endTime ? toMin(n.endTime) - toMin(n.startTime) : undefined;
+    add({
+      key: n.id,
+      date: n.date,
+      kind: 'note',
+      state: 'planned',
+      title: n.title,
+      ...(n.startTime ? { time: n.startTime } : {}),
+      ...(dur !== undefined ? { durationMin: dur } : {}),
+      ...(n.profileId ? {} : { family: true }),
+    });
+  }
   for (const list of out.values()) list.sort(byTime);
   return out;
 }
 
-export const KIND_ICON: Record<CalKind, string> = { game: '⚽', tournament: '🏆', friendly: '🤝', training: '👟' };
-export const KIND_LABEL: Record<CalKind, string> = { game: 'Ottelu', tournament: 'Turnaus', friendly: 'Harjoituspeli', training: 'Treeni' };
+export const KIND_ICON: Record<CalKind, string> = { game: '⚽', tournament: '🏆', friendly: '🤝', training: '👟', note: '📅' };
+export const KIND_LABEL: Record<CalKind, string> = { game: 'Ottelu', tournament: 'Turnaus', friendly: 'Harjoituspeli', training: 'Treeni', note: 'Muu merkintä' };
+
+/** Treeni tai kalenterimerkintä: näytetään himmeämpänä kuin pelit. */
+export const isSubdued = (e: Pick<CalEvent, 'kind'>): boolean => e.kind === 'training' || e.kind === 'note';
 
 /** Tapahtumat aikajärjestyksessä väliltä (otteluohjelma); treenit mukaan vain pyydettäessä. */
 export function eventsBetween(events: ReadonlyMap<ISODate, CalEvent[]>, from: ISODate, to: ISODate, trainings = false): CalEvent[] {
@@ -301,11 +322,19 @@ export const clockText = (t?: string): string | undefined => t?.replace(/^0(\d)/
 
 // ---------- perhekalenteri (19.11.2026) ----------
 
-/** Yhdistää profiilien tapahtumat päivittäin ja merkitsee kunkin profiilin; päivän sisällä aikajärjestys. */
+/**
+ * Yhdistää profiilien tapahtumat päivittäin ja merkitsee kunkin profiilin; päivän sisällä aikajärjestys.
+ * Koko perheen kalenterimerkintä on jokaisen profiilin listalla: se näytetään kerran ilman profiilia.
+ */
 export function mergeProfileEvents(byProfile: { profileId: UUID; events: ReadonlyMap<ISODate, CalEvent[]> }[]): Map<ISODate, CalEvent[]> {
   const out = new Map<ISODate, CalEvent[]>();
+  const seen = new Set<string>();
   for (const { profileId, events } of byProfile) {
-    for (const [d, list] of events) out.set(d, [...(out.get(d) ?? []), ...list.map((e) => ({ ...e, profileId }))]);
+    for (const [d, list] of events) {
+      const add = list.filter((e) => !e.family || !seen.has(e.key)).map((e) => (e.family ? e : { ...e, profileId }));
+      for (const e of add) if (e.family) seen.add(e.key);
+      out.set(d, [...(out.get(d) ?? []), ...add]);
+    }
   }
   for (const list of out.values()) list.sort(byTime);
   return out;
@@ -323,7 +352,8 @@ export function eventWindow(e: Pick<CalEvent, 'kind' | 'time' | 'arrival' | 'dur
   if (!first) return undefined;
   const planStart = e.kind === 'tournament' && e.arrival ? e.arrival : (e.time ?? e.arrival)!;
   const start = toMin(first);
-  const end = Math.max(start + 15, toMin(planStart) + (e.durationMin ?? 90));
+  // Kalenterimerkintä ilman päättymisaikaa: tunti.
+  const end = Math.max(start + 15, toMin(planStart) + (e.durationMin ?? (e.kind === 'note' ? 60 : 90)));
   return { start, end };
 }
 
@@ -339,7 +369,8 @@ export function windowText(e: Pick<CalEvent, 'kind' | 'time' | 'arrival' | 'dura
  * oletetaan kestävän koko päivän (tarkistettava). Ei pelattuja eikä profiilin omia päällekkäisyyksiä.
  */
 export function clashes(day: CalEvent[]): [CalEvent, CalEvent][] {
-  const list = day.filter((e) => e.profileId && e.state !== 'skipped');
+  // Kalenterimerkinnät eivät ole mukana (vain pelit ja treenit).
+  const list = day.filter((e) => e.profileId && e.state !== 'skipped' && e.kind !== 'note');
   const out: [CalEvent, CalEvent][] = [];
   for (let i = 0; i < list.length; i++) {
     for (let j = i + 1; j < list.length; j++) {

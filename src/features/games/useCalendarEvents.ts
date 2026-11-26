@@ -8,7 +8,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { repo, type FixtureEntry } from '../../db/repositories';
 import { friendlyRows, gameRows } from '../../domain/football';
 import { mergeProfileEvents, monthEvents, type CalEvent } from '../../domain/monthCalendar';
-import type { ActivityType, ISODate, Session, Team, UUID } from '../../domain/types';
+import type { ActivityType, CalendarNote, ISODate, Session, Team, UUID } from '../../domain/types';
 
 export interface CalendarData {
   from: ISODate;
@@ -19,24 +19,27 @@ export interface CalendarData {
   types: Map<UUID, ActivityType>;
   /** Kaikkien mukana olevien profiilien joukkueet ja treeniryhmät (myös arkistoidut). */
   teams: Map<UUID, Team>;
+  /** Kalenterimerkinnät (kun pyydetty), muokkausta varten. */
+  notes: Map<UUID, CalendarNote>;
 }
 
-export function useCalendarEvents(profileIds: UUID[], from: ISODate, to: ISODate, today: ISODate, trainings: boolean): CalendarData | undefined {
+export function useCalendarEvents(profileIds: UUID[], from: ISODate, to: ISODate, today: ISODate, trainings: boolean, notes = false): CalendarData | undefined {
   const ids = profileIds.join(',');
-  const key = `${ids}|${from}|${to}|${today}|${trainings}`;
+  const key = `${ids}|${from}|${to}|${today}|${trainings}|${notes}`;
   const raw = useLiveQuery(async () => {
     const typesList = await repo.listActivityTypes({ includeArchived: true });
     const footballIds = new Set(typesList.filter((t) => t.sport === 'football').map((t) => t.id));
     const perProfile = await Promise.all(
       ids.split(',').filter(Boolean).map(async (profileId) => {
         const sessions = (await repo.sessionsInRange(profileId, from, to)).filter((s) => footballIds.has(s.activityTypeId));
-        const [details, fixtures, plans, teams] = await Promise.all([
+        const [details, fixtures, plans, teams, calNotes] = await Promise.all([
           repo.footballDetailsFor(sessions.map((s) => s.id)),
           repo.listFixtures(profileId, from, to),
           trainings ? repo.calendarTrainings(profileId, from, to, today) : Promise.resolve([]),
           repo.listTeams(profileId, { includeArchived: true, groups: true }),
+          notes ? repo.listCalendarNotes(profileId, from, to) : Promise.resolve([] as CalendarNote[]),
         ]);
-        return { profileId, sessions, details, fixtures, plans, teams };
+        return { profileId, sessions, details, fixtures, plans, teams, calNotes };
       }),
     );
     return { key, from, to, typesList, perProfile };
@@ -58,6 +61,7 @@ export function useCalendarEvents(profileIds: UUID[], from: ISODate, to: ISODate
         sessionStart: new Map(p.sessions.map((s) => [s.id, s.startTime])),
         sessionDuration: new Map(p.sessions.map((s) => [s.id, s.durationMin])),
         trainings: p.plans.map((t) => ({ id: t.id, date: t.date, startTime: t.startTime, durationMin: t.durationMin, name: t.label ?? 'Treeni', ...(t.teamId ? { teamId: t.teamId } : {}) })),
+        notes: p.calNotes,
       }),
     }));
     return {
@@ -68,6 +72,7 @@ export function useCalendarEvents(profileIds: UUID[], from: ISODate, to: ISODate
       sessions: new Map(data.perProfile.flatMap((p) => p.sessions.map((s) => [s.id, s] as const))),
       types,
       teams: new Map(data.perProfile.flatMap((p) => p.teams.map((t) => [t.id, t] as const))),
+      notes: new Map(data.perProfile.flatMap((p) => p.calNotes.map((n) => [n.id, n] as const))),
     };
   }, [data, today]);
 }

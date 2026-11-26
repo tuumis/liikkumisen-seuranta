@@ -16,6 +16,7 @@ import {
   eventTitle,
   teamNameFor,
   firstOfMonth,
+  isSubdued,
   KIND_ICON,
   lastOfMonth,
   monthGrid,
@@ -40,6 +41,8 @@ interface PrintOpts {
   span: Span;
   count: number;
   trainings: boolean;
+  /** Kalenterimerkinnät (27.11.2026), oletuksena pois. */
+  notes: boolean;
   results: boolean;
   places: boolean;
   arrival: boolean;
@@ -48,7 +51,7 @@ interface PrintOpts {
   family: boolean;
 }
 
-const DEFAULT_OPTS: PrintOpts = { format: 'month', span: 'months', count: 1, trainings: false, results: true, places: true, arrival: true, childName: false, family: false };
+const DEFAULT_OPTS: PrintOpts = { format: 'month', span: 'months', count: 1, trainings: false, notes: false, results: true, places: true, arrival: true, childName: false, family: false };
 const OPTS_KEY = 'calendarPrint';
 
 const cleanOpts = (v: Partial<PrintOpts>): PrintOpts => ({
@@ -56,6 +59,7 @@ const cleanOpts = (v: Partial<PrintOpts>): PrintOpts => ({
   span: v.span === 'spring' || v.span === 'autumn' ? v.span : 'months',
   count: Math.max(1, Math.min(6, Math.round(Number(v.count) || 1))),
   trainings: !!v.trainings,
+  notes: !!v.notes,
   results: v.results !== false,
   places: v.places !== false,
   arrival: v.arrival !== false,
@@ -101,6 +105,7 @@ export function CalendarPrint({ profile, today, startMonth, onClose }: { profile
     to,
     today,
     opts.trainings,
+    opts.notes,
   );
   const ready = !!data && data.from === from && data.to === to;
   const labels = memberLabeler(members, data?.teams ?? new Map(), opts.childName);
@@ -243,6 +248,9 @@ export function CalendarPrint({ profile, today, startMonth, onClose }: { profile
             <ToggleChip on={opts.trainings} onChange={(trainings) => set({ trainings })}>
               Treenit
             </ToggleChip>
+            <ToggleChip on={opts.notes} onChange={(notes) => set({ notes })}>
+              Muut merkinnät
+            </ToggleChip>
             {canFamily && (
               <ToggleChip on={opts.family} onChange={(f) => set({ family: f })}>
                 Koko perhe
@@ -323,7 +331,7 @@ type Opts = Pick<PrintOpts, 'results' | 'places' | 'arrival' | 'trainings'>;
 
 /** Tapahtuman rivit kuukausiruudussa. */
 function CellEvent({ e, opts, pal, teamPrefix, color }: { e: CalEvent; opts: Opts; pal: ReportPalette; teamPrefix: (e: CalEvent) => string | undefined; color?: string }) {
-  const training = e.kind === 'training';
+  const training = isSubdued(e);
   const skipped = e.state === 'skipped';
   const prefix = teamPrefix(e);
   const details = [
@@ -485,7 +493,7 @@ function ProgramTable({
               </td>
             </tr>
             {list.map((e) => {
-              const training = e.kind === 'training';
+              const training = isSubdued(e);
               const skipped = e.state === 'skipped';
               const prefix = teamPrefix(e);
               const tags = [e.series, e.homeAway && HOME_AWAY_LABEL[e.homeAway], skipped && 'ei pelattu', e.infoMissing && '⚠ tietoja puuttuu'].filter(Boolean);

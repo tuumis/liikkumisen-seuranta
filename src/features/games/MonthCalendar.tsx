@@ -5,13 +5,15 @@
 import { useRef, useState, type TouchEvent } from 'react';
 import { addDays } from '../../domain/dates';
 import { HOME_AWAY_LABEL, OUTCOME_LABEL } from '../../domain/football';
-import { addMonths, clashes, clockText, eventTitle, gridRange, teamNameFor, windowText, KIND_ICON, KIND_LABEL, monthGrid, monthKeyOf, type CalEvent, type MonthKey } from '../../domain/monthCalendar';
+import { addMonths, clashes, clockText, eventTitle, gridRange, isSubdued, teamNameFor, windowText, KIND_ICON, KIND_LABEL, monthGrid, monthKeyOf, type CalEvent, type MonthKey } from '../../domain/monthCalendar';
+import { noteTimeText } from '../../domain/calendarNotes';
+import { CalendarNoteSheet, type NoteDraft } from '../week/CalendarNoteSheet';
 import type { ISODate, Profile, Session } from '../../domain/types';
 import type { FixtureEntry } from '../../db/repositories';
 import { Button, Card } from '../../ui/components';
 import { ToggleChip } from '../../ui/controls';
 import { dayLabel, formatDate } from '../../ui/format';
-import { IconChevronLeft, IconChevronRight, IconOverlap, IconPlus, IconWarning } from '../../ui/icons';
+import { IconCalendarClock, IconChevronLeft, IconChevronRight, IconOverlap, IconPlus, IconWarning } from '../../ui/icons';
 import { useStoredFlag } from '../../ui/storedPref';
 import type { FixtureKind } from './FixtureSheet';
 import { useCalendarEvents } from './useCalendarEvents';
@@ -26,7 +28,7 @@ export const monthTitle = (m: MonthKey) => {
 
 /** Tapahtuman väri tilan mukaan (tuleva, tulos puuttuu, tulos, ei pelattu, treeni). */
 export function chipClass(e: CalEvent): string {
-  if (e.kind === 'training') return 'text-slate-500 ring-slate-200';
+  if (isSubdued(e)) return 'text-slate-500 ring-slate-200';
   if (e.state === 'skipped') return 'text-slate-400 line-through ring-slate-200';
   if (e.state === 'pending') return 'bg-amber-50 text-amber-900 ring-amber-200';
   if (e.state === 'played') {
@@ -47,6 +49,10 @@ function chipText(e: CalEvent): string {
 
 /** Valitun päivän rivin lisätiedot. */
 function detailLine(e: CalEvent, team?: string): string {
+  if (e.kind === 'note') {
+    const end = e.time && e.durationMin !== undefined ? endClock(e.time, e.durationMin) : undefined;
+    return [KIND_LABEL.note, noteTimeText({ startTime: e.time, endTime: end }), e.family && 'Koko perhe'].filter(Boolean).join(' · ');
+  }
   const parts: (string | undefined | false)[] = [
     e.kind !== 'training' && KIND_LABEL[e.kind],
     team,
@@ -58,6 +64,12 @@ function detailLine(e: CalEvent, team?: string): string {
     e.location,
   ];
   return parts.filter(Boolean).join(' · ');
+}
+
+/** Päättymisaika alusta ja kestosta ("14:30" + 45 → "15:15"). */
+function endClock(start: string, min: number): string {
+  const m = Number(start.slice(0, 2)) * 60 + Number(start.slice(3, 5)) + min;
+  return `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 }
 
 const STATE_NOTE: Partial<Record<CalEvent['state'], string>> = { pending: 'Tulos puuttuu', skipped: 'Ei pelattu' };
@@ -81,6 +93,9 @@ export function MonthCalendar({
 }) {
   const [selected, setSelected] = useState<ISODate | undefined>(() => (month === monthKeyOf(today) ? today : undefined));
   const [trainings, setTrainings] = useStoredFlag('calendarTrainings', false);
+  // Kalenterimerkinnät (27.11.2026): oletuksena mukana; muokkaus samasta paneelista kuin Viikko-näkymässä.
+  const [notesOn, setNotesOn] = useStoredFlag('calendarNotes', true);
+  const [noteDraft, setNoteDraft] = useState<NoteDraft | null>(null);
   // Perhekalenteri (19.11.2026): kaikkien jalkapalloprofiilien tapahtumat, jokaisella oma värinsä.
   const familyProfiles = useFootballProfiles();
   const canFamily = (familyProfiles?.length ?? 0) > 1;
@@ -95,6 +110,7 @@ export function MonthCalendar({
     range.to,
     today,
     trainings,
+    notesOn,
   );
   const own = (e: CalEvent) => !e.profileId || e.profileId === profile.id;
   // Treenin joukkue tai ryhmä (19.11.2026), myös yhdellä joukkueella (kuten Viikko-näkymässä).
@@ -133,7 +149,10 @@ export function MonthCalendar({
   };
 
   const open = (e: CalEvent) => {
-    if (e.sessionId) {
+    if (e.kind === 'note') {
+      const n = data?.notes.get(e.key);
+      if (n) setNoteDraft({ note: n });
+    } else if (e.sessionId) {
       const s = data?.sessions.get(e.sessionId);
       if (s) onOpenSession(s);
     } else if (e.planId && e.state !== 'skipped') {
@@ -142,7 +161,7 @@ export function MonthCalendar({
     }
   };
   // Toisen lapsen tapahtumaa muokataan hänen profiilissaan.
-  const clickable = (e: CalEvent) => own(e) && (!!e.sessionId || (!!e.planId && e.state !== 'skipped'));
+  const clickable = (e: CalEvent) => own(e) && (e.kind === 'note' || !!e.sessionId || (!!e.planId && e.state !== 'skipped'));
 
   const dayEvents = selected ? (data?.events.get(selected) ?? []) : [];
   const dayClashes = selected ? clashOn(selected) : [];
@@ -169,6 +188,9 @@ export function MonthCalendar({
         <div className="ml-auto flex shrink-0 flex-wrap items-center gap-1.5">
           <ToggleChip on={trainings} onChange={setTrainings}>
             Treenit
+          </ToggleChip>
+          <ToggleChip on={notesOn} onChange={setNotesOn}>
+            Merkinnät
           </ToggleChip>
           {canFamily && (
             <ToggleChip on={familyPref} onChange={setFamily}>
@@ -226,6 +248,7 @@ export function MonthCalendar({
           <span>🏆 turnaus</span>
           <span>🤝 harjoituspeli</span>
           {trainings && <span>👟 treeni</span>}
+          {notesOn && <span>📅 muu merkintä</span>}
           <span className="inline-flex items-center gap-1">
             <span className="size-2.5 rounded-full bg-amber-50 ring-1 ring-amber-200" /> tulos puuttuu
           </span>
@@ -259,7 +282,7 @@ export function MonthCalendar({
             </div>
           )}
           {dayEvents.length === 0 ? (
-            <p className="mt-1 text-sm text-slate-500">Ei pelejä{trainings ? ' eikä treenejä' : ''} tälle päivälle.</p>
+            <p className="mt-1 text-sm text-slate-500">Ei pelejä{trainings ? ' eikä treenejä' : ''}{notesOn ? ' eikä merkintöjä' : ''} tälle päivälle.</p>
           ) : (
             <ul className="mt-2 space-y-1.5">
               {dayEvents.map((e) => {
@@ -277,7 +300,7 @@ export function MonthCalendar({
                         </span>
                       )}
                       <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                        <span className={`truncate font-medium ${e.state === 'skipped' ? 'text-slate-500 line-through' : e.kind === 'training' ? 'text-slate-600' : 'text-slate-900'}`}>{eventTitle(e, 'full')}</span>
+                        <span className={`truncate font-medium ${e.state === 'skipped' ? 'text-slate-500 line-through' : isSubdued(e) ? 'text-slate-600' : 'text-slate-900'}`}>{eventTitle(e, 'full')}</span>
                         {e.result && <span className={`rounded-full px-2 py-0.5 text-xs font-bold ring-1 ${chipClass(e)}`}>{e.result}</span>}
                         {STATE_NOTE[e.state] && <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${chipClass(e)}`}>{STATE_NOTE[e.state]}</span>}
                         {e.infoMissing && (
@@ -323,12 +346,20 @@ export function MonthCalendar({
                   <IconPlus size="0.9rem" /> {label}
                 </Button>
               ))}
+              <button
+                type="button"
+                onClick={() => setNoteDraft({ date: selected })}
+                className="press inline-flex min-h-9 items-center gap-1.5 rounded-full px-2.5 text-sm font-semibold text-slate-600 hover:bg-[var(--surface-sunk)] hover:text-slate-900"
+              >
+                <IconCalendarClock size="0.95rem" /> Muu merkintä
+              </button>
             </div>
           ) : (
             dayEvents.length === 0 && <p className="mt-1 text-xs text-slate-500">Jo pelatun pelin kirjaat Viikko-näkymän +-painikkeella.</p>
           )}
         </section>
       )}
+      <CalendarNoteSheet profile={profile} draft={noteDraft} onClose={() => setNoteDraft(null)} />
 
     </Card>
   );
@@ -362,7 +393,7 @@ function DayCell({
   clash: boolean;
 }) {
   const day = Number(date.slice(8, 10));
-  const games = events.filter((e) => e.kind !== 'training').length;
+  const games = events.filter((e) => !isSubdued(e)).length;
   const label = `${dayLabel(date)}${today ? ', tänään' : ''}${clash ? ', päällekkäisiä tapahtumia' : ''}${events.length ? `, ${events.map((e) => `${eventTitle(e, 'full') === KIND_LABEL[e.kind] ? '' : `${KIND_LABEL[e.kind]} `}${eventTitle(e, 'full')}${e.result ? ` ${e.result}` : ''}`).join(', ')}` : ''}`;
   const more = events.length - 3;
   return (
@@ -391,7 +422,7 @@ function DayCell({
       {/* Puhelin: merkit (tulos kirjaimena); valittu päivä näyttää tiedot ruudukon alla. */}
       <div className="pointer-events-none relative mt-0.5 flex flex-wrap gap-0.5 sm:hidden" aria-hidden>
         {events.slice(0, 3).map((e) => (
-          <span key={e.key} className={`relative flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-0.5 text-[10px] font-bold leading-none ring-1 ${chipClass(e)} ${e.kind === 'training' ? 'opacity-70' : ''}`}>
+          <span key={e.key} className={`relative flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-0.5 text-[10px] font-bold leading-none ring-1 ${chipClass(e)} ${isSubdued(e) ? 'opacity-70' : ''}`}>
             {e.state === 'played' && e.outcome ? OUTCOME_LABEL[e.outcome] : KIND_ICON[e.kind]}
             {colorOf(e) && <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full ring-1 ring-[var(--surface-raised)]" style={{ background: colorOf(e) }} />}
           </span>
