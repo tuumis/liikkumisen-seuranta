@@ -9,6 +9,13 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.100',
+    date: '27.11.2026',
+    items: [
+      'Kuukausikalentereissa Koko perhe -tilassa toisen perheenjäsenen nimen vieressä ei enää ole rivittyvää muokkausvihjettä. Vihje näkyy kerran päivän listan alla.',
+    ],
+  },
+  {
     version: '1.1.99',
     date: '27.11.2026',
     items: [

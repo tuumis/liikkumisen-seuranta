@@ -300,7 +300,6 @@ export function MonthCalendar({
                         <span className="mb-0.5 inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-slate-600">
                           <span className="size-2.5 rounded-full" style={{ background: colorOf(e) }} aria-hidden />
                           {memberById.get(e.profileId)?.name}
-                          {!own(e) && <span className="font-medium normal-case tracking-normal text-slate-500">· muokkaus hänen profiilissaan</span>}
                         </span>
                       )}
                       <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -337,6 +336,8 @@ export function MonthCalendar({
               })}
             </ul>
           )}
+          {/* Muokkausvihje kerran listan alla (27.11.2026), ei nimirivillä, jossa se rivittyi kapeassa sarakkeessa. */}
+          {family && dayEvents.some((e) => !own(e)) && <p className="mt-1 px-2 text-xs text-slate-500">Muiden perheenjäsenten tapahtumia muokataan heidän omassa profiilissaan.</p>}
           {selected >= today ? (
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {family && <span className="text-xs font-semibold text-slate-600">Lisää ({profile.name}):</span>}

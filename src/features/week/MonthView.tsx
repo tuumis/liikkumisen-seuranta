@@ -354,7 +354,6 @@ export function MonthView({
                             <span className="mb-0.5 inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-slate-600">
                               <span className="size-2.5 rounded-full" style={{ background: p.color }} aria-hidden />
                               {p.name}
-                              <span className="font-medium normal-case tracking-normal text-slate-500">· muokkaus hänen profiilissaan</span>
                             </span>
                             <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                               <span className={`truncate font-medium ${i.kind === 'skipped' ? 'text-slate-500 line-through' : i.kind === 'note' ? 'text-slate-600' : 'text-slate-900'}`}>{i.title}</span>
@@ -370,6 +369,9 @@ export function MonthView({
                 </section>
               );
             })}
+          {family && (items.get(sel) ?? []).some((i) => i.profileId && i.profileId !== profile.id) && (
+            <p className="px-2 text-xs text-slate-500">Muiden perheenjäsenten kertoja ja merkintöjä muokataan heidän omassa profiilissaan.</p>
+          )}
           <div className="text-center">
             <button type="button" onClick={() => actions.onOpenWeek(sel)} className="press inline-flex min-h-10 items-center gap-1 rounded-full px-3 text-sm font-semibold text-green-800 hover:bg-[var(--surface-sunk)]">
               Avaa viikko ja päivän luvut <IconChevronRight size="1rem" />
