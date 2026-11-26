@@ -3,7 +3,9 @@
 
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import type { ActivityType, FieldPosition, FocusTag, GameFormat, GameLevel, GameResult, HomeAway, PlayedState, Session } from '../../domain/types';
+import type { ActivityType, FieldPosition, FocusTag, GameFormat, GameLevel, GameResult, HomeAway, IntensityPreset, PlayedState, Session } from '../../domain/types';
+import { CONFIRM_INTENSITY } from '../review/ConfirmForm';
+import { TermInfo } from '../../ui/glossary';
 import { HomeAwayChips, HomeAwaySelect } from '../games/HomeAway';
 import { DEFAULT_GAME_WARMUP_MIN, DEFAULT_PLAY_SHARE } from '../../domain/intensity';
 import { goalsLabel } from '../../ui/labels';
@@ -109,6 +111,11 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
   // Seuran treenin joukkue (19.11.2026) on kerralla, ei lisätiedoissa.
   const [trainingTeam, setTrainingTeam] = useState('');
   useEffect(() => setTrainingTeam(session?.teamId ?? ''), [session?.id, session?.teamId]);
+  // Treenin teho (27.11.2026): pikakuittaus kirjaa viikkorytmin tehon; tässä sen näkee ja voi vaihtaa, jos treeni
+  // poikkesi tavallisesta. null = käsin annetut minuutit (ei valintaa).
+  const tehoOf = (s: Session | null) => (!s ? null : s.intensitySource === 'manual' ? null : (s.intensityPreset ?? 'profile'));
+  const [teho, setTeho] = useState<'profile' | IntensityPreset | null>(null);
+  useEffect(() => setTeho(tehoOf(session)), [session?.id]);
 
   // Avattaessa: olemassa olevat tiedot tai oletukset (oma joukkue = viimeksi käytetty).
   const existing = useLiveQuery(async () => (session ? (await repo.getFootballDetails(session.id)) ?? null : undefined), [session?.id]);
@@ -243,6 +250,7 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
     try {
       await repo.saveFootballDetails(session!.id, input);
       if (showTeam && trainingTeam !== (session!.teamId ?? '')) await repo.setSessionTeam(session!.id, trainingTeam || undefined);
+      if (kind === 'training' && teho !== null && teho !== tehoOf(session)) await repo.setSessionIntensity(session!.id, teho === 'profile' ? undefined : teho);
       if (showSelf && sb !== null && sa !== null && (selfBefore !== null || selfAfter !== null) && (sb !== (self?.before ?? 0) || sa !== (self?.after ?? 0))) {
         await repo.setTrainingSelf(session!.id, { before: sb, after: sa });
       }
@@ -279,6 +287,24 @@ export function FootballPanel({ session, type, onClose }: { session: Session | n
         <p className="text-xs text-slate-500">Kaikki tiedot ovat valinnaisia. Kerta on jo tallennettu.</p>
 
         {showTeam && <TrainingTeamField profileId={session.profileId} value={trainingTeam} onChange={setTrainingTeam} inPanel />}
+
+        {kind === 'training' && (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
+              Teho <TermInfo id="intensity" />
+            </div>
+            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Teho">
+              {CONFIRM_INTENSITY.map((o) => (
+                <ToggleChip key={o.value} on={teho === o.value} onChange={() => setTeho(o.value)}>
+                  {o.label}
+                </ToggleChip>
+              ))}
+            </div>
+            <p className="text-xs text-slate-500">
+              {teho === null ? 'Kerran minuutit on annettu käsin. Valinta laskee ne uudelleen.' : 'Kuitattu tällä teholla. Vaihda, jos treeni poikkesi tavallisesta.'}
+            </p>
+          </div>
+        )}
 
         <div>
           <div className="mb-1 text-sm font-medium text-slate-700">Viihtyminen</div>

@@ -4,6 +4,7 @@
 // arkiliikunnalle (vahvista arvio). Päivän alla suositusmerkit (rasittava, lihas, luusto).
 // PC:llä valittavat lisäsarakkeet (tehot, jalkapallo, kommentit); summat minuutteina tai tunteina.
 
+import { presetText } from '../../domain/intensity';
 import { TypeGlyph } from '../../ui/TypeGlyph';
 import { useEffect, useRef, useState } from 'react';
 import { footballBrief, shortName } from '../../domain/weekReport';
@@ -360,7 +361,7 @@ export function DayTable({
                               type="button"
                               onClick={(e) => morphOpen(e.currentTarget, () => onPlanOpen(p))}
                               className={`${chip} border border-dashed border-slate-300 text-slate-500 ${skipped ? 'line-through opacity-70' : ''}`}
-                              title={`Suunniteltu: ${t?.name ?? ''} ${p.durationMin} min${skipped ? ' (ei tehty)' : ''}`}
+                              title={`Suunniteltu: ${t?.name ?? ''} ${p.durationMin} min${skipped ? ' (ei tehty)' : ` · teho: ${presetText(p.intensityPreset)}`}`}
                             >
                               <span aria-hidden className="grayscale-[0.6]">
                                 <TypeGlyph t={t} />

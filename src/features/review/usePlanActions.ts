@@ -2,6 +2,7 @@
 
 import type { PlannedSession, Session, SkipReason } from '../../domain/types';
 import { repo, type ConfirmDetails } from '../../db/repositories';
+import { presetText } from '../../domain/intensity';
 import { dayLabel } from '../../ui/format';
 import { SKIP_REASON_LABEL } from '../../ui/labels';
 import { markFresh } from '../../ui/fresh';
@@ -29,7 +30,8 @@ export function usePlanActions(onOpenSession: (s: Session) => void, onConfirmed?
       }
       markFresh(r.session.id);
       playSound('confirm');
-      toast(`Kuitattu: ${dayLabel(plan.date)} ${r.session.durationMin} min`, {
+      const teho = r.session.intensitySource === 'manual' ? '' : ` · teho: ${presetText(r.session.intensityPreset)}`;
+      toast(`Kuitattu: ${dayLabel(plan.date)} ${r.session.durationMin} min${teho}`, {
         label: 'Kumoa',
         run: () => repo.undoConfirm([r.session.id]),
       }, 'success');

@@ -827,6 +827,30 @@ export function createRepositories(db: AppDB = defaultDb) {
     });
   }
 
+  /**
+   * Kerran teho jälkikäteen (27.11.2026, jalkapallon lisätiedot pikakuittauksen jälkeen): esiasetus tai lajin arvio
+   * (undefined). Muut tiedot säilyvät; minuutit lasketaan uudelleen.
+   */
+  async function setSessionIntensity(id: UUID, preset: IntensityPreset | undefined): Promise<Session> {
+    const s = await db.sessions.get(id);
+    if (!s || s.deletedAt) throw new Error('Kertaa ei löydy');
+    if (s.intensitySource === 'profile' && (s.intensityPreset ?? undefined) === preset) return s;
+    return updateSession(id, {
+      activityTypeId: s.activityTypeId,
+      date: s.date,
+      durationMin: s.durationMin,
+      effort: s.effort,
+      muscle: s.muscle,
+      bone: s.bone,
+      ...(preset ? { intensityPreset: preset } : {}),
+      ...(s.playedMin !== undefined ? { playedMin: s.playedMin } : {}),
+      ...(s.startTime ? { startTime: s.startTime } : {}),
+      ...(s.timedSec !== undefined ? { timedSec: s.timedSec } : {}),
+      ...(s.note ? { note: s.note } : {}),
+      ...(s.label ? { label: s.label } : {}),
+    });
+  }
+
   /** Verryttelykertaa muokattu suoraan: uusi kesto jaetaan ennen/jälkeen-osiin (ennen säilyy, jos mahtuu). */
   function splitSelfDuration(s: Session) {
     const before = s.selfBeforeMin ?? 0;
@@ -2872,6 +2896,7 @@ export function createRepositories(db: AppDB = defaultDb) {
     reopenPlanned,
     listTeams,
     setSessionTeam,
+    setSessionIntensity,
     trainingsWithoutTeam,
     assignTrainingsTeam,
     clearTrainingsTeam,

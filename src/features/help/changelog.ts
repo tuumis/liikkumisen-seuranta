@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.97',
+    date: '27.11.2026',
+    items: [
+      'Jalkapallotreenin pikakuittauksen jälkeen aukeavassa lisätietoikkunassa näkyy nyt teho, jolla kerta kuitattiin, ja sen voi vaihtaa, jos treeni poikkesi tavallisesta.',
+      'Kuittausilmoitus kertoo tehon (esim. "Kuitattu: Ke 25.11. 75 min · teho: enimmäkseen reipasta").',
+    ],
+  },
+  {
     version: '1.1.96',
     date: '27.11.2026',
     items: [

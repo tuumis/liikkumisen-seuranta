@@ -1,6 +1,7 @@
 // Yksittäisen suunnitelman toiminnot Viikko-näkymästä: kuittaus (kuten suunniteltu tai muulla
 // kestolla), tämän kerran muutos (kesto, kellonaika) myös etukäteen, ohitus syineen.
 
+import { presetText } from '../../domain/intensity';
 import { useEffect, useState } from 'react';
 import type { ActivityType, Fixture, PlannedSession, Session } from '../../domain/types';
 import { repo } from '../../db/repositories';
@@ -238,7 +239,7 @@ export function PlanSheet({
             <div className="card-sunk p-3">
               {!details ? (
                 <button type="button" className="w-full text-left text-sm font-medium text-green-800" onClick={() => setDetails(true)}>
-                  Kuittaa tiedoilla (teho, lihas/luusto{isClubTraining(type) ? ', verryttely' : ''})
+                  Kuittaa tiedoilla (teho nyt: {presetText(plan.intensityPreset)}; lihas/luusto{isClubTraining(type) ? ', verryttely' : ''})
                 </button>
               ) : (
                 <ConfirmForm plan={plan} type={type} onConfirm={(d) => run(() => actions.confirm(plan, undefined, d))()} onCancel={() => setDetails(false)} />

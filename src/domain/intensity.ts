@@ -14,6 +14,14 @@ export const INTENSITY_PRESETS: Readonly<Record<IntensityPreset, IntensityShares
 
 export const isIntensityPreset = (v: unknown): v is IntensityPreset => v === 'light' || v === 'moderate' || v === 'vigorous';
 
+const PRESET_TEXT: Readonly<Record<IntensityPreset, string>> = { light: 'enimmäkseen kevyttä', moderate: 'enimmäkseen reipasta', vigorous: 'enimmäkseen rasittavaa' };
+
+/**
+ * Suunnitellun kerran teho tekstinä (27.11.2026): pikakuittaus (✓ tai pyyhkäisy) kirjaa kerran tällä teholla.
+ * Ilman viikkorytmin valintaa lajin tehoprofiili ("lajin arvio", sama sana kuin Kuittaa tiedoilla -näkymässä).
+ */
+export const presetText = (p?: IntensityPreset): string => (isIntensityPreset(p) ? PRESET_TEXT[p] : 'lajin arvio');
+
 /**
  * Suunnitellun kerran tehominuutit ennusteisiin (26.11.2026): viikkorytmin esiasetus, muuten lajin arvio.
  */
