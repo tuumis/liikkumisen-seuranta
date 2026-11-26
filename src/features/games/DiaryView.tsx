@@ -1,7 +1,7 @@
 // Jalkapallon päiväkirja: kaikki treenit, omatoimiset harjoitukset, pelit ja turnaukset yhdessä
 // listassa kommentteineen. Haku, suodatus ja nopea kommentin lisäys suoraan listasta.
 
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { footballKindOf, LEVEL_LABEL, OUTCOME_LABEL, outcomeOf, POSITION_LABEL, trainingSelfText } from '../../domain/football';
 import type { ActivityType, FootballDetails, PlayedState, Profile, Session } from '../../domain/types';
 import { displayTeamName } from '../../domain/opponent';
@@ -33,6 +33,10 @@ export function DiaryView({ profile }: { profile: Profile }) {
   const [query, setQuery] = useState('');
   const [panel, setPanel] = useState<Session | null>(null);
   const [layout, setLayoutState] = useState<Layout>(readLayout);
+  // Kaksi paneelia (27.11.2026): kun näkymä on vähintään 60rem leveä (PC, pienennetty sivupalkki tai iso näyttö),
+  // lista on vasemmalla ja valitun kerran tiedot oikealla sivun sisällä; kapeammin tiedot aukeavat paneeliin.
+  const root = useRef<HTMLDivElement>(null);
+  const wide = useWiderThan(root, 960);
   const setLayout = (v: Layout) => {
     setLayoutState(v);
     try {
@@ -71,7 +75,8 @@ export function DiaryView({ profile }: { profile: Profile }) {
   const commented = (data?.sessions ?? []).filter((s) => !s.deletedAt && !s.linkedTo && hasComment(s, data?.details.get(s.id))).length;
 
   return (
-    <div className="space-y-4">
+    <div ref={root} className={wide ? 'grid grid-cols-[minmax(0,1fr)_30rem] items-start gap-5' : ''}>
+    <div className="@container min-w-0 space-y-4">
       <Card>
         <div className="space-y-3">
           <div className="flex items-center gap-2">
@@ -114,25 +119,51 @@ export function DiaryView({ profile }: { profile: Profile }) {
           )}
         </Card>
       ) : layout === 'table' ? (
-        <DiaryTable entries={entries} onOpen={setPanel} />
+        <DiaryTable entries={entries} onOpen={setPanel} activeId={wide ? panel?.id : undefined} />
       ) : (
         [...byMonth.entries()].map(([month, list]) => (
           <section key={month}>
             <h3 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
               {formatDate(`${month}-01`, 'LLLL yyyy')} · {list.length}
             </h3>
-            <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 @min-[68rem]:grid-cols-3">
+            <ul className="space-y-2 @2xl:grid @2xl:grid-cols-2 @2xl:gap-3 @2xl:space-y-0 @min-[68rem]:grid-cols-3">
               {list.map((e) => (
-                <DiaryEntry key={e.s.id} s={e.s} t={e.t} d={e.d} self={e.self} onDetails={() => setPanel(e.s)} />
+                <DiaryEntry key={e.s.id} s={e.s} t={e.t} d={e.d} self={e.self} onDetails={() => setPanel(e.s)} active={wide && panel?.id === e.s.id} />
               ))}
             </ul>
           </section>
         ))
       )}
 
-      <FootballPanel session={panel} type={panel ? data?.types.get(panel.activityTypeId) : undefined} onClose={() => setPanel(null)} />
+      {!wide && <FootballPanel session={panel} type={panel ? data?.types.get(panel.activityTypeId) : undefined} onClose={() => setPanel(null)} />}
+    </div>
+    {wide && (
+      <div className="scroll-thin sticky top-6 max-h-[calc(100dvh-3rem)] overflow-y-auto overscroll-contain rounded-[1.75rem]">
+        {panel ? (
+          <FootballPanel key={panel.id} inline session={panel} type={data?.types.get(panel.activityTypeId)} onClose={() => setPanel(null)} />
+        ) : (
+          <p className="card p-6 text-sm text-slate-600">Valitse kerta listasta, niin sen tiedot aukeavat tähän. Voit lisätä tulokset, arvion ja kommentin ja siirtyä suoraan seuraavaan kertaan.</p>
+        )}
+      </div>
+    )}
     </div>
   );
+}
+
+/** Elementin leveys ≥ px (ResizeObserver); ensimmäinen mittaus ennen piirtoa. */
+function useWiderThan(ref: RefObject<HTMLElement | null>, px: number): boolean {
+  const [wide, setWide] = useState(false);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const check = () => setWide(el.getBoundingClientRect().width >= px);
+    check();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref, px]);
+  return wide;
 }
 
 /** Kortit / taulukko (laitekohtainen valinta, kuten Viikko-näkymässä). */
@@ -243,7 +274,7 @@ function tableRows(entries: Entry[]): TableRow[] {
 }
 
 /** Päiväkirja taulukkona: rivi per treeni, peli tai turnauksen peli; rivin napautus avaa lisätiedot. */
-function DiaryTable({ entries, onOpen }: { entries: Entry[]; onOpen: (s: Session) => void }) {
+function DiaryTable({ entries, onOpen, activeId }: { entries: Entry[]; onOpen: (s: Session) => void; activeId?: string }) {
   const rows = tableRows(entries);
   const th = 'px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wide text-slate-500';
   return (
@@ -266,7 +297,7 @@ function DiaryTable({ entries, onOpen }: { entries: Entry[]; onOpen: (s: Session
             {rows.map((r, i) => {
               const first = i === 0 || rows[i - 1].s.id !== r.s.id;
               return (
-                <tr key={r.key} onClick={() => onOpen(r.s)} className={`cursor-pointer hover:bg-[color-mix(in_oklab,var(--surface-sunk)_70%,transparent)] ${first ? 'border-t border-[var(--line)]' : ''}`}>
+                <tr key={r.key} onClick={() => onOpen(r.s)} className={`cursor-pointer hover:bg-[color-mix(in_oklab,var(--surface-sunk)_70%,transparent)] ${r.s.id === activeId ? 'bg-green-50' : ''} ${first ? 'border-t border-[var(--line)]' : ''}`}>
                   <td className="whitespace-nowrap px-3 py-2 tabular-nums text-slate-700">{first ? formatDate(r.s.date, 'EEEEEE d.M.yy') : ''}</td>
                   <td className="max-w-[14rem] truncate px-3 py-2 text-slate-900" title={r.event}>
                     <button
@@ -311,7 +342,7 @@ function DiaryTable({ entries, onOpen }: { entries: Entry[]; onOpen: (s: Session
 
 const hasComment = (s: Session, d?: FootballDetails) => !!(d?.ratingNote || s.note || d?.games?.some((g) => g.note));
 
-function DiaryEntry({ s, t, d, self, onDetails }: { s: Session; t?: ActivityType; d?: FootballDetails; self?: Session; onDetails: () => void }) {
+function DiaryEntry({ s, t, d, self, onDetails, active = false }: { s: Session; t?: ActivityType; d?: FootballDetails; self?: Session; onDetails: () => void; active?: boolean }) {
   const toast = useToast();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(d?.ratingNote ?? '');
@@ -324,7 +355,7 @@ function DiaryEntry({ s, t, d, self, onDetails }: { s: Session; t?: ActivityType
   }
 
   return (
-    <li className="card p-4 sm:p-5">
+    <li className={`card p-4 sm:p-5 ${active ? 'outline-2 -outline-offset-2 outline-green-700' : ''}`} aria-current={active || undefined}>
       <div className="flex items-start gap-3">
         <TypeIcon t={t} size="sm" />
         <div className="min-w-0 flex-1">

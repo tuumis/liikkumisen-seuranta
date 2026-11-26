@@ -103,6 +103,7 @@ const TOPICS: { q: string; a: string[] }[] = [
       'Kyllä. Sivupalkin yläreunan nuoli (tai Ctrl+B) pienentää palkin pelkiksi kuvakkeiksi, ja sisältö saa enemmän tilaa. Kuvakkeen nimi näkyy, kun viet hiiren sen päälle. Profiilit näkyvät kuvina, ja kuittaamattomien kertojen määrä pienenä numerona. Nuoli logon alla (tai Ctrl+B) suurentaa palkin takaisin. Valinta muistetaan tällä laitteella.',
       'Kun tilaa on riittävästi (pienennetty palkki tai iso näyttö), kuukausikalentereissa valittu päivä näkyy kalenterin vieressä (Jalkapallossa sen alla myös Odottaa tulosta), kalenterin ruuduissa nimet kahdella rivillä ja neljä tapahtumaa, viikon päiväkortit kahdessa sarakkeessa ja Analyysin kortit kolmessa palstassa.',
       'PC:llä muokkausikkunat (esimerkiksi kerran, merkinnän tai pelin tiedot) aukeavat ruudun oikeaan reunaan, jolloin näkymä jää vasemmalle näkyviin. Ikkuna sulkeutuu ruksista, Esc-näppäimellä tai napsauttamalla sen ulkopuolelle.',
+      'Jalkapallon Päiväkirjassa leveällä näytöllä lista on vasemmalla ja valitun kerran tiedot oikealla, joten kertaa voi vaihtaa suoraan listasta.',
     ],
   },
 ];

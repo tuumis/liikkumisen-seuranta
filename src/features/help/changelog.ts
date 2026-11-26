@@ -9,6 +9,13 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.104',
+    date: '27.11.2026',
+    items: [
+      'Jalkapallon Päiväkirja kahtena paneelina leveällä näytöllä (esimerkiksi pienennetty sivupalkki): lista vasemmalla ja valitun kerran lisätiedot oikealla sivun sisällä. Kertaa voi vaihtaa suoraan listasta, valittu kerta on korostettu, ja tiedot jäävät auki tallennuksen jälkeen. Kapeammalla näytöllä tiedot aukeavat ikkunaan kuten ennen.',
+    ],
+  },
+  {
     version: '1.1.103',
     date: '27.11.2026',
     items: [
