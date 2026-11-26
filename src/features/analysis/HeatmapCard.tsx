@@ -8,7 +8,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { repo } from '../../db/repositories';
 import { dayTotals, isEstimateConfirmation, trackingStart } from '../../domain/aggregate';
 import { parseISODate, toISODate } from '../../domain/dates';
-import { computeSessionMinutes } from '../../domain/intensity';
+import { plannedMinutes } from '../../domain/intensity';
 import { DAY_TARGET, dayGoalValue } from '../../domain/dayTarget';
 import { RECOMMENDATIONS } from '../../domain/recommendations';
 import { recommendationGroup } from '../../domain/groups';
@@ -128,7 +128,7 @@ function useHeatData(profile: Profile, start: ISODate, end: ISODate, withEstimat
         effort: 0,
         muscle: false,
         bone: false,
-        minutes: computeSessionMinutes(type, { durationMin: p.durationMin, effort: 0 }).minutes,
+        minutes: plannedMinutes(type, p),
       } as unknown as Session;
       const list = plansByDate.get(p.date);
       if (list) list.push(pseudo);

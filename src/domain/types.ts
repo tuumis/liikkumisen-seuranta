@@ -167,6 +167,8 @@ export interface TemplateItem extends SyncFields {
   selfAfterMin?: number;
   /** Seuran jalkapallotreeni (19.11.2026): oma joukkue (Team.id), jonka kanssa treenataan; siirtyy kuitattuun kertaan. */
   teamId?: UUID;
+  /** Teho valmiiksi (26.11.2026): kuittaus ja ennusteet käyttävät esiasetusta lajin arvion sijaan; puuttuu = lajin arvio. */
+  intensityPreset?: IntensityPreset;
   createdAt: Timestamp;
 }
 
@@ -194,6 +196,8 @@ export interface PlannedSession extends SyncFields {
   label?: string;
   /** Yksittäin suunniteltu seuran treeni (19.11.2026): oma joukkue. Viikkorytmin kerroilla joukkue luetaan pohjariviltä. */
   teamId?: UUID;
+  /** Viikkorytmin teho (26.11.2026), kopioitu pohjariviltä: kuittauksen oletus ja ennusteen teho. */
+  intensityPreset?: IntensityPreset;
   createdAt: Timestamp;
 }
 

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { z } from 'zod';
 import { isISODate } from '../../domain/dates';
-import type { Profile, TemplateItem, Weekday } from '../../domain/types';
+import type { IntensityPreset, Profile, TemplateItem, Weekday } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { Button, Card, EmptyState, Field, inputClass } from '../../ui/components';
 import { TimeField } from '../../ui/TimeField';
@@ -21,6 +21,12 @@ import { parseSelfMin, TrainingSelfBackfill, TrainingSelfFields } from '../footb
 import { IconClose, IconPencil, IconPlus } from '../../ui/icons';
 import { TrainingTeamField } from '../football/TrainingTeam';
 import { displayTeamName } from '../../domain/opponent';
+import { CONFIRM_INTENSITY } from '../review/ConfirmForm';
+import { ToggleChip } from '../../ui/controls';
+import { TermInfo } from '../../ui/glossary';
+
+/** Viikkorytmin teho listassa (26.11.2026): "enimmäkseen rasittavaa". */
+const presetText = (p?: IntensityPreset) => (p ? CONFIRM_INTENSITY.find((o) => o.value === p)?.label.toLocaleLowerCase('fi') : undefined);
 
 const WEEKDAYS: { value: Weekday; label: string }[] = [
   { value: 1, label: 'Ma' },
@@ -115,6 +121,7 @@ export function TemplateSection({ profile }: { profile: Profile }) {
                 <span className="block text-xs text-slate-600">
                   {i.weekdays.map((d) => WEEKDAYS[d - 1].label).join(', ')}
                   {i.startTime && ` klo ${i.startTime}`} · {i.durationMin} min
+                  {i.intensityPreset && ` · ${presetText(i.intensityPreset)}`}
                   {(i.selfBeforeMin || i.selfAfterMin) && isClubTraining(types?.find((t) => t.id === i.activityTypeId)) ? ` · 🥾 ${trainingSelfText(i)}` : ''}
                 </span>
                 <span className="block text-xs text-slate-500">
@@ -156,6 +163,7 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
     selfBefore: item?.selfBeforeMin ? String(item.selfBeforeMin) : '',
     selfAfter: item?.selfAfterMin ? String(item.selfAfterMin) : '',
     teamId: item?.teamId ?? '',
+    teho: (item?.intensityPreset ?? 'profile') as IntensityPreset | 'profile',
   });
   const clubTraining = isClubTraining(types?.find((t) => t.id === v.activityTypeId));
   // Uuden rivin oletuslaji, kun jalkapallon päättely ja lajit ovat valmiina.
@@ -197,6 +205,7 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
       selfBeforeMin: sb || undefined,
       selfAfterMin: sa || undefined,
       teamId: clubTraining ? v.teamId || undefined : undefined,
+      intensityPreset: v.teho === 'profile' ? undefined : v.teho,
     };
     try {
       const saved = item ? await repo.updateTemplateItem(item.id, input, today) : await repo.createTemplateItem(profile.id, input, today);
@@ -275,6 +284,25 @@ function TemplateForm({ profile, item, onDone }: { profile: Profile; item?: Temp
           <input className={inputClass} inputMode="numeric" value={v.durationMin} onChange={(e) => setV((c) => ({ ...c, durationMin: e.target.value }))} />
           {err('durationMin')}
         </Field>
+      </div>
+
+      {/* Teho valmiiksi (26.11.2026): kuittaus ja ennusteet käyttävät tätä; kuitatessa voi vaihtaa. */}
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
+          Teho <TermInfo id="intensity" />
+        </div>
+        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Teho">
+          {CONFIRM_INTENSITY.map((o) => (
+            <ToggleChip key={o.value} on={v.teho === o.value} onChange={() => setV((c) => ({ ...c, teho: o.value }))}>
+              {o.label}
+            </ToggleChip>
+          ))}
+        </div>
+        <p className="text-xs text-slate-500">
+          {v.teho === 'profile'
+            ? 'Lajin tavallinen teho. Kuitatessa voit valita kerran tehon.'
+            : 'Kerrat kuitataan tällä teholla, ja ennuste lasketaan sillä. Kuitatessa voit vaihtaa yksittäisen kerran tehon.'}
+        </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">

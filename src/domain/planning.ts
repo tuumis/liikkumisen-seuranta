@@ -53,7 +53,7 @@ export function templateItemDates(
 
 /** Uusi avoin suunnitelma pohjariviltä; tunniste p:<templateItemId>:<date>. */
 export function newPlanned(
-  item: Pick<TemplateItem, 'id' | 'profileId' | 'activityTypeId' | 'durationMin' | 'startTime' | 'label'>,
+  item: Pick<TemplateItem, 'id' | 'profileId' | 'activityTypeId' | 'durationMin' | 'startTime' | 'label' | 'intensityPreset'>,
   date: ISODate,
   ts: Timestamp,
   by: DeviceId,
@@ -72,5 +72,6 @@ export function newPlanned(
   };
   if (item.startTime) p.startTime = item.startTime;
   if (item.label) p.label = item.label;
+  if (item.intensityPreset) p.intensityPreset = item.intensityPreset;
   return p;
 }

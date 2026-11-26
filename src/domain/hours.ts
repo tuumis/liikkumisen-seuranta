@@ -11,7 +11,7 @@
 import { activeEstimate, addsToEstimate, isEstimateConfirmation, isEstimateValidOn, sessionCategory } from './aggregate';
 import { datesBetween } from './dates';
 import { estimateBaseMin } from './holidays';
-import { computeSessionMinutes, mvpaOf } from './intensity';
+import { mvpaOf, plannedMinutes } from './intensity';
 import type { ActivityType, Category, DayFlag, Estimate, ISODate, Period, PlannedSession, Session, UUID } from './types';
 
 export interface HoursSplit {
@@ -217,7 +217,7 @@ export function weeklyHours(input: {
       openByCat.set(c, (openByCat.get(c) ?? 0) + p.durationMin);
       if (!addsToEstimate(p, input.types)) openReplaces.add(c);
       const type = input.types.get(p.activityTypeId);
-      if (type) openPlanMvpa += mvpaOf(computeSessionMinutes(type, { durationMin: p.durationMin, effort: 0 }).minutes);
+      if (type) openPlanMvpa += mvpaOf(plannedMinutes(type, p));
     }
     let forecastMin = 0;
     if (!future) {

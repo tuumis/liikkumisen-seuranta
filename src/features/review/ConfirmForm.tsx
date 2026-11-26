@@ -42,7 +42,8 @@ export function ConfirmForm({
     [club, plan.profileId, plan.templateItemId],
   );
   const [duration, setDuration] = useState(String(plan.durationMin));
-  const [teho, setTeho] = useState<Teho>('profile');
+  // Viikkorytmin teho valmiiksi valittuna (26.11.2026).
+  const [teho, setTeho] = useState<Teho>(plan.intensityPreset ?? 'profile');
   const [muscle, setMuscle] = useState(type?.muscleDefault === 'yes');
   const [bone, setBone] = useState(type?.boneDefault === 'yes');
   const [saveDefault, setSaveDefault] = useState(false);
@@ -73,7 +74,7 @@ export function ConfirmForm({
       if (saveDefault && type) await saveStrengthDefault(type, muscle, bone);
       await onConfirm({
         durationMin: d.data,
-        intensityPreset: teho === 'profile' ? undefined : teho,
+        intensityPreset: teho === 'profile' ? null : teho,
         muscle,
         bone,
         self: club ? { before: sb ?? 0, after: sa ?? 0 } : undefined,
@@ -110,6 +111,7 @@ export function ConfirmForm({
         </div>
         <p className="text-xs text-slate-500">
           {teho === 'profile' ? `Lajin arvio: ${type?.name ?? 'laji'} tavallisella teholla.` : 'Kerran minuutit lasketaan valitulla teholla lajin arvion sijaan.'}
+          {plan.intensityPreset && teho === plan.intensityPreset ? ' Valittu viikkorytmissä.' : ''}
         </p>
       </div>
 

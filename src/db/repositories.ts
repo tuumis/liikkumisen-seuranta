@@ -6,7 +6,7 @@ import { findFinnishClub } from '../domain/finnishClubs';
 import { Dexie, type Table } from 'dexie';
 import { CURRENT_SCHEMA_VERSION } from '../domain/migrations';
 import { activityTypeId, dayFlagId, newId, plannedSessionId, sessionIdFromPlanned, SETTINGS_ID, trainingSelfId } from '../domain/ids';
-import { computeSessionMinutes, DEFAULT_GAME_WARMUP_MIN, DEFAULT_PLAY_SHARE, INTENSITY_PRESETS, roundMinutes, partsShares, supportsParts } from '../domain/intensity';
+import { computeSessionMinutes, DEFAULT_GAME_WARMUP_MIN, DEFAULT_PLAY_SHARE, INTENSITY_PRESETS, isIntensityPreset, roundMinutes, partsShares, supportsParts } from '../domain/intensity';
 import { defaultGameLength, DEFAULT_WARMUP_MIN, legacyTournamentStart, tournamentStart } from '../domain/tournamentTime';
 import { DEFAULT_SETTINGS } from '../domain/recommendations';
 import { addDays, datesBetween, isISODate, maxDate } from '../domain/dates';
@@ -80,7 +80,8 @@ export type DeviceRole = 'pc' | 'phone';
 /** Kuittauksen lisätiedot (24.11.2026): puuttuva kenttä = oletus (suunniteltu kesto, lajin arvio ja oletukset). */
 export interface ConfirmDetails {
   durationMin?: number;
-  intensityPreset?: IntensityPreset;
+  /** Teho kuittauksessa; puuttuu = suunnitelman (viikkorytmin) teho, null = lajin arvio (26.11.2026). */
+  intensityPreset?: IntensityPreset | null;
   muscle?: boolean;
   bone?: boolean;
   /** Seuran treenin omatoiminen verryttely; annettuna korvaa viikkorytmin oletuksen (0 ja 0 = ei verryttelyä). */
@@ -236,6 +237,8 @@ export interface TemplateItemInput {
   selfAfterMin?: number;
   /** Seuran treeni: oma joukkue (19.11.2026). */
   teamId?: UUID;
+  /** Teho valmiiksi (26.11.2026); puuttuu = lajin arvio. */
+  intensityPreset?: IntensityPreset;
 }
 
 /** Poistetun kerran ja siihen liittyneiden tietueiden aiemmat versiot. */
@@ -1016,8 +1019,9 @@ export function createRepositories(db: AppDB = defaultDb) {
       durationMin: input.durationMin,
       validFrom: input.validFrom,
     };
-    for (const k of ['startTime', 'validTo', 'note', 'label', 'selfBeforeMin', 'selfAfterMin', 'teamId'] as const) delete next[k];
+    for (const k of ['startTime', 'validTo', 'note', 'label', 'selfBeforeMin', 'selfAfterMin', 'teamId', 'intensityPreset'] as const) delete next[k];
     if (input.teamId) next.teamId = input.teamId;
+    if (isIntensityPreset(input.intensityPreset)) next.intensityPreset = input.intensityPreset;
     if (selfMin(input.selfBeforeMin)) next.selfBeforeMin = selfMin(input.selfBeforeMin);
     if (selfMin(input.selfAfterMin)) next.selfAfterMin = selfMin(input.selfAfterMin);
     if (input.startTime) next.startTime = input.startTime;
@@ -1175,14 +1179,16 @@ export function createRepositories(db: AppDB = defaultDb) {
       const liveTeam = fixtureTeam && !fixtureTeam.deletedAt ? fixtureTeam : undefined;
       // Peli ja turnaus: lämmittely ennen jokaista peliä ja joukkueen peliaika-arvio.
       const gamesN = fixture?.games?.length || fixture?.gamesCount || 1;
+      // Teho: kuittauksen valinta, muuten viikkorytmin teho (26.11.2026); null = lajin arvio.
+      const preset = opts.intensityPreset === null ? undefined : (opts.intensityPreset ?? (isIntensityPreset(plan.intensityPreset) ? plan.intensityPreset : undefined));
       const input: SessionInput = {
         activityTypeId: type.id,
         date: plan.date,
         startTime: opts.startTime ?? plan.startTime,
         durationMin: opts.durationMin ?? plan.durationMin,
         // Tehon esiasetus kuittauksessa (24.11.2026) korvaa tason ponnistelukertoimen kuten kerran muokkauksessa.
-        effort: opts.intensityPreset ? 0 : fixtureLevel ? LEVEL_EFFORT[fixtureLevel] : 0,
-        intensityPreset: opts.intensityPreset,
+        effort: preset ? 0 : fixtureLevel ? LEVEL_EFFORT[fixtureLevel] : 0,
+        intensityPreset: preset,
         muscle: opts.muscle ?? type.muscleDefault === 'yes',
         bone: opts.bone ?? type.boneDefault === 'yes',
         warmupMin: type.usesPlayedMinutes ? gamesN * (fixture?.warmupMin ?? DEFAULT_GAME_WARMUP_MIN) : undefined,

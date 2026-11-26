@@ -12,6 +12,16 @@ export const INTENSITY_PRESETS: Readonly<Record<IntensityPreset, IntensityShares
   vigorous: Object.freeze({ light: 0.1, moderate: 0.35, vigorous: 0.5 }),
 });
 
+export const isIntensityPreset = (v: unknown): v is IntensityPreset => v === 'light' || v === 'moderate' || v === 'vigorous';
+
+/**
+ * Suunnitellun kerran tehominuutit ennusteisiin (26.11.2026): viikkorytmin esiasetus, muuten lajin arvio.
+ */
+export function plannedMinutes(type: ActivityType, plan: { durationMin: number; intensityPreset?: IntensityPreset }): IntensityMinutes {
+  const t = isIntensityPreset(plan.intensityPreset) ? { ...type, shares: INTENSITY_PRESETS[plan.intensityPreset] } : type;
+  return computeSessionMinutes(t, { durationMin: plan.durationMin, effort: 0 }).minutes;
+}
+
 export const EFFORT_FACTOR: Readonly<Record<Effort, number>> = Object.freeze({
   [-1]: 0.75, // kevyempi
   0: 1, // tavallinen

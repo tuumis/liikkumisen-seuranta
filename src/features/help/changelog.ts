@@ -9,6 +9,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.81',
+    date: '26.11.2026',
+    items: [
+      'Viikkorytmin tapahtumalle voi valita tehon valmiiksi: Lajin arvio, Enimmäkseen kevyttä, reipasta tai rasittavaa (Asetukset → Viikkorytmi).',
+      'Kerrat kuitataan valitulla teholla, myös yhdellä painalluksella ja sekuntikellosta. Kuittaa tiedoilla -näkymässä teho on valmiina, ja sen voi vaihtaa yksittäiselle kerralle.',
+      'Viikko-näkymän ennuste ja Analyysin kalenterikartta laskevat tulevat kerrat valitulla teholla. Muutos koskee tulevia kuittaamattomia kertoja; kirjatut kerrat eivät muutu.',
+    ],
+  },
+  {
     version: '1.1.80',
     date: '26.11.2026',
     items: ['Puhelimessa Jalkapallo → Kalenteri: Lista/Kuukausi-valinta sekä Tulosta- ja Vie kalenteriin -painikkeet ovat nyt samalla rivillä; painikkeet näkyvät kuvakkeina.'],

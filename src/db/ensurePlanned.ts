@@ -34,7 +34,11 @@ function fromItem(row: PlannedSession, item: TemplateItem): PlannedSession {
 }
 
 const sameContent = (a: PlannedSession, b: PlannedSession) =>
-  a.activityTypeId === b.activityTypeId && a.durationMin === b.durationMin && a.startTime === b.startTime && a.label === b.label;
+  a.activityTypeId === b.activityTypeId &&
+  a.durationMin === b.durationMin &&
+  a.startTime === b.startTime &&
+  a.label === b.label &&
+  a.intensityPreset === b.intensityPreset;
 
 export function createPlanner(db: AppDB, deviceId: () => Promise<DeviceId>) {
   async function getPlannedThrough(profileId: UUID): Promise<ISODate | undefined> {

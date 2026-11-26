@@ -13,6 +13,8 @@ const minutes = z.object({ light: z.number().min(0), moderate: z.number().min(0)
 const photo = z.string().max(300_000).regex(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/);
 const category = z.enum(['hobby', 'school_pe', 'school_recess', 'daycare', 'commute', 'self_directed', 'family', 'other']);
 const homeAway = z.enum(['home', 'away']);
+// Viikkorytmin teho (26.11.2026): tuntematon arvo (uudempi versio) luetaan lajin arvioksi.
+const preset = z.enum(['light', 'moderate', 'vigorous']).optional().catch(undefined);
 
 /** Tyhjennetty poistomerkintä (profiilin poisto): vain avain ja synkronointikentät. */
 const tombstone = (key: 'id' | 'sessionId' | 'plannedSessionId') => z.looseObject({ [key]: z.string().min(1), updatedAt: ts, updatedBy: z.string().min(1), deletedAt: ts });
@@ -96,6 +98,7 @@ export const templateItemSchema = either(
     active: z.boolean(),
     selfBeforeMin: z.number().min(0).optional(),
     selfAfterMin: z.number().min(0).optional(),
+    intensityPreset: preset,
     createdAt: ts,
     ...sync,
   }),
@@ -114,6 +117,7 @@ export const plannedSessionSchema = either(
     skipReason: z.enum(['sick', 'injured', 'cancelled', 'holiday', 'other_commitment', 'other']).catch('other').optional(),
     skipNote: z.string().max(200).optional(),
     sessionId: z.string().optional(),
+    intensityPreset: preset,
     createdAt: ts,
     ...sync,
   }),
