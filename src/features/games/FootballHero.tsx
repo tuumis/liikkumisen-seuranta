@@ -20,7 +20,8 @@ import { previewCard } from '../../domain/previewCard';
 import type { ISODate, Profile, Session } from '../../domain/types';
 import { repo, type FixtureEntry } from '../../db/repositories';
 import { dayLabel } from '../../ui/format';
-import { IconEye, IconEyeOff, IconPlus, IconShare, IconSparkle, IconTrophy } from '../../ui/icons';
+import { IconEye, IconEyeOff, IconPencil, IconPlus, IconShare, IconSparkle, IconTrophy } from '../../ui/icons';
+import { openPreviewShare } from '../share/PreviewShare';
 import { openCoachShare } from '../coach/CoachShare';
 import { CountUp } from '../../ui/CountUp';
 import { today as todayFn } from '../../ui/today';
@@ -49,11 +50,12 @@ function useNow(ms: number): Date {
 }
 
 // Luvut: puhelimella viisi pientä ruutua rivissä, leveämmällä kolme saraketta kahdella rivillä (container fh).
+// PC:llä (27.11.2026) sisältö on ruudun keskellä, ja koko kasvaa lukujen alueen leveyden mukaan (container st).
 function Stat({ label, value, i, className = '' }: { label: ReactNode; value: ReactNode; i: number; className?: string }) {
   return (
-    <div className={`hero-glass anim-rise min-w-0 rounded-2xl px-1 py-1.5 text-center @min-[40rem]/fh:px-2 @min-[40rem]/fh:py-2 @min-[40rem]/fh:text-left ${className}`} style={{ ['--i' as string]: i }}>
-      <dt className="truncate text-[9.5px] font-bold uppercase tracking-wide text-[var(--hero-ink-soft)] @min-[40rem]/fh:text-[10px]">{label}</dt>
-      <dd className="stat mt-0.5 whitespace-nowrap text-[17px] font-semibold @min-[40rem]/fh:mt-1 @min-[68rem]/fh:text-[21px] @min-[80rem]/fh:text-[25px]">{value}</dd>
+    <div className={`hero-glass anim-rise min-w-0 rounded-2xl px-1 py-1.5 text-center @min-[40rem]/fh:flex @min-[40rem]/fh:flex-col @min-[40rem]/fh:items-center @min-[40rem]/fh:justify-center @min-[40rem]/fh:px-2 @min-[40rem]/fh:py-2 ${className}`} style={{ ['--i' as string]: i }}>
+      <dt className="max-w-full truncate text-[9.5px] font-bold uppercase tracking-wide text-[var(--hero-ink-soft)] @min-[15rem]/st:text-[10.5px] @min-[22rem]/st:text-[11.5px] @min-[30rem]/st:text-[12.5px]">{label}</dt>
+      <dd className="stat mt-0.5 whitespace-nowrap text-[17px] font-semibold @min-[15rem]/st:mt-1 @min-[15rem]/st:text-[22px] @min-[22rem]/st:text-[28px] @min-[30rem]/st:text-[34px] @min-[38rem]/st:text-[40px]">{value}</dd>
     </div>
   );
 }
@@ -93,8 +95,8 @@ function Countdown({ e, onRecord }: { e: FixtureEntry; onRecord: () => void }) {
     [p.days, 'pv', ''],
     [p.hours, 'h', ''],
     [p.minutes, 'min', ''],
-    // Sekunnit vain leveämmällä (puhelimella rauhallisempi).
-    [p.seconds, 's', 'hidden @min-[40rem]/fh:block'],
+    // Sekunnit vain PC:llä, kun Seuraava peli -laatikko on vähintään 18rem (puhelimella rauhallisempi).
+    [p.seconds, 's', 'hidden @min-[40rem]/fh:@min-[18rem]/nx:block'],
   ];
   return (
     <span role="timer" aria-label={`Alkuun ${p.days} päivää ${p.hours} tuntia ${p.minutes} minuuttia`} className="flex items-start gap-1 @min-[40rem]/fh:gap-1.5 @min-[41rem]/nx:gap-2">
@@ -229,8 +231,11 @@ export function FootballHero({ profile, onOpen, onAdd }: { profile: Profile; onO
                   </button>
                 )}
               </div>
-              <div className="flex items-end justify-between gap-x-3 @min-[40rem]/fh:flex-wrap @min-[40rem]/fh:items-center @min-[40rem]/fh:gap-y-2.5">
-                <button type="button" onClick={() => onOpen?.(next)} className="press min-w-0 flex-1 text-left hover:opacity-90 @min-[40rem]/fh:min-w-[13rem]" aria-label={`${fixtureTitle(nextCard)}, avaa tiedot`}>
+              {/* Asettelu (27.11.2026): puhelimella tiedot | laskuri ja painikkeet alla; PC:llä leveänä tiedot ja painikkeet |
+                  laskuri; PC:llä kapeana tiedot ja alla laskuri | painikkeet kuvakkeina (kortti ei kasva korkeutta). */}
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-3 gap-y-2 [grid-template-areas:'info_timer'_'btns_btns'] @min-[40rem]/fh:@min-[26rem]/nx:items-center @min-[40rem]/fh:@min-[26rem]/nx:[grid-template-areas:'info_timer'_'btns_timer'] @min-[40rem]/fh:@max-[26rem]/nx:items-center @min-[40rem]/fh:@max-[26rem]/nx:gap-y-2.5 @min-[40rem]/fh:@max-[26rem]/nx:[grid-template-areas:'info_info'_'timer_btns']">
+                <span className="min-w-0 [grid-area:info]">
+                <button type="button" onClick={() => onOpen?.(next)} className="press block w-full min-w-0 text-left hover:opacity-90" aria-label={`${fixtureTitle(nextCard)}, avaa tiedot`}>
                   <span className="block truncate font-display text-base font-semibold leading-tight @min-[40rem]/fh:text-lg">{fixtureTitle(nextCard)}</span>
                   {/* Aika selvästi (myös puhelimella): päivä ja kellonaika vahvemmalla tekstillä. */}
                   <span className="mt-0.5 block truncate text-[13px] font-semibold">
@@ -240,7 +245,17 @@ export function FootballHero({ profile, onOpen, onAdd }: { profile: Profile; onO
                   </span>
                   {nextCard.location && <span className="block truncate text-[12px] text-[var(--hero-ink-soft)]">{nextCard.location}</span>}
                 </button>
-                <span className="shrink-0">
+                </span>
+                {/* Tiedot ja otteluennakko suoraan kortista (27.11.2026). */}
+                <span className="flex flex-wrap gap-1.5 [grid-area:btns] @min-[40rem]/fh:@max-[26rem]/nx:justify-end">
+                  <button type="button" onClick={() => onOpen?.(next)} title="Tiedot" className="press hit hero-glass inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full px-2.5 text-[11.5px] font-bold hover:brightness-110 @min-[40rem]/fh:@max-[26rem]/nx:size-9 @min-[40rem]/fh:@max-[26rem]/nx:px-0">
+                    <IconPencil size="0.85rem" /> <span className="@min-[40rem]/fh:@max-[26rem]/nx:sr-only">Tiedot</span>
+                  </button>
+                  <button type="button" onClick={() => openPreviewShare(next.plan.id)} title="Ennakko kuvana tai videona (esim. Instagram)" className="press hit hero-glass inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full px-2.5 text-[11.5px] font-bold hover:brightness-110 @min-[40rem]/fh:@max-[26rem]/nx:size-9 @min-[40rem]/fh:@max-[26rem]/nx:px-0">
+                    <IconShare size="0.85rem" /> <span className="@min-[40rem]/fh:@max-[26rem]/nx:sr-only">Ennakko</span>
+                  </button>
+                </span>
+                <span className="min-w-0 justify-self-end [grid-area:timer] @min-[40rem]/fh:@max-[26rem]/nx:justify-self-start">
                   <Countdown e={next} onRecord={() => void record(next)} />
                 </span>
               </div>
@@ -282,23 +297,23 @@ export function FootballHero({ profile, onOpen, onAdd }: { profile: Profile; onO
 
         {/* Kauden luvut */}
         {stats ? (
-          <dl className="grid grid-cols-5 gap-1.5 @min-[40rem]/fh:grid-cols-3 @min-[40rem]/fh:gap-2">
+          <dl className="grid grid-cols-5 gap-1.5 @min-[40rem]/fh:@container/st @min-[40rem]/fh:grid-cols-3 @min-[40rem]/fh:gap-2">
             <Stat label="Pelit" value={num(stats.g.games)} i={1} />
             <Stat label="V–T–H" value={`${stats.g.wins}–${stats.g.draws}–${stats.g.losses}`} i={2} />
             <Stat label="Maalit" value={`${stats.g.goalsFor}–${stats.g.goalsAgainst}`} i={3} />
             <Stat label="Treenit" value={num(stats.trainings)} i={4} />
             <Stat
-              className="hidden @min-[40rem]/fh:block"
+              className="hidden"
               label="Viimeiset"
               i={5}
               value={
                 stats.form.length ? (
-                  <span className="flex gap-1 pt-0.5" aria-label={`Viimeiset pelit: ${stats.form.map((r) => OUTCOME_WORD[r.outcome]).join(', ')}`}>
+                  <span className="flex justify-center gap-1 pt-0.5 @min-[30rem]/st:gap-1.5" aria-label={`Viimeiset pelit: ${stats.form.map((r) => OUTCOME_WORD[r.outcome]).join(', ')}`}>
                     {stats.form.map((r) => (
                       <span
                         key={`${r.sessionId}-${r.index ?? 0}`}
                         title={`${dayLabel(r.date)}${r.opponent ? ` vs ${r.opponent}` : ''} ${r.goalsFor}–${r.goalsAgainst}`}
-                        className={`flex size-[1.35rem] items-center justify-center rounded-full text-[11px] font-bold not-italic ${
+                        className={`flex size-[1.35rem] items-center justify-center rounded-full text-[11px] font-bold not-italic @min-[22rem]/st:size-[1.6rem] @min-[22rem]/st:text-[12px] @min-[30rem]/st:size-[1.9rem] @min-[30rem]/st:text-[13px] ${
                           r.outcome === 'W' ? 'bg-[var(--hero-accent)] text-[var(--hero-accent-ink)]' : r.outcome === 'D' ? 'hero-glass-strong' : 'ring-1 ring-inset ring-[var(--hero-line)]'
                         }`}
                         aria-hidden
@@ -313,23 +328,23 @@ export function FootballHero({ profile, onOpen, onAdd }: { profile: Profile; onO
               }
             />
             {/* Omat maalit: napautus piilottaa tai näyttää (muistetaan laitteella). */}
-            <div className="hero-glass anim-rise min-w-0 rounded-2xl" style={{ ['--i' as string]: 6 }}>
+            <div className="hero-glass anim-rise relative min-w-0 rounded-2xl" style={{ ['--i' as string]: 6 }}>
               <button
                 type="button"
                 onClick={() => setShowGoals(!showGoals)}
                 aria-pressed={showGoals}
                 aria-label={showGoals ? `${goalsLabel(profile.name)}: ${stats.g.playerGoals}. Piilota` : `${goalsLabel(profile.name)} piilotettu. Näytä`}
                 title={showGoals ? 'Piilota omat maalit' : 'Näytä omat maalit'}
-                className="press block w-full px-1 py-1.5 text-center @min-[40rem]/fh:px-2 @min-[40rem]/fh:py-2 @min-[40rem]/fh:text-left"
+                className="press block w-full px-1 py-1.5 text-center @min-[40rem]/fh:flex @min-[40rem]/fh:h-full @min-[40rem]/fh:flex-col @min-[40rem]/fh:items-center @min-[40rem]/fh:justify-center @min-[40rem]/fh:px-6 @min-[40rem]/fh:py-2"
               >
-                <span className="flex items-center justify-center gap-1 @min-[40rem]/fh:justify-between">
-                  <span className="truncate text-[9.5px] font-bold uppercase tracking-wide text-[var(--hero-ink-soft)] @min-[40rem]/fh:text-[10px]">
+                <span className="flex max-w-full items-center justify-center gap-1">
+                  <span className="truncate text-[9.5px] font-bold uppercase tracking-wide text-[var(--hero-ink-soft)] @min-[15rem]/st:text-[10.5px] @min-[22rem]/st:text-[11.5px] @min-[30rem]/st:text-[12.5px]">
                     <span className="@min-[40rem]/fh:hidden">{profile.name || 'Maalit'}</span>
                     <span className="hidden @min-[40rem]/fh:inline">{goalsLabel(profile.name)}</span>
                   </span>
-                  <span className="hidden shrink-0 text-[var(--hero-ink-soft)] @min-[40rem]/fh:inline">{showGoals ? <IconEye size="0.95rem" /> : <IconEyeOff size="0.95rem" />}</span>
+                  <span className="absolute right-2 top-2 hidden text-[var(--hero-ink-soft)] @min-[40rem]/fh:inline">{showGoals ? <IconEye size="0.95rem" /> : <IconEyeOff size="0.95rem" />}</span>
                 </span>
-                <span className="stat mt-0.5 flex items-center justify-center gap-1 whitespace-nowrap text-[17px] font-semibold @min-[40rem]/fh:mt-1 @min-[40rem]/fh:justify-start @min-[68rem]/fh:text-[21px] @min-[80rem]/fh:text-[25px]">
+                <span className="flex items-center justify-center gap-1 stat mt-0.5 whitespace-nowrap text-[17px] font-semibold @min-[15rem]/st:mt-1 @min-[15rem]/st:text-[22px] @min-[22rem]/st:text-[28px] @min-[30rem]/st:text-[34px] @min-[38rem]/st:text-[40px]">
                   {showGoals ? num(stats.g.playerGoals) : <IconEyeOff size="1.1rem" className="text-[var(--hero-ink-soft)]" />}
                 </span>
               </button>

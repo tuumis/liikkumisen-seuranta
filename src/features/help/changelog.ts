@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.111',
+    date: '27.11.2026',
+    items: [
+      'Kausikortin luvut ovat PC:llä isompia ja keskellä ruutujaan.',
+      'Seuraava peli -kohdassa on Tiedot- ja Ennakko-painikkeet: tiedot avautuvat muokattaviksi ja ennakon voi jakaa kuvana tai videona suoraan kortista.',
+    ],
+  },
+  {
     version: '1.1.110',
     date: '27.11.2026',
     items: [
