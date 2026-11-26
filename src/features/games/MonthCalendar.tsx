@@ -18,6 +18,8 @@ import { useStoredFlag } from '../../ui/storedPref';
 import type { FixtureKind } from './FixtureSheet';
 import { useCalendarEvents } from './useCalendarEvents';
 import { useFootballProfiles } from '../football/useFootballEnabled';
+import { FAMILY_CALENDAR_MAX } from '../../domain/familyLimit';
+import { useFamilyShown } from '../../ui/FamilyPicker';
 
 const WEEKDAYS = ['Ma', 'Ti', 'Ke', 'To', 'Pe', 'La', 'Su'];
 
@@ -104,7 +106,9 @@ export function MonthCalendar({
   const canFamily = (familyProfiles?.length ?? 0) > 1;
   const [familyPref, setFamily] = useStoredFlag('calendarFamily', false);
   const family = familyPref && canFamily;
-  const members = family ? familyProfiles! : [profile];
+  // Enintään 6 profiilia (27.11.2026): useammalla "Näytä"-valinta (sama valinta kuin Viikko-näkymän kalenterissa).
+  const { shown: familyShown, picker: familyPicker } = useFamilyShown('calendarFamilyShown', familyProfiles, profile.id, FAMILY_CALENDAR_MAX);
+  const members = family ? familyShown : [profile];
   const memberById = new Map(members.map((p) => [p.id, p]));
   const range = gridRange(month);
   const data = useCalendarEvents(
@@ -203,6 +207,7 @@ export function MonthCalendar({
         </div>
       </div>
 
+      {family && familyPicker && <div className="mt-3">{familyPicker}</div>}
       {/* Leveä näkymä (27.11.2026): kalenteri ja valitun päivän tapahtumat rinnakkain. Leveys luetaan Jalkapallo-näkymän
           säiliöstä (GamesTab: @container/fcal), jotta sivusarakkeen Odottaa tulosta ja näkymän oma kortti vaihtuvat
           samassa kohdassa. 67rem kortin ulkoleveydestä ≈ 64rem sisältöä. */}

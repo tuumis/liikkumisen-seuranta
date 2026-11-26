@@ -52,6 +52,8 @@ import { useStoredChoice, useStoredFlag } from '../../ui/storedPref';
 import { ToggleChip } from '../../ui/controls';
 import { FamilyWeek } from './FamilyWeek';
 import type { MonthItem } from '../../domain/monthView';
+import { FAMILY_WEEK_MAX } from '../../domain/familyLimit';
+import { useFamilyShown } from '../../ui/FamilyPicker';
 import { useFootballEnabled } from '../football/useFootballEnabled';
 import { GameDayCard } from '../games/TournamentDay';
 import { FixtureSheet, fixtureKindOf, type FixtureDraft } from '../games/FixtureSheet';
@@ -103,7 +105,14 @@ export function WeekView({
   const monthMode = calMode === 'month';
   // Koko perheen viikko (27.11.2026): PC:n Päivät-kortissa profiilit sarakkeina (laitekohtainen valinta, oletus pois).
   const allProfiles = useLiveQuery(() => repo.listProfiles(), []);
-  const [weekFamilyPref, setWeekFamily] = useStoredFlag('weekFamily', false);
+  const [weekFamilyPref, setWeekFamilyPref] = useStoredFlag('weekFamily', false);
+  // Enintään 4 profiilia rinnakkain (27.11.2026); useammalla "Näytä"-valinta. Päällä kortti on koko sivun levyinen
+  // viikon korttien yläpuolella, joten valinnan jälkeen se vieritetään näkyviin.
+  const { shown: weekMembers, picker: weekPicker } = useFamilyShown('weekFamilyShown', allProfiles, profile?.id ?? '', FAMILY_WEEK_MAX);
+  const setWeekFamily = (v: boolean) => {
+    setWeekFamilyPref(v);
+    if (v) window.setTimeout(() => document.getElementById('days-title')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 60);
+  };
   const [quickAdd, setQuickAdd] = useState<{ date?: ISODate } | null>(null);
   const [editing, setEditing] = useState<Session | null>(null);
   // Loukkaantumisjakson paneeli: päivä, jolta se avattiin (24.11.2026).
@@ -519,7 +528,7 @@ export function WeekView({
   };
 
   const dayList = profile && (
-    <section className="space-y-3" aria-labelledby="days-title">
+    <section className="scroll-mt-6 space-y-3" aria-labelledby="days-title">
       <div className="flex items-center gap-2 px-1">
         <div className="min-w-0 flex-1">
           <h2 id="days-title" className="font-display text-lg font-semibold leading-tight text-slate-900">
@@ -562,8 +571,9 @@ export function WeekView({
         )}
       </div>
       {familyWeek ? (
-        <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-          <FamilyWeek profiles={allProfiles!} selectedId={profile.id} dates={dates} today={today} types={typeMap} onItem={openFamilyItem} />
+        <div className="space-y-2.5" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+          {weekPicker && <div className="px-1">{weekPicker}</div>}
+          <FamilyWeek profiles={weekMembers} selectedId={profile.id} dates={dates} today={today} types={typeMap} onItem={openFamilyItem} />
         </div>
       ) : daysView === 'table' ? (
         <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
@@ -787,7 +797,7 @@ export function WeekView({
               return <UpcomingCard profile={profile} today={today} types={typeMap} onOpen={openPlan} teamName={teamName} />;
             case 'days':
               // Puhelimella ja tabletilla päivät ovat päivänauhassa (19.11.2026).
-              return isLg ? dayList : null;
+              return isLg && !familyWeek ? dayList : null;
             case 'recent':
               return <RecentCard profile={profile} today={today} types={typeMap} onOpen={setEditing} teamName={teamName} />;
             case 'details':
@@ -820,6 +830,9 @@ export function WeekView({
           return out;
         };
         return (
+          <>
+          {/* Koko perheen viikko koko sivun levyisenä (27.11.2026): sarakkeille tilaa. */}
+          {isLg && familyWeek && <div className="mb-5">{dayList}</div>}
           <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12 lg:gap-6">
             <div className={`min-w-0 space-y-5 ${sideIds.length ? 'lg:col-span-7 @4xl:col-span-8' : 'lg:col-span-12'}`}>
               {render(mainIds, true)}
@@ -835,6 +848,7 @@ export function WeekView({
               </aside>
             )}
           </div>
+          </>
         );
       })()}
       </div>

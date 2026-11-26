@@ -116,7 +116,7 @@ export function FamilyWeek({
         const notes = familyNotes(d);
         const isToday = d === today;
         return (
-          <div key={d} role="row" className={`border-b border-[var(--line)] last:border-b-0 ${clash.length ? 'bg-amber-50/70' : ''}`}>
+          <div key={d} role="row" className={`border-b border-[var(--line)] last:border-b-0 ${clash.length ? 'bg-amber-50' : ''}`}>
             <div className="grid" style={cols}>
               <div role="rowheader" className="px-3 py-2.5">
                 <span className={`block text-sm font-semibold ${isToday ? 'text-green-800' : 'text-slate-900'}`}>{formatDate(d, 'EEEEEE d.M.')}</span>

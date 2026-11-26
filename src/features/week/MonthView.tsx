@@ -19,6 +19,8 @@ import { IconChevronLeft, IconChevronRight } from '../../ui/icons';
 import { TypeGlyph } from '../../ui/TypeGlyph';
 import { monthTitle } from '../games/MonthCalendar';
 import { DayRow } from './DayRow';
+import { FAMILY_CALENDAR_MAX } from '../../domain/familyLimit';
+import { useFamilyShown } from '../../ui/FamilyPicker';
 
 const WEEKDAYS = ['Ma', 'Ti', 'Ke', 'To', 'Pe', 'La', 'Su'];
 /** Muiden profiilien rivin tila: kirjattu, ei tehty tai kuittaamatta (mennyt suunnitelma). */
@@ -83,9 +85,12 @@ export function MonthView({
   // Sama valinta kuin Jalkapallo-välilehden kalenterissa (27.11.2026): päällä toisessa, päällä myös toisessa.
   const [familyPref, setFamily] = useStoredFlag('calendarFamily', false);
   const family = familyPref && canFamily;
-  const others = useMemo(() => (family ? allProfiles!.filter((p) => p.id !== profile.id) : []), [family, allProfiles, profile.id]);
+  // Enintään 6 profiilia (27.11.2026): useammalla "Näytä"-valinta (sama valinta kuin Jalkapallon kalenterissa).
+  const { shown: familyShown, picker: familyPicker } = useFamilyShown('calendarFamilyShown', allProfiles, profile.id, FAMILY_CALENDAR_MAX);
+  const shownIds = familyShown.map((p) => p.id).join(',');
+  const others = useMemo(() => (family ? familyShown.filter((p) => p.id !== profile.id) : []), [family, shownIds, profile.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const otherIds = others.map((p) => p.id).join(',');
-  const members = family ? allProfiles! : [profile];
+  const members = family ? familyShown : [profile];
   const memberById = new Map(members.map((p) => [p.id, p]));
 
   // Viikkorytmin kerrat selattavalle kuukaudelle kuten viikkoja selattaessa (yhtenäisesti enintään +8 vko, kauempana jakso).
@@ -227,6 +232,7 @@ export function MonthView({
           )}
           {header && <div className="ml-auto flex shrink-0 items-center gap-2">{header}</div>}
         </div>
+        {family && familyPicker && <div className="mt-3">{familyPicker}</div>}
 
         <div className="mt-3 select-none" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
           <div className="grid grid-cols-[1.5rem_repeat(7,minmax(0,1fr))] gap-px text-center text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:grid-cols-[2rem_repeat(7,minmax(0,1fr))]" aria-hidden>

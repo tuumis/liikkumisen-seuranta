@@ -10,6 +10,8 @@ import { GROUP_LABEL, MONTHS, PROFILE_COLORS } from '../../ui/labels';
 import { today } from '../../ui/today';
 import { DateInput } from '../../ui/DateInput';
 import { useFootballStatus } from '../football/useFootballEnabled';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { repo } from '../../db/repositories';
 
 const currentYear = Number(today().slice(0, 4));
 
@@ -92,6 +94,10 @@ export function ProfileForm({
   const onlyNarrow = wide ? 'lg:hidden' : '';
   const onlyWide = wide ? 'hidden lg:block' : 'hidden';
   const gap = wide ? 'space-y-4 lg:space-y-3' : 'space-y-4';
+  // Muiden profiilien värit (27.11.2026): perhenäkymissä profiilit erotetaan väreistä, joten sama väri huomautetaan.
+  const otherProfiles = useLiveQuery(() => repo.listProfiles(), [])?.filter((p) => p.id !== initial?.id) ?? [];
+  const usedBy = (c: string) => otherProfiles.filter((p) => p.color?.toLowerCase() === c.toLowerCase()).map((p) => p.name);
+  const sameColor = usedBy(raw.color);
   const colorPicker = (
   <fieldset>
     <legend className="mb-1 text-sm font-medium text-slate-700">Väri</legend>
@@ -101,13 +107,22 @@ export function ProfileForm({
           key={c}
           type="button"
           onClick={() => setRaw((cur) => ({ ...cur, color: c }))}
-          className={`${wide ? 'size-10 lg:size-8' : 'size-10'} rounded-full ring-offset-2 ${raw.color === c ? 'ring-2 ring-slate-900' : ''}`}
+          className={`relative ${wide ? 'size-10 lg:size-8' : 'size-10'} rounded-full ring-offset-2 ${raw.color === c ? 'ring-2 ring-slate-900' : ''}`}
           style={{ backgroundColor: c }}
-          aria-label={`Väri ${c}`}
+          aria-label={`Väri ${c}${usedBy(c).length ? `, käytössä: ${usedBy(c).join(', ')}` : ''}`}
+          title={usedBy(c).length ? `Käytössä: ${usedBy(c).join(', ')}` : undefined}
           aria-pressed={raw.color === c}
-        />
+        >
+          {usedBy(c).length > 0 && <span className="absolute -right-0.5 -top-0.5 size-3 rounded-full bg-[var(--surface)] ring-2 ring-[var(--surface)]" aria-hidden><span className="block size-full rounded-full bg-slate-400" /></span>}
+        </button>
       ))}
     </div>
+    {sameColor.length > 0 && (
+      <p className="mt-1.5 text-xs text-amber-800" role="status">
+        Sama väri kuin profiililla {sameColor.join(', ')}. Perheen kalentereissa ja viikossa profiilit erottuvat toisistaan väristä, joten eri väri on selkeämpi.
+      </p>
+    )}
+    {sameColor.length === 0 && otherProfiles.length > 0 && <p className="mt-1.5 text-xs text-slate-500">Harmaa piste: väri on jo toisella profiililla.</p>}
   </fieldset>
   );
 

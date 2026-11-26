@@ -9,6 +9,22 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.107',
+    date: '27.11.2026',
+    items: [
+      'Koko perheen viikko on PC:llä koko sivun levyinen viikon korttien yläpuolella, jolloin sarakkeille on tilaa; valinnan jälkeen se vieritetään näkyviin.',
+      'Perhenäkymien profiilimäärä: Koko perheen viikossa enintään 4 ja kalentereissa (Viikko ja Jalkapallo) enintään 6 profiilia kerrallaan. Jos profiileja on enemmän, Näytä-rivistä valitaan näytettävät; valittu profiili on aina mukana, ja valinta muistetaan laitteella.',
+      'Profiilin värin valinnassa toisen profiilin käyttämä väri on merkitty, ja samasta väristä huomautetaan, koska perhenäkymissä profiilit erottuvat väreistä.',
+    ],
+  },
+  {
+    version: '1.1.106',
+    date: '27.11.2026',
+    items: [
+      'Koko perheen viikko: päällekkäisten menojen päivä näkyy tummassa teemassa tummana keltaisena, ja sen tekstit erottuvat. Aiemmin rivin tausta jäi vaaleaksi ja teksti hukkui siihen.',
+    ],
+  },
+  {
     version: '1.1.105',
     date: '27.11.2026',
     items: [
