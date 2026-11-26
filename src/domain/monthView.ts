@@ -132,3 +132,41 @@ export function monthItemDetail(i: MonthItem, team?: string): string {
   const parts: (string | undefined | false)[] = [game, team, i.time && `klo ${clock(i.time)}`, !game && i.durationMin !== undefined && `${i.durationMin} min`, i.location];
   return parts.filter(Boolean).join(' · ');
 }
+
+/** Rivin aikaikkuna minuutteina (alku = kellonaika, loppu = alku + kesto tai merkinnän päättyminen; oletus 60 min). */
+function itemWindow(i: MonthItem): { start: number; end: number } | undefined {
+  if (!i.time) return undefined;
+  const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+  const start = toMin(i.time);
+  const end = i.endTime ? toMin(i.endTime) : start + (i.durationMin ?? 60);
+  return { start, end: Math.max(end, start + 15) };
+}
+
+/** Ikkuna tekstinä: "17.30–18.30". */
+export function itemWindowText(i: MonthItem): string | undefined {
+  const w = itemWindow(i);
+  if (!w) return undefined;
+  const t = (m: number) => `${Math.floor(m / 60) % 24}.${String(m % 60).padStart(2, '0')}`;
+  return `${t(w.start)}–${t(Math.min(w.end, 24 * 60 - 1))}`;
+}
+
+/**
+ * Perheen viikko (27.11.2026): eri profiilien samaan aikaan osuvat menot samana päivänä. Mukana vain kellonajalliset
+ * kerrat, suunnitelmat ja omat merkinnät (ei väliin jääneitä, ei koko perheen merkintöjä); ilman kellonaikaa olevaa
+ * riviä (esim. koululiikunta) ei tulkita päällekkäiseksi.
+ */
+export function familyClashes(day: MonthItem[]): [MonthItem, MonthItem][] {
+  const list = day.filter((i) => i.profileId && !i.family && i.kind !== 'skipped' && i.time);
+  const out: [MonthItem, MonthItem][] = [];
+  for (let a = 0; a < list.length; a++) {
+    for (let b = a + 1; b < list.length; b++) {
+      const x = list[a];
+      const y = list[b];
+      if (x.profileId === y.profileId) continue;
+      const wx = itemWindow(x)!;
+      const wy = itemWindow(y)!;
+      if (wx.start < wy.end && wy.start < wx.end) out.push([x, y]);
+    }
+  }
+  return out;
+}

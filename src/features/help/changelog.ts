@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.105',
+    date: '27.11.2026',
+    items: [
+      'Koko perheen viikko PC:llä: Viikko-näkymän Päivät-kortin Koko perhe -valinta näyttää kaikkien profiilien viikon rinnakkain, päivät riveinä ja lapset sarakkeina. Sarakkeen otsikossa näkyy, monenako päivänä kertoja on kirjattu.',
+      'Päivät, joilla eri lasten menot osuvat samaan aikaan, korostetaan keltaisella, ja rivin alla lukee kenen menot ja mihin aikaan. Valitun profiilin rivistä avautuu kerta kuten ennen; toisen profiilin rivi vaihtaa profiilin.',
+    ],
+  },
+  {
     version: '1.1.104',
     date: '27.11.2026',
     items: [

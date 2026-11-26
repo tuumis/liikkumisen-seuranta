@@ -22,16 +22,16 @@ import { DayRow } from './DayRow';
 
 const WEEKDAYS = ['Ma', 'Ti', 'Ke', 'To', 'Pe', 'La', 'Su'];
 /** Muiden profiilien rivin tila: kirjattu, ei tehty tai kuittaamatta (mennyt suunnitelma). */
-function stateBadge(i: MonthItem, date: ISODate, today: ISODate): { text: string; cls: string } | undefined {
+export function stateBadge(i: MonthItem, date: ISODate, today: ISODate): { text: string; cls: string } | undefined {
   if (i.kind === 'done') return { text: 'Kirjattu', cls: 'bg-green-50 text-green-900 ring-green-200' };
   if (i.kind === 'skipped') return { text: 'Ei tehty', cls: 'text-slate-500 ring-slate-200' };
   if (i.kind === 'open' && date < today) return { text: 'Kuittaamatta', cls: 'bg-amber-50 text-amber-900 ring-amber-200' };
   return undefined;
 }
-const hhmm = (t?: string) => t?.replace(/^0(\d)/, '$1').replace(':', '.');
+export const hhmm = (t?: string) => t?.replace(/^0(\d)/, '$1').replace(':', '.');
 
 /** Rivin tyyli: kirjattu (vihreä pinta), suunniteltu (katkoviiva), ei tehty (yliviivattu), merkintä (himmeä). */
-function itemClass(i: MonthItem): string {
+export function itemClass(i: MonthItem): string {
   if (i.kind === 'done') return 'bg-[var(--surface-sage)] text-slate-800';
   if (i.kind === 'open') return 'border border-dashed border-slate-300 text-slate-700';
   if (i.kind === 'skipped') return 'text-slate-400 line-through';

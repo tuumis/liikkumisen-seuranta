@@ -553,7 +553,7 @@ export default function App() {
             tabs.filter((t) => mounted.has(t.id)).map((t) => (
               <TabPanel key={t.id} active={t.id === tab} contextKey={selected?.id}>
                 {t.id === 'week' ? (
-                  <WeekView profile={selected} onOpenSettings={openSettings} titleSlot={weekTitleSlot} />
+                  <WeekView profile={selected} onOpenSettings={openSettings} titleSlot={weekTitleSlot} onSelectProfile={select} />
                 ) : t.id === 'games' ? (
                   <GamesTab profile={selected} />
                 ) : t.id === 'analysis' ? (

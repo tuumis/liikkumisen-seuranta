@@ -104,6 +104,7 @@ const TOPICS: { q: string; a: string[] }[] = [
       'Kun tilaa on riittävästi (pienennetty palkki tai iso näyttö), kuukausikalentereissa valittu päivä näkyy kalenterin vieressä (Jalkapallossa sen alla myös Odottaa tulosta), kalenterin ruuduissa nimet kahdella rivillä ja neljä tapahtumaa, viikon päiväkortit kahdessa sarakkeessa ja Analyysin kortit kolmessa palstassa.',
       'PC:llä muokkausikkunat (esimerkiksi kerran, merkinnän tai pelin tiedot) aukeavat ruudun oikeaan reunaan, jolloin näkymä jää vasemmalle näkyviin. Ikkuna sulkeutuu ruksista, Esc-näppäimellä tai napsauttamalla sen ulkopuolelle.',
       'Jalkapallon Päiväkirjassa leveällä näytöllä lista on vasemmalla ja valitun kerran tiedot oikealla, joten kertaa voi vaihtaa suoraan listasta.',
+      'Viikko-näkymän Päivät-kortin Koko perhe -valinta (PC) näyttää kaikkien profiilien viikon rinnakkain: päivät riveinä ja profiilit sarakkeina. Keltainen rivi kertoo, että eri lasten menot ovat samaan aikaan. Valitun profiilin rivistä avautuu kerta, toisen profiilin rivi vaihtaa profiilin.',
     ],
   },
 ];

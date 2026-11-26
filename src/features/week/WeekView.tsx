@@ -48,7 +48,10 @@ import { PlanOnceSheet } from './PlanOnceSheet';
 import { CalendarNoteSheet, type NoteDraft } from './CalendarNoteSheet';
 import { MonthView } from './MonthView';
 import { monthKeyOf, type MonthKey } from '../../domain/monthCalendar';
-import { useStoredChoice } from '../../ui/storedPref';
+import { useStoredChoice, useStoredFlag } from '../../ui/storedPref';
+import { ToggleChip } from '../../ui/controls';
+import { FamilyWeek } from './FamilyWeek';
+import type { MonthItem } from '../../domain/monthView';
 import { useFootballEnabled } from '../football/useFootballEnabled';
 import { GameDayCard } from '../games/TournamentDay';
 import { FixtureSheet, fixtureKindOf, type FixtureDraft } from '../games/FixtureSheet';
@@ -70,11 +73,14 @@ export function WeekView({
   profile,
   onOpenSettings,
   titleSlot,
+  onSelectProfile,
 }: {
   profile?: Profile;
   onOpenSettings: (section?: SettingsSectionId) => void;
   /** Sivun otsikkorivin paikka Viikko / Kuukausi -valinnalle (27.11.2026). */
   titleSlot?: HTMLElement | null;
+  /** Profiilin vaihto (Koko perheen viikko: toisen profiilin rivi). */
+  onSelectProfile?: (id: string) => void;
 }) {
   const today = todayFn();
   const [weekStart, setWeekStart] = useState<ISODate>(() => startOfIsoWeek(today));
@@ -95,6 +101,9 @@ export function WeekView({
   const [calMode, setCalMode] = useStoredChoice<'week' | 'month'>('weekMode', ['week', 'month'], 'week');
   const [month, setMonth] = useState<MonthKey>(() => monthKeyOf(today));
   const monthMode = calMode === 'month';
+  // Koko perheen viikko (27.11.2026): PC:n Päivät-kortissa profiilit sarakkeina (laitekohtainen valinta, oletus pois).
+  const allProfiles = useLiveQuery(() => repo.listProfiles(), []);
+  const [weekFamilyPref, setWeekFamily] = useStoredFlag('weekFamily', false);
   const [quickAdd, setQuickAdd] = useState<{ date?: ISODate } | null>(null);
   const [editing, setEditing] = useState<Session | null>(null);
   // Loukkaantumisjakson paneeli: päivä, jolta se avattiin (24.11.2026).
@@ -493,19 +502,41 @@ export function WeekView({
     </div>
   );
 
+  const canFamilyWeek = isLg && (allProfiles?.length ?? 0) > 1;
+  const familyWeek = canFamilyWeek && weekFamilyPref;
+  // Perheen viikon rivi: valitun profiilin rivi avautuu kuten päivälistassa, toisen profiilin rivi vaihtaa profiilin.
+  const openFamilyItem = (pid: string | undefined, i: MonthItem) => {
+    if (pid && pid !== profile?.id) return onSelectProfile?.(pid);
+    if (i.kind === 'note') {
+      const n = (calendarNotes ?? []).find((x) => x.id === i.key);
+      if (n) openNote(n);
+      return;
+    }
+    const s = (sessions ?? []).find((x) => x.id === i.key);
+    if (s) return setEditing(s);
+    const p = (plans ?? []).find((x) => x.id === i.key);
+    if (p) openPlan(p);
+  };
+
   const dayList = profile && (
     <section className="space-y-3" aria-labelledby="days-title">
       <div className="flex items-center gap-2 px-1">
         <div className="min-w-0 flex-1">
           <h2 id="days-title" className="font-display text-lg font-semibold leading-tight text-slate-900">
-            Päivät
+            {familyWeek ? 'Koko perheen viikko' : 'Päivät'}
           </h2>
           <span className="block truncate text-xs text-slate-500">
             {week.count} {week.count === 1 ? 'kerta' : 'kertaa'} · {fmtUnit(week.duration, unit)} {unit}
             {adherence.planned > 0 && ` · suunniteltu ${adherence.planned}, tehty ${adherence.done}`}
           </span>
         </div>
+        {canFamilyWeek && (
+          <ToggleChip on={weekFamilyPref} onChange={setWeekFamily}>
+            Koko perhe
+          </ToggleChip>
+        )}
         {/* Näkymän vaihto: kortit tai tiivis taulukko (laitekohtainen). */}
+        {!familyWeek && (
         <div className="flex shrink-0 rounded-xl bg-[var(--surface-sunk)] p-0.5 text-xs font-semibold" role="radiogroup" aria-label="Päivien näkymä">
           {(
             [
@@ -528,8 +559,13 @@ export function WeekView({
             </button>
           ))}
         </div>
+        )}
       </div>
-      {daysView === 'table' ? (
+      {familyWeek ? (
+        <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+          <FamilyWeek profiles={allProfiles!} selectedId={profile.id} dates={dates} today={today} types={typeMap} onItem={openFamilyItem} />
+        </div>
+      ) : daysView === 'table' ? (
         <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
           <DayTable
             rows={dates.map((d, i) => ({
@@ -598,7 +634,9 @@ export function WeekView({
         ))}
       </ol>
       )}
-      {daysView === 'table' ? (
+      {familyWeek ? (
+        <p className="text-center text-xs text-slate-500">Valitun profiilin rivistä avautuu kerta; toisen profiilin rivi vaihtaa profiilin. Keltainen rivi: menot ovat päällekkäin.</p>
+      ) : daysView === 'table' ? (
         <p className="text-center text-xs text-slate-500">Päivän nimestä: lisää kerta, sairas-, matka- tai loukkaantumispäivä. Kerrasta muokkaus, Arki-napista arkiliikunnan tarkistus.</p>
       ) : (
         <>
