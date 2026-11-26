@@ -9,6 +9,13 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.95',
+    date: '27.11.2026',
+    items: [
+      'Viikko / Kuukausi -valinta on nyt omalla rivillään Viikko-näkymän ylimpänä, otsikon alla. Se pysyy samassa kohdassa, kun vaihdat viikon ja kuukauden välillä, myös puhelimella.',
+    ],
+  },
+  {
     version: '1.1.94',
     date: '27.11.2026',
     items: [

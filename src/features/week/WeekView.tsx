@@ -411,8 +411,10 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     setSelDay(d);
     setCalMode('week');
   };
+  // Viikko / Kuukausi omalla rivillään sivun ylimpänä (27.11.2026, käyttäjän valinta A): sama paikka molemmissa
+  // tiloissa PC:llä ja puhelimella (aiemmin valinta hyppäsi viikon rivin alusta kalenterikortin oikeaan reunaan).
   const modeToggle = (
-    <div className="flex shrink-0 rounded-xl bg-[var(--surface-sunk)] p-0.5 text-xs font-semibold" role="radiogroup" aria-label="Näkymä">
+    <div className="flex w-full rounded-xl bg-[var(--surface-sunk)] p-0.5 text-sm font-semibold sm:inline-flex sm:w-auto" role="radiogroup" aria-label="Näkymä">
       {(
         [
           ['week', 'Viikko'],
@@ -425,7 +427,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
           role="radio"
           aria-checked={calMode === v}
           onClick={() => (v === 'month' ? showMonth() : setCalMode('week'))}
-          className={`press hit flex min-h-9 items-center rounded-[0.6rem] px-3 ${calMode === v ? 'bg-[var(--surface-raised)] text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
+          className={`press hit flex min-h-10 flex-1 items-center justify-center rounded-[0.6rem] px-4 sm:min-h-9 sm:flex-none ${calMode === v ? 'bg-[var(--surface-raised)] text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
         >
           {l}
         </button>
@@ -437,7 +439,6 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     // Puhelimella (18.11.2026) viikon valitsin on omalla rivillään ja painikkeet sen alla: muuten "Tämä viikko"
     // työnsi Muokkaa näkymää -painikkeen ruudun ulkopuolelle, ja nuolet siirtyivät viikkoa vaihdettaessa.
     <div className="anim-fade flex flex-wrap items-center gap-2 sm:flex-nowrap">
-      {profile && modeToggle}
       {isLg && (
       <div className="flex flex-1 basis-full items-center gap-1 rounded-2xl bg-[var(--surface)] p-1 shadow-sm sm:basis-auto lg:flex-none">
         <button type="button" onClick={() => go(-1)} className="press hit flex size-10 items-center justify-center rounded-xl text-slate-600 hover:bg-[var(--surface-sunk)] hover:text-slate-900" aria-label="Edellinen viikko">
@@ -666,6 +667,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
 
   return (
     <div className="space-y-5">
+      {profile && <div className="anim-fade">{modeToggle}</div>}
       <div className="space-y-3 empty:hidden">
         <UpdateBanner />
         {/* Puhelimella synkronointi on yläpalkin kuvakkeessa (19.11.2026). */}
@@ -685,14 +687,11 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
           teamName={teamName}
           footballOn={footballOn}
           header={
-            <>
-              {modeToggle}
-              <span className="hidden lg:block">
-                <Button onClick={() => setQuickAdd({})}>
-                  <IconPlus size="1.1rem" /> Lisää kerta
-                </Button>
-              </span>
-            </>
+            isLg ? (
+              <Button onClick={() => setQuickAdd({})}>
+                <IconPlus size="1.1rem" /> Lisää kerta
+              </Button>
+            ) : undefined
           }
           actions={{
             onAdd: (date) => setQuickAdd({ date }),
