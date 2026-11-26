@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.88',
+    date: '27.11.2026',
+    items: ['Turnauksen otteluohjelma järjestyy tallennettaessa kellonajan mukaan, joten pelit voi lisätä missä järjestyksessä tahansa. Rivit ilman kellonaikaa pysyvät paikallaan.'],
+  },
+  {
     version: '1.1.87',
     date: '27.11.2026',
     items: [

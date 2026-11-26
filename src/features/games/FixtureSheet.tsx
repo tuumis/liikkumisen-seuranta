@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { isISODate } from '../../domain/dates';
 import { GAME_FORMATS, LEVEL_LABEL } from '../../domain/football';
-import { ARRIVAL_LEAD_MIN, DEFAULT_COOLDOWN_MIN, DEFAULT_WARMUP_MIN, defaultGameLength, firstGameMin, gameDaySchedule, tournamentDuration, tournamentEndMin, tournamentStart } from '../../domain/tournamentTime';
+import { ARRIVAL_LEAD_MIN, DEFAULT_COOLDOWN_MIN, DEFAULT_WARMUP_MIN, defaultGameLength, firstGameMin, gameDaySchedule, sortGamesByTime, tournamentDuration, tournamentEndMin, tournamentStart } from '../../domain/tournamentTime';
 import type { GameFormat, GameLevel, HHmm, HomeAway, ISODate, Profile } from '../../domain/types';
 import { HomeAwayChips, HomeAwaySelect } from './HomeAway';
 import { repo, type FixtureEntry, type FixtureInput } from '../../db/repositories';
@@ -119,7 +119,7 @@ export function FixtureSheet({
     setSeriesTouched(false);
     setHomeAway(f?.homeAway ?? '');
     setSchedule(
-      (f?.games ?? []).map((g) => ({
+      sortGamesByTime(f?.games ?? []).map((g) => ({
         time: g.time ?? '',
         opponent: g.opponent ?? '',
         location: g.location ?? '',

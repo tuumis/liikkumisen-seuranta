@@ -146,6 +146,9 @@ describe('pelikalenteri', () => {
       cooldownMin: 10,
     });
     expect(await db.fixtures.get(e.plan.id)).toMatchObject({ gameLengthMin: 20, warmupMin: 15, cooldownMin: 10, gamesCount: 3 });
+    // Otteluohjelma tallentuu aikajärjestyksessä (27.11.2026).
+    const sorted = await repo.createFixture('p1', { kind: 'tournament', date: '2026-11-22', durationMin: 100, games: [{ time: '16:00', opponent: 'A' }, { time: '17:45', opponent: 'B' }, { time: '16:40', opponent: 'C' }] });
+    expect((await db.fixtures.get(sorted.plan.id))!.games!.map((x) => x.opponent)).toEqual(['A', 'C', 'B']);
     expect((await db.fixtures.get(e.plan.id))!.durationManual).toBeUndefined();
     await repo.updateFixture(e.plan.id, { kind: 'tournament', date: '2026-11-21', durationMin: 300, eventName: 'Winterliiga', durationManual: true });
     expect(await db.fixtures.get(e.plan.id)).toMatchObject({ durationManual: true });

@@ -5,6 +5,16 @@
 import type { Fixture, GameFormat, HHmm, PlannedSession, ScheduledGame } from './types';
 import { hhmmToMin, planEndMin, type EndOf } from './reminders';
 
+/**
+ * Otteluohjelma aikajärjestykseen (27.11.2026): kellonajalliset pelit järjestetään ajan mukaan niiden omiin
+ * kohtiin, ja rivit ilman aikaa pysyvät paikallaan. Sama aika säilyttää syöttöjärjestyksen.
+ */
+export function sortGamesByTime<T extends { time?: string }>(games: T[]): T[] {
+  const timed = games.filter((g) => g.time).sort((a, b) => a.time!.localeCompare(b.time!));
+  let i = 0;
+  return games.map((g) => (g.time ? timed[i++] : g));
+}
+
 /** Lämmittely ennen jokaista peliä (min): alkuverryttely alkaa 15 min ennen peliä. */
 export const DEFAULT_WARMUP_MIN = 15;
 /** Peleihin ja turnauksiin saavutaan aina 30 min ennen ensimmäistä peliä (käyttäjän tieto 13.11.2026). */

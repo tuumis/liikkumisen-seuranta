@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultGameLength, endOfWithFixtures, gameDaySchedule, legacyTournamentStart, tournamentDuration, tournamentEndMin, tournamentStart } from './tournamentTime';
+import { defaultGameLength, endOfWithFixtures, gameDaySchedule, legacyTournamentStart, sortGamesByTime, tournamentDuration, tournamentEndMin, tournamentStart } from './tournamentTime';
 import { planned } from './test-helpers';
 import { hhmmToMin } from './reminders';
 import type { ScheduledGame } from './types';
@@ -9,6 +9,15 @@ const winterliiga: ScheduledGame[] = [
   { time: '15:00', opponent: 'HoDy-18' },
   { time: '15:30', opponent: 'FC Nõmme United' },
 ];
+
+describe('otteluohjelman aikajärjestys', () => {
+  it('kellonajalliset ajan mukaan, ilman aikaa olevat pysyvät paikallaan', () => {
+    const g = (opponent: string, time?: string) => ({ opponent, ...(time ? { time } : {}) });
+    expect(sortGamesByTime([g('A', '16:00'), g('B', '17:45'), g('C', '16:40')]).map((x) => x.opponent)).toEqual(['A', 'C', 'B']);
+    expect(sortGamesByTime([g('A', '17:00'), g('X'), g('B', '09:00'), g('C', '09:00')]).map((x) => x.opponent)).toEqual(['B', 'X', 'C', 'A']);
+    expect(sortGamesByTime([])).toEqual([]);
+  });
+});
 
 describe('turnauksen kesto otteluohjelmasta', () => {
   it('aktiivinen aika: pelit × (lämmittely + pelin pituus) + loppuverryttely', () => {

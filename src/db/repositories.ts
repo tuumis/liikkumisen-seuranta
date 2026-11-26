@@ -7,7 +7,7 @@ import { Dexie, type Table } from 'dexie';
 import { CURRENT_SCHEMA_VERSION } from '../domain/migrations';
 import { activityTypeId, dayFlagId, newId, plannedSessionId, sessionIdFromPlanned, SETTINGS_ID, trainingSelfId } from '../domain/ids';
 import { computeSessionMinutes, DEFAULT_GAME_WARMUP_MIN, DEFAULT_PLAY_SHARE, INTENSITY_PRESETS, isIntensityPreset, roundMinutes, partsShares, supportsParts } from '../domain/intensity';
-import { defaultGameLength, DEFAULT_WARMUP_MIN, legacyTournamentStart, tournamentStart } from '../domain/tournamentTime';
+import { defaultGameLength, DEFAULT_WARMUP_MIN, legacyTournamentStart, sortGamesByTime, tournamentStart } from '../domain/tournamentTime';
 import { DEFAULT_SETTINGS } from '../domain/recommendations';
 import { addDays, datesBetween, isISODate, maxDate } from '../domain/dates';
 import { injuryRunAt, MAX_INJURY_DAYS, type InjuryRun } from '../domain/injury';
@@ -2107,7 +2107,8 @@ export function createRepositories(db: AppDB = defaultDb) {
       })
       .filter((g) => g.opponent || g.time || g.location || g.homeAway || g.internal);
     if (input.kind === 'tournament' && games.length) {
-      f.games = games;
+      // Aikajärjestykseen tallennettaessa (27.11.2026); ohjelmaa muokataan vain ennen kuittausta, joten tuloksia ei vielä ole.
+      f.games = sortGamesByTime(games);
       f.gamesCount = games.length;
     }
     // Harjoituspeli: vastustajat (1…n) ilman kellonaikoja; kuittaus tekee niistä tulosrivit.
