@@ -9,6 +9,13 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.103',
+    date: '27.11.2026',
+    items: [
+      'PC:llä muokkausikkunat aukeavat ruudun oikeaan reunaan koko korkeudelta keskelle aukeamisen sijaan, ja näkymä (esimerkiksi kalenteri) jää vasemmalle näkyviin kevyemmän varjon alle. Puhelimella ikkunat toimivat ennallaan.',
+    ],
+  },
+  {
     version: '1.1.102',
     date: '27.11.2026',
     items: [

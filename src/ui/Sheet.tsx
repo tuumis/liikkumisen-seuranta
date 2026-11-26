@@ -35,16 +35,17 @@ export function unlockScroll() {
  * Alapaneeli (bottom sheet). Piirretään suoraan <body>-elementtiin (portaali), jotta se on aina
  * alapalkin ja muun sisällön päällä. Sulkeutuu taustan napautuksella, Esc-näppäimellä, puhelimen
  * takaisin-eleellä ja vetämällä yläosasta (kahva ja otsikkorivi) alas (19.11.2026).
+ * PC:llä (lg, 27.11.2026) sivupaneeli ruudun oikeassa reunassa koko korkeudelta: näkymä jää vasemmalle
+ * näkyviin kevyemmän taustan alle.
  */
 export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
   const panel = useRef<HTMLDivElement>(null);
   const close = useRef(onClose);
   close.current = onClose;
-  // Kortista avattuna (morphOpen) paneeli kasvaa PC:llä napautetun rivin kohdalta; muuten tavallinen nousu.
+  // Kortista avattu alkuperä (ui/morph.ts) kulutetaan, vaikka sivupaneeli (27.11.2026) ei sitä enää käytä:
+  // muuten vanha alkuperä jäisi seuraavalle paneelille.
   const wasOpen = useRef(false);
-  const origin = useRef<{ x: number; y: number } | null>(null);
-  if (open && !wasOpen.current) origin.current = takeMorphOrigin();
-  if (!open) origin.current = null;
+  if (open && !wasOpen.current) takeMorphOrigin();
   wasOpen.current = open;
   useBackClose(open, onClose);
 
@@ -69,16 +70,8 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
     const s = scrim.current;
     if (!open || !p || !s || typeof p.animate !== 'function' || prefersReducedMotion()) return;
     const desktop = window.matchMedia?.('(min-width: 1024px)').matches;
-    const o = origin.current;
-    let from = 'translateY(24px)';
-    if (desktop && o) {
-      // Kortista avattu paneeli kasvaa PC:llä napautetun rivin kohdalta (ui/morph.ts).
-      const r = p.getBoundingClientRect();
-      const x = Math.min(r.width, Math.max(0, o.x - r.left));
-      const y = Math.min(r.height, Math.max(0, o.y - r.top));
-      p.style.transformOrigin = `${Math.round(x)}px ${Math.round(y)}px`;
-      from = 'scale(0.9)';
-    } else if (desktop) from = 'translateY(8px) scale(0.98)';
+    // PC: sivupaneeli liukuu oikealta; puhelin: nousee alhaalta.
+    const from = desktop ? 'translateX(40px)' : 'translateY(24px)';
     const ease = 'cubic-bezier(0.22, 1, 0.36, 1)';
     const list: Animation[] = [];
     const a = p.animate([{ opacity: 0, transform: from }, { opacity: 1, transform: 'none' }], { duration: 350, easing: ease, fill: 'forwards' });
@@ -152,7 +145,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
 
   if (!open) return null;
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center lg:items-center lg:p-6" role="presentation">
+    <div className="sheet-wrap fixed inset-0 z-50 flex items-end justify-center lg:items-stretch lg:justify-end lg:p-3" role="presentation">
       <div ref={scrim} className="scrim sheet-scrim absolute inset-0" onClick={onClose} aria-hidden />
       <div
         ref={panel}
@@ -160,7 +153,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className={`relative flex max-h-[90dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-[2rem] bg-[var(--surface)] shadow-xl focus:outline-none lg:rounded-[2rem]`}
+        className={`relative flex max-h-[90dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-[2rem] bg-[var(--surface)] shadow-xl focus:outline-none lg:max-h-none lg:rounded-[1.75rem]`}
       >
         {/* Otsikko pysyy paikallaan; vain sisältö vierii (ohut palkki pyöristettyjen kulmien sisällä). */}
         <div className="shrink-0 touch-none px-5 pt-3 lg:touch-auto lg:px-7 lg:pt-6" onTouchStart={onDragStart} onTouchMove={onDragMove} onTouchEnd={onDragEnd} onTouchCancel={onDragEnd}>

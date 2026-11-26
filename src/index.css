@@ -721,6 +721,15 @@ html[data-bg] body::before {
 .scrim.sheet-scrim {
   animation: none;
 }
+/* PC:n sivupaneeli (27.11.2026): kevyempi tausta, jotta näkymä erottuu paneelin vieressä. */
+@media (min-width: 1024px) {
+  .scrim.sheet-scrim {
+    background-color: rgb(26 37 32 / 0.26);
+  }
+  .dark .scrim.sheet-scrim {
+    background-color: rgb(0 0 0 / 0.42);
+  }
+}
 .anim-fade {
   animation: fade 0.4s var(--ease-out) backwards;
 }
@@ -940,6 +949,12 @@ html[data-bg] body::before {
   @media (min-width: 1024px) {
     .titlebar {
       background: linear-gradient(90deg, transparent 0 var(--side-w), color-mix(in oklab, var(--bg) 82%, transparent) var(--side-w));
+    }
+  }
+  /* PC-sovelluksen ikkunapainikkeet oikeassa yläkulmassa: sivupaneeli alkaa niiden alapuolelta (27.11.2026). */
+  @media (min-width: 1024px) {
+    .sheet-wrap {
+      padding-top: calc(env(titlebar-area-height, 33px) + 0.25rem);
     }
   }
   /* Kapea ikkuna: yläpalkki ikkunapainikkeiden alapuolelle. */
