@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { addDays, datesBetween, isoWeek, isoWeekday, startOfIsoWeek, weekPeriod } from '../../domain/dates';
 import { dayGoalMet } from '../../domain/dayTarget';
@@ -65,7 +66,16 @@ export const DAY_BAR_TARGET: Record<RecommendationGroup, number> = {
   adult: RECOMMENDATIONS.adult.weightedMinPerWeek.value / 7,
 };
 
-export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpenSettings: (section?: SettingsSectionId) => void }) {
+export function WeekView({
+  profile,
+  onOpenSettings,
+  titleSlot,
+}: {
+  profile?: Profile;
+  onOpenSettings: (section?: SettingsSectionId) => void;
+  /** Sivun otsikkorivin paikka Viikko / Kuukausi -valinnalle (27.11.2026). */
+  titleSlot?: HTMLElement | null;
+}) {
   const today = todayFn();
   const [weekStart, setWeekStart] = useState<ISODate>(() => startOfIsoWeek(today));
   // Viikon vaihto (17.11.2026): kortit hakevat tietonsa kukin erikseen, joten päivärivit ja yhteenveto
@@ -411,10 +421,10 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     setSelDay(d);
     setCalMode('week');
   };
-  // Viikko / Kuukausi omalla rivillään sivun ylimpänä (27.11.2026, käyttäjän valinta A): sama paikka molemmissa
-  // tiloissa PC:llä ja puhelimella (aiemmin valinta hyppäsi viikon rivin alusta kalenterikortin oikeaan reunaan).
+  // Viikko / Kuukausi sivun otsikkorivillä (27.11.2026, käyttäjän valinta A; tiivistetty samana päivänä: oma rivi jätti
+  // tyhjää tilaa): sama paikka molemmissa tiloissa PC:llä ja puhelimella.
   const modeToggle = (
-    <div className="flex w-full rounded-xl bg-[var(--surface-sunk)] p-0.5 text-sm font-semibold sm:inline-flex sm:w-auto" role="radiogroup" aria-label="Näkymä">
+    <div className="flex rounded-xl bg-[var(--surface-sunk)] p-0.5 text-sm font-semibold" role="radiogroup" aria-label="Näkymä">
       {(
         [
           ['week', 'Viikko'],
@@ -427,7 +437,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
           role="radio"
           aria-checked={calMode === v}
           onClick={() => (v === 'month' ? showMonth() : setCalMode('week'))}
-          className={`press hit flex min-h-10 flex-1 items-center justify-center rounded-[0.6rem] px-4 sm:min-h-9 sm:flex-none ${calMode === v ? 'bg-[var(--surface-raised)] text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
+          className={`press hit flex min-h-10 items-center justify-center rounded-[0.6rem] px-3.5 ${calMode === v ? 'bg-[var(--surface-raised)] text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
         >
           {l}
         </button>
@@ -667,7 +677,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
 
   return (
     <div className="space-y-5">
-      {profile && <div className="anim-fade">{modeToggle}</div>}
+      {profile && titleSlot && createPortal(modeToggle, titleSlot)}
       <div className="space-y-3 empty:hidden">
         <UpdateBanner />
         {/* Puhelimella synkronointi on yläpalkin kuvakkeessa (19.11.2026). */}

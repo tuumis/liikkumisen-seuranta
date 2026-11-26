@@ -82,6 +82,7 @@ export default function App() {
   const [error, setError] = useState<string>();
   const [rawTab, setTabState] = useState<Tab>(() => (store.get('tab') as Tab) ?? 'week');
   const [settingsSection, setSettingsSection] = useState<SettingsSectionId | undefined>();
+  const [weekTitleSlot, setWeekTitleSlot] = useState<HTMLElement | null>(null);
   // Kerran avatut välilehdet (pysyvät muistissa, ei uutta latausta palatessa).
   const [visited, setVisited] = useState<Set<Tab>>(() => new Set());
   useEffect(() => setVisited((v) => (v.has(rawTab) ? v : new Set(v).add(rawTab))), [rawTab]);
@@ -414,19 +415,23 @@ export default function App() {
             <DemoBanner />
           </div>
         )}
-        <div className="mb-5 flex items-end justify-between gap-3 lg:mb-8">
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-x-3 gap-y-2.5 lg:mb-8">
           <div className="min-w-0">
             <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">{dateLine}</div>
             <h1 className="font-display text-[28px] font-semibold leading-tight tracking-tight text-slate-900 lg:text-[40px]">
               {tab === 'week' && selected ? `Viikko · ${selected.name}` : TAB_TITLE[tab]}
             </h1>
           </div>
-          {selected && (
-            <span className="hidden items-center gap-2 rounded-full bg-[var(--surface)] py-1 pl-1 pr-3.5 text-sm font-semibold text-slate-700 shadow-sm lg:flex">
-              <Avatar name={selected.name} photo={selected.photo} color={selected.color} size="sm" />
-              {selected.name}
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            {/* Viikko-näkymän Viikko / Kuukausi -valinta otsikkorivillä (27.11.2026): WeekView piirtää sen tähän. */}
+            {tab === 'week' && <div ref={setWeekTitleSlot} className="empty:hidden" />}
+            {selected && (
+              <span className="hidden items-center gap-2 rounded-full bg-[var(--surface)] py-1 pl-1 pr-3.5 text-sm font-semibold text-slate-700 shadow-sm lg:flex">
+                <Avatar name={selected.name} photo={selected.photo} color={selected.color} size="sm" />
+                {selected.name}
+              </span>
+            )}
+          </div>
         </div>
         {/* Avatut välilehdet pidetään muistissa (piilotettuina, laskenta pysäytettynä), jotta palatessa sisältö näkyy heti. */}
         <div className="page-view" ref={pageRef}>
@@ -436,7 +441,7 @@ export default function App() {
             tabs.filter((t) => mounted.has(t.id)).map((t) => (
               <TabPanel key={t.id} active={t.id === tab} contextKey={selected?.id}>
                 {t.id === 'week' ? (
-                  <WeekView profile={selected} onOpenSettings={openSettings} />
+                  <WeekView profile={selected} onOpenSettings={openSettings} titleSlot={weekTitleSlot} />
                 ) : t.id === 'games' ? (
                   <GamesTab profile={selected} />
                 ) : t.id === 'analysis' ? (
