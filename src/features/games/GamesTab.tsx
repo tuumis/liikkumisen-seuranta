@@ -90,7 +90,7 @@ export function GamesTab({ profile }: { profile?: Profile }) {
   if (!profile) return <Card>Lisää profiili Asetukset-välilehdellä.</Card>;
   return (
     <div className="flex flex-col gap-5">
-      <FootballHero profile={profile} />
+      <FootballHero profile={profile} onOpen={(entry) => setDraft({ kind: 'game', entry })} onAdd={() => setDraft({ kind: 'game' })} />
       {/* Pelipäivän pikakirjaus myös täällä (24.11.2026, käyttäjän valinta). */}
       <GameDayCard profile={profile} today={todayFn()} />
 

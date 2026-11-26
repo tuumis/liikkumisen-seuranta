@@ -9,6 +9,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.109',
+    date: '27.11.2026',
+    items: [
+      'Jalkapallo-välilehden kausikortti uudistui: seuraava peli juoksevalla laskurilla (vastustaja, aika, koti tai vieras ja paikka), kaksi seuraavaa tulevaa peliä sekä kauden luvut ja viimeisten pelien tulokset. PC:llä kaikki on yhdellä rivillä, ja kortti on aiempaa matalampi.',
+      'Pelin alettua laskurin tilalla lukee Peli käynnissä, ja pelin päätyttyä Kirjaa tulos -painike. Pelin napautus avaa sen tiedot, ja ilman tulevia pelejä kortissa on Lisää peli -painike.',
+      'Oman pelaajan maalit saa piiloon ja takaisin napauttamalla niiden ruutua (valinta muistetaan laitteella).',
+    ],
+  },
+  {
     version: '1.1.108',
     date: '27.11.2026',
     items: [
