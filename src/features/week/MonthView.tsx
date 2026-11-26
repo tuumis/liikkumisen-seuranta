@@ -80,7 +80,8 @@ export function MonthView({
   // Koko perhe (27.11.2026, vaihe 2): kaikkien profiilien rivit samaan kalenteriin profiilin värillä.
   const allProfiles = useLiveQuery(() => repo.listProfiles(), []);
   const canFamily = (allProfiles?.length ?? 0) > 1;
-  const [familyPref, setFamily] = useStoredFlag('monthFamily', false);
+  // Sama valinta kuin Jalkapallo-välilehden kalenterissa (27.11.2026): päällä toisessa, päällä myös toisessa.
+  const [familyPref, setFamily] = useStoredFlag('calendarFamily', false);
   const family = familyPref && canFamily;
   const others = useMemo(() => (family ? allProfiles!.filter((p) => p.id !== profile.id) : []), [family, allProfiles, profile.id]);
   const otherIds = others.map((p) => p.id).join(',');
@@ -156,6 +157,12 @@ export function MonthView({
     );
     return mergeMonthItems([own, ...rest]);
   }, [shownData, fixtureByPlan, types, family, otherData, profile.id]);
+  // Kuukauden lajit selitteeseen (kuvake ja nimi), järjestyksessä ensimmäisestä esiintymästä.
+  const usedTypes = useMemo(() => {
+    const ids = new Set<UUID>();
+    for (const [d, list] of items) if (monthKeyOf(d) === shown) for (const i of list) if (i.typeId) ids.add(i.typeId);
+    return [...ids].map((id) => types.get(id)).filter((t): t is ActivityType => !!t);
+  }, [items, shown, types]);
   const otherTeam = new Map((otherData ?? []).map((o) => [o.profileId, o.team]));
   const colorOf = (i: MonthItem) => (family && i.profileId ? memberById.get(i.profileId)?.color : undefined);
   const nameOf = (i: MonthItem) => (family && i.profileId ? memberById.get(i.profileId)?.name : undefined);
@@ -264,6 +271,15 @@ export function MonthView({
                 <span key={p.id} className="inline-flex items-center gap-1.5">
                   <span className="size-3 rounded-full" style={{ background: p.color }} aria-hidden />
                   {p.name}
+                </span>
+              ))}
+            </div>
+          )}
+          {usedTypes.length > 0 && (
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600" aria-label="Kuukauden lajit">
+              {usedTypes.map((t) => (
+                <span key={t.id} className="inline-flex items-center gap-1">
+                  <TypeGlyph t={t} /> {t.name.toLowerCase()}
                 </span>
               ))}
             </div>

@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.94',
+    date: '27.11.2026',
+    items: [
+      'Koko perhe -valinta on nyt yhteinen Viikko-näkymän kuukausikalenterille ja Jalkapallo-välilehden kalenterille: kun se on päällä toisessa, se on päällä myös toisessa, ja nimet väreineen näkyvät kalenterin alla.',
+      'Kuukausikalenterin alla näkyvät kuukauden lajit kuvakkeineen.',
+    ],
+  },
+  {
     version: '1.1.93',
     date: '27.11.2026',
     items: [
