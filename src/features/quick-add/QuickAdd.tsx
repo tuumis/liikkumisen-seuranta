@@ -2,6 +2,7 @@
 // Päivä, ponnistelu, lihas/luusto ja muistiinpano ovat valinnaisia ja
 // valitaan samassa paneelissa ennen kestoa.
 
+import { OtherNoteLink } from '../week/PlanOnceSheet';
 import { TypeGlyph } from '../../ui/TypeGlyph';
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -72,6 +73,7 @@ export function QuickAdd({
   initialDate,
   onSaved,
   timer,
+  onOtherNote,
 }: {
   open: boolean;
   onClose: () => void;
@@ -81,6 +83,8 @@ export function QuickAdd({
   onSaved?: (s: Session) => void;
   /** Pysäytetyn sekuntikellon kirjaus (25.11.2026): päivä, alkamisaika, kesto ja laji valmiina. */
   timer?: { stopwatch: Stopwatch; seconds: number };
+  /** Muu kuin liikunta: avaa kalenterimerkinnän päivälle (27.11.2026). */
+  onOtherNote?: (date: ISODate) => void;
 }) {
   const today = todayFn();
   const toast = useToast();
@@ -390,6 +394,7 @@ export function QuickAdd({
                 </div>
               );
             })}
+          {onOtherNote && !timer && <OtherNoteLink onClick={() => onOtherNote(initialDate ?? today)} />}
         </div>
       ) : (
         <div className="space-y-4">

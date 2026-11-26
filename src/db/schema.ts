@@ -11,6 +11,7 @@ import { Dexie, type EntityTable } from 'dexie';
 import { DEMO, DEMO_DB_NAME } from '../demo/demoMode';
 import type {
   ActivityType,
+  CalendarNote,
   Club,
   DayFlag,
   Estimate,
@@ -40,6 +41,7 @@ export class AppDB extends Dexie {
   teams!: EntityTable<Team, 'id'>;
   fixtures!: EntityTable<Fixture, 'plannedSessionId'>;
   clubs!: EntityTable<Club, 'id'>;
+  calendarNotes!: EntityTable<CalendarNote, 'id'>;
   meta!: EntityTable<MetaRow, 'key'>;
 
   constructor(name = DB_NAME) {
@@ -71,6 +73,12 @@ export class AppDB extends Dexie {
       .stores({ clubs: 'id, updatedAt' })
       .upgrade(async (tx) => {
         await tx.table('meta').put({ key: 'schemaVersion', value: 3 });
+      });
+    // Versio 4: kalenterimerkinnät (27.11.2026). Uusi taulu alkaa tyhjänä (migrateV3ToV4).
+    this.version(4)
+      .stores({ calendarNotes: 'id, date, updatedAt' })
+      .upgrade(async (tx) => {
+        await tx.table('meta').put({ key: 'schemaVersion', value: 4 });
       });
   }
 }

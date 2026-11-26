@@ -9,6 +9,13 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.87',
+    date: '27.11.2026',
+    items: [
+      'Kalenterimerkinnät: viikolle voi lisätä myös muun kuin liikunnallisen tapahtuman, esim. hammaslääkärin tai kyläilyn. Valitse lisäysikkunan lopusta Muu merkintä (ei liikuntaa) ja anna nimi, päivä ja halutessa kellonaika. Merkinnän voi tehdä yhdelle profiilille tai koko perheelle, ja sitä voi muokata tai sen voi poistaa napauttamalla. Merkinnät eivät vaikuta liikuntamääriin.',
+    ],
+  },
+  {
     version: '1.1.86',
     date: '27.11.2026',
     items: [

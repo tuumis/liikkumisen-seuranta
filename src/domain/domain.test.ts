@@ -186,11 +186,12 @@ describe('tunnisteet ja siemendata', () => {
   });
 
   it('migraatioketju v1 → nykyinen; uudempi hylätään', () => {
-    expect(CURRENT_SCHEMA_VERSION).toBe(3);
+    expect(CURRENT_SCHEMA_VERSION).toBe(4);
     const data = { profiles: [] };
-    expect(migrateToCurrent(data, 3)).toBe(data);
-    expect(migrateToCurrent(data, 2)).toEqual({ profiles: [], clubs: [] });
-    expect(migrateToCurrent(data, 1)).toEqual({ profiles: [], teams: [], fixtures: [], clubs: [] });
-    expect(() => migrateToCurrent(data, 4)).toThrow('Päivitä sovellus tällä laitteella ensin');
+    expect(migrateToCurrent(data, 4)).toBe(data);
+    expect(migrateToCurrent(data, 3)).toEqual({ profiles: [], calendarNotes: [] });
+    expect(migrateToCurrent(data, 2)).toEqual({ profiles: [], clubs: [], calendarNotes: [] });
+    expect(migrateToCurrent(data, 1)).toEqual({ profiles: [], teams: [], fixtures: [], clubs: [], calendarNotes: [] });
+    expect(() => migrateToCurrent(data, 5)).toThrow('Päivitä sovellus tällä laitteella ensin');
   });
 });

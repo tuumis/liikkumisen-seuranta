@@ -19,8 +19,20 @@ import { typeOptionLabel, useHiddenTypes, visibleTypes } from './useLoggableType
 import { CompanionsPicker, companionDuration, type Companion } from './Companions';
 import { isClubTraining } from '../../domain/football';
 import { TrainingTeamField } from '../football/TrainingTeam';
+import { IconCalendarClock } from '../../ui/icons';
 
-export function PlanOnceSheet({ profile, date, onClose }: { profile: Profile; date: ISODate | null; onClose: () => void }) {
+export function PlanOnceSheet({
+  profile,
+  date,
+  onClose,
+  onOtherNote,
+}: {
+  profile: Profile;
+  date: ISODate | null;
+  onClose: () => void;
+  /** Muu kuin liikunta: avaa kalenterimerkinnän valitulle päivälle (27.11.2026). */
+  onOtherNote?: (date: ISODate) => void;
+}) {
   const toast = useToast();
   const today = todayFn();
   const hidden = useHiddenTypes(profile.id);
@@ -130,8 +142,23 @@ export function PlanOnceSheet({ profile, date, onClose }: { profile: Profile; da
               Peruuta
             </Button>
           </div>
+          {onOtherNote && <OtherNoteLink onClick={() => onOtherNote(day)} />}
         </form>
       )}
     </Sheet>
+  );
+}
+
+/** Pieni linkki lisäysvalikoiden lopussa: arjen muu tapahtuma kalenteriin (27.11.2026). */
+export function OtherNoteLink({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="press mx-auto flex min-h-10 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-slate-600 hover:bg-[var(--surface-sunk)] hover:text-slate-900"
+    >
+      <IconCalendarClock size="1rem" />
+      Muu merkintä (ei liikuntaa)
+    </button>
   );
 }

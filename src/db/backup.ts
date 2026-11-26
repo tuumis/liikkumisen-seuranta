@@ -400,7 +400,8 @@ export async function purgeProfile(db: AppDB, profileId: UUID, deviceId: DeviceI
     const planIds = await ownIds('plannedSessions');
     const fixtures = (await db.fixtures.bulkGet(planIds)).filter(Boolean).map((f) => f!.plannedSessionId);
     await purge('fixtures', fixtures, 'plannedSessionId');
-    for (const t of ['estimates', 'templateItems', 'plannedSessions', 'dayFlags', 'teams'] as const) await purge(t, await ownIds(t));
+    // Kalenterimerkinnöistä vain profiilin omat; koko perheen merkinnät jäävät (27.11.2026).
+    for (const t of ['estimates', 'templateItems', 'plannedSessions', 'dayFlags', 'teams', 'calendarNotes'] as const) await purge(t, await ownIds(t));
     await purge('profiles', [profileId]);
     await db.meta.delete(`plannedThrough:${profileId}`);
     return n;

@@ -25,6 +25,7 @@ const TABLE_LABEL: Record<SyncedTable, string> = {
   teams: 'Joukkue',
   fixtures: 'Tuleva peli',
   clubs: 'Seura',
+  calendarNotes: 'Kalenterimerkintä',
 };
 
 const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : undefined);
@@ -33,7 +34,7 @@ function describe(p: PendingChange, typeName: (id: unknown) => string | undefine
   const r = p.row;
   const date = isISODate(r.date as string) ? formatDate(r.date as string, 'EEEEEE d.M.') : undefined;
   const team = str(r.opponent) ?? str(r.eventName) ?? str(r.team);
-  const parts = [str(r.label) ?? str(r.name) ?? typeName(r.activityTypeId), team && displayTeamName(team), date];
+  const parts = [str(r.label) ?? str(r.name) ?? str(r.title) ?? typeName(r.activityTypeId), team && displayTeamName(team), date];
   return parts.filter(Boolean).join(' · ');
 }
 

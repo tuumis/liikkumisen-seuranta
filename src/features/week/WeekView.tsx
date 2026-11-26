@@ -5,7 +5,7 @@ import { dayGoalMet } from '../../domain/dayTarget';
 import { planAdherence } from '../../domain/adherence';
 import { farWeekPlanning, planningThroughForWeek } from '../../domain/planning';
 import { RECOMMENDATIONS } from '../../domain/recommendations';
-import type { ActivityType, DayFlag, Fixture, ISODate, PlannedSession, Profile, RecommendationGroup, Session, UUID } from '../../domain/types';
+import type { ActivityType, CalendarNote, DayFlag, Fixture, ISODate, PlannedSession, Profile, RecommendationGroup, Session, UUID } from '../../domain/types';
 import { displayTeamName } from '../../domain/opponent';
 import { repo } from '../../db/repositories';
 import { Button, Card } from '../../ui/components';
@@ -44,6 +44,7 @@ import { HoursCard, HoursDetailCard } from './HoursCard';
 import { GettingStarted } from './GettingStarted';
 import { LastWeekCard } from './LastWeekCard';
 import { PlanOnceSheet } from './PlanOnceSheet';
+import { CalendarNoteSheet, type NoteDraft } from './CalendarNoteSheet';
 import { useFootballEnabled } from '../football/useFootballEnabled';
 import { GameDayCard } from '../games/TournamentDay';
 import { FixtureSheet, fixtureKindOf, type FixtureDraft } from '../games/FixtureSheet';
@@ -83,6 +84,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
   const [injuryDay, setInjuryDay] = useState<ISODate | null>(null);
   const [dayMenu, setDayMenu] = useState<ISODate | null>(null);
   const [planOnce, setPlanOnce] = useState<ISODate | null>(null);
+  const [noteDraft, setNoteDraft] = useState<NoteDraft | null>(null);
   const [estimateDay, setEstimateDay] = useState<ISODate | null>(null);
   const [planOpen, setPlanOpen] = useState<PlannedSession | null>(null);
   // Peli, turnaus tai harjoituspeli Viikko-näkymästä (24.11.2026): tuleva avoin suoraan muokkaukseen.
@@ -123,6 +125,13 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
     () => (profile ? repo.plansInRange(profile.id, period.start, period.end) : Promise.resolve([] as PlannedSession[])),
     [profile?.id, period.start, period.end],
   );
+  // Kalenterimerkinnät (27.11.2026): profiilin omat ja koko perheen; vain näkyviin, ei lukuihin.
+  const calendarNotes = useLiveQuery(
+    () => (profile ? repo.listCalendarNotes(profile.id, period.start, period.end) : Promise.resolve([] as CalendarNote[])),
+    [profile?.id, period.start, period.end],
+  );
+  const notesOn = (d: ISODate) => (calendarNotes ?? []).filter((n) => n.date === d);
+  const openNote = (n: CalendarNote) => setNoteDraft({ note: n });
   const fixtureEntries = useLiveQuery(
     () => (profile ? repo.listFixtures(profile.id, period.start, period.end) : Promise.resolve([])),
     [profile?.id, period.start, period.end],
@@ -487,6 +496,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
               sessions: (sessions ?? []).filter((s) => s.date === d),
               plans: (plans ?? []).filter((p) => p.date === d && p.status !== 'done'),
               flag: flagByDate.get(d),
+              notes: notesOn(d),
             }))}
             profileId={profile.id}
             group={info?.group ?? 'school_age'}
@@ -503,6 +513,7 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             onPlanConfirm={(p) => void planActions.confirm(p)}
             onEstimate={setEstimateDay}
             onOpenMenu={setDayMenu}
+            onNoteOpen={openNote}
           />
         </div>
       ) : (
@@ -536,6 +547,8 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             onPlan={() => setPlanOnce(d)}
             onEdit={setEditing}
             onEstimate={() => setEstimateDay(d)}
+            notes={notesOn(d)}
+            onNoteOpen={openNote}
           />
         ))}
       </ol>
@@ -609,6 +622,8 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
           onPlan={() => setPlanOnce(day)}
           onEdit={setEditing}
           onEstimate={() => setEstimateDay(day)}
+          notes={notesOn(day)}
+          onNoteOpen={openNote}
         />
       </ol>
       <p className="text-center text-xs text-slate-500">Pyyhkäise vaihtaaksesi päivää. Suunnitelman kuittaat tehdyksi pyyhkäisemällä sitä oikealle. Pitkä painallus päivään: sairas-, matka- tai loukkaantumispäivä.</p>
@@ -733,7 +748,17 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
             columns
             unavailable={unavailable}
           />
-          <QuickAdd open={!!quickAdd} onClose={() => setQuickAdd(null)} profile={profile} initialDate={quickAdd?.date} onSaved={openFootballIfAny} />
+          <QuickAdd
+            open={!!quickAdd}
+            onClose={() => setQuickAdd(null)}
+            profile={profile}
+            initialDate={quickAdd?.date}
+            onSaved={openFootballIfAny}
+            onOtherNote={(date) => {
+              setQuickAdd(null);
+              setNoteDraft({ date });
+            }}
+          />
           <PlanSheet
             plan={planOpen}
             type={planOpen ? typeMap.get(planOpen.activityTypeId) : undefined}
@@ -805,7 +830,16 @@ export function WeekView({ profile, onOpenSettings }: { profile?: Profile; onOpe
               setInjuryDay(date);
             }}
           />
-          <PlanOnceSheet profile={profile} date={planOnce} onClose={() => setPlanOnce(null)} />
+          <PlanOnceSheet
+            profile={profile}
+            date={planOnce}
+            onClose={() => setPlanOnce(null)}
+            onOtherNote={(date) => {
+              setPlanOnce(null);
+              setNoteDraft({ date });
+            }}
+          />
+          <CalendarNoteSheet profile={profile} draft={noteDraft} onClose={() => setNoteDraft(null)} />
           <InjurySheet profile={profile} date={injuryDay} onClose={() => setInjuryDay(null)} />
         </>
       )}

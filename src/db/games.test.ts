@@ -368,11 +368,11 @@ describe('Dexie-päivitys v1 → v2 olemassa olevalla tietokannalla', () => {
     dbs.push(db);
     const repo = createRepositories(db);
     await repo.initialize();
-    expect(db.verno).toBe(3);
+    expect(db.verno).toBe(4);
     expect((await repo.listProfiles()).map((p) => p.name)).toEqual(['Vanha']);
     expect(await db.sessions.count()).toBe(1);
     expect(await db.teams.count()).toBe(0);
-    expect(await repo.getMeta('schemaVersion')).toBe(3);
+    expect(await repo.getMeta('schemaVersion')).toBe(4);
     expect(await db.activityTypes.get('t:football_self')).toBeDefined();
   });
 });

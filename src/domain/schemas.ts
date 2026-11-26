@@ -3,6 +3,7 @@
 // Tyhjennetty poistomerkintä sisältää vain tunnisteen ja synkronointikentät.
 
 import { z } from 'zod';
+import { isISODate } from './dates';
 
 const iso = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const ts = z.string().min(1);
@@ -193,6 +194,21 @@ export const fixtureSchema = either(
 
 export const clubSchema = either(z.looseObject({ id: z.string().min(1), name: z.string(), logo: photo.optional(), country: z.string().max(10).optional(), city: z.string().max(80).optional(), shareColor: z.string().max(20).optional(), opponent: z.boolean().optional(), squads: z.array(z.looseObject({ group: z.string().max(60).optional(), age: z.string().max(30).optional() })).max(100).optional(), createdAt: ts, ...sync }));
 
+// Kalenterimerkintä (skeema v4, 27.11.2026).
+const clock = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+export const calendarNoteSchema = either(
+  z.looseObject({
+    id: z.string().min(1),
+    profileId: z.string().min(1).optional(),
+    date: z.string().refine(isISODate),
+    title: z.string().min(1).max(120),
+    startTime: clock.optional(),
+    endTime: clock.optional(),
+    createdAt: ts,
+    ...sync,
+  }),
+);
+
 export const metaSchema = z.looseObject({ key: z.string().min(1), value: z.unknown() });
 
 const syncedData = {
@@ -210,6 +226,8 @@ const syncedData = {
   fixtures: z.array(fixtureSchema).default([]),
   // Skeema v3.
   clubs: z.array(clubSchema).default([]),
+  // Skeema v4.
+  calendarNotes: z.array(calendarNoteSchema).default([]),
 };
 
 const header = {

@@ -450,6 +450,23 @@ export interface Club extends SyncFields {
   createdAt: Timestamp;
 }
 
+/**
+ * Kalenterimerkintä (27.11.2026): arjen muu tapahtuma liikunnan rinnalla (esim. hammaslääkäri). Ei vaikuta
+ * mihinkään lukuun eikä näy analyysissa, koosteissa tai jakokuvissa; pelkkä muistiinpano Viikko-näkymän päivissä.
+ */
+export interface CalendarNote extends SyncFields {
+  id: UUID;
+  /** Profiili; puuttuu = koko perhe (näkyy kaikilla profiileilla). */
+  profileId?: UUID;
+  date: ISODate;
+  title: string;
+  /** Alkamisaika HH:MM (valinnainen). */
+  startTime?: string;
+  /** Päättymisaika HH:MM (valinnainen, vain alkamisajan kanssa). */
+  endTime?: string;
+  createdAt: Timestamp;
+}
+
 // ---------- muut ----------
 export type DayFlagReason = 'sick' | 'travel' | 'other' | 'injured';
 

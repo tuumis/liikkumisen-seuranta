@@ -26,6 +26,7 @@ import type {
   Fixture,
   FocusTag,
   FootballDetails,
+  CalendarNote,
   Club,
   GameLevel,
   GameResult,
@@ -53,6 +54,7 @@ import type {
   Weekday, SessionPart, HomeAway } from '../domain/types';
 import { cleanSeries, isClubFootball, isClubTraining, isGameFormat, isHomeAway, labelKey, LEVEL_EFFORT, POSITIONS, selfMin, trainingSelfLabel, trainingSelfStart } from '../domain/football';
 import { BUILT_IN_ACTIVITY_TYPES, BUILT_IN_RENAMES, ESTIMATE_DEFAULT_TYPE_KEY } from '../seed/activityTypes';
+import { compareNotes, noteError, type CalendarNoteInput } from '../domain/calendarNotes';
 import { nowTimestamp } from './clock';
 import { createPlanner } from './ensurePlanned';
 import { noteLocalChange } from './localChange';
@@ -2249,6 +2251,56 @@ export function createRepositories(db: AppDB = defaultDb) {
     });
   }
 
+  // ---------- kalenterimerkinnät (27.11.2026) ----------
+
+  /** Profiilin ja koko perheen merkinnät aikaväliltä (päivät mukaan lukien), aikajärjestyksessä. */
+  async function listCalendarNotes(profileId: UUID, from: ISODate, to: ISODate): Promise<CalendarNote[]> {
+    const rows = live(await db.calendarNotes.where('date').between(from, to, true, true).toArray());
+    return rows.filter((n) => !n.profileId || n.profileId === profileId).sort(compareNotes);
+  }
+
+  /** Uusi merkintä tai muokkaus (id). Tyhjä kellonaika poistaa ajan. */
+  async function saveCalendarNote(input: CalendarNoteInput, id?: UUID): Promise<CalendarNote> {
+    const err = noteError(input);
+    if (err) throw new Error(err);
+    const fields = {
+      date: input.date,
+      title: input.title.trim(),
+      ...(input.profileId ? { profileId: input.profileId } : {}),
+      ...(input.startTime ? { startTime: input.startTime } : {}),
+      ...(input.startTime && input.endTime ? { endTime: input.endTime } : {}),
+    };
+    return db.transaction('rw', db.calendarNotes, db.meta, async () => {
+      if (id) {
+        const current = await db.calendarNotes.get(id);
+        if (!current || current.deletedAt) throw new Error('Merkintää ei löydy');
+        const { profileId: _p, startTime: _s, endTime: _e, ...rest } = current;
+        const next = await stamp({ ...rest, ...fields });
+        await db.calendarNotes.put(next);
+        return next;
+      }
+      const ts = nowTimestamp();
+      const note: CalendarNote = { id: newId(), ...fields, createdAt: ts, updatedAt: ts, updatedBy: await deviceId() };
+      await db.calendarNotes.add(note);
+      return note;
+    });
+  }
+
+  /** Poisto (poistomerkintä, siirtyy synkronoinnissa); kumottavissa restoreCalendarNote-funktiolla. */
+  async function deleteCalendarNote(id: UUID): Promise<void> {
+    const n = await db.calendarNotes.get(id);
+    if (!n || n.deletedAt) return;
+    await softDelete(db.calendarNotes, id);
+  }
+
+  async function restoreCalendarNote(id: UUID): Promise<void> {
+    const n = await db.calendarNotes.get(id);
+    if (!n?.deletedAt) return;
+    const next = await stamp({ ...n });
+    delete next.deletedAt;
+    await db.calendarNotes.put(next);
+  }
+
   async function restorePlanned(planId: UUID): Promise<void> {
     await db.transaction('rw', [db.plannedSessions, db.fixtures, db.meta], async () => {
       const plan = await db.plannedSessions.get(planId);
@@ -2744,6 +2796,10 @@ export function createRepositories(db: AppDB = defaultDb) {
 
   return {
     db,
+    listCalendarNotes,
+    saveCalendarNote,
+    deleteCalendarNote,
+    restoreCalendarNote,
     getMeta,
     setMeta,
     listStopwatches,

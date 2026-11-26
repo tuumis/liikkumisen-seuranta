@@ -1,4 +1,5 @@
-import type { ActivityType, DayFlag, DayTotals, Fixture, FootballDetails, ISODate, PlannedSession, Session, UUID } from '../../domain/types';
+import type { ActivityType, CalendarNote, DayFlag, DayTotals, Fixture, FootballDetails, ISODate, PlannedSession, Session, UUID } from '../../domain/types';
+import { noteTimeText } from '../../domain/calendarNotes';
 import { formatClock } from '../../domain/stopwatch';
 import type { DayHours } from '../../domain/hours';
 import { InfoTip } from '../../ui/InfoTip';
@@ -24,7 +25,7 @@ import { useLongPress } from '../../ui/useLongPress';
 import { IconButton } from '../review/ReviewSheet';
 import { FLAG_LABEL } from './DaySheet';
 import { TypeIcon } from './Dashboard';
-import { IconCheck, IconClose, IconPlus, IconSun } from '../../ui/icons';
+import { IconCalendarClock, IconCheck, IconClose, IconPlus, IconSun } from '../../ui/icons';
 import { SwipeRow } from '../../ui/SwipeRow';
 import { isFresh, useConfirmFeedback } from '../../ui/fresh';
 import { morphOpen } from '../../ui/morph';
@@ -60,6 +61,8 @@ export function DayRow({
   onPlanSkip,
   onPlanConfirm,
   onEstimate,
+  notes = [],
+  onNoteOpen,
 }: {
   /** Järjestys porrastettua sisääntuloa varten. */
   index?: number;
@@ -99,6 +102,9 @@ export function DayRow({
   onPlanConfirm: (p: PlannedSession) => void;
   /** Avaa päivän arkiliikunnan tarkistuksen (vahvista / muuta / ei tänään). */
   onEstimate?: () => void;
+  /** Päivän kalenterimerkinnät (muut kuin liikunta, 27.11.2026); eivät vaikuta lukuihin. */
+  notes?: CalendarNote[];
+  onNoteOpen?: (n: CalendarNote) => void;
 }) {
   const press = useLongPress(onOpenMenu);
   const estimated = sessions.some((s) => s.intensitySource === 'profile');
@@ -196,7 +202,7 @@ export function DayRow({
         </div>
       </div>
 
-      {listed.length + plans.length + (estimateRow ? 1 : 0) > 0 ? (
+      {listed.length + plans.length + notes.length + (estimateRow ? 1 : 0) > 0 ? (
         <ul className="space-y-1 px-2 pb-2.5">
           {listed.map((s) => {
             const t = types.get(s.activityTypeId);
@@ -361,6 +367,24 @@ export function DayRow({
               </SwipeRow>
             );
           })}
+          {notes.map((n) => (
+            <li key={n.id} className="rounded-2xl">
+              <button
+                type="button"
+                onClick={() => onNoteOpen?.(n)}
+                className="press flex w-full min-w-0 items-center gap-3 rounded-2xl px-2 py-1.5 text-left hover:bg-[color-mix(in_oklab,var(--surface-sunk)_70%,transparent)]"
+                aria-label={`Kalenterimerkintä: ${n.title}${n.startTime ? `, ${noteTimeText(n)}` : ''}`}
+              >
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl text-slate-500" aria-hidden>
+                  <IconCalendarClock size="1.1rem" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-slate-700">{n.title}</span>
+                  <span className="block truncate text-xs text-slate-500">{[noteTimeText(n), n.profileId ? undefined : 'Koko perhe'].filter(Boolean).join(' · ') || 'Muu merkintä'}</span>
+                </span>
+              </button>
+            </li>
+          ))}
         </ul>
       ) : (
         <div className="px-4 pb-3 pl-[4.5rem] text-xs text-slate-400">{isFuture ? 'Ei suunnitelmia' : 'Ei kirjauksia'}</div>

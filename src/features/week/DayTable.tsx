@@ -12,9 +12,10 @@ import type { DayHours } from '../../domain/hours';
 import { isEstimateConfirmation } from '../../domain/hours';
 import { earlyYearsDay, isVigorousDay } from '../../domain/aggregate';
 import { DAY_TARGET, dayGoalMet } from '../../domain/dayTarget';
-import type { ActivityType, Category, DayFlag, DayTotals, FootballDetails, ISODate, PlannedSession, RecommendationGroup, Session, UUID } from '../../domain/types';
+import type { ActivityType, CalendarNote, Category, DayFlag, DayTotals, FootballDetails, ISODate, PlannedSession, RecommendationGroup, Session, UUID } from '../../domain/types';
+import { noteTimeText } from '../../domain/calendarNotes';
 import { dayLabel } from '../../ui/format';
-import { IconBolt, IconBone, IconCheck, IconComment, IconLeaf, IconPlus, IconSun } from '../../ui/icons';
+import { IconBolt, IconBone, IconCalendarClock, IconCheck, IconComment, IconLeaf, IconPlus, IconSun } from '../../ui/icons';
 import { useToast } from '../../ui/Toast';
 import { isFresh, useConfirmFeedback } from '../../ui/fresh';
 import { morphOpen } from '../../ui/morph';
@@ -31,6 +32,8 @@ export interface DayTableRow {
   sessions: Session[];
   plans: PlannedSession[];
   flag?: DayFlag;
+  /** Kalenterimerkinnät (27.11.2026): pieninä nappeina, eivät vaikuta summiin. */
+  notes?: CalendarNote[];
 }
 
 type ExtraCol = 'split' | 'football' | 'note';
@@ -89,6 +92,7 @@ export function DayTable({
   onPlanConfirm,
   onEstimate,
   onOpenMenu,
+  onNoteOpen,
 }: {
   rows: DayTableRow[];
   profileId: UUID;
@@ -107,6 +111,7 @@ export function DayTable({
   onPlanConfirm: (p: PlannedSession) => void;
   onEstimate: (date: ISODate) => void;
   onOpenMenu: (date: ISODate) => void;
+  onNoteOpen?: (n: CalendarNote) => void;
 }) {
   const toast = useToast();
   const [colsRaw, setColsRaw] = useStored<string>('dayTableCols', '', () => true);
@@ -396,6 +401,19 @@ export function DayTable({
                           )}
                         </span>
                       )}
+                      {r.notes?.map((n) => (
+                        <button
+                          key={n.id}
+                          type="button"
+                          onClick={() => onNoteOpen?.(n)}
+                          className={`${chip} text-slate-500 hover:bg-[var(--surface-sunk)]`}
+                          title={`Kalenterimerkintä: ${n.title}${n.startTime ? ` ${noteTimeText(n)}` : ''}${n.profileId ? '' : ' (koko perhe)'}`}
+                        >
+                          <IconCalendarClock size="0.9rem" />
+                          <span className="truncate font-medium">{n.title}</span>
+                          {n.startTime && <span className="tabular-nums font-medium">{n.startTime.replace(':', '.')}</span>}
+                        </button>
+                      ))}
                       <button
                         type="button"
                         onClick={() => (r.isFuture && onPlan ? onPlan(r.date) : onAdd(r.date))}
