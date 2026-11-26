@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { enterDemo, exitDemo } from './demoMode';
 import { IconSparkle } from '../ui/icons';
+import { SideTip } from '../ui/SideTip';
 
 /** Esimerkkitilan palkki näkymän yläreunassa: kertoo, että tiedot ovat keksittyjä, ja Poistu palaa omiin tietoihin. */
 export function DemoBanner() {
@@ -18,7 +19,20 @@ export function DemoBanner() {
 }
 
 /** PC:n sivupalkki (24.11.2026): esimerkkitilan merkintä ja Poistu aina näkyvissä yläpalkin sijaan. */
-export function DemoSidebar() {
+/** Pienennetyssä palkissa merkki; painallus suurentaa palkin, jossa on Poistu esimerkistä. */
+export function DemoSidebar({ mini = false, onExpand }: { mini?: boolean; onExpand?: () => void }) {
+  if (mini)
+    return (
+      <button
+        type="button"
+        onClick={onExpand}
+        className="press group relative flex size-11 items-center justify-center rounded-2xl bg-white/[0.06] text-[var(--hero-accent)] ring-1 ring-white/10 hover:bg-white/[0.1]"
+        aria-label="Esimerkkitila: tiedot ovat keksittyjä. Suurenna valikko poistuaksesi."
+      >
+        <IconSparkle size="1.2rem" />
+        <SideTip>Esimerkkitila</SideTip>
+      </button>
+    );
   return (
     <div role="status" className="rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10">
       <div className="flex items-center gap-2 text-sm font-semibold text-[var(--side-ink)]">

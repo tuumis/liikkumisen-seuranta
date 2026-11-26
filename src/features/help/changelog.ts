@@ -9,6 +9,13 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.98',
+    date: '27.11.2026',
+    items: [
+      'PC:n sivupalkin voi pienentää pelkiksi kuvakkeiksi yläreunan nuolesta tai pikanäppäimellä Ctrl+B. Pienennettynä näkyvät välilehdet, kuittaamattomien kertojen määrä, profiilien kuvat sekä haku, ohje ja teema; nimi näkyy, kun hiiren vie kuvakkeen päälle. Sisältö saa noin 200 px lisää leveyttä. Valinta muistetaan laitteella.',
+    ],
+  },
+  {
     version: '1.1.97',
     date: '27.11.2026',
     items: [

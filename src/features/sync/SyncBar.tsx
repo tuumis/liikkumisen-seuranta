@@ -10,6 +10,7 @@ import { repo } from '../../db/repositories';
 import { SYNC_FILE_NAME } from '../../domain/version';
 import { Button } from '../../ui/components';
 import { IconSync } from '../../ui/icons';
+import { SideTip } from '../../ui/SideTip';
 import { Sheet } from '../../ui/Sheet';
 import { useMinuteTick } from '../review/unconfirmed';
 import { useToast } from '../../ui/Toast';
@@ -36,7 +37,7 @@ export function ago(ts?: string): string {
 }
 
 /** variant 'bar' = Viikko-näkymä (leveä näyttö, puhelinrooli), 'sidebar' = PC:n sivupalkki (vain PC-rooli), 'header' = puhelimen yläpalkin kuvake + paneeli. */
-export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' | 'header' }) {
+export function SyncBar({ variant = 'bar', onExpand }: { variant?: 'bar' | 'sidebar' | 'sidebarMini' | 'header'; onExpand?: () => void }) {
   useMinuteTick(); // "Synkronoitu N min sitten" pysyy ajan tasalla
   const state = useSyncState();
   const actions = useSyncActions();
@@ -85,7 +86,7 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' | 'he
     };
   }, [state?.role, state?.hasFolder, state?.lastSyncRunAt]);
 
-  if (!state?.role || (variant === 'sidebar' && state.role !== 'pc')) return null;
+  if (!state?.role || ((variant === 'sidebar' || variant === 'sidebarMini') && state.role !== 'pc')) return null;
 
   async function run(f: () => Promise<{ summary?: MergeSummary; message: string } | null | string>) {
     setBusy(true);
@@ -136,6 +137,26 @@ export function SyncBar({ variant = 'bar' }: { variant?: 'bar' | 'sidebar' | 'he
     else void run(actions.importFile);
   };
   const sideBtn = 'press flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-left hover:bg-white/[0.06] disabled:opacity-60';
+  // Pienennetty sivupalkki (27.11.2026): kuvake; kansiollinen synkronointi suoraan, muuten palkki suurenee valintoihin.
+  if (variant === 'sidebarMini') {
+    const sub = busy ? busyText : failed ? 'Synkronointi keskeytyi' : phoneHasNew ? 'Puhelimella uusia kirjauksia' : synced(state.lastSyncRunAt);
+    return (
+      <div ref={rootRef}>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => (supportsFolder() && !failed ? run(actions.pcSync) : onExpand?.())}
+          className="press group relative flex size-11 items-center justify-center rounded-2xl text-[var(--side-ink-soft)] hover:bg-white/[0.06] hover:text-white disabled:opacity-60"
+          aria-label={`Synkronoi puhelimen kanssa. ${sub}`}
+        >
+          <IconSync size="1.25rem" className={busy ? 'animate-spin [animation-direction:reverse]' : ''} />
+          {(phoneHasNew || failed) && !busy && <span className="absolute right-2 top-2 size-2 rounded-full bg-[var(--hero-accent)] ring-2 ring-[var(--side-from)]" aria-hidden />}
+          <SideTip>Synkronoi · {sub}</SideTip>
+        </button>
+        <ConflictSheet summary={conflicts} onClose={() => setConflicts(null)} />
+      </div>
+    );
+  }
   if (variant === 'sidebar') {
     const sub = busy ? busyText : failed ? 'Synkronointi keskeytyi' : phoneHasNew ? 'Puhelimella uusia kirjauksia' : synced(state.lastSyncRunAt);
     return (

@@ -24,13 +24,15 @@ import { Avatar } from './ui/Avatar';
 import { hideUntilSettled } from './ui/settle';
 import { markTabSwitch, TabPanel } from './ui/TabPanel';
 import { formatDate } from './ui/format';
-import { IconBall, IconCalendarClock, IconPlus, IconChart, IconHelp, IconLeaf, IconMoon, IconSearch, IconSettings, IconSun, IconWeek } from './ui/icons';
+import { IconBall, IconCalendarClock, IconChevronLeft, IconChevronRight, IconPlus, IconChart, IconHelp, IconLeaf, IconMoon, IconSearch, IconSettings, IconSun, IconWeek } from './ui/icons';
+import { useStoredFlag } from './ui/storedPref';
+import { SIDE_MINI_BTN, SideTip } from './ui/SideTip';
 import { setThemeChoice, useIsDark } from './ui/theme';
 import { useUnconfirmedCounts } from './features/review/unconfirmed';
 import { requestWeek } from './features/desktop/settings';
 import { DEMO } from './demo/demoMode';
 import { DemoBanner, DemoSidebar } from './demo/DemoBanner';
-import { StopwatchBar, StopwatchHost } from './features/stopwatch/StopwatchBar';
+import { StopwatchBar, StopwatchHost, StopwatchMini } from './features/stopwatch/StopwatchBar';
 import { CoachShareHost } from './features/coach/CoachShare';
 
 // Analyysi (Recharts) ladataan omana osanaan; service worker esivälimuistittaa senkin.
@@ -87,6 +89,12 @@ export default function App() {
   const [visited, setVisited] = useState<Set<Tab>>(() => new Set());
   useEffect(() => setVisited((v) => (v.has(rawTab) ? v : new Set(v).add(rawTab))), [rawTab]);
   const [helpOpen, setHelpOpen] = useState(false);
+  // PC:n sivupalkki pelkkinä kuvakkeina (27.11.2026): laitekohtainen valinta, ei automaattista pienennystä.
+  // Leveys CSS-muuttujana (--side-w), jota sisällön reunus, ilmoitukset ja ikkunan vetoalue käyttävät.
+  const [sideMini, setSideMini] = useStoredFlag('sidebarMini', false);
+  useLayoutEffect(() => {
+    document.documentElement.style.setProperty('--side-w', sideMini ? '5rem' : '18rem');
+  }, [sideMini]);
   // Puhelimen yläpalkki: nimirivi piiloutuu alaspäin vieritettäessä. Palkin alle jätetään yhtä suuri
   // marginaali, joten sisältö ei siirry (vain palkki pienenee) ja kiinnittyvät osat seuraavat palkkia.
   const headerCompact = useCompactHeader();
@@ -245,17 +253,117 @@ export default function App() {
 
   return (
     <FootballStatusContext.Provider value={footballMap}>
-    <div className="min-h-dvh lg:pl-72">
+    <div className="min-h-dvh lg:pl-[var(--side-w)] lg:transition-[padding] lg:duration-200 lg:ease-out motion-reduce:transition-none">
       {/* PC-sovellus: vetoalue ikkunan ylälaidassa, kun otsikkopalkki on piilotettu (window-controls-overlay). */}
       <div className="titlebar" aria-hidden />
       {/* PC: kiinteä metsänvihreä sivupalkki navigaatiolle ja profiileille. */}
-      <aside className="sidebar fixed inset-y-0 left-0 z-20 hidden w-72 flex-col lg:flex">
+      <aside
+        className={`sidebar fixed inset-y-0 left-0 z-20 hidden flex-col transition-[width] duration-200 ease-out motion-reduce:transition-none lg:flex ${sideMini ? 'w-20' : 'w-72 overflow-x-clip'}`}
+      >
+        {sideMini ? (
+          <div className="flex h-full w-20 flex-col items-center pb-6 pt-8">
+            <BrandMark className="size-10" />
+            <button type="button" onClick={() => setSideMini(false)} className={`${SIDE_MINI_BTN} mt-3 !size-9 text-[var(--side-muted)]`} aria-label="Suurenna valikko" aria-expanded={false}>
+              <IconChevronRight size="1.1rem" />
+              <SideTip>Suurenna valikko · Ctrl B</SideTip>
+            </button>
+            <nav className="mt-5 space-y-1" aria-label="Päävalikko">
+              {tabs.map((t) => {
+                const active = tab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setTab(t.id)}
+                    aria-current={active ? 'page' : undefined}
+                    aria-label={t.label}
+                    className={`press group relative flex size-12 items-center justify-center rounded-2xl ${
+                      active ? 'bg-white/[0.12] text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]' : 'text-[var(--side-ink-soft)] hover:bg-white/[0.06] hover:text-white'
+                    }`}
+                  >
+                    <span className={`absolute -left-4 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-[var(--hero-accent)] transition-opacity ${active ? 'opacity-100' : 'opacity-0'}`} aria-hidden />
+                    <t.Icon size="1.35rem" />
+                    <SideTip>{t.label}</SideTip>
+                  </button>
+                );
+              })}
+            </nav>
+            <div className="mt-4 empty:hidden">
+              <StopwatchMini profiles={profiles} onExpand={() => setSideMini(false)} />
+            </div>
+            {pendingTotal > 0 && (
+              <button
+                type="button"
+                onClick={openReview}
+                className="press anim-rise group relative mt-4 flex size-12 items-center justify-center rounded-2xl bg-[var(--hero-accent)] text-[var(--side-from)] shadow-md hover:brightness-105"
+                aria-label={`Kuittaa kerrat: ${pendingTotal} kuittaamatta. ${pendingLine}`}
+              >
+                <IconCalendarClock size="1.3rem" />
+                <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--side-from)] px-1 text-[11px] font-bold tabular-nums text-[var(--hero-accent)] ring-2 ring-[var(--side-from)]" aria-hidden>
+                  {pendingTotal}
+                </span>
+                <SideTip>Kuittaa kerrat · {pendingLine}</SideTip>
+              </button>
+            )}
+            {profiles && profiles.length > 0 && (
+              <div className="mt-5 space-y-1.5 border-t border-white/10 pt-5" role="tablist" aria-label="Profiilit" aria-orientation="vertical">
+                {profiles.map((p) => {
+                  const active = p.id === selected?.id;
+                  const n = pendingOf(p.id);
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      aria-label={`${p.name}${n ? `, ${n} kuittaamatta` : ''}`}
+                      onClick={() => select(p.id)}
+                      className={`press group relative flex size-12 items-center justify-center rounded-2xl ${active ? 'bg-[var(--side-ink)] shadow-md' : 'hover:bg-white/[0.06]'}`}
+                    >
+                      <Avatar name={p.name} photo={p.photo} color={p.color} size="md" className={active ? '' : 'ring-2 ring-white/20'} />
+                      {n > 0 && (
+                        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--hero-accent)] px-1 text-[11px] font-bold tabular-nums text-[var(--side-from)] ring-2 ring-[var(--side-from)]" aria-hidden>
+                          {n}
+                        </span>
+                      )}
+                      <SideTip>{p.name}</SideTip>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <div className="mt-auto flex flex-col items-center gap-1.5 pt-4">
+              <SidebarUpdate mini />
+              {DEMO ? <DemoSidebar mini onExpand={() => setSideMini(false)} /> : <SyncBar variant="sidebarMini" onExpand={() => setSideMini(false)} />}
+              <button type="button" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))} className={SIDE_MINI_BTN} aria-label="Haku ja komennot">
+                <IconSearch size="1.25rem" />
+                <SideTip>Haku ja komennot · Ctrl K</SideTip>
+              </button>
+              <button type="button" onClick={() => setHelpOpen(true)} className={SIDE_MINI_BTN} aria-label="Ohje">
+                <IconHelp size="1.25rem" />
+                <SideTip>Ohje</SideTip>
+              </button>
+              <ThemeToggle mini />
+            </div>
+          </div>
+        ) : (
+        <div className="flex h-full w-72 shrink-0 flex-col">
         <div className="flex items-center gap-3 px-6 pb-8 pt-8">
           <BrandMark className="size-10" />
           <div className="leading-tight">
             <div className="font-display text-[17px] font-semibold text-[var(--side-ink)]">Liikkumisen</div>
             <div className="font-display text-[17px] font-semibold text-[var(--hero-accent)]">seuranta</div>
           </div>
+          <button
+            type="button"
+            onClick={() => setSideMini(true)}
+            className="press -mr-2 ml-auto flex size-9 items-center justify-center rounded-xl text-[var(--side-muted)] hover:bg-white/[0.08] hover:text-white"
+            aria-label="Pienennä valikko"
+            aria-expanded
+            title="Pienennä valikko (Ctrl+B)"
+          >
+            <IconChevronLeft size="1.1rem" />
+          </button>
         </div>
         <nav className="space-y-1 px-4" aria-label="Päävalikko">
           {tabs.map((t) => {
@@ -345,6 +453,8 @@ export default function App() {
             Tiedot pysyvät tällä laitteella. Ei verkkoliikennettä.
           </p>
         </div>
+        </div>
+        )}
       </aside>
 
       {/* Puhelin ja tabletti: läpikuultava yläpalkki profiilisiruineen. */}
@@ -520,6 +630,8 @@ export default function App() {
           openSettings={openSettings}
           openHelp={() => setHelpOpen(true)}
           run={runCommand}
+          sidebarMini={sideMini}
+          toggleSidebar={() => setSideMini(!sideMini)}
         />
       )}
     </div>
@@ -574,8 +686,15 @@ function LoadingSkeleton() {
  * Vaalea/tumma-pikavalinta PC:n sivupalkissa (24.11.2026, käyttäjän toive). Vaihtaa näkyvän teeman
  * vastakkaiseksi; laitteen mukainen teema valitaan edelleen kohdasta Asetukset → Ulkoasu.
  */
-function ThemeToggle() {
+function ThemeToggle({ mini = false }: { mini?: boolean }) {
   const dark = useIsDark();
+  if (mini)
+    return (
+      <button type="button" onClick={() => setThemeChoice(dark ? 'light' : 'dark')} className={SIDE_MINI_BTN} aria-label={dark ? 'Vaihda vaaleaan teemaan' : 'Vaihda tummaan teemaan'}>
+        {dark ? <IconSun size="1.25rem" /> : <IconMoon size="1.25rem" />}
+        <SideTip>{dark ? 'Vaalea teema' : 'Tumma teema'}</SideTip>
+      </button>
+    );
   return (
     <button
       type="button"

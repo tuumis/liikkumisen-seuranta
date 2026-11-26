@@ -939,7 +939,7 @@ html[data-bg] body::before {
   }
   @media (min-width: 1024px) {
     .titlebar {
-      background: linear-gradient(90deg, transparent 0 18rem, color-mix(in oklab, var(--bg) 82%, transparent) 18rem);
+      background: linear-gradient(90deg, transparent 0 var(--side-w), color-mix(in oklab, var(--bg) 82%, transparent) var(--side-w));
     }
   }
   /* Kapea ikkuna: yläpalkki ikkunapainikkeiden alapuolelle. */
@@ -963,6 +963,10 @@ html[data-bg] body::before {
 }
 
 /* Sivupalkki (PC): syvä metsänvihreä liukuväri ja hento valoreunus. */
+/* PC:n sivupalkin leveys (27.11.2026): App vaihtaa pienennettynä 5rem. */
+:root {
+  --side-w: 18rem;
+}
 .sidebar {
   background:
     radial-gradient(400px 300px at 0% 0%, rgb(221 169 110 / 0.12), transparent 60%),

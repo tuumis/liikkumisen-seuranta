@@ -5,6 +5,7 @@ import { createContext, useContext, useState, type ReactNode } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { Button } from '../../ui/components';
 import { IconSparkle } from '../../ui/icons';
+import { SideTip } from '../../ui/SideTip';
 
 interface AppUpdate {
   available: boolean;
@@ -50,9 +51,21 @@ export function UpdateBanner() {
 }
 
 /** PC:n sivupalkki: näkyy aina, kun uusi versio on odottamassa. */
-export function SidebarUpdate() {
+export function SidebarUpdate({ mini = false }: { mini?: boolean }) {
   const u = useAppUpdate();
   if (!u.available) return null;
+  if (mini)
+    return (
+      <button
+        type="button"
+        onClick={u.update}
+        className="press anim-rise group relative flex size-11 items-center justify-center rounded-2xl bg-[var(--hero-accent)] text-[var(--side-from)] shadow-md hover:brightness-105"
+        aria-label="Päivitä sovellus uuteen versioon"
+      >
+        <IconSparkle size="1.25rem" />
+        <SideTip>Päivitä · uusi versio saatavilla</SideTip>
+      </button>
+    );
   return (
     <button
       type="button"

@@ -13,6 +13,7 @@ import type { Profile } from '../../domain/types';
 import { Avatar } from '../../ui/Avatar';
 import { IconClock, IconClose, IconPause, IconPlay } from '../../ui/icons';
 import { TypeGlyph } from '../../ui/TypeGlyph';
+import { SideTip } from '../../ui/SideTip';
 import { QuickAdd } from '../quick-add/QuickAdd';
 
 const SAVE_EVENT = 'stopwatch-save';
@@ -142,6 +143,32 @@ function StopwatchRow({ sw, profile, showName, now, variant }: { sw: Stopwatch; 
 }
 
 /** Käynnissä olevat kellot: puhelimen yläpalkki (header) tai PC:n sivupalkki (sidebar). */
+/** Pienennetty sivupalkki (27.11.2026): käynnissä olevan kellon aika; painallus suurentaa palkin kellon painikkeisiin. */
+export function StopwatchMini({ profiles, onExpand }: { profiles: Profile[] | null; onExpand: () => void }) {
+  const list = useStopwatches();
+  const now = useNow(list.some((sw) => !isPaused(sw)));
+  const visible = list.filter((sw) => profiles?.some((p) => p.id === sw.profileId));
+  if (!visible.length) return null;
+  const sw = visible[0];
+  const running = visible.some((x) => !isPaused(x));
+  const clock = formatClock(elapsedSec(sw, now));
+  return (
+    <button
+      type="button"
+      onClick={onExpand}
+      className="press group relative flex w-14 flex-col items-center gap-0.5 rounded-2xl bg-white/[0.06] px-1 py-2 text-[var(--side-ink)] ring-1 ring-white/10 hover:bg-white/[0.1]"
+      aria-label={`Sekuntikello ${clock}${running ? '' : ', tauolla'}. Suurenna valikko kellon painikkeisiin.`}
+    >
+      <span className="relative">
+        <IconClock size="1.2rem" />
+        {running && <span className="absolute -right-1 -top-1 size-2 animate-pulse rounded-full bg-[var(--hero-accent)]" aria-hidden />}
+      </span>
+      <span className="text-[10px] font-bold tabular-nums">{clock}</span>
+      <SideTip>Sekuntikello{visible.length > 1 ? ` (${visible.length})` : ''}</SideTip>
+    </button>
+  );
+}
+
 export function StopwatchBar({ variant, profiles }: { variant: 'header' | 'sidebar'; profiles: Profile[] | null }) {
   const list = useStopwatches();
   const now = useNow(list.some((sw) => !isPaused(sw)));

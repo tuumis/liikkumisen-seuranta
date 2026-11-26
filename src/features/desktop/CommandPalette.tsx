@@ -26,7 +26,13 @@ export interface PaletteContext {
   openSettings: (s?: SettingsSectionId) => void;
   openHelp: () => void;
   run: (cmd: AppCommand) => void;
+  /** PC:n sivupalkki pienennetty (27.11.2026); Ctrl+B ja komento vaihtavat. */
+  sidebarMini: boolean;
+  toggleSidebar: () => void;
 }
+
+/** Sivupalkki on vain PC-asettelussa (lg). */
+const wideLayout = () => typeof window !== 'undefined' && !!window.matchMedia?.('(min-width: 1024px)').matches;
 
 interface Item {
   id: string;
@@ -63,6 +69,11 @@ export function CommandPalette(ctx: PaletteContext) {
       if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setOpen((o) => !o);
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'b' && wideLayout() && !isTyping(e.target)) {
+        e.preventDefault();
+        ctxRef.current.toggleSidebar();
         return;
       }
       if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented || isTyping(e.target)) return;
@@ -126,6 +137,9 @@ function Palette({ ctx, onClose }: { ctx: PaletteContext; onClose: () => void })
         .filter((p) => p.id !== ctx.selected?.id)
         .map((p) => ({ id: `p-${p.id}`, group: 'Profiilit', label: `Vaihda profiiliin ${p.name}`, words: 'profiili lapsi', run: go(() => ctx.selectProfile(p.id)) })),
       ...SETTINGS_SECTIONS.map((s) => ({ id: `s-${s.id}`, group: 'Asetukset', label: s.title, hint: s.text, words: 'asetukset', run: go(() => ctx.openSettings(s.id)) })),
+      ...(wideLayout()
+        ? [{ id: 'sidebar', group: 'Ulkoasu', label: ctx.sidebarMini ? 'Suurenna valikko' : 'Pienennä valikko', keys: 'Ctrl B', words: 'sivupalkki kuvakkeet kapea leveä piilota', run: go(ctx.toggleSidebar) }]
+        : []),
       { id: 'theme', group: 'Ulkoasu', label: dark ? 'Vaihda vaaleaan teemaan' : 'Vaihda tummaan teemaan', words: 'tumma vaalea teema yö', run: go(() => setThemeChoice(dark ? 'light' : 'dark')) },
       { id: 'help', group: 'Ohje', label: 'Ohje', keys: '?', words: 'apua käyttöohje', run: go(ctx.openHelp) },
     ];

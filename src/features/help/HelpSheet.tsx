@@ -97,6 +97,12 @@ const TOPICS: { q: string; a: string[] }[] = [
       'PC:n ja puhelimen tiedot yhdistetään tiedostolla omassa pilvikansiossa (OneDrive tai iCloud).',
     ],
   },
+  {
+    q: 'Voiko PC:n sivupalkin pienentää?',
+    a: [
+      'Kyllä. Sivupalkin yläreunan nuoli (tai Ctrl+B) pienentää palkin pelkiksi kuvakkeiksi, ja sisältö saa enemmän tilaa. Kuvakkeen nimi näkyy, kun viet hiiren sen päälle. Profiilit näkyvät kuvina, ja kuittaamattomien kertojen määrä pienenä numerona. Nuoli logon alla (tai Ctrl+B) suurentaa palkin takaisin. Valinta muistetaan tällä laitteella.',
+    ],
+  },
 ];
 
 type View = 'help' | 'privacy' | 'news';
