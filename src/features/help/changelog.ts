@@ -9,6 +9,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.112',
+    date: '27.11.2026',
+    items: [
+      'Jalkapallon Päiväkirja on taas koko leveydellä, ja kerran tiedot aukeavat PC:llä oikeasta reunasta kuten muutkin muokkausikkunat.',
+      'Kausikortin Seuraava peli: leveällä näytöllä isompi otsikko, aika ja paikka sekä selvästi isompi laskuri.',
+      'Seuraava peli -kohdan Tiedot-painike avaa pelille lisätyn linkin (esim. turnaussivun), ja se näkyy vain, kun linkki on lisätty. Pelin muokkaus avautuu edelleen pelin nimestä.',
+    ],
+  },
+  {
     version: '1.1.111',
     date: '27.11.2026',
     items: [

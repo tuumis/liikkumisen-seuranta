@@ -1,7 +1,7 @@
 // Jalkapallon päiväkirja: kaikki treenit, omatoimiset harjoitukset, pelit ja turnaukset yhdessä
 // listassa kommentteineen. Haku, suodatus ja nopea kommentin lisäys suoraan listasta.
 
-import { useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useMemo, useState } from 'react';
 import { footballKindOf, LEVEL_LABEL, OUTCOME_LABEL, outcomeOf, POSITION_LABEL, trainingSelfText } from '../../domain/football';
 import type { ActivityType, FootballDetails, PlayedState, Profile, Session } from '../../domain/types';
 import { displayTeamName } from '../../domain/opponent';
@@ -33,10 +33,8 @@ export function DiaryView({ profile }: { profile: Profile }) {
   const [query, setQuery] = useState('');
   const [panel, setPanel] = useState<Session | null>(null);
   const [layout, setLayoutState] = useState<Layout>(readLayout);
-  // Kaksi paneelia (27.11.2026): kun näkymä on vähintään 60rem leveä (PC, pienennetty sivupalkki tai iso näyttö),
-  // lista on vasemmalla ja valitun kerran tiedot oikealla sivun sisällä; kapeammin tiedot aukeavat paneeliin.
-  const root = useRef<HTMLDivElement>(null);
-  const wide = useWiderThan(root, 960);
+  // Kerran tiedot aukeavat aina paneeliin (PC:llä oikeasta reunasta kuten muut muokkausikkunat); lista on koko
+  // leveydellä. Kahden paneelin näkymästä (1.1.104) luovuttiin 27.11.2026 käyttäjän toiveesta.
   const setLayout = (v: Layout) => {
     setLayoutState(v);
     try {
@@ -75,7 +73,6 @@ export function DiaryView({ profile }: { profile: Profile }) {
   const commented = (data?.sessions ?? []).filter((s) => !s.deletedAt && !s.linkedTo && hasComment(s, data?.details.get(s.id))).length;
 
   return (
-    <div ref={root} className={wide ? 'grid grid-cols-[minmax(0,1fr)_30rem] items-start gap-5' : ''}>
     <div className="@container min-w-0 space-y-4">
       <Card>
         <div className="space-y-3">
@@ -119,7 +116,7 @@ export function DiaryView({ profile }: { profile: Profile }) {
           )}
         </Card>
       ) : layout === 'table' ? (
-        <DiaryTable entries={entries} onOpen={setPanel} activeId={wide ? panel?.id : undefined} />
+        <DiaryTable entries={entries} onOpen={setPanel} activeId={panel?.id} />
       ) : (
         [...byMonth.entries()].map(([month, list]) => (
           <section key={month}>
@@ -128,42 +125,16 @@ export function DiaryView({ profile }: { profile: Profile }) {
             </h3>
             <ul className="space-y-2 @2xl:grid @2xl:grid-cols-2 @2xl:gap-3 @2xl:space-y-0 @min-[68rem]:grid-cols-3">
               {list.map((e) => (
-                <DiaryEntry key={e.s.id} s={e.s} t={e.t} d={e.d} self={e.self} onDetails={() => setPanel(e.s)} active={wide && panel?.id === e.s.id} />
+                <DiaryEntry key={e.s.id} s={e.s} t={e.t} d={e.d} self={e.self} onDetails={() => setPanel(e.s)} active={panel?.id === e.s.id} />
               ))}
             </ul>
           </section>
         ))
       )}
 
-      {!wide && <FootballPanel session={panel} type={panel ? data?.types.get(panel.activityTypeId) : undefined} onClose={() => setPanel(null)} />}
-    </div>
-    {wide && (
-      <div className="scroll-thin sticky top-6 max-h-[calc(100dvh-3rem)] overflow-y-auto overscroll-contain rounded-[1.75rem]">
-        {panel ? (
-          <FootballPanel key={panel.id} inline session={panel} type={data?.types.get(panel.activityTypeId)} onClose={() => setPanel(null)} />
-        ) : (
-          <p className="card p-6 text-sm text-slate-600">Valitse kerta listasta, niin sen tiedot aukeavat tähän. Voit lisätä tulokset, arvion ja kommentin ja siirtyä suoraan seuraavaan kertaan.</p>
-        )}
-      </div>
-    )}
+      <FootballPanel session={panel} type={panel ? data?.types.get(panel.activityTypeId) : undefined} onClose={() => setPanel(null)} />
     </div>
   );
-}
-
-/** Elementin leveys ≥ px (ResizeObserver); ensimmäinen mittaus ennen piirtoa. */
-function useWiderThan(ref: RefObject<HTMLElement | null>, px: number): boolean {
-  const [wide, setWide] = useState(false);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const check = () => setWide(el.getBoundingClientRect().width >= px);
-    check();
-    if (typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(check);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [ref, px]);
-  return wide;
 }
 
 /** Kortit / taulukko (laitekohtainen valinta, kuten Viikko-näkymässä). */

@@ -20,7 +20,8 @@ import { previewCard } from '../../domain/previewCard';
 import type { ISODate, Profile, Session } from '../../domain/types';
 import { repo, type FixtureEntry } from '../../db/repositories';
 import { dayLabel } from '../../ui/format';
-import { IconEye, IconEyeOff, IconPencil, IconPlus, IconShare, IconSparkle, IconTrophy } from '../../ui/icons';
+import { IconExternal, IconEye, IconEyeOff, IconPlus, IconShare, IconSparkle, IconTrophy } from '../../ui/icons';
+import { linkHost } from '../../domain/link';
 import { openPreviewShare } from '../share/PreviewShare';
 import { openCoachShare } from '../coach/CoachShare';
 import { CountUp } from '../../ui/CountUp';
@@ -99,13 +100,13 @@ function Countdown({ e, onRecord }: { e: FixtureEntry; onRecord: () => void }) {
     [p.seconds, 's', 'hidden @min-[40rem]/fh:@min-[18rem]/nx:block'],
   ];
   return (
-    <span role="timer" aria-label={`Alkuun ${p.days} päivää ${p.hours} tuntia ${p.minutes} minuuttia`} className="flex items-start gap-1 @min-[40rem]/fh:gap-1.5 @min-[41rem]/nx:gap-2">
+    <span role="timer" aria-label={`Alkuun ${p.days} päivää ${p.hours} tuntia ${p.minutes} minuuttia`} className="flex items-start gap-1 @min-[40rem]/fh:gap-1.5 @min-[41rem]/nx:gap-2.5">
       {parts.map(([v, unit, cls]) => (
         <span key={unit} className={`text-center ${cls}`} aria-hidden>
-          <span className="hero-glass stat block min-w-[2.25rem] rounded-xl px-1.5 py-1 text-[20px] font-semibold leading-none tabular-nums @min-[40rem]/fh:min-w-[2.6rem] @min-[40rem]/fh:text-[24px] @min-[41rem]/nx:min-w-[3.6rem] @min-[41rem]/nx:rounded-2xl @min-[41rem]/nx:px-2 @min-[41rem]/nx:py-2 @min-[41rem]/nx:text-[40px] @min-[44rem]/nx:min-w-[4.2rem] @min-[44rem]/nx:text-[48px]">
+          <span className="hero-glass stat block min-w-[2.25rem] rounded-xl px-1.5 py-1 text-[20px] font-semibold leading-none tabular-nums @min-[40rem]/fh:min-w-[2.6rem] @min-[40rem]/fh:text-[24px] @min-[41rem]/nx:min-w-[4.4rem] @min-[41rem]/nx:rounded-2xl @min-[41rem]/nx:px-2 @min-[41rem]/nx:py-2 @min-[41rem]/nx:text-[52px] @min-[44rem]/nx:min-w-[5.1rem] @min-[44rem]/nx:py-2.5 @min-[44rem]/nx:text-[62px]">
             {unit === 'pv' ? v : String(v).padStart(2, '0')}
           </span>
-          <span className="mt-0.5 block text-[10px] font-bold uppercase tracking-wide text-[var(--hero-ink-soft)] @min-[41rem]/nx:mt-1 @min-[41rem]/nx:text-[11px]">{unit}</span>
+          <span className="mt-0.5 block text-[10px] font-bold uppercase tracking-wide text-[var(--hero-ink-soft)] @min-[41rem]/nx:mt-1.5 @min-[41rem]/nx:text-[12px]">{unit}</span>
         </span>
       ))}
     </span>
@@ -235,22 +236,30 @@ export function FootballHero({ profile, onOpen, onAdd }: { profile: Profile; onO
                   laskuri; PC:llä kapeana tiedot ja alla laskuri | painikkeet kuvakkeina (kortti ei kasva korkeutta). */}
               <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-3 gap-y-2 [grid-template-areas:'info_timer'_'btns_btns'] @min-[40rem]/fh:@min-[26rem]/nx:items-center @min-[40rem]/fh:@min-[26rem]/nx:[grid-template-areas:'info_timer'_'btns_timer'] @min-[40rem]/fh:@max-[26rem]/nx:items-center @min-[40rem]/fh:@max-[26rem]/nx:gap-y-2.5 @min-[40rem]/fh:@max-[26rem]/nx:[grid-template-areas:'info_info'_'timer_btns']">
                 <span className="min-w-0 [grid-area:info]">
-                <button type="button" onClick={() => onOpen?.(next)} className="press block w-full min-w-0 text-left hover:opacity-90" aria-label={`${fixtureTitle(nextCard)}, avaa tiedot`}>
-                  <span className="block truncate font-display text-base font-semibold leading-tight @min-[40rem]/fh:text-lg">{fixtureTitle(nextCard)}</span>
+                <button type="button" onClick={() => onOpen?.(next)} className="press block w-full min-w-0 text-left hover:opacity-90" aria-label={`${fixtureTitle(nextCard)}, muokkaa`}>
+                  <span className="block truncate font-display text-base font-semibold leading-tight @min-[40rem]/fh:text-lg @min-[41rem]/nx:text-[28px]">{fixtureTitle(nextCard)}</span>
                   {/* Aika selvästi (myös puhelimella): päivä ja kellonaika vahvemmalla tekstillä. */}
-                  <span className="mt-0.5 block truncate text-[13px] font-semibold">
+                  <span className="mt-0.5 block truncate text-[13px] font-semibold @min-[41rem]/nx:mt-1 @min-[41rem]/nx:text-[16px]">
                     {dayLabel(next.plan.date)}
                     {nextTime ? ` klo ${clock(nextTime)}` : ''}
                     {nextHome ? <span className="font-normal text-[var(--hero-ink-soft)]"> · {HOME_AWAY_LABEL[nextHome]}</span> : null}
                   </span>
-                  {nextCard.location && <span className="block truncate text-[12px] text-[var(--hero-ink-soft)]">{nextCard.location}</span>}
+                  {nextCard.location && <span className="block truncate text-[12px] text-[var(--hero-ink-soft)] @min-[41rem]/nx:text-[14px]">{nextCard.location}</span>}
                 </button>
                 </span>
-                {/* Tiedot ja otteluennakko suoraan kortista (27.11.2026). */}
+                {/* Pelin linkki (Tiedot, esim. turnaussivu; vain jos lisätty) ja otteluennakko suoraan kortista (27.11.2026). */}
                 <span className="flex flex-wrap gap-1.5 [grid-area:btns] @min-[40rem]/fh:@max-[26rem]/nx:justify-end">
-                  <button type="button" onClick={() => onOpen?.(next)} title="Tiedot" className="press hit hero-glass inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full px-2.5 text-[11.5px] font-bold hover:brightness-110 @min-[40rem]/fh:@max-[26rem]/nx:size-9 @min-[40rem]/fh:@max-[26rem]/nx:px-0">
-                    <IconPencil size="0.85rem" /> <span className="@min-[40rem]/fh:@max-[26rem]/nx:sr-only">Tiedot</span>
-                  </button>
+                  {next.fixture?.link && (
+                  <a
+                    href={next.fixture.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`Avaa ${linkHost(next.fixture.link)}`}
+                    aria-label={`Tiedot: ${linkHost(next.fixture.link)} (uusi välilehti)`}
+                    className="press hit hero-glass inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full px-2.5 text-[11.5px] font-bold hover:brightness-110 @min-[40rem]/fh:@max-[26rem]/nx:size-9 @min-[40rem]/fh:@max-[26rem]/nx:px-0">
+                    <IconExternal size="0.85rem" /> <span className="@min-[40rem]/fh:@max-[26rem]/nx:sr-only">Tiedot</span>
+                  </a>
+                  )}
                   <button type="button" onClick={() => openPreviewShare(next.plan.id)} title="Ennakko kuvana tai videona (esim. Instagram)" className="press hit hero-glass inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full px-2.5 text-[11.5px] font-bold hover:brightness-110 @min-[40rem]/fh:@max-[26rem]/nx:size-9 @min-[40rem]/fh:@max-[26rem]/nx:px-0">
                     <IconShare size="0.85rem" /> <span className="@min-[40rem]/fh:@max-[26rem]/nx:sr-only">Ennakko</span>
                   </button>

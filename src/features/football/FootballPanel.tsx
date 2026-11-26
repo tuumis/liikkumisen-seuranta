@@ -1,7 +1,7 @@
 // Jalkapallon lisätietopaneeli (SPEC 8). Kaikki valinnaisia; "Myöhemmin" ohittaa, ja kerta on silti tallessa (D3).
 // Viihtyminen ennen suoritusarviota: liikkumisen ilo on pysyvien tottumusten perusta.
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import type { ActivityType, FieldPosition, FocusTag, GameFormat, GameLevel, GameResult, HomeAway, IntensityPreset, PlayedState, Session } from '../../domain/types';
 import { CONFIRM_INTENSITY } from '../review/ConfirmForm';
@@ -21,7 +21,7 @@ import { Sheet } from '../../ui/Sheet';
 import { useToast } from '../../ui/Toast';
 import { TeamNameFields, useTeamNameSuggestions } from '../games/TeamNameFields';
 import { openResultShare } from '../share/ResultShare';
-import { IconClose, IconPlus } from '../../ui/icons';
+import { IconPlus } from '../../ui/icons';
 import { TrainingTeamField } from './TrainingTeam';
 import { isOwnClub } from '../../domain/opponent';
 
@@ -68,25 +68,7 @@ export function GoalStepper({ value, onChange, label }: { value: string; onChang
 const toNum = (s: string) => (s.trim() === '' ? undefined : Number.isInteger(Number(s)) && Number(s) >= 0 ? Number(s) : NaN);
 const str = (n?: number) => (n === undefined ? '' : String(n));
 
-/**
- * Sivun sisään piirretty paneeli (27.11.2026, Päiväkirja leveänä): sama otsikko ja sulkeminen kuin `Sheet`, mutta ei
- * päällekkäistä ikkunaa, joten lista pysyy käytettävänä vieressä.
- */
-function InlinePanel({ title, onClose, children }: { open: boolean; title: string; onClose: () => void; children: ReactNode }) {
-  return (
-    <section className="card p-5 lg:p-6" aria-label={title}>
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="font-display text-xl font-semibold leading-tight text-slate-900">{title}</h2>
-        <button type="button" onClick={onClose} className="press flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--surface-sunk)] text-slate-600 hover:text-slate-900" aria-label="Sulje">
-          <IconClose size="1.1rem" />
-        </button>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-export function FootballPanel({ session, type, onClose, inline = false }: { session: Session | null; type?: ActivityType; onClose: () => void; inline?: boolean }) {
+export function FootballPanel({ session, type, onClose }: { session: Session | null; type?: ActivityType; onClose: () => void }) {
   const toast = useToast();
   const kind = type?.footballKind;
   const names = useLiveQuery(() => (session ? repo.footballNameSuggestions(session.profileId) : undefined), [session?.profileId]);
@@ -276,8 +258,7 @@ export function FootballPanel({ session, type, onClose, inline = false }: { sess
       const hasResult = kind === 'game' ? scored(nums.gf, nums.ga) : kind === 'tournament' && rows.some((r) => scored(r.goalsFor, r.goalsAgainst));
       const id = session!.id;
       toast('Lisätiedot tallennettu', hasResult ? { label: 'Jaa tulos', run: () => openResultShare(id) } : undefined, 'success');
-      // Sivun sisällä (Päiväkirja) tiedot jäävät auki tallennuksen jälkeen.
-      if (!inline) onClose();
+      onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -285,7 +266,6 @@ export function FootballPanel({ session, type, onClose, inline = false }: { sess
     }
   }
 
-  const Shell = inline ? InlinePanel : Sheet;
   const list = (id: string, values?: string[]) => (
     <datalist id={id}>
       {values?.map((v) => (
@@ -295,7 +275,7 @@ export function FootballPanel({ session, type, onClose, inline = false }: { sess
   );
 
   return (
-    <Shell open onClose={onClose} title={`${type.icon} ${type.name} · ${dayLabel(session.date)}`}>
+    <Sheet open onClose={onClose} title={`${type.icon} ${type.name} · ${dayLabel(session.date)}`}>
       <form
         className="space-y-4"
         noValidate
@@ -734,10 +714,10 @@ export function FootballPanel({ session, type, onClose, inline = false }: { sess
             Tallenna
           </Button>
           <Button variant="secondary" onClick={onClose}>
-            {inline ? 'Sulje' : 'Myöhemmin'}
+            Myöhemmin
           </Button>
         </div>
       </form>
-    </Shell>
+    </Sheet>
   );
 }
