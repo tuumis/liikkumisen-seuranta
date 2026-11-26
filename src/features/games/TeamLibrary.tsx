@@ -12,7 +12,7 @@ import { buildOpponentLibrary, type ClubEntry, type SquadEntry, type UpcomingGam
 import type { Club, Profile } from '../../domain/types';
 import { repo } from '../../db/repositories';
 import { Button, Card, EmptyState, inputClass } from '../../ui/components';
-import { formatDate } from '../../ui/format';
+import { formatDate, noBreak } from '../../ui/format';
 import { Sheet } from '../../ui/Sheet';
 import { ClubOrigin, Flag, OriginFields } from '../../ui/Flag';
 import { LogoPicker, TeamLogo, useClubLogos, useClubs } from '../../ui/TeamLogo';
@@ -55,7 +55,7 @@ function useLibrary(profile: Profile) {
 }
 
 const friendliesOf = (c: ClubEntry) => c.squads.reduce((a, s) => a + s.rows.filter((r) => r.kind === 'friendly').length, 0);
-const record = (s: GameSummary) => `${s.wins}–${s.draws}–${s.losses}`;
+const record = (s: GameSummary) => noBreak(`${s.wins}–${s.draws}–${s.losses}`);
 const hasResults = (s: GameSummary) => s.wins + s.draws + s.losses > 0;
 const gamesText = (n: number) => `${n} ${n === 1 ? 'peli' : 'peliä'}`;
 
@@ -178,7 +178,7 @@ export function OpponentLibrary({ profile }: { profile: Profile }) {
                 <span className="mt-0.5 block text-xs tabular-nums text-slate-500">
                   {c.summary.games === 0 && c.upcoming === 0 && !friendliesOf(c) ? 'Ei vielä pelejä' : gamesText(c.summary.games)}
                   {friendliesOf(c) > 0 && ` · harjoituspelejä ${friendliesOf(c)}`}
-                  {hasResults(c.summary) && ` · V–T–H ${record(c.summary)}`}
+                  {hasResults(c.summary) && ` · ${noBreak('V–T–H')} ${record(c.summary)}`}
                   {c.upcoming > 0 && ` · tulossa ${c.upcoming}`}
                 </span>
               </span>
@@ -450,9 +450,10 @@ function SquadSection({ squad, profile, notes }: { squad: SquadEntry; profile: P
       <div className="mb-2 flex items-baseline justify-between gap-2">
         <h3 className="font-display text-lg font-semibold text-slate-900">
           {squadLabel(squad.parts)}
-          <span className="ml-2 text-xs font-normal tabular-nums text-slate-500">
+          {/* Pelimäärä ja tulos pysyvät yhdessä: puhelimella siirtyvät kokonaan seuraavalle riville (27.11.2026). */}
+          <span className="ml-2 inline-block whitespace-nowrap text-xs font-normal tabular-nums text-slate-500">
             {gamesText(squad.summary.games)}
-            {hasResults(squad.summary) && ` · ${record(squad.summary)}`}
+            {hasResults(squad.summary) && ` · ${noBreak('V–T–H')} ${record(squad.summary)}`}
           </span>
         </h3>
         {!editing && (

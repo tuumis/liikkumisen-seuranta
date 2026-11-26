@@ -6,7 +6,7 @@ import { gameRows, OUTCOME_LABEL, type GameOutcome, type GameRow } from '../../d
 import { displayTeamName, parseTeamName, squadLabel } from '../../domain/opponent';
 import { opponentHistory, type OpponentHistory } from '../../domain/opponentLibrary';
 import type { Profile, UUID } from '../../domain/types';
-import { formatDate } from '../../ui/format';
+import { formatDate, noBreak } from '../../ui/format';
 import { logoFor, TeamLogo, useClubLogos } from '../../ui/TeamLogo';
 import { useFootball } from '../football/useFootball';
 
@@ -42,7 +42,7 @@ export function historyLine(h: OpponentHistory | undefined): string | undefined 
   if (!list.length) return undefined;
   const s = h.squad.length ? h.squadSummary : h.othersSummary;
   const who = h.squad.length ? '' : ` (${h.club}, muu ryhmä)`;
-  const record = s.wins + s.draws + s.losses > 0 ? ` · V–T–H ${s.wins}–${s.draws}–${s.losses}` : '';
+  const record = s.wins + s.draws + s.losses > 0 ? noBreak(` · V–T–H ${s.wins}–${s.draws}–${s.losses}`) : '';
   return `Aiemmin ${s.games} ${s.games === 1 ? 'peli' : 'peliä'}${who}${record} · viimeksi ${score(list[0])}`;
 }
 
@@ -85,7 +85,7 @@ export function OpponentHistoryCard({ profile, opponent }: { profile: Profile; o
           {h.squad.length > 0 ? (
             <div className="text-xs tabular-nums text-slate-600">
               {s.games} {s.games === 1 ? 'peli' : 'peliä'}
-              {s.wins + s.draws + s.losses > 0 && ` · V–T–H ${s.wins}–${s.draws}–${s.losses} · maalit ${s.goalsFor}–${s.goalsAgainst}`}
+              {s.wins + s.draws + s.losses > 0 && noBreak(` · V–T–H ${s.wins}–${s.draws}–${s.losses} · maalit ${s.goalsFor}–${s.goalsAgainst}`)}
               {s.playerGoalsGames > 0 && ` · ${profile.name}: ⚽ ${s.playerGoals}`}
             </div>
           ) : (
@@ -105,7 +105,7 @@ export function OpponentHistoryCard({ profile, opponent }: { profile: Profile; o
           <div className="mt-3 text-xs font-semibold text-slate-600">
             Muut {h.club} -ryhmät · {h.othersSummary.games} {h.othersSummary.games === 1 ? 'peli' : 'peliä'}
             {h.othersSummary.wins + h.othersSummary.draws + h.othersSummary.losses > 0 &&
-              ` · V–T–H ${h.othersSummary.wins}–${h.othersSummary.draws}–${h.othersSummary.losses}`}
+              noBreak(` · V–T–H ${h.othersSummary.wins}–${h.othersSummary.draws}–${h.othersSummary.losses}`)}
           </div>
           <ul className="mt-1 space-y-1.5">
             {h.others.slice(0, 3).map((r) => (

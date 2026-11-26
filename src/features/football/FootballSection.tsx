@@ -19,11 +19,12 @@ import { ENJOYMENT_LABEL, FOCUS_TAG_LABEL, focusTagLabel, RATING_LABEL, SKIP_REA
 import { num1, percent } from '../../ui/statusText';
 import { today as todayFn } from '../../ui/today';
 import { useFootball } from './useFootball';
+import { noBreak } from '../../ui/format';
 
 export function resultLine(g: GameSummary): string {
   const res = g.wins + g.draws + g.losses;
   if (!g.games) return 'Ei pelejä';
-  return `${g.games} ${g.games === 1 ? 'peli' : 'peliä'}${res ? ` · V–T–H ${g.wins}–${g.draws}–${g.losses} · maalit ${g.goalsFor}–${g.goalsAgainst}` : ''}${g.noResult ? ` · ${g.noResult} ei tulosta` : ''}${g.playerGoalsGames ? ` · pelaajan maalit ${g.playerGoals}` : ''}`;
+  return noBreak(`${g.games} ${g.games === 1 ? 'peli' : 'peliä'}${res ? ` · V–T–H ${g.wins}–${g.draws}–${g.losses} · maalit ${g.goalsFor}–${g.goalsAgainst}` : ''}${g.noResult ? ` · ${g.noResult} ei tulosta` : ''}${g.playerGoalsGames ? ` · pelaajan maalit ${g.playerGoals}` : ''}`);
 }
 
 export function FootballSection({ profileId, week, onOpenGames }: { profileId: string; week: Period; onOpenGames: () => void }) {

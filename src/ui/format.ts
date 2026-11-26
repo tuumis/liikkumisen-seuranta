@@ -16,3 +16,9 @@ export function dayLabel(d: ISODate): string {
   const { month, day } = parseISODate(d);
   return `${WEEKDAY_SHORT[isoWeekday(d) - 1]} ${day}.${month}.`;
 }
+
+/**
+ * Tulokset (1–0–0, 4–2, V–T–H) eivät katkea rivin lopussa ajatusviivan kohdalta (27.11.2026):
+ * sanaliitos (U+2060) viivan molemmin puolin. Vain näytettävään tekstiin, ei vientiin.
+ */
+export const noBreak = (s: string): string => s.replace(/([\dVTH])–(?=[\dVTH])/g, '$1\u2060–\u2060');

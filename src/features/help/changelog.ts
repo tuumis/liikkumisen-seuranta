@@ -9,6 +9,13 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.83',
+    date: '27.11.2026',
+    items: [
+      'Korjaus puhelimelle: tulokset (esim. 1–0–0 ja 4–2) eivät enää katkea kahdelle riville ajatusviivan kohdalta. Joukkueen otsikossa pelimäärä ja tulos siirtyvät tarvittaessa yhdessä seuraavalle riville.',
+    ],
+  },
+  {
     version: '1.1.82',
     date: '27.11.2026',
     items: [

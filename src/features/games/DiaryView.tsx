@@ -8,7 +8,7 @@ import { displayTeamName } from '../../domain/opponent';
 import { repo } from '../../db/repositories';
 import { Button, Card, inputClass, EmptyState } from '../../ui/components';
 import { ToggleChip } from '../../ui/controls';
-import { dayLabel, formatDate } from '../../ui/format';
+import { dayLabel, formatDate, noBreak } from '../../ui/format';
 import { ENJOYMENT_LABEL, focusTagLabel } from '../../ui/labels';
 import { useToast } from '../../ui/Toast';
 import { TypeIcon } from '../week/Dashboard';
@@ -343,7 +343,7 @@ function DiaryEntry({ s, t, d, self, onDetails }: { s: Session; t?: ActivityType
             {d?.opponent && (
               <span>
                 vs {d.opponent}
-                {result && ` ${d.goalsFor}–${d.goalsAgainst} ${OUTCOME_LABEL[result]}`}
+                {result && noBreak(` ${d.goalsFor}–${d.goalsAgainst} ${OUTCOME_LABEL[result]}`)}
               </span>
             )}
             {d?.eventName && <span>🏆 {d.eventName}</span>}
