@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.113',
+    date: '27.11.2026',
+    items: [
+      'Kausikortin Seuraava peli -laskuri kasvaa nyt laatikon leveyden mukaan ja täyttää tyhjän tilan kaikilla PC-näytöillä ja näytön skaalauksilla.',
+      'Kapeammalla PC-näytöllä Tiedot- ja Ennakko-painikkeet ovat pelin nimen vieressä ja laskuri koko leveydeltä sen alla, sekunnit mukana.',
+    ],
+  },
+  {
     version: '1.1.112',
     date: '27.11.2026',
     items: [

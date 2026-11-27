@@ -97,16 +97,18 @@ function Countdown({ e, onRecord }: { e: FixtureEntry; onRecord: () => void }) {
     [p.hours, 'h', ''],
     [p.minutes, 'min', ''],
     // Sekunnit vain PC:llä, kun Seuraava peli -laatikko on vähintään 18rem (puhelimella rauhallisempi).
-    [p.seconds, 's', 'hidden @min-[40rem]/fh:@min-[18rem]/nx:block'],
+    [p.seconds, 's', 'hidden @min-[40rem]/fh:block'],
   ];
   return (
-    <span role="timer" aria-label={`Alkuun ${p.days} päivää ${p.hours} tuntia ${p.minutes} minuuttia`} className="flex items-start gap-1 @min-[40rem]/fh:gap-1.5 @min-[41rem]/nx:gap-2.5">
+    // PC:llä laskurin koko seuraa Seuraava peli -laatikon leveyttä (cqi, 27.11.2026): leveänä laskuri täyttää tietojen
+    // viereisen tilan (tiedoille jätetään noin 11rem), kapeana koko rivin tietojen alla. Toimii kaikilla skaalauksilla.
+    <span role="timer" aria-label={`Alkuun ${p.days} päivää ${p.hours} tuntia ${p.minutes} minuuttia`} className="flex items-start gap-1 @min-[40rem]/fh:gap-[0.2em] @min-[40rem]/fh:@max-[26rem]/nx:text-[length:clamp(24px,calc(100cqi/7.1),44px)] @min-[40rem]/fh:@min-[26rem]/nx:text-[length:clamp(26px,calc((100cqi-12.5rem)/6.9),64px)]">
       {parts.map(([v, unit, cls]) => (
         <span key={unit} className={`text-center ${cls}`} aria-hidden>
-          <span className="hero-glass stat block min-w-[2.25rem] rounded-xl px-1.5 py-1 text-[20px] font-semibold leading-none tabular-nums @min-[40rem]/fh:min-w-[2.6rem] @min-[40rem]/fh:text-[24px] @min-[41rem]/nx:min-w-[4.4rem] @min-[41rem]/nx:rounded-2xl @min-[41rem]/nx:px-2 @min-[41rem]/nx:py-2 @min-[41rem]/nx:text-[52px] @min-[44rem]/nx:min-w-[5.1rem] @min-[44rem]/nx:py-2.5 @min-[44rem]/nx:text-[62px]">
+          <span className="hero-glass stat block min-w-[2.25rem] rounded-xl px-1.5 py-1 text-[20px] font-semibold leading-none tabular-nums @min-[40rem]/fh:min-w-[1.55em] @min-[40rem]/fh:rounded-[0.3em] @min-[40rem]/fh:px-[0.14em] @min-[40rem]/fh:py-[0.14em] @min-[40rem]/fh:text-[length:1em]">
             {unit === 'pv' ? v : String(v).padStart(2, '0')}
           </span>
-          <span className="mt-0.5 block text-[10px] font-bold uppercase tracking-wide text-[var(--hero-ink-soft)] @min-[41rem]/nx:mt-1.5 @min-[41rem]/nx:text-[12px]">{unit}</span>
+          <span className="mt-0.5 block text-[10px] font-bold uppercase tracking-wide text-[var(--hero-ink-soft)] @min-[40rem]/fh:mt-[0.14em] @min-[40rem]/fh:text-[length:clamp(10px,0.24em,14px)]">{unit}</span>
         </span>
       ))}
     </span>
@@ -233,22 +235,22 @@ export function FootballHero({ profile, onOpen, onAdd }: { profile: Profile; onO
                 )}
               </div>
               {/* Asettelu (27.11.2026): puhelimella tiedot | laskuri ja painikkeet alla; PC:llä leveänä tiedot ja painikkeet |
-                  laskuri; PC:llä kapeana tiedot ja alla laskuri | painikkeet kuvakkeina (kortti ei kasva korkeutta). */}
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-3 gap-y-2 [grid-template-areas:'info_timer'_'btns_btns'] @min-[40rem]/fh:@min-[26rem]/nx:items-center @min-[40rem]/fh:@min-[26rem]/nx:[grid-template-areas:'info_timer'_'btns_timer'] @min-[40rem]/fh:@max-[26rem]/nx:items-center @min-[40rem]/fh:@max-[26rem]/nx:gap-y-2.5 @min-[40rem]/fh:@max-[26rem]/nx:[grid-template-areas:'info_info'_'timer_btns']">
+                  laskuri; PC:llä kapeana tiedot | painikkeet kuvakkeina ja alla laskuri koko leveydeltä. */}
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-3 gap-y-2 [grid-template-areas:'info_timer'_'btns_btns'] @min-[40rem]/fh:@min-[26rem]/nx:items-center @min-[40rem]/fh:@min-[26rem]/nx:[grid-template-areas:'info_timer'_'btns_timer'] @min-[40rem]/fh:@max-[26rem]/nx:items-start @min-[40rem]/fh:@max-[26rem]/nx:gap-y-2.5 @min-[40rem]/fh:@max-[26rem]/nx:[grid-template-areas:'info_btns'_'timer_timer']">
                 <span className="min-w-0 [grid-area:info]">
                 <button type="button" onClick={() => onOpen?.(next)} className="press block w-full min-w-0 text-left hover:opacity-90" aria-label={`${fixtureTitle(nextCard)}, muokkaa`}>
-                  <span className="block truncate font-display text-base font-semibold leading-tight @min-[40rem]/fh:text-lg @min-[41rem]/nx:text-[28px]">{fixtureTitle(nextCard)}</span>
+                  <span className="block truncate font-display text-base font-semibold leading-tight @min-[40rem]/fh:@max-[26rem]/nx:text-lg @min-[40rem]/fh:@min-[26rem]/nx:line-clamp-2 @min-[40rem]/fh:@min-[26rem]/nx:whitespace-normal @min-[40rem]/fh:@min-[26rem]/nx:text-[length:clamp(18px,4.6cqi,32px)]">{fixtureTitle(nextCard)}</span>
                   {/* Aika selvästi (myös puhelimella): päivä ja kellonaika vahvemmalla tekstillä. */}
-                  <span className="mt-0.5 block truncate text-[13px] font-semibold @min-[41rem]/nx:mt-1 @min-[41rem]/nx:text-[16px]">
+                  <span className="mt-0.5 block truncate text-[13px] font-semibold @min-[40rem]/fh:@min-[26rem]/nx:mt-1 @min-[40rem]/fh:@min-[26rem]/nx:text-[length:clamp(13px,2.9cqi,17px)]">
                     {dayLabel(next.plan.date)}
                     {nextTime ? ` klo ${clock(nextTime)}` : ''}
                     {nextHome ? <span className="font-normal text-[var(--hero-ink-soft)]"> · {HOME_AWAY_LABEL[nextHome]}</span> : null}
                   </span>
-                  {nextCard.location && <span className="block truncate text-[12px] text-[var(--hero-ink-soft)] @min-[41rem]/nx:text-[14px]">{nextCard.location}</span>}
+                  {nextCard.location && <span className="block truncate text-[12px] text-[var(--hero-ink-soft)] @min-[40rem]/fh:@min-[26rem]/nx:text-[length:clamp(12px,2.5cqi,15px)]">{nextCard.location}</span>}
                 </button>
                 </span>
                 {/* Pelin linkki (Tiedot, esim. turnaussivu; vain jos lisätty) ja otteluennakko suoraan kortista (27.11.2026). */}
-                <span className="flex flex-wrap gap-1.5 [grid-area:btns] @min-[40rem]/fh:@max-[26rem]/nx:justify-end">
+                <span className="flex flex-wrap gap-1.5 [grid-area:btns] @min-[40rem]/fh:@max-[26rem]/nx:flex-nowrap @min-[40rem]/fh:@max-[26rem]/nx:justify-end">
                   {next.fixture?.link && (
                   <a
                     href={next.fixture.link}
@@ -256,11 +258,11 @@ export function FootballHero({ profile, onOpen, onAdd }: { profile: Profile; onO
                     rel="noopener noreferrer"
                     title={`Avaa ${linkHost(next.fixture.link)}`}
                     aria-label={`Tiedot: ${linkHost(next.fixture.link)} (uusi välilehti)`}
-                    className="press hit hero-glass inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full px-2.5 text-[11.5px] font-bold hover:brightness-110 @min-[40rem]/fh:@max-[26rem]/nx:size-9 @min-[40rem]/fh:@max-[26rem]/nx:px-0">
+                    className="press hit hero-glass inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full px-2.5 text-[11.5px] font-bold hover:brightness-110 @min-[40rem]/fh:@max-[26rem]/nx:size-9 @min-[40rem]/fh:@max-[26rem]/nx:gap-0 @min-[40rem]/fh:@max-[26rem]/nx:px-0">
                     <IconExternal size="0.85rem" /> <span className="@min-[40rem]/fh:@max-[26rem]/nx:sr-only">Tiedot</span>
                   </a>
                   )}
-                  <button type="button" onClick={() => openPreviewShare(next.plan.id)} title="Ennakko kuvana tai videona (esim. Instagram)" className="press hit hero-glass inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full px-2.5 text-[11.5px] font-bold hover:brightness-110 @min-[40rem]/fh:@max-[26rem]/nx:size-9 @min-[40rem]/fh:@max-[26rem]/nx:px-0">
+                  <button type="button" onClick={() => openPreviewShare(next.plan.id)} title="Ennakko kuvana tai videona (esim. Instagram)" className="press hit hero-glass inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full px-2.5 text-[11.5px] font-bold hover:brightness-110 @min-[40rem]/fh:@max-[26rem]/nx:size-9 @min-[40rem]/fh:@max-[26rem]/nx:gap-0 @min-[40rem]/fh:@max-[26rem]/nx:px-0">
                     <IconShare size="0.85rem" /> <span className="@min-[40rem]/fh:@max-[26rem]/nx:sr-only">Ennakko</span>
                   </button>
                 </span>
