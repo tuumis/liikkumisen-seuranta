@@ -10,7 +10,8 @@ import { APP_VERSION } from '../../domain/version';
 import { PrivacySheet } from '../help/Privacy';
 import { contactAddress } from './contact';
 import { QuickTest } from './QuickTest';
-import { IconClock, IconClose, IconLock, IconPause, IconPlay } from '../../ui/icons';
+import { IconClock, IconClose, IconLock, IconMoon, IconPause, IconPlay, IconSun } from '../../ui/icons';
+import { useIsDark, useThemeChoice } from '../../ui/theme';
 
 type ShotName =
   | 'pc-week'
@@ -98,10 +99,11 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
   return (
     <div className="lp-page">
       <header className="lp-top">
-        <div className="lp-wrap flex h-[68px] items-center gap-7">
-          <span className="flex min-w-0 items-center gap-2.5">
-            <img src="./favicon.svg" alt="" className="size-[30px] shrink-0" />
-            <span className="truncate font-display text-[17px] font-semibold sm:text-[19px]">Liikkumisen seuranta</span>
+        <div className="lp-wrap flex h-[68px] items-center gap-3 min-[481px]:gap-7">
+          {/* Kapealla puhelimella pienempi merkki ja nimi, jotta nimi mahtuu teemapainikkeen kanssa (27.11.2026). */}
+          <span className="flex min-w-0 items-center gap-2 min-[400px]:gap-2.5">
+            <img src="./favicon.svg" alt="" className="size-[26px] shrink-0 min-[400px]:size-[30px]" />
+            <span className="truncate font-display text-[14.5px] font-semibold min-[400px]:text-[17px] sm:text-[19px]">Liikkumisen seuranta</span>
           </span>
           <nav className="ml-auto hidden gap-6 text-[15px] text-[var(--lp-ink-2)] min-[900px]:flex" aria-label="Alkusivun osiot">
             <button type="button" className="lp-navlink" onClick={() => scrollToId('ominaisuudet')}>
@@ -117,10 +119,13 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
               Tietosuoja
             </button>
           </nav>
-          <button type="button" onClick={goToCode} className="lp-btn lp-btn-line ml-auto h-[38px] shrink-0 px-3 text-sm min-[481px]:h-11 min-[481px]:px-[18px] min-[481px]:text-[15px] min-[900px]:ml-0">
-            <span className="hidden min-[481px]:inline">Syötä kutsukoodi</span>
-            <span className="min-[481px]:hidden">Kutsukoodi</span>
-          </button>
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 min-[481px]:gap-2 min-[900px]:ml-0">
+            <ThemeToggle />
+            <button type="button" onClick={goToCode} className="lp-btn lp-btn-line h-[38px] shrink-0 px-3 text-sm min-[481px]:h-11 min-[481px]:px-[18px] min-[481px]:text-[15px]">
+              <span className="hidden min-[481px]:inline">Syötä kutsukoodi</span>
+              <span className="min-[481px]:hidden">Kutsukoodi</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -490,6 +495,27 @@ function useAddress() {
   return address;
 }
 const mailto = (address: string) => `mailto:${address}?subject=${encodeURIComponent('Kutsukoodi: Liikkumisen seuranta')}`;
+
+/**
+ * Vaalea / tumma teema alkusivun yläpalkissa (27.11.2026). Sama laitekohtainen valinta kuin sovelluksen
+ * Ulkoasu-asetuksissa, joten se säilyy myös sovellukseen siirryttäessä.
+ */
+function ThemeToggle() {
+  const dark = useIsDark();
+  const [, setChoice] = useThemeChoice();
+  const label = dark ? 'Vaihda vaaleaan teemaan' : 'Vaihda tummaan teemaan';
+  return (
+    <button
+      type="button"
+      onClick={() => setChoice(dark ? 'light' : 'dark')}
+      className="lp-btn lp-btn-line size-[38px] shrink-0 p-0 min-[481px]:size-11"
+      aria-label={label}
+      title={label}
+    >
+      {dark ? <IconSun size="1.15rem" /> : <IconMoon size="1.15rem" />}
+    </button>
+  );
+}
 
 /** Kutsukoodin kenttä. Vaalea alkusivun yläosassa, dark = pikatestin tuloksen yhteydessä tummalla taustalla. */
 function InviteForm({

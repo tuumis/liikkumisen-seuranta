@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.119',
+    date: '27.11.2026',
+    items: ['Alkusivun yläpalkissa on vaalean ja tumman teeman vaihto (kuu / aurinko). Valinta säilyy myös sovelluksessa.'],
+  },
+  {
     version: '1.1.118',
     date: '27.11.2026',
     items: ['Alkusivun kuva uuden kerran kirjauksesta päivitetty: siinä näkyy Muu merkintä -kortti ikkunan alussa.'],
