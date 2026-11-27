@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.115',
+    date: '27.11.2026',
+    items: ['Korjaus: asennetussa PC-sovelluksessa Jalkapallon välilehdet jäivät vieritettäessä osin ikkunan yläpalkin alle. Nyt ne kiinnittyvät yläpalkin alapuolelle.', 'Kiinnittyneen välilehtipalkin alakulmat on pyöristetty.'],
+  },
+  {
     version: '1.1.114',
     date: '27.11.2026',
     items: [

@@ -928,11 +928,18 @@ html[data-bg] body::before {
 }
 
 /* PC-sovellus ilman erillistä otsikkopalkkia (window-controls-overlay, SPEC 16): ylälaidan vetoalue
-   ikkunan siirtämiseen; sivupalkin kohdalla läpinäkyvä, jolloin sivupalkin väri jatkuu ylälaitaan asti. */
+   ikkunan siirtämiseen; sivupalkin kohdalla läpinäkyvä, jolloin sivupalkin väri jatkuu ylälaitaan asti.
+   --titlebar-h: vetoalueen korkeus; PC:llä kiinnittyvät osat (Jalkapallon välilehdet) asettuvat sen alle (27.11.2026). */
+:root {
+  --titlebar-h: 0px;
+}
 .titlebar {
   display: none;
 }
 @media (display-mode: window-controls-overlay) {
+  :root {
+    --titlebar-h: env(titlebar-area-height, 33px);
+  }
   .titlebar {
     display: block;
     position: fixed;

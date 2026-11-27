@@ -116,7 +116,7 @@ export function GamesTab({ profile }: { profile?: Profile }) {
 
       <div
         ref={tabsRef}
-        className="sticky top-[var(--mobile-header-h,0px)] z-10 order-first -mx-4 lg:order-none bg-[color-mix(in_oklab,var(--bg)_82%,transparent)] px-4 py-2 backdrop-blur-xl lg:-mx-3 lg:px-3 lg:pb-1 lg:pt-1.5"
+        className="sticky top-[var(--mobile-header-h,0px)] z-10 order-first lg:top-[var(--titlebar-h,0px)] -mx-4 lg:order-none bg-[color-mix(in_oklab,var(--bg)_82%,transparent)] px-4 py-2 backdrop-blur-xl lg:-mx-3 lg:rounded-b-2xl lg:px-3 lg:pb-1 lg:pt-1.5"
       >
         <div className="hidden lg:block">
           <FootballTabs profile={profile} value={view} onChange={setView} onAdd={() => setAdding(true)} />
