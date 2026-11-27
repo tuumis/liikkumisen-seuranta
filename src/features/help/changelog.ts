@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.114',
+    date: '27.11.2026',
+    items: [
+      'Jalkapallon näkymien välilehdet (Päiväkirja, Kalenteri, Tulokset, Joukkueet) erottuvat PC:llä paremmin: ne ovat heti kausikortin alla, niissä on kuvakkeet ja määrät, valittu välilehti on korostettu ja palkki pysyy näkyvissä vieritettäessä.',
+      'Lisää kalenteriin on PC:llä painike välilehtien rivillä (aiemmin oma kortti), ja se avaa samat valinnat kuin puhelimella.',
+    ],
+  },
+  {
     version: '1.1.113',
     date: '27.11.2026',
     items: [

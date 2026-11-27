@@ -216,6 +216,19 @@ export const IconTrophy = (p: IconProps) => (
     <path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v3.5M8.5 20h7M9.5 20l.5-3.5h4l.5 3.5" />
   </svg>
 );
+export const IconNotebook = (p: IconProps) => (
+  <svg {...base(p)}>
+    <rect x="5" y="3.5" width="14" height="17" rx="2.5" />
+    <path d="M9 3.5v17M12.5 8h3.5M12.5 11.5h3.5" />
+  </svg>
+);
+export const IconUsers = (p: IconProps) => (
+  <svg {...base(p)}>
+    <circle cx="9" cy="8.5" r="3.2" />
+    <path d="M3.5 19.5a5.5 5.5 0 0 1 11 0" />
+    <path d="M15.5 5.6a3.2 3.2 0 0 1 0 5.8M17.5 14.4a5.5 5.5 0 0 1 3 5.1" />
+  </svg>
+);
 export const IconPencil = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M14.5 5.5 18.5 9.5M4.5 19.5l1-4.2L15.8 5a1.9 1.9 0 0 1 2.7 0l.5.5a1.9 1.9 0 0 1 0 2.7L8.7 18.5z" />

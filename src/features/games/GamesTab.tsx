@@ -33,6 +33,7 @@ import { DiaryView } from './DiaryView';
 import { OpponentLibrary } from './TeamLibrary';
 import { TeamNameFields, useTeamNameSuggestions } from './TeamNameFields';
 import { FootballHero } from './FootballHero';
+import { FootballTabs } from './FootballTabs';
 import { TeamBreakdownCard } from '../football/TeamBreakdownCard';
 import { UnassignedTrainings } from '../football/TrainingTeam';
 import { IconCalendarClock, IconPencil, IconPlus, IconReport, IconShare, IconWarning } from '../../ui/icons';
@@ -63,11 +64,14 @@ export function GamesTab({ profile }: { profile?: Profile }) {
   // kortin ohi); ne näkyvät vierittämällä ylös.
   const tabsRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  // PC:llä välilehdet kiinnittyvät sivun yläreunaan vieritettäessä (27.11.2026); sivua siirretään vain, kun ne ovat jo
+  // kiinni (kausikortti jää näkyviin, kun välilehteä vaihdetaan sivun alussa).
   const setView = (v: View) => {
     const el = tabsRef.current;
     const content = contentRef.current;
-    if (el && content && getComputedStyle(el).position === 'sticky') {
-      const stickTop = parseFloat(getComputedStyle(el).top) || 0;
+    const stickTop = el ? parseFloat(getComputedStyle(el).top) || 0 : 0;
+    const pc = typeof window.matchMedia === 'function' && window.matchMedia('(min-width: 64rem)').matches;
+    if (el && content && getComputedStyle(el).position === 'sticky' && (!pc || el.getBoundingClientRect().top <= stickTop + 1)) {
       const target = content.getBoundingClientRect().top + window.scrollY - stickTop - el.offsetHeight - 8;
       holdHeader();
       window.scrollTo({ top: Math.max(0, target) });
@@ -94,18 +98,8 @@ export function GamesTab({ profile }: { profile?: Profile }) {
       {/* Pelipäivän pikakirjaus myös täällä (24.11.2026, käyttäjän valinta). */}
       <GameDayCard profile={profile} today={todayFn()} />
 
-      {/* Selkeät lisäystoiminnot: mitä painike tekee ja milloin sitä käytetään. PC:llä näkyvissä suoraan;
-          puhelimella ja tabletilla yksi Lisää kalenteriin -painike avaa samat valinnat (19.11.2026). */}
-      <section className="card hidden p-4 sm:p-5 lg:block" aria-labelledby="fx-add-title">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="fx-add-title" className="font-display text-lg font-semibold text-slate-900">
-            Lisää kalenteriin
-          </h2>
-          <span className="text-xs text-slate-500">Tulevat pelit näkyvät myös Viikko-näkymässä</span>
-        </div>
-        <AddChoices className="mt-3 grid gap-2 sm:grid-cols-2 @4xl:grid-cols-3" onPick={(kind) => setDraft({ kind })} />
-        <p className="mt-2 text-xs text-slate-500">{ADD_HINT}</p>
-      </section>
+      {/* Lisää kalenteriin -painike avaa valinnat (peli, harjoituspeli, turnaus). PC:llä painike on välilehtien rivillä
+          (27.11.2026; aiemmin oma kortti), puhelimella ja tabletilla tässä. */}
       <Button className="w-full shadow-md lg:hidden" onClick={() => setAdding(true)}>
         <IconPlus size="1.05rem" /> Lisää kalenteriin
       </Button>
@@ -122,8 +116,12 @@ export function GamesTab({ profile }: { profile?: Profile }) {
 
       <div
         ref={tabsRef}
-        className="sticky top-[var(--mobile-header-h,0px)] z-10 order-first -mx-4 lg:order-none bg-[color-mix(in_oklab,var(--bg)_82%,transparent)] px-4 py-2 backdrop-blur-xl lg:static lg:mx-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none"
+        className="sticky top-[var(--mobile-header-h,0px)] z-10 order-first -mx-4 lg:order-none bg-[color-mix(in_oklab,var(--bg)_82%,transparent)] px-4 py-2 backdrop-blur-xl lg:-mx-3 lg:px-3 lg:pb-1 lg:pt-1.5"
       >
+        <div className="hidden lg:block">
+          <FootballTabs profile={profile} value={view} onChange={setView} onAdd={() => setAdding(true)} />
+        </div>
+        <div className="lg:hidden">
         <Segmented<View>
           label="Jalkapallon näkymä"
           value={view}
@@ -135,6 +133,7 @@ export function GamesTab({ profile }: { profile?: Profile }) {
             { value: 'teams', label: 'Joukkueet' },
           ]}
         />
+        </div>
       </div>
 
       {/* Vähintään näytön korkuinen: lyhyempi näkymä ei vedä vierityskohtaa ylös, joten valitsin pysyy paikallaan. */}
