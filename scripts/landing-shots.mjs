@@ -8,7 +8,9 @@
 // Selaimen polku: ympäristömuuttuja BROWSER, muuten Edge tai Chrome tavallisesta paikasta.
 //
 // Tarkat versiot kuvataan suoraan (PC 2x = 2560 px, puhelin 3x = 1170 px leveä) ja perusversiot pienennetään
-// niistä selaimessa (PC 1280 px, puhelin 780 px), kuten Landing.tsx:n srcSet odottaa.
+// niistä selaimessa (PC 1280 px, puhelin 780 px), kuten Landing.tsx:n srcSet odottaa. Viikkonäkymistä tehdään myös
+// sovelluksen asennusikkunan kuvat (public/screenshot-wide.png 1280 × 800 ja screenshot-narrow.png 390 × 844,
+// vite.config.ts:n manifest).
 
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -78,7 +80,7 @@ const evaluate = async (expr) => {
 // ---------- apufunktiot ----------
 // Kuvissa ei animaatioita eikä esimerkkitilan palkkia.
 const STILL = `(() => { const s = document.createElement('style'); s.textContent = '*{animation:none!important;transition:none!important;caret-color:transparent!important} [data-demo-banner]{display:none!important}'; document.head.appendChild(s); return 1; })()`;
-const PREFS = ['theme', 'accent', 'background', 'calendarFamily', 'calendarTrainings', 'calendarMode'];
+const PREFS = ['theme', 'accent', 'background', 'calendarFamily', 'calendarTrainings', 'calendarMode', 'sidebarMini', 'diaryView'];
 
 async function open(width, height, phone, tab, prefs = {}) {
   await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: phone ? 3 : 2, mobile: phone });
@@ -90,7 +92,9 @@ async function open(width, height, phone, tab, prefs = {}) {
 }
 const click = (pred) =>
   evaluate(`(async () => { const el = [...document.querySelectorAll('button, [role=radio], a')].find((b) => ${pred}); el?.click(); await new Promise((r) => setTimeout(r, 900)); return !!el; })()`);
-const radio = (text) => click(`b.getAttribute('role') === 'radio' && b.textContent.trim() === '${text}'`);
+// Valintakytkin (radio) tai PC:n välilehti (tab, esim. Jalkapallon näkymät 27.11.2026; nimen perässä voi olla määrä).
+const radio = (text) =>
+  click(`(b.getAttribute('role') === 'radio' && b.textContent.trim() === '${text}') || (b.getAttribute('role') === 'tab' && b.textContent.trim().startsWith('${text}') && b.offsetParent !== null)`);
 const toGrid = (offset) => evaluate(`(() => { const g = document.querySelector('[role=grid]'); g?.scrollIntoView({ block: 'start' }); window.scrollBy(0, ${offset}); return !!g; })()`);
 const story = async (cards) => {
   await click(`b.textContent.includes('Kauden kooste')`);
@@ -99,7 +103,8 @@ const story = async (cards) => {
   await sleep(1200);
 };
 
-async function shot(name) {
+/** `png`: lisäksi asennusikkunan kuva tiedostoon public/<png>.png (CSS-pikselikoko, PNG). */
+async function shot(name, png) {
   if (ONLY && !ONLY.includes(name)) return;
   const phone = name.startsWith('phone-');
   const big = await send('Page.captureScreenshot', { format: 'webp', quality: Math.round(Q * 100) });
@@ -109,6 +114,13 @@ async function shot(name) {
     const w = ${phone ? 780 : 1280}, h = Math.round(img.height * w / img.width); const c = document.createElement('canvas'); c.width = w; c.height = h;
     const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(img, 0, 0, w, h); return c.toDataURL('image/webp', ${Q}).split(',')[1]; })()`);
   writeFileSync(join(OUT, `${name}.webp`), Buffer.from(small, 'base64'));
+  if (png) {
+    const data = await evaluate(`(async () => { const img = new Image(); img.src = 'data:image/webp;base64,${big.data}'; await img.decode();
+      const w = ${phone ? 390 : 1280}, h = ${phone ? 844 : 800}; const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(img, 0, 0, w, Math.round(img.height * w / img.width)); return c.toDataURL('image/png').split(',')[1]; })()`);
+    writeFileSync(join(OUT, '..', `${png}.png`), Buffer.from(data, 'base64'));
+    console.log('kuvattu', `${png}.png`);
+  }
   console.log('kuvattu', name);
 }
 
@@ -133,7 +145,7 @@ try {
   // ---------- PC ----------
   await role('pc');
   await open(1280, 800, false, 'week');
-  await shot('pc-week');
+  await shot('pc-week', 'screenshot-wide');
   await open(1280, 800, false, 'analysis');
   await radio('Kausi');
   await sleep(2000);
@@ -141,7 +153,7 @@ try {
   await open(1280, 800, false, 'games', { calendarMode: 'month', calendarTrainings: '1' });
   await radio('Kalenteri');
   await sleep(1200);
-  await toGrid(-250);
+  await toGrid(-185);
   await sleep(600);
   await shot('pc-calendar');
   await open(1280, 800, false, 'week', { accent: 'heather', background: 'grass' });
@@ -149,23 +161,25 @@ try {
   await open(1280, 800, false, 'games', { calendarMode: 'month', calendarFamily: '1' });
   await radio('Kalenteri');
   await sleep(1500);
-  await toGrid(-250);
+  await toGrid(-185);
   await sleep(600);
   await shot('pc-family');
   await open(1280, 800, false, 'games');
   await story(3);
   await shot('pc-story');
+  // Jalkapallo PC:llä: kausikortti (seuraava peli laskurilla, tulevat pelit, tilastot), välilehdet ja päiväkirja.
+  await open(1280, 800, false, 'games');
+  await shot('pc-football');
 
   // ---------- puhelin (ei laiteroolia: puhelimen asettelu) ----------
   await role(undefined);
   await open(390, 844, true, 'week');
-  await shot('phone-week');
+  await shot('phone-week', 'screenshot-narrow');
   await click(`b.getAttribute('aria-label') === 'Lisää kerta'`);
   await sleep(800);
   await shot('phone-add');
+  // Jalkapallo puhelimella: välilehdet ja kausikortti (seuraava peli laskurilla, tilastot).
   await open(390, 844, true, 'games', { calendarMode: 'list' });
-  await radio('Tulokset');
-  await sleep(1000);
   await shot('phone-football');
   await radio('Kalenteri');
   await sleep(800);

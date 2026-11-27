@@ -16,6 +16,7 @@ type ShotName =
   | 'pc-week'
   | 'pc-analysis'
   | 'pc-calendar'
+  | 'pc-football'
   | 'pc-theme'
   | 'pc-family'
   | 'pc-story'
@@ -35,10 +36,11 @@ const SHOTS: Record<ShotName, { w: number; h: number; alt: string }> = {
   'pc-theme': { w: 1280, h: 800, alt: 'Viikkonäkymä PC:llä Kanerva-väriteemalla ja nurmitaustalla' },
   'pc-family': { w: 1280, h: 800, alt: 'Koko perheen kalenteri PC:llä: sisarusten treenit ja pelit väreittäin' },
   'pc-story': { w: 1280, h: 800, alt: 'Kauden kooste PC:llä: paras viikko' },
+  'pc-football': { w: 1280, h: 800, alt: 'Jalkapallo PC:llä: seuraava peli laskurilla, tulevat pelit, kauden tilastot ja päiväkirja' },
   'phone-week': { w: 390, h: 844, alt: 'Viikkonäkymä puhelimella' },
   'phone-add': { w: 390, h: 844, alt: 'Uuden kerran kirjaus puhelimella' },
   'phone-analysis': { w: 390, h: 844, alt: 'Analyysi puhelimella: reipas ja rasittava liikunta kuukausittain' },
-  'phone-football': { w: 390, h: 844, alt: 'Jalkapallon kausi puhelimella: treenit, pelit ja maalit' },
+  'phone-football': { w: 390, h: 844, alt: 'Jalkapallo puhelimella: seuraava peli laskurilla ja kauden tilastot' },
   'phone-preview': { w: 390, h: 844, alt: 'Otteluennakon jakokuva puhelimella' },
   'phone-theme': { w: 390, h: 844, alt: 'Ulkoasuasetukset puhelimella: tumma teema ja väriteemat' },
   'phone-family': { w: 390, h: 844, alt: 'Koko perheen pelikalenteri puhelimella, päällekkäiset pelit merkitty' },
@@ -63,9 +65,9 @@ const SCENES: Scene[] = [
   { phone: 'phone-week', pc: 'pc-week', title: 'Kuittaus yhdellä napautuksella', text: 'Viikon harrastukset ovat valmiina. Tehty treeni kuitataan, poissaolo merkitään syineen.', chips: ['Kuittaa', 'Viikkorytmi'] },
   { phone: 'phone-add', pc: 'pc-week', title: 'Viikko ja huomiot', text: 'Näet heti, täyttyykö liikkumissuositus, ja huomiot kertovat, mikä muuttui. Muu liikunta: laji ja kesto.', chips: ['Viikon huomiot', 'Suosikkilajit ensin'] },
   { phone: 'phone-analysis', pc: 'pc-analysis', title: 'Kehitys kuukausittain', text: 'Kaudet, lajit ja suositusten toteutuminen. Raportit PDF:nä.', chips: ['Kausi kerralla', 'Raportti PDF:nä'] },
-  { phone: 'phone-theme', pc: 'pc-theme', title: 'Oman näköinen', text: 'Vaalea tai tumma teema, neljä väriteemaa ja taustat, myös oma kuva.', chips: ['4 väriteemaa', 'Tumma teema'] },
-  { phone: 'phone-football', pc: 'pc-calendar', title: 'Pelit ja tulokset', text: 'Pelikalenteri, turnaukset, joukkueet ja kauden tilastot.', chips: ['Kauden tilastot', 'Omat maalit'] },
-  { phone: 'phone-family', pc: 'pc-family', title: 'Koko perheen kalenteri', text: 'Sisarusten treenit ja pelit samassa kalenterissa. Päällekkäiset pelit näkyvät heti.', chips: ['Päällekkäin', 'Vienti kalenteriin'] },
+  { phone: 'phone-theme', pc: 'pc-theme', title: 'Oman näköinen', text: 'Vaalea tai tumma teema, neljä väriteemaa, kolme fonttia ja taustat, myös oma kuva.', chips: ['4 väriteemaa', 'Tumma teema'] },
+  { phone: 'phone-football', pc: 'pc-football', title: 'Pelit ja tulokset', text: 'Seuraava peli laskurilla, pelikalenteri, turnaukset ja kauden tilastot.', chips: ['Seuraava peli', 'Omat maalit'] },
+  { phone: 'phone-family', pc: 'pc-family', title: 'Koko perheen kalenteri', text: 'Sisarusten menot samassa kalenterissa. Päivät, joilla menot osuvat päällekkäin, korostuvat.', chips: ['Päällekkäin', 'Vienti kalenteriin'] },
   { phone: 'phone-story', pc: 'pc-story', title: 'Kauden kooste', text: 'Kauden kohokohdat tarinakortteina. Tallenna kuvana tai jaa.', chips: ['Paras viikko', 'Jaa kuvana'] },
   { phone: 'phone-preview', pc: 'pc-calendar', title: 'Ennakot jakoon', text: 'Otteluennakko kuvana tai videona joukkueen WhatsApp-ryhmään.', chips: ['Kuva tai video', 'Jaa ryhmään'] },
 ];
@@ -162,6 +164,7 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
           points={[
             'Arkiliikunta, kuten välitunnit ja koulumatkat, arvioidaan kerran ja lasketaan mukaan',
             'Kuittaa tiedoilla: toteutunut kesto, teho ja omatoiminen verryttely samalla kertaa',
+            'Sekuntikello: kellota treenin tai lenkin todellinen aika, ja kerta kirjautuu valmiiksi',
             'Poissaolot ja peruutukset merkitään syineen',
             'Muut menot, kuten hammaslääkäri tai mummolan kyläily, kalenterimerkintöinä viikolle ja pelikalenteriin',
           ]}
@@ -179,6 +182,7 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
             'Alle kouluikäisillä kolme tuntia liikkumista päivässä',
             'Viikon huomiot: suosituksen toteutuminen ja ohjatun urheilun kuormitus tutkimustiedon valossa',
             'Raportti kaudesta PDF-tiedostona',
+            'Jaa valmentajalle: kooste koko liikunnasta ja kuormituksesta viikoittain',
           ]}
         >
           <Shot name="pc-analysis" onZoom={setZoom} className="lp-pc" />
@@ -188,10 +192,12 @@ export function Landing({ onUnlock, linkFailed }: { onUnlock: () => void; linkFa
           id="jalkapallo"
           kicker="Jalkapalloperheille"
           title="Pelit, tulokset ja koko perheen kalenteri"
-          text="Pelikalenteri ja tulokset on tehty jalkapalloperheen tarpeisiin. Turnaukset, ottelut ja tulokset ovat yhdessä paikassa. Sisarusten treenit ja pelit näkyvät samassa kalenterissa omilla väreillään, ja päällekkäiset pelit huomaa heti. Otteluennakon ja tuloksen voi jakaa kuvana tai videona joukkueen WhatsApp-ryhmään."
+          text="Pelikalenteri ja tulokset on tehty jalkapalloperheen tarpeisiin. Turnaukset, ottelut ja tulokset ovat yhdessä paikassa, ja kausikortista näet seuraavan pelin laskureineen. Sisarusten treenit, pelit ja muut menot näkyvät samassa kalenterissa omilla väreillään, ja päällekkäiset menot huomaa heti. Otteluennakon ja tuloksen voi jakaa kuvana tai videona joukkueen WhatsApp-ryhmään."
           points={[
             'Joukkueet ja treeniryhmät sarjoineen, tilastot joukkueittain',
+            'Kausikortti: seuraava peli laskurilla, tulevat pelit, voitot, tasapelit ja häviöt sekä maalit',
             'Pelipäivän pikakirjaus: tulos, omat maalit ja peliaika suoraan kortista, myös turnauksessa peli kerrallaan',
+            'Loukkaantumisjakso: paluupäivä, ja jakson treenit merkitään poissaoloiksi',
             'Muut lajit, kuten jääkiekko, salibandy, uinti ja tanssi, kirjataan samalla tavalla ja lasketaan mukaan suosituksiin',
           ]}
         >

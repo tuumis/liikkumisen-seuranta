@@ -9,6 +9,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.116',
+    date: '27.11.2026',
+    items: [
+      'Alkusivu päivitetty: uudet kuvat sovelluksen nykyisestä ulkoasusta (myös Jalkapallon kausikortti PC:llä ja puhelimella) ja tekstit uusiin ominaisuuksiin, kuten seuraavan pelin laskuri, sekuntikello, Jaa valmentajalle, loukkaantumisjakso, fontit ja koko perheen päällekkäiset menot.',
+      'Sovelluksen asennusikkunan esikatselukuvat päivitetty.',
+    ],
+  },
+  {
     version: '1.1.115',
     date: '27.11.2026',
     items: ['Korjaus: asennetussa PC-sovelluksessa Jalkapallon välilehdet jäivät vieritettäessä osin ikkunan yläpalkin alle. Nyt ne kiinnittyvät yläpalkin alapuolelle.', 'Kiinnittyneen välilehtipalkin alakulmat on pyöristetty.'],
