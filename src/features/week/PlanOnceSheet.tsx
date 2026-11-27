@@ -104,6 +104,7 @@ export function PlanOnceSheet({
             Tiedossa oleva tapahtuma tulevalle päivälle. Se näkyy viikolla suunnitelmana, ja kuittaat sen tehdyksi tai muutat kestoa vasta kyseisenä päivänä.
             {footballOn && ' Pelit ja turnaukset lisätään Jalkapallo → Kalenteri.'}
           </p>
+          {onOtherNote && <OtherNoteLink onClick={() => onOtherNote(day)} />}
           <Field label="Laji">
             <select className={inputClass} value={typeId} onChange={(e) => setTypeId(e.target.value)}>
               {types?.map((t) => (
@@ -142,23 +143,26 @@ export function PlanOnceSheet({
               Peruuta
             </Button>
           </div>
-          {onOtherNote && <OtherNoteLink onClick={() => onOtherNote(day)} />}
         </form>
       )}
     </Sheet>
   );
 }
 
-/** Pieni linkki lisäysvalikoiden lopussa: arjen muu tapahtuma kalenteriin (27.11.2026). */
-export function OtherNoteLink({ onClick }: { onClick: () => void }) {
+/**
+ * Arjen muu tapahtuma kalenteriin (27.11.2026): kortti lisäysikkunoiden alussa (aiemmin pieni linkki lopussa, jäi
+ * huomaamatta). Sama ulkoasu kuin Käynnistä kello -kortilla.
+ */
+export function OtherNoteLink({ onClick, className = '' }: { onClick: () => void; className?: string }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="press mx-auto flex min-h-10 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-slate-600 hover:bg-[var(--surface-sunk)] hover:text-slate-900"
-    >
-      <IconCalendarClock size="1rem" />
-      Muu merkintä (ei liikuntaa)
+    <button type="button" onClick={onClick} className={`press card-interactive card flex w-full items-center gap-3 rounded-[1.25rem] px-3.5 py-3 text-left ${className}`}>
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--surface-sunk)] text-slate-700" aria-hidden>
+        <IconCalendarClock size="1.35rem" />
+      </span>
+      <span className="min-w-0 flex-1 leading-tight">
+        <span className="block text-sm font-semibold text-slate-900">Muu merkintä</span>
+        <span className="block text-xs text-slate-500">Ei liikuntaa, esim. hammaslääkäri tai kyläily</span>
+      </span>
     </button>
   );
 }

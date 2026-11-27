@@ -9,6 +9,11 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.117',
+    date: '27.11.2026',
+    items: ['Muu merkintä (esim. hammaslääkäri tai kyläily) on nyt selvä kortti lisäysikkunan alussa Käynnistä kello -kortin vieressä, ja tulevan päivän Suunniteltu kerta -ikkunassa heti alussa. Aiemmin se oli pieni linkki ikkunan lopussa.'],
+  },
+  {
     version: '1.1.116',
     date: '27.11.2026',
     items: [

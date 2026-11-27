@@ -342,6 +342,9 @@ export function QuickAdd({
               Kellotettu {formatClock(timer.seconds)}. Valitse laji, niin kerta tallennetaan.
             </p>
           )}
+          {/* Käynnistä kello ja Muu merkintä alussa vierekkäin (27.11.2026; merkintä aiemmin pienenä linkkinä lopussa). */}
+          {(canStartTimer || (onOtherNote && !timer)) && (
+          <div className="grid gap-2 sm:grid-cols-2">
           {canStartTimer && (
             <button
               type="button"
@@ -357,6 +360,9 @@ export function QuickAdd({
                 <span className="block text-xs text-slate-500">Kellota todellinen aika, laji valitaan lopuksi</span>
               </span>
             </button>
+          )}
+          {onOtherNote && !timer && <OtherNoteLink onClick={() => onOtherNote(initialDate ?? today)} className={canStartTimer ? '' : 'sm:col-span-2'} />}
+          </div>
           )}
           {football.length > 0 && (
             <section className="card-sage p-2.5" aria-label="Jalkapallo">
@@ -394,7 +400,6 @@ export function QuickAdd({
                 </div>
               );
             })}
-          {onOtherNote && !timer && <OtherNoteLink onClick={() => onOtherNote(initialDate ?? today)} />}
         </div>
       ) : (
         <div className="space-y-4">
